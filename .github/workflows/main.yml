@@ -1,0 +1,75 @@
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (Ubuntu 22.04)
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+    - name: Install build dependencies
+      run: apt-get update && apt-get install -y build-essential git ninja-build cmake pkg-config libssl-dev
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: 'recursive'
+
+    - name: Configure git
+      run: |
+        git config --global --add safe.directory '*'
+
+    - name: Build
+      run: make release
+      env:
+        GEN: ninja
+  
+    - name: Test
+      run: make test_release
+
+    # - uses: actions/upload-artifact@v2
+    #   with:
+    #     name: sqlite-scanner-linux
+    #     path: |
+    #       build/release/extension/sqlite_scanner/sqlite_scanner.duckdb_extension
+          
+          
+  # Skip windows for now, as it is not working
+  # windows:
+  #   name: Windows (64-bit)
+  #   runs-on: windows-latest
+
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 0
+
+  #   - name: Build
+  #     run: |
+  #       make release
+
+  #   # - name: Make tpch test database
+  #   #   run: |
+  #   #     ./build/release/Release/duckdb.exe < tpch-export.duckdb
+  #   #     choco install sqlite -y
+  #   #     sqlite3 tpch.db < tpch-create.sqlite
+
+  #   - name: Test
+  #     run: make test_release
+
+  #   # - uses: actions/upload-artifact@v2
+  #   #   with:
+  #   #     name: sqlite-scanner-windows
+  #   #     path: |
+  #   #       build/release/extension/sqlite_scanner/sqlite_scanner.duckdb_extension
+          
