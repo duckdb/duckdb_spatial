@@ -1,5 +1,7 @@
-#include "geo/proj/module.hpp"
 #include "geo/common.hpp"
+
+#include "geo/proj/module.hpp"
+#include "geo/proj/functions.hpp"
 
 #include "proj.h"
 #include "sqlite3.h"
@@ -8,12 +10,12 @@ namespace geo {
 
 namespace proj {
 
-// We embed the whole proj.db in the proj_db.cpp file, which we then link into the extension binary
+// We embed the whole proj.db in the proj_db.c file, which we then link into the extension binary
 // We can then use the sqlite3 "memvfs" (which we also statically link to) to point to the proj.db database in memory
-// To genereate the proj_db.cpp file, we use the following command:
-// `xxd -i proj.db > proj_db.cpp`
+// To genereate the proj_db.c file, we use the following command:
+// `xxd -i proj.db > proj_db.c`
 // Then rename the array to proj_db and the length to proj_db_len if necessary
-// We link these from the proj_db.cpp file externally instead of #include:ing so our IDE doesnt go haywire
+// We link these from the proj_db.c file externally instead of #include:ing so our IDE doesnt go haywire
 extern "C" unsigned char proj_db[];
 extern "C" unsigned int proj_db_len;
 
@@ -43,6 +45,9 @@ void ProjModule::Register(ClientContext &context) {
 
 	proj_context_set_sqlite3_vfs_name(nullptr, "memvfs");
 	proj_context_set_database_path(nullptr, path.c_str(), nullptr, nullptr);
+
+	// Register functions
+	ProjFunctions::Register(context);
 }
 
 } // namespace proj
