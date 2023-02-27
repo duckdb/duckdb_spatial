@@ -28,8 +28,8 @@ static void LoadInternal(DatabaseInstance &instance) {
 	auto &context = *con.context;
 
 	geo::core::CoreModule::Register(context);
-	geo::gdal::GdalModule::Register(context);
 	geo::proj::ProjModule::Register(context);
+	geo::gdal::GdalModule::Register(context);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
