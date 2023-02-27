@@ -203,7 +203,7 @@ ExternalProject_Add(
     DuckDB
     DEPENDS GDAL PROJ GEOS
     GIT_REPOSITORY "https://github.com/duckdb/duckdb.git"
-    GIT_TAG "v0.7.0"
+    GIT_TAG "v0.7.1"
     GIT_SHALLOW TRUE
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/duckdb
     CONFIGURE_HANDLED_BY_BUILD TRUE
