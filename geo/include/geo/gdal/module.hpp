@@ -1,6 +1,5 @@
-#include "geo/common.hpp"
-
 #pragma once
+#include "geo/common.hpp"
 
 namespace geo {
 
