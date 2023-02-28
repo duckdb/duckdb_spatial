@@ -10,12 +10,13 @@
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/filter/null_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
-#include "gdal_priv.h"
+
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
 #include "geo/gdal/types.hpp"
 #include "geo/gdal/functions.hpp"
-#include "ogr_api.h"
+
+#include "gdal_priv.h"
 #include "ogrsf_frmts.h"
 
 namespace geo {
@@ -267,7 +268,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	result->all_names.reserve(attribute_count);
 	names.reserve(attribute_count);
 
-	for (idx_t col_idx = 0; col_idx < attribute_count; col_idx++) {
+	for (idx_t col_idx = 0; col_idx < (idx_t)attribute_count; col_idx++) {
 		auto &attribute = *attributes[col_idx];
 
 		const char ogc_flag[] = {'\x01', '\0', '\0', '\0', '\x14', '\0', '\0', '\0', 'A', 'R', 'R', 'O', 'W',

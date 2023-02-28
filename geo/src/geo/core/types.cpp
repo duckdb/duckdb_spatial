@@ -1,6 +1,7 @@
 
 #include "geo/core/types.hpp"
 #include "geo/core/module.hpp"
+#include "geo/common.hpp"
 
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
 
@@ -8,18 +9,20 @@ namespace geo {
 
 namespace core {
 
-LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}});
 
-LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalType::DOUBLE},
-                                                    {"min_y", LogicalType::DOUBLE},
-                                                    {"max_x", LogicalType::DOUBLE},
-                                                    {"max_y", LogicalType::DOUBLE}});
+LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}});
+
+LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalTypeId::DOUBLE},
+                                                    {"min_y", LogicalTypeId::DOUBLE},
+                                                    {"max_x", LogicalTypeId::DOUBLE},
+                                                    {"max_y", LogicalTypeId::DOUBLE}});
 
 LogicalType GeoTypes::LINESTRING_2D =
-    LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}}));
+    LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}}));
 
 LogicalType GeoTypes::POLYGON_2D =
-    LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}})));
+    LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}})));
+
 
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);

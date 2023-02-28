@@ -8,7 +8,7 @@ namespace geo {
 
 namespace gdal {
 
-LogicalType GeoTypes::WKB_BLOB = LogicalType::BLOB;
+LogicalType GeoTypes::WKB_BLOB = LogicalTypeId::BLOB;
 
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);

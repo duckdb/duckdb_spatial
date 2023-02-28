@@ -13,6 +13,7 @@ add_subdirectory(src)
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Add dependencies
+find_library(SQLITE3 sqlite3)
 find_library(SQLITE3_MEMVFS memvfs)
 find_package(PROJ REQUIRED)
 find_package(GEOS REQUIRED)
@@ -29,6 +30,7 @@ target_link_libraries(
          CURL::libcurl
          Arrow::arrow_static
          EXPAT::EXPAT
+         ${SQLITE3}
          ${SQLITE3_MEMVFS})
 
 # Build extensions
