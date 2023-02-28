@@ -1,7 +1,6 @@
 #pragma once
 #include "geo/common.hpp"
 
-
 namespace geo {
 
 namespace core {
@@ -11,6 +10,6 @@ public:
 	static void Register(ClientContext &context);
 };
 
-} // namespace gdal
+} // namespace core
 
 } // namespace geo

@@ -15,7 +15,7 @@ void GdalModule::Register(ClientContext &context) {
 	GDALAllRegister();
 
 	// Register functions
-    GeoTypes::Register(context);
+	GeoTypes::Register(context);
 	GdalTableFunction::Register(context);
 }
 

@@ -21,9 +21,8 @@ LogicalType GeoTypes::LINESTRING_2D =
 LogicalType GeoTypes::POLYGON_2D =
     LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}})));
 
-
-void GeoTypes::Register(ClientContext& context) {
-    auto &catalog = Catalog::GetSystemCatalog(context);
+void GeoTypes::Register(ClientContext &context) {
+	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	// Point2D
 	auto point_2d = CreateTypeInfo("POINT_2D", GeoTypes::POINT_2D);
@@ -57,7 +56,6 @@ void GeoTypes::Register(ClientContext& context) {
 	entry = (TypeCatalogEntry *)catalog.CreateType(context, &box_2d);
 	LogicalType::SetCatalog(GeoTypes::BOX_2D, entry);
 }
-
 
 } // namespace core
 
