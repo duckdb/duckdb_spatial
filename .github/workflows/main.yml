@@ -1,4 +1,10 @@
-on: [push, pull_request]
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: 
+      - '*'
 
 defaults:
   run:
@@ -29,8 +35,13 @@ jobs:
       run: |
         git config --global --add safe.directory '*'
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+
     - name: Build
-      run: make release
+      run: |
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+        make release
       env:
         GEN: ninja
   

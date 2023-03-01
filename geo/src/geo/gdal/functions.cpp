@@ -10,12 +10,13 @@
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/filter/null_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
-#include "gdal_priv.h"
+
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
 #include "geo/gdal/types.hpp"
 #include "geo/gdal/functions.hpp"
-#include "ogr_api.h"
+
+#include "gdal_priv.h"
 #include "ogrsf_frmts.h"
 
 namespace geo {
@@ -267,7 +268,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	result->all_names.reserve(attribute_count);
 	names.reserve(attribute_count);
 
-	for (idx_t col_idx = 0; col_idx < attribute_count; col_idx++) {
+	for (idx_t col_idx = 0; col_idx < (idx_t)attribute_count; col_idx++) {
 		auto &attribute = *attributes[col_idx];
 
 		const char ogc_flag[] = {'\x01', '\0', '\0', '\0', '\x14', '\0', '\0', '\0', 'A', 'R', 'R', 'O', 'W',
@@ -425,6 +426,58 @@ void GdalTableFunction::Register(ClientContext &context) {
 	CreateTableFunctionInfo info(set);
 	catalog.CreateTableFunction(context, &info);
 }
+
+
+// Simple table function to list all the drivers available
+
+unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
+                                                 vector<LogicalType> &return_types, vector<string> &names) {
+	return_types.push_back(LogicalType::VARCHAR);
+	return_types.push_back(LogicalType::VARCHAR);
+	names.push_back("driver_short_name");
+	names.push_back("driver_long_name");
+
+	auto driver_count = GDALGetDriverCount();
+	return make_unique<BindData>(driver_count);
+}
+
+unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context, TableFunctionInitInput &input) {
+	return make_unique<State>();
+}
+
+void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+		auto &state = (State &)*input.global_state;
+		auto &bind_data = (BindData &)*input.bind_data;
+
+		idx_t count = 0;
+		idx_t next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, bind_data.driver_count);
+
+		for (; state.current_idx < next_idx; state.current_idx++) {
+			auto driver = GDALGetDriver(state.current_idx);
+			
+			// Check if the driver is a vector driver
+			if (GDALGetMetadataItem(driver, GDAL_DCAP_VECTOR, nullptr) == nullptr) {
+				continue;
+			}
+
+			auto short_name = Value::CreateValue(GDALGetDriverShortName(driver));
+			auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
+
+
+			output.data[0].SetValue(count, short_name);
+			output.data[1].SetValue(count, long_name);
+			count++;
+		}
+		output.SetCardinality(count);
+}
+
+void GdalDriversTableFunction::Register(ClientContext &context) {
+	TableFunction func("st_read_drivers", {}, Execute, Bind, Init);
+	auto &catalog = Catalog::GetSystemCatalog(context);
+	CreateTableFunctionInfo info(func);
+	catalog.CreateTableFunction(context, &info);
+}
+
 
 } // namespace gdal
 

@@ -82,26 +82,6 @@ ExternalProject_Add(
     -DEXPAT_BUILD_DOCS=OFF
 )
 
-# Arrow
-ExternalProject_Add(
-    Arrow
-    DEPENDS OpenSSL CURL
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/apache-arrow-10.0.1.zip
-    SOURCE_SUBDIR cpp
-    CMAKE_ARGS
-    -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
-    -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DARROW_BUILD_STATIC=ON
-    -DARROW_BUILD_SHARED=OFF
-    -DARROW_SIMD_LEVEL=NONE
-    -DARROW_PARQUET=ON
-    -DARROW_DATASET=ON
-    -DARROW_WITH_RE2=OFF
-    -DARROW_WITH_UTF8PROC=OFF
-    -DARROW_BUILD_TESTS=OFF
-)
-
 # PROJ
 ExternalProject_Add(
     PROJ
@@ -149,9 +129,9 @@ ExternalProject_Add(
 # GDAL
 ExternalProject_Add(
     GDAL
-    DEPENDS PROJ GEOS CURL Expat SQLite3 Arrow
+    DEPENDS PROJ GEOS CURL Expat SQLite3
     GIT_REPOSITORY "https://github.com/OSGeo/gdal.git"
-    GIT_TAG "master" # TODO: Change this next release
+    GIT_TAG "release/3.6" # TODO: Change this next release
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED TRUE
     CONFIGURE_HANDLED_BY_BUILD TRUE
@@ -174,8 +154,8 @@ ExternalProject_Add(
     -DBUILD_APPS=OFF
     
     # Arrow
-    -DGDAL_USE_ARROW=ON
-    -DARROW_USE_STATIC_LIBRARIES=ON
+    -DGDAL_USE_ARROW=OFF
+    -DARROW_USE_STATIC_LIBRARIES=OFF
 
     # Disable all external drivers unless explicitly enabled
     -DGDAL_USE_EXTERNAL_LIBS=OFF
@@ -203,7 +183,7 @@ ExternalProject_Add(
     DuckDB
     DEPENDS GDAL PROJ GEOS
     GIT_REPOSITORY "https://github.com/duckdb/duckdb.git"
-    GIT_TAG "v0.7.0"
+    GIT_TAG "v0.7.1"
     GIT_SHALLOW TRUE
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/duckdb
     CONFIGURE_HANDLED_BY_BUILD TRUE

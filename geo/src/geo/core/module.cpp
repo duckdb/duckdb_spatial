@@ -8,7 +8,7 @@ namespace geo {
 namespace core {
 
 void CoreModule::Register(ClientContext &context) {
-    GeoTypes::Register(context);
+	GeoTypes::Register(context);
 }
 
 } // namespace core

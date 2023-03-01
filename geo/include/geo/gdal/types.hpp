@@ -5,12 +5,12 @@ namespace geo {
 
 namespace gdal {
 
-struct GeoTypes { 
+struct GeoTypes {
 
-    // A valid "well-known binary" blob of geometry data
-    static LogicalType WKB_BLOB;
+	// A valid "well-known binary" blob of geometry data
+	static LogicalType WKB_BLOB;
 
-    static void Register(ClientContext &context);
+	static void Register(ClientContext &context);
 };
 
 } // namespace gdal
