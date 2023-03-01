@@ -18,6 +18,7 @@ void GdalModule::Register(ClientContext &context) {
 	// Register functions
 	GeoTypes::Register(context);
 	GdalTableFunction::Register(context);
+	GdalDriversTableFunction::Register(context);
 }
 
 } // namespace gdal
