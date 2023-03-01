@@ -20,6 +20,7 @@ find_package(GEOS REQUIRED)
 find_package(GDAL REQUIRED)
 find_package(CURL REQUIRED)
 find_package(EXPAT REQUIRED)
+find_package(ZLIB REQUIRED)
 
 target_link_libraries(
   ${EXTENSION_NAME}
@@ -28,6 +29,7 @@ target_link_libraries(
          GDAL::GDAL
          CURL::libcurl
          EXPAT::EXPAT
+         ZLIB::ZLIB
          ${SQLITE3}
          ${SQLITE3_MEMVFS})
 
