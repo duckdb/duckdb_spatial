@@ -131,7 +131,7 @@ ExternalProject_Add(
     GDAL
     DEPENDS PROJ GEOS CURL Expat SQLite3
     GIT_REPOSITORY "https://github.com/OSGeo/gdal.git"
-    GIT_TAG "master" # TODO: Change this next release
+    GIT_TAG "release/3.6" # TODO: Change this next release
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED TRUE
     CONFIGURE_HANDLED_BY_BUILD TRUE
