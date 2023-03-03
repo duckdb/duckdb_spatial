@@ -23,6 +23,7 @@ LogicalType GeoTypes::LINESTRING_2D =
 LogicalType GeoTypes::POLYGON_2D =
     LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}})));
 
+LogicalType GeoTypes::GEOMETRY = LogicalType::BLOB;
 
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
@@ -58,6 +59,15 @@ void GeoTypes::Register(ClientContext &context) {
 	GeoTypes::BOX_2D.SetAlias("BOX_2D");
 	entry = (TypeCatalogEntry *)catalog.CreateType(context, &box_2d);
 	LogicalType::SetCatalog(GeoTypes::BOX_2D, entry);
+
+    // GEOMETRY
+    auto geometry_name = "GEOMETRY";
+    auto geometry_info = CreateTypeInfo(geometry_name, GeoTypes::GEOMETRY);
+    geometry_info.internal = true;
+    geometry_info.temporary = true;
+    GeoTypes::GEOMETRY.SetAlias(geometry_name);
+    auto geometry_entry = (TypeCatalogEntry *)catalog.CreateType(context, &geometry_info);
+    LogicalType::SetCatalog(GeoTypes::GEOMETRY, geometry_entry);
 }
 
 } // namespace core

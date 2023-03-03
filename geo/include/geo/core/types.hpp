@@ -11,7 +11,9 @@ struct GeoTypes {
 	static LogicalType POLYGON_2D;
 	static LogicalType BOX_2D;
 
-	static void Register(ClientContext &context);
+    static LogicalType GEOMETRY;
+
+    static void Register(ClientContext &context);
 };
 
 } // namespace core
