@@ -31,5 +31,7 @@
 *.out
 *.app
 
+**/*.DS_Store
+
 build
 duckdb
