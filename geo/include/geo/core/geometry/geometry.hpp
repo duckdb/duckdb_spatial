@@ -6,6 +6,212 @@ namespace geo {
 
 namespace core {
 
+using DIMENSIONS = int;
+using MEASURES = int;
+
+template<DIMENSIONS ND, MEASURES NM>
+struct TPoint { };
+
+template<>
+struct TPoint<3, 0> {
+	double x;
+	double y;
+	double z;
+};
+
+template<>
+struct TPoint<2, 0> {
+	double x;
+	double y;
+};
+
+template<>
+struct TPoint<3, 1> {
+	double x;
+	double y;
+	double z;
+	double m;
+};
+
+template<>
+struct TPoint<2, 1> {
+	double x;
+	double y;
+	double m;
+};
+
+template<DIMENSIONS ND, MEASURES NM>
+struct TPointArray {
+	TPoint<ND, NM>* points;
+	uint32_t num_points;
+
+	double Length() const {
+		double length = 0;
+		for (uint32_t i = 0; i < num_points - 1; i++) {
+			auto &p1 = points[i];
+			auto &p2 = points[i + 1];
+			length += std::sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
+		}
+		return length;
+	}
+
+	// Signed area of the linestring (as a polygon).
+	// Positive if CCW, negative if CW.
+	double SignedArea() const {
+		if(num_points < 3) {
+			return 0;
+		}
+		double area = 0;
+		for (uint32_t i = 0; i < num_points - 1; i++) {
+			auto &p1 = points[i];
+			auto &p2 = points[i + 1];
+			area += p1.x * p2.y - p2.x * p1.y;
+		}
+		return area * 0.5;
+	}
+
+	TPoint<ND, NM>& operator[](uint32_t index) const {
+		D_ASSERT(index < num_points);
+		return points[index];
+	}
+
+	uint32_t GetSerializedSize() const {
+		return sizeof(TPoint<ND, NM>) * num_points;
+	}
+
+	data_ptr_t Write(data_ptr_t ptr) const {
+		auto size = sizeof(TPoint<ND, NM>) * num_points;
+		memcpy(ptr, points, size);
+		return ptr + size;
+	}
+
+};
+
+
+template<DIMENSIONS LD, MEASURES LM, DIMENSIONS RD, MEASURES RM>
+static double Distance(TPoint<LD, LM> a, TPoint<RD, RM> b) {
+	return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+template<DIMENSIONS LD, MEASURES LM, DIMENSIONS RD, MEASURES RM>
+static double Distance(TPointArray<LD, LM> a, TPointArray<RD, RM> b) {
+	double min_dist = std::numeric_limits<double>::max();
+	for (uint32_t i = 0; i < a.num_points; i++) {
+		for (uint32_t j = 0; j < b.num_points; j++) {
+			min_dist = std::min(min_dist, Distance(a[i], b[j]));
+		}
+	}
+	return min_dist;
+}
+
+static double Distance(TPointArray<2, 0> a, TPointArray<2, 0> b) {
+	double min_dist = std::numeric_limits<double>::max();
+	for (uint32_t i = 0; i < a.num_points; i++) {
+		for (uint32_t j = 0; j < b.num_points; j++) {
+			min_dist = std::min(min_dist, Distance(a[i], b[j]));
+		}
+	}
+	return min_dist;
+}
+
+
+
+static void foobar() {
+	TPoint<3, 1> a;
+	TPoint<2, 0> b;
+
+	TPointArray<3, 1> arr;
+	TPointArray<2, 0> arr2;
+	arr.Length();
+	arr.SignedArea();
+
+	arr[0].z;
+
+	Distance(arr2, arr);
+	Distance(a, b);
+}
+enum class GeometryType : uint8_t {
+	Point = 0,
+	LineString = 1,
+	Polygon = 2,
+};
+
+static void Handle(GeometryType type, DIMENSIONS dims, MEASURES measures) {
+	switch (type) {
+	case GeometryType::LineString:
+		switch (dims) {
+		case 2:
+			switch (measures) {
+			case 0:
+				auto p = TPointArray<2, 0>();
+				break;
+			case 1:
+				auto p = TPointArray<2, 1>();
+				break;
+			}
+			break;
+		}
+		break;
+	case GeometryType::Point:
+		switch(dims) {
+		case 2:
+			switch(measures) {
+			case 0:
+				auto p = TPoint<2, 0>();
+				break;
+			case 1:
+				auto p = TPoint<2, 1>();
+				break;
+			}
+			break;
+		case 3:
+			switch(measures) {
+			case 0:
+				auto p = TPoint<3, 0>();
+				break;
+			case 1:
+				auto p = TPoint<3, 1>();
+				break;
+			}
+			break;
+		}
+		break;
+	case GeometryType::Polygon:
+		break;
+	}
+}
+
+
+template<DIMENSIONS ND, MEASURES NM>
+struct GPoint {
+	static_assert(ND > 0, "GPoint must have at least one dimension");
+	static_assert(ND <= 3, "GPoint can have at most three dimensions");
+	static_assert(NM <= 1, "GPoint can have at most one measure");
+private:
+	double _data[ND + NM];
+public:
+	bool HasMeasure() const {
+		return NM > 0;
+	}
+
+	typename std::enable_if<(ND > 0), double&>::type X() const {
+		return _data[0];
+	}
+
+	typename std::enable_if<(ND > 1), double&>::type Y() const {
+		return _data[1];
+	}
+
+	typename std::enable_if<(ND > 2), double&>::type Z() const {
+		return _data[2];
+	}
+
+	typename std::enable_if<(ND > 0), double&>::type M() const {
+		return _data[ND];
+	}
+};
+
+
 enum class GeometryType : uint8_t {
 	Point = 1,
 	LineString = 2,
