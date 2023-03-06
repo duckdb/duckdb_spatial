@@ -10,6 +10,7 @@
 
 #include "geo/core/module.hpp"
 #include "geo/gdal/module.hpp"
+#include "geo/proj/module.hpp"
 
 namespace duckdb {
 inline void GeoScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -27,6 +28,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 	auto &context = *con.context;
 
 	geo::core::CoreModule::Register(context);
+	geo::proj::ProjModule::Register(context);
 	geo::gdal::GdalModule::Register(context);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
