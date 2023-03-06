@@ -11,6 +11,48 @@ namespace geo {
 
 namespace geos {
 
+// Conversion operations
+static void WKBFromWKTFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto count = args.size();
+	auto input = args.data[0];
+	auto ctx = GeosContextWrapper();
+	auto reader = ctx.CreateWKTReader();
+	auto writer = ctx.CreateWKBWriter();
+
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkt) {
+		auto geom = reader.Read(wkt);
+		return writer.Write(geom, result);
+	});
+}
+
+static void WKTFromWKBFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto count = args.size();
+	auto input = args.data[0];
+	auto ctx = GeosContextWrapper();
+	auto reader = ctx.CreateWKBReader();
+	auto writer = ctx.CreateWKTWriter();
+
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkb) {
+		auto geom = reader.Read(wkb);
+		return writer.Write(geom, result);
+	});
+}
+
+static void WKBFromBlobFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto count = args.size();
+	auto input = args.data[0];
+	auto ctx = GeosContextWrapper();
+	auto reader = ctx.CreateWKBReader();
+	auto writer = ctx.CreateWKBWriter();
+
+	// We read a BLOB as wkb, and if it succeeds we write it back as wkb but this time as a WKB_BLOB type (since we now know it is valid)
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkb) {
+		auto geom = reader.Read(wkb);
+		return writer.Write(geom, result);
+	});
+}
+
+
 // Property Accessors
 static void WKBAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();
@@ -385,6 +427,20 @@ static void WKBContainsFunction(DataChunk &args, ExpressionState &state, Vector 
 
 void GeosScalarFunctions::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
+	/////////// Conversion Operations
+
+	// TODO: Rename these once we have a proper Geometry type, and not just WKB. These should probably be called ST_WkbFromText and ST_WkbFromBlob
+	CreateScalarFunctionInfo wkb_from_wkt_info(ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB, WKBFromWKTFunction));
+	wkb_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.AddFunction(context, &wkb_from_wkt_info);
+
+	CreateScalarFunctionInfo wkt_from_wkb_info(ScalarFunction("ST_AsText", {core::GeoTypes::WKB_BLOB}, LogicalType::VARCHAR, WKTFromWKBFunction));
+	wkt_from_wkb_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.AddFunction(context, &wkt_from_wkb_info);
+
+	CreateScalarFunctionInfo wkb_from_wkb_info(ScalarFunction("ST_GeomFromWKB", {LogicalType::BLOB}, core::GeoTypes::WKB_BLOB, WKBFromBlobFunction));
+	wkb_from_wkb_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.AddFunction(context, &wkb_from_wkb_info);
 
 	/////////// Property Accessors
 	CreateScalarFunctionInfo area_info(ScalarFunction("ST_Area", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBAreaFunction));

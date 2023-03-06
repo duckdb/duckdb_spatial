@@ -160,6 +160,24 @@ struct WKBWriter {
 	}
 };
 
+struct WKTReader {
+	GEOSContextHandle_t ctx;
+	GEOSWKTReader_t *reader;
+
+	explicit WKTReader(GEOSContextHandle_t ctx) : ctx(ctx) {
+		reader = GEOSWKTReader_create_r(ctx);
+	}
+
+	GeometryPtr Read(string_t &wkt) const {
+		auto str = wkt.GetString();
+		auto geom = GEOSWKTReader_read_r(ctx, reader, str.c_str());
+		if (!geom) {
+			throw InvalidInputException("Could not read WKT");
+		}
+		return GeometryPtr(ctx, geom);
+	}
+};
+
 struct WKTWriter {
 	GEOSContextHandle_t ctx;
 	GEOSWKTWriter_t *writer;
@@ -187,6 +205,7 @@ struct WKTWriter {
 		return str;
 	}
 };
+
 
 struct GeosContextWrapper {
 private:
@@ -216,6 +235,10 @@ public:
 
 	WKTWriter CreateWKTWriter() const {
 		return WKTWriter(ctx);
+	}
+
+	WKTReader CreateWKTReader() const {
+		return WKTReader(ctx);
 	}
 };
 
