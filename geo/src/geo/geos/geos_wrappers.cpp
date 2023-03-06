@@ -7,41 +7,43 @@ namespace geos {
 
 // Accessors
 double GeometryPtr::Area() const {
-	return GEOSArea(ptr, nullptr);
+	double area;
+	return GEOSArea_r(ctx, ptr, &area) ? area : 0;
 }
 
 double GeometryPtr::Length() const {
-	return GEOSLength(ptr, nullptr);
+	double len = 0;
+	return GEOSLength_r(ctx, ptr, &len) ? len : 0;
 }
 
 double GeometryPtr::GetX() {
 	double x = 0;
-	return GEOSGeomGetX(ptr, &x) ? x : 0;
+	return GEOSGeomGetX_r(ctx, ptr, &x) ? x : 0;
 }
 
 double GeometryPtr::GetY() {
 	double y = 0;
-	return GEOSGeomGetY(ptr, &y) ? y : 0;
+	return GEOSGeomGetY_r(ctx, ptr, &y) ? y : 0;
 }
 
 bool GeometryPtr::IsEmpty() const {
-	return GEOSisEmpty(ptr);
+	return GEOSisEmpty_r(ctx, ptr);
 }
 
 bool GeometryPtr::IsSimple() const {
-	return GEOSisSimple(ptr);
+	return GEOSisSimple_r(ctx,ptr);
 }
 
 bool GeometryPtr::IsValid() const {
-	return GEOSisValid(ptr);
+	return GEOSisValid_r(ctx,ptr);
 }
 
 bool GeometryPtr::IsRing() const {
-	return GEOSisRing(ptr);
+	return GEOSisRing_r(ctx,ptr);
 }
 
 bool GeometryPtr::IsClosed() const {
-	return GEOSisClosed(ptr);
+	return GEOSisClosed_r(ctx,ptr);
 }
 
 // Constructive ops

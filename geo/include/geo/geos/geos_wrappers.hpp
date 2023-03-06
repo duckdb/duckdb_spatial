@@ -160,19 +160,46 @@ struct WKBWriter {
 	}
 };
 
-struct GeosContextWrapper {
+struct WKTWriter {
 	GEOSContextHandle_t ctx;
+	GEOSWKTWriter_t *writer;
+
+	explicit WKTWriter(GEOSContextHandle_t ctx) : ctx(ctx) {
+		writer = GEOSWKTWriter_create_r(ctx);
+	}
+
+	void Write(const GeometryPtr &geom, std::ostream &stream) const {
+		auto wkt = GEOSWKTWriter_write_r(ctx, writer, geom.get());
+		if (!wkt) {
+			throw InvalidInputException("Could not write WKT");
+		}
+		stream << wkt;
+		GEOSFree_r(ctx, wkt);
+	}
+
+	string_t Write(const GeometryPtr &geom, Vector& vec) const {
+		auto wkt = GEOSWKTWriter_write_r(ctx, writer, geom.get());
+		if (!wkt) {
+			throw InvalidInputException("Could not write WKT");
+		}
+		auto str = StringVector::AddStringOrBlob(vec, wkt);
+		GEOSFree_r(ctx, wkt);
+		return str;
+	}
+};
+
+struct GeosContextWrapper {
+private:
+	GEOSContextHandle_t ctx;
+public:
 	GeosContextWrapper() {
 		ctx = GEOS_init_r();
-
-		// TODO: We should throw an exception here
+		// TODO: Set handlers
 		/*
-		GEOSContext_setErrorHandler_r(ctx, [](const char *fmt, ...) {
-		    va_list ap;
-		    va_start(ap, fmt);
-		    vfprintf(stderr, fmt, ap);
-		    va_end(ap);
-		});
+		GEOSContext_setNoticeHandler_r(ctx, NoticeHandler);
+		GEOSContext_setErrorHandler_r(ctx, ErrorHandler);
+		GEOSContext_setNoticeMessageHandler_r(ctx, ExceptionHandler, (void*)nullptr);
+		GEOSContext_setErrorMessageHandler_r(ctx, ExceptionHandler, (void*)nullptr);
 		 */
 	}
 	~GeosContextWrapper() {
@@ -185,6 +212,10 @@ struct GeosContextWrapper {
 
 	WKBWriter CreateWKBWriter() const {
 		return WKBWriter(ctx);
+	}
+
+	WKTWriter CreateWKTWriter() const {
+		return WKTWriter(ctx);
 	}
 };
 

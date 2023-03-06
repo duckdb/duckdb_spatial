@@ -3,7 +3,9 @@
 #include "geo/geos/functions/aggregate.hpp"
 
 namespace geo {
+
 namespace geos {
+
 /*
 struct UnionState {
 	geos::geom::Geometry::Ptr geom;
@@ -91,9 +93,6 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, AggregateFunction &
     return nullptr;
 }
 */
-
-
-
 
 void GeosAggregateFunctions::Register(ClientContext &context) {
 	/*

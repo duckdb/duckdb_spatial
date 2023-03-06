@@ -1,6 +1,5 @@
 
 #include "geo/core/types.hpp"
-#include "geo/core/module.hpp"
 #include "geo/common.hpp"
 
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
