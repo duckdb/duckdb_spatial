@@ -65,13 +65,11 @@ void GeoTypes::Register(ClientContext &context) {
 	LogicalType::SetCatalog(GeoTypes::BOX_2D, entry);
 
 	// WKB_BLOB
-	auto wkb_name = "WKB_BLOB";
-	auto wkb_info = CreateTypeInfo(wkb_name, GeoTypes::WKB_BLOB);
-	wkb_info.internal = true;
-	wkb_info.temporary = true;
-	GeoTypes::WKB_BLOB.SetAlias(wkb_name);
-	auto wkb_entry = (TypeCatalogEntry *)catalog.CreateType(context, &wkb_info);
-	LogicalType::SetCatalog(GeoTypes::WKB_BLOB, wkb_entry);
+	GeoTypes::WKB_BLOB.SetAlias("WKB_BLOB");
+	auto wkb = CreateTypeInfo("WKB_BLOB", GeoTypes::WKB_BLOB);
+	wkb.internal = true;
+	wkb.temporary = true;
+	catalog.CreateType(context, &wkb);
 
 	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, LogicalType::BLOB, DefaultCasts::ReinterpretCast);
 }

@@ -1,0 +1,25 @@
+require geo
+
+# Test that all empty geometries are equal to each other
+statement ok
+CREATE TABLE empty (geom WKB_BLOB);
+
+statement ok
+INSERT INTO empty VALUES
+    (ST_GeomFromText('POINT EMPTY')),
+    (ST_GeomFromText('LINESTRING EMPTY')),
+    (ST_GeomFromText('POLYGON EMPTY')),
+    (ST_GeomFromText('MULTIPOINT EMPTY')),
+    (ST_GeomFromText('MULTILINESTRING EMPTY')),
+    (ST_GeomFromText('MULTIPOLYGON EMPTY')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION EMPTY'));
+
+query I
+SELECT bool_and(ST_Equals(a.geom, b.geom)) FROM empty as a FULL OUTER JOIN empty as b ON 1=1;
+----
+true
+
+query I
+SELECT ST_Equals(ST_GeomFromText('POINT (1 1)'), ST_GeomFromText('POINT (1.00000 1.00000)'));
+----
+true

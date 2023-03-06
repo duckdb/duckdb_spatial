@@ -18,13 +18,13 @@ release:
 	cmake --build . --config Release
 
 test: debug
-	./build/debug/base/Build/DuckDB/test/unittest --test-dir ./geo "[sql]"
+	./build/debug/base/Build/DuckDB/test/unittest --test-dir ./geo "test/sql/*"
 
 test_debug: debug
-	lldb ./build/debug/base/Build/DuckDB/test/unittest -- --test-dir ./geo "[sql]"
+	lldb ./build/debug/base/Build/DuckDB/test/unittest -- --test-dir ./geo "test/sql/*"
 
 test_release: release
-	./build/release/base/Build/DuckDB/test/unittest --test-dir ./geo "[sql]"
+	./build/release/base/Build/DuckDB/test/unittest --test-dir ./geo "test/sql/*"
 
 recursive_wildcard=$(foreach d,$(wildcard $(1:=/*)),$(call recursive_wildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 format:

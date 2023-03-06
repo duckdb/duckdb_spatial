@@ -13,6 +13,7 @@ static bool WKBToWKTCast(Vector &source, Vector &result, idx_t count, CastParame
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 	auto writer = ctx.CreateWKTWriter();
+	writer.SetTrim(true);
 
 	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
 		auto geom = reader.Read(input);

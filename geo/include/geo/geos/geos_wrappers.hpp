@@ -92,6 +92,9 @@ public:
 	GeometryPtr Envelope() const;
 	GeometryPtr Intersection(const GeometryPtr &other) const;
 
+	// Mutations
+	void Normalize() const;
+
 
 	// Predicates
 	bool Contains(const GeometryPtr &other) const;
@@ -184,6 +187,10 @@ struct WKTWriter {
 
 	explicit WKTWriter(GEOSContextHandle_t ctx) : ctx(ctx) {
 		writer = GEOSWKTWriter_create_r(ctx);
+	}
+
+	void SetTrim(bool trim) const {
+		GEOSWKTWriter_setTrim_r(ctx, writer, trim ? 1 : 0);
 	}
 
 	void Write(const GeometryPtr &geom, std::ostream &stream) const {

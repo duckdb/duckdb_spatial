@@ -111,6 +111,13 @@ GeometryPtr GeometryPtr::Intersection(const GeometryPtr &other) const {
 	return GeometryPtr(ctx, result);
 }
 
+void GeometryPtr::Normalize() const {
+	auto result = GEOSNormalize_r(ctx, ptr);
+	if (result == -1) {
+		throw Exception("Could not normalize geometry");
+	}
+}
+
 // Predicates
 bool GeometryPtr::Covers(const GeometryPtr &other) const {
 	return GEOSCovers_r(ctx, ptr, other.ptr);

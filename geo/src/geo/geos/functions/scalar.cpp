@@ -282,6 +282,21 @@ static void WKBIntersectionFunction(DataChunk &args, ExpressionState &state, Vec
 	});
 }
 
+// Mutators
+static void WKBNormalizeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto input = args.data[0];
+	auto count = args.size();
+	auto ctx = GeosContextWrapper();
+	auto reader = ctx.CreateWKBReader();
+	auto writer = ctx.CreateWKBWriter();
+
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkb) {
+		auto geom = reader.Read(wkb);
+		geom.Normalize();
+		return writer.Write(geom, result);
+	});
+}
+
 
 // Spatial Predicates
 static void WKBCoversFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -512,6 +527,11 @@ void GeosScalarFunctions::Register(ClientContext &context) {
 	CreateScalarFunctionInfo intersection_info(ScalarFunction("ST_Intersection", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBIntersectionFunction));
 	intersection_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &intersection_info);
+
+	/////////// Mutations
+	CreateScalarFunctionInfo normalize_info(ScalarFunction("ST_Normalize", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBNormalizeFunction));
+	normalize_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.AddFunction(context, &normalize_info);
 
 	/////////// Spatial Predicates
 	CreateScalarFunctionInfo contains_info(ScalarFunction("ST_Contains", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBContainsFunction));
