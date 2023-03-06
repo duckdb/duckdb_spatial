@@ -138,12 +138,12 @@ unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientCont
 
 void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
 	auto &state = (State &)*input.global_state;
-
+a
 	int result_count = 0;
 	auto crs_list = proj_get_crs_info_list_from_database(nullptr, nullptr, nullptr, &result_count);
 	
 	idx_t count = 0;
-	idx_t next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, result_count);
+	auto next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, result_count);
 	for (idx_t i = state.current_idx; i < next_idx; i++) {
 		auto proj = crs_list[i];
 		output.SetValue(0, count, Value(proj->auth_name));

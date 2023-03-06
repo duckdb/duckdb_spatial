@@ -43,7 +43,7 @@ PJ_CONTEXT* ProjModule::GetThreadProjContext() {
 // IMPORTANT: Make sure this module is loaded before any other modules that use proj (like GDAL)
 void ProjModule::Register(ClientContext &context) {
 	// we use the sqlite "memvfs" to store the proj.db database in the extension binary itself
-	// this way we dont have to worry about the user having the proj.db database installed
+	// this way we don't have to worry about the user having the proj.db database installed
 	// on their system. We therefore have to tell proj to use memvfs as the sqlite3 vfs and
 	// point it to the segment of the binary that contains the proj.db database
 	
@@ -60,17 +60,12 @@ void ProjModule::Register(ClientContext &context) {
 	// Any PJ_CONTEXT we create after this will inherit these settings (on this thread?)
 	auto path = StringUtil::Format("file:/proj.db?ptr=%lu&sz=%lu&max=%lu", proj_db, proj_db_len, proj_db_len);
 
-	
 	proj_context_set_sqlite3_vfs_name(nullptr, "memvfs");
 	
 	auto ok = proj_context_set_database_path(nullptr, path.c_str(), nullptr, nullptr);
 	if(!ok) {
 		throw InternalException("Could not set proj.db path");
 	}
-
-	int count = 0;
-	auto str =  proj_get_crs_info_list_from_database(nullptr, nullptr, nullptr, &count);
-	printf("ESRI.DATE: %d", count);
 
 	// Register functions
 	ProjFunctions::Register(context);
