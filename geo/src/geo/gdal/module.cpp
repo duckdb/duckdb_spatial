@@ -1,6 +1,5 @@
 #include "geo/gdal/module.hpp"
 #include "geo/gdal/functions.hpp"
-#include "geo/gdal/types.hpp"
 
 #include "geo/common.hpp"
 
@@ -16,7 +15,6 @@ void GdalModule::Register(ClientContext &context) {
 	OGRRegisterAll();
 
 	// Register functions
-	GeoTypes::Register(context);
 	GdalTableFunction::Register(context);
 	GdalDriversTableFunction::Register(context);
 }

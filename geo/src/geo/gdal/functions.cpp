@@ -13,7 +13,6 @@
 
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
-#include "geo/gdal/types.hpp"
 #include "geo/gdal/functions.hpp"
 
 #include "gdal_priv.h"
@@ -218,7 +217,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			result->spatial_filter = make_unique<RectangleSpatialFilter>(minx, miny, maxx, maxy);
 		}
 
-		if (loption == "spatial_filter" && kv.second.type() == gdal::GeoTypes::WKB_BLOB) {
+		if (loption == "spatial_filter" && kv.second.type() == core::GeoTypes::WKB_BLOB) {
 			if (result->spatial_filter) {
 				throw BinderException("Only one spatial filter can be specified");
 			}
@@ -278,7 +277,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		if (attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
 			// This is a WKB geometry blob
 			GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx);
-			return_types.emplace_back(gdal::GeoTypes::WKB_BLOB);
+			return_types.emplace_back(core::GeoTypes::WKB_BLOB);
 		} else if (attribute.dictionary) {
 			result->arrow_convert_data[col_idx] =
 			    make_unique<ArrowConvertData>(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
@@ -419,7 +418,7 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["allowed_drivers"] = LogicalType::LIST(LogicalType::VARCHAR);
 	scan.named_parameters["sibling_files"] = LogicalType::LIST(LogicalType::VARCHAR);
 	scan.named_parameters["spatial_filter_box"] = core::GeoTypes::BOX_2D;
-	scan.named_parameters["spatial_filter"] = gdal::GeoTypes::WKB_BLOB;
+	scan.named_parameters["spatial_filter"] = core::GeoTypes::WKB_BLOB;
 	set.AddFunction(scan);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
@@ -432,10 +431,10 @@ void GdalTableFunction::Register(ClientContext &context) {
 
 unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
                                                  vector<LogicalType> &return_types, vector<string> &names) {
-	return_types.push_back(LogicalType::VARCHAR);
-	return_types.push_back(LogicalType::VARCHAR);
-	names.push_back("driver_short_name");
-	names.push_back("driver_long_name");
+	return_types.emplace_back(LogicalType::VARCHAR);
+	return_types.emplace_back(LogicalType::VARCHAR);
+	names.emplace_back("driver_short_name");
+	names.emplace_back("driver_long_name");
 
 	auto driver_count = GDALGetDriverCount();
 	return make_unique<BindData>(driver_count);
@@ -450,10 +449,10 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 		auto &bind_data = (BindData &)*input.bind_data;
 
 		idx_t count = 0;
-		idx_t next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, bind_data.driver_count);
+		auto next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, bind_data.driver_count);
 
 		for (; state.current_idx < next_idx; state.current_idx++) {
-			auto driver = GDALGetDriver(state.current_idx);
+			auto driver = GDALGetDriver((int)state.current_idx);
 			
 			// Check if the driver is a vector driver
 			if (GDALGetMetadataItem(driver, GDAL_DCAP_VECTOR, nullptr) == nullptr) {

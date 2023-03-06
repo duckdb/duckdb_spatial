@@ -11,6 +11,8 @@ struct GeoTypes {
 	static LogicalType POLYGON_2D;
 	static LogicalType BOX_2D;
 
+	static LogicalType WKB_BLOB;
+
 	static void Register(ClientContext &context);
 };
 
