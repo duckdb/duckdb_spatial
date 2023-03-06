@@ -20,6 +20,11 @@ SELECT bool_and(ST_Equals(a.geom, b.geom)) FROM empty as a FULL OUTER JOIN empty
 true
 
 query I
+SELECT bool_and(ST_IsEmpty(geom)) FROM empty;
+----
+true
+
+query I
 SELECT ST_Equals(ST_GeomFromText('POINT (1 1)'), ST_GeomFromText('POINT (1.00000 1.00000)'));
 ----
 true
