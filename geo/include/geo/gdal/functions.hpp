@@ -1,6 +1,8 @@
 #pragma once
 
 #include "duckdb/function/table/arrow.hpp"
+#include "duckdb/parser/parsed_data/copy_info.hpp"
+#include "duckdb/function/copy_function.hpp"
 
 #include "geo/common.hpp"
 
@@ -23,7 +25,6 @@ public:
 	static void Register(ClientContext &context);
 };
 
-
 struct GdalDriversTableFunction {
 	
 	struct BindData : public TableFunctionData {
@@ -42,6 +43,11 @@ struct GdalDriversTableFunction {
 	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
 										vector<LogicalType> &return_types, vector<string> &names);
 };
+
+struct GdalCopyFunction {
+	static void Register(ClientContext &context);
+};
+
 
 } // namespace gdal
 

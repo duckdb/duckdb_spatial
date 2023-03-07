@@ -17,6 +17,7 @@ void GdalModule::Register(ClientContext &context) {
 	// Register functions
 	GdalTableFunction::Register(context);
 	GdalDriversTableFunction::Register(context);
+	GdalCopyFunction::Register(context);
 }
 
 } // namespace gdal
