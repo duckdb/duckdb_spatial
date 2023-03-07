@@ -22,12 +22,17 @@ namespace gdal {
 
 struct BindData : public TableFunctionData {
 
-	string filename;
+	string file_path;
 	vector<LogicalType> field_sql_types;
 	vector<string> field_names;
+	string driver_name;
+	string layer_name;
+	vector<string> dataset_creation_options;
+	vector<string> layer_creation_options;
 
-	BindData(string filename, vector<LogicalType> field_sql_types, vector<string> field_names) :
-		filename(std::move(filename)), field_sql_types(std::move(field_sql_types)), field_names(std::move(field_names)) {}
+
+	BindData(string file_path, vector<LogicalType> field_sql_types, vector<string> field_names) :
+	      file_path(std::move(file_path)), field_sql_types(std::move(field_sql_types)), field_names(std::move(field_names)) {}
 };
 
 struct LocalState : public LocalFunctionData {
@@ -55,7 +60,51 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 	// check all the options in the copy info
 	// and set
 	for (auto &option : info.options) {
+		if (StringUtil::Upper(option.first) == "DRIVER") {
+			auto set = option.second.front();
+			if(set.type().id() == LogicalTypeId::VARCHAR) {
+				bind_data->driver_name = set.GetValue<string>();
+			} else {
+				throw BinderException("Driver name must be a string");
+			}
+		}
+		else if(StringUtil::Upper(option.first) == "LAYER_NAME") {
+			auto set = option.second.front();
+			if(set.type().id() == LogicalTypeId::VARCHAR) {
+				bind_data->layer_name = set.GetValue<string>();
+			} else {
+				throw BinderException("Layer name must be a string");
+			}
+		}
+		else if(StringUtil::Upper(option.first) == "LAYER_CREATION_OPTIONS") {
+			auto set = option.second;
+			for(auto &s : set) {
+				if(s.type().id() != LogicalTypeId::VARCHAR) {
+					throw BinderException("Layer creation options must be strings");
+				}
+				bind_data->layer_creation_options.push_back(s.GetValue<string>());
+			}
+		} else if(StringUtil::Lower(option.first) == "DATASET_CREATION_OPTIONS") {
+			auto set = option.second;
+			for(auto &s : set) {
+				if(s.type().id() != LogicalTypeId::VARCHAR) {
+					throw BinderException("Dataset creation options must be strings");
+				}
+				bind_data->dataset_creation_options.push_back(s.GetValue<string>());
+			}
+		} else {
+			throw BinderException("Unknown option '%s'", option.first);
+		}
 		// save dataset open options.. i guess?
+	}
+
+	if(bind_data->driver_name.empty()) {
+		throw BinderException("Driver name must be specified");
+	}
+
+	if(bind_data->layer_name.empty()) {
+		// Default to the base name of the file
+		bind_data->layer_name = FileSystem::ExtractBaseName(bind_data->file_path);
 	}
 
 	return bind_data;
@@ -140,19 +189,29 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	//return std::move(global_data);
 
 	auto &gdal_data = (BindData &)bind_data;
-
-	auto driver_name = "ESRI Shapefile";
-	GDALDriver *driver = GetGDALDriverManager()->GetDriverByName(driver_name);
+	GDALDriver *driver = GetGDALDriverManager()->GetDriverByName(gdal_data.driver_name.c_str());
 	if (!driver) {
 		throw IOException("Could not open driver");
 	}
 
-	auto dataset = GDALDatasetUniquePtr(driver->Create(file_path.c_str(), 0, 0, 0, GDT_Unknown, nullptr));
+	// Create the dataset
+	vector<char*> dcos;
+	dcos.reserve(gdal_data.dataset_creation_options.size());
+	for (auto &option : gdal_data.dataset_creation_options) {
+		dcos.push_back(const_cast<char*>(option.c_str()));
+	}
+	auto dataset = GDALDatasetUniquePtr(driver->Create(file_path.c_str(), 0, 0, 0, GDT_Unknown, dcos.data()));
 	if (!dataset) {
 		throw IOException("Could not open dataset");
 	}
 
-	auto layer = dataset->CreateLayer("layer", nullptr, wkbUnknown, nullptr);
+	// Create the layer
+	vector<char*> lcos;
+	lcos.reserve(gdal_data.layer_creation_options.size());
+	for (auto &option : gdal_data.layer_creation_options) {
+		lcos.push_back(const_cast<char*>(option.c_str()));
+	}
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), nullptr, wkbUnknown, lcos.data());
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
@@ -294,7 +353,8 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 // Finalize
 //===--------------------------------------------------------------------===//
 static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunctionData &gstate) {
-
+	auto &global_state = (GlobalState &)gstate;
+	global_state.dataset->FlushCache();
 }
 
 //===--------------------------------------------------------------------===//
