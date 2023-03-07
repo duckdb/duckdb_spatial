@@ -316,7 +316,7 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		feature->SetField(field_idx, value.GetValue<int32_t>());
 		break;
 	case LogicalTypeId::BIGINT:
-		feature->SetField(field_idx, value.GetValue<int64_t>());
+		feature->SetField(field_idx, (GIntBig)value.GetValue<int64_t>());
 		break;
 	case LogicalTypeId::FLOAT:
 		feature->SetField(field_idx, value.GetValue<float>());
@@ -326,8 +326,8 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		break;
 	case LogicalTypeId::VARCHAR:
 	case LogicalTypeId::BLOB: {
-		auto str = value.GetValue<string>();
-		feature->SetField(field_idx, str.c_str());
+		auto str = value.GetValueUnsafe<string_t>();
+		feature->SetField(field_idx, (int)str.GetSize(), str.GetDataUnsafe());
 	} break;
 	default:
 		// TODO: Add time types
