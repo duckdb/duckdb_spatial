@@ -88,6 +88,8 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 	return StringUtil::Join(filters, " AND ");
 }
 
+static const char* LAYER_CREATION_OPTIONS[2] = { "INCLUDE_FID=NO", nullptr };
+
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
 	unique_ptr<SpatialFilter> spatial_filter;
@@ -234,7 +236,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto layer = dataset->GetLayer(result->layer_idx);
 
 	struct ArrowArrayStream stream;
-	if (!layer->GetArrowStream(&stream)) {
+	if (!layer->GetArrowStream(&stream, LAYER_CREATION_OPTIONS)) {
 		// layer is owned by GDAL, we do not need to destory it
 		throw IOException("Could not get arrow stream from layer");
 	}
@@ -340,7 +342,8 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	global_state->stream = make_unique<ArrowArrayStreamWrapper>();
 
-	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream)) {
+
+	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, LAYER_CREATION_OPTIONS)) {
 		throw IOException("Could not get arrow stream");
 	}
 
