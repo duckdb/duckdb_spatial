@@ -9,7 +9,6 @@ namespace geo {
 
 namespace core {
 
-
 LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}});
 
 LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalTypeId::DOUBLE},
@@ -20,12 +19,10 @@ LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalTypeId::DOU
 LogicalType GeoTypes::LINESTRING_2D =
     LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}}));
 
-LogicalType GeoTypes::POLYGON_2D =
-    LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}})));
-
+LogicalType GeoTypes::POLYGON_2D = LogicalType::LIST(
+    LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}})));
 
 LogicalType GeoTypes::WKB_BLOB = LogicalTypeId::BLOB;
-
 
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
@@ -69,7 +66,8 @@ void GeoTypes::Register(ClientContext &context) {
 	auto wkb = CreateTypeInfo("WKB_BLOB", GeoTypes::WKB_BLOB);
 	wkb.internal = true;
 	wkb.temporary = true;
-	catalog.CreateType(context, &wkb);
+	auto wkb_entry = (TypeCatalogEntry *)catalog.CreateType(context, &wkb);
+	LogicalType::SetCatalog(GeoTypes::WKB_BLOB, wkb_entry);
 
 	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, LogicalType::BLOB, DefaultCasts::ReinterpretCast);
 }

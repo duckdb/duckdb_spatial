@@ -1,21 +1,12 @@
-#include "duckdb/catalog/catalog.hpp"
-#include "duckdb/common/types/value.hpp"
-#include "duckdb/function/table/arrow.hpp"
-#include "duckdb/function/table_function.hpp"
-#include "duckdb/main/client_context.hpp"
-#include "duckdb/main/config.hpp"
-#include "duckdb/main/database.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
-#include "duckdb/planner/filter/null_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
 
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
 #include "geo/gdal/functions.hpp"
 
-#include "gdal_priv.h"
 #include "ogrsf_frmts.h"
 
 namespace geo {
@@ -26,7 +17,7 @@ enum SpatialFilterType { Wkb, Rectangle };
 
 struct SpatialFilter {
 	SpatialFilterType type;
-	SpatialFilter(SpatialFilterType type_p) : type(type_p) {};
+	explicit SpatialFilter(SpatialFilterType type_p) : type(type_p) {};
 };
 
 struct RectangleSpatialFilter : SpatialFilter {
@@ -38,8 +29,8 @@ struct RectangleSpatialFilter : SpatialFilter {
 
 struct WKBSpatialFilter : SpatialFilter {
 	OGRGeometryH geom;
-	WKBSpatialFilter(string wkb_p) : SpatialFilter(SpatialFilterType::Wkb) {
-		auto ok = OGR_G_CreateFromWkb(wkb_p.c_str(), nullptr, &geom, wkb_p.size());
+	explicit WKBSpatialFilter(const string &wkb_p) : SpatialFilter(SpatialFilterType::Wkb), geom(nullptr) {
+		auto ok = OGR_G_CreateFromWkb(wkb_p.c_str(), nullptr, &geom, (int)wkb_p.size());
 		if (ok != OGRERR_NONE) {
 			throw Exception("WKBSpatialFilter: could not create geometry from WKB");
 		}
@@ -97,6 +88,8 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 	return StringUtil::Join(filters, " AND ");
 }
 
+static const char* LAYER_CREATION_OPTIONS[2] = { "INCLUDE_FID=NO", nullptr };
+
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
 	unique_ptr<SpatialFilter> spatial_filter;
@@ -111,7 +104,7 @@ struct GdalScanFunctionData : public TableFunctionData {
 
 struct GdalScanLocalState : ArrowScanLocalState {
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk)
-	    : ArrowScanLocalState(move(current_chunk)) {
+	    : ArrowScanLocalState(std::move(current_chunk)) {
 	}
 };
 
@@ -243,7 +236,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto layer = dataset->GetLayer(result->layer_idx);
 
 	struct ArrowArrayStream stream;
-	if (!layer->GetArrowStream(&stream)) {
+	if (!layer->GetArrowStream(&stream, LAYER_CREATION_OPTIONS)) {
 		// layer is owned by GDAL, we do not need to destory it
 		throw IOException("Could not get arrow stream from layer");
 	}
@@ -349,7 +342,8 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	global_state->stream = make_unique<ArrowArrayStreamWrapper>();
 
-	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream)) {
+
+	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, LAYER_CREATION_OPTIONS)) {
 		throw IOException("Could not get arrow stream");
 	}
 
@@ -366,7 +360,7 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 		}
 	}
 
-	return move(global_state);
+	return std::move(global_state);
 }
 
 // Scan
@@ -384,7 +378,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 			return;
 		}
 	}
-	int64_t output_size = MinValue<int64_t>(STANDARD_VECTOR_SIZE, state.chunk->arrow_array.length - state.chunk_offset);
+	auto output_size = MinValue<int64_t>(STANDARD_VECTOR_SIZE, state.chunk->arrow_array.length - state.chunk_offset);
 	data.lines_read += output_size;
 
 	if (global_state.CanRemoveFilterColumns()) {
@@ -425,58 +419,6 @@ void GdalTableFunction::Register(ClientContext &context) {
 	CreateTableFunctionInfo info(set);
 	catalog.CreateTableFunction(context, &info);
 }
-
-
-// Simple table function to list all the drivers available
-
-unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
-                                                 vector<LogicalType> &return_types, vector<string> &names) {
-	return_types.emplace_back(LogicalType::VARCHAR);
-	return_types.emplace_back(LogicalType::VARCHAR);
-	names.emplace_back("driver_short_name");
-	names.emplace_back("driver_long_name");
-
-	auto driver_count = GDALGetDriverCount();
-	return make_unique<BindData>(driver_count);
-}
-
-unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context, TableFunctionInitInput &input) {
-	return make_unique<State>();
-}
-
-void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
-		auto &state = (State &)*input.global_state;
-		auto &bind_data = (BindData &)*input.bind_data;
-
-		idx_t count = 0;
-		auto next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, bind_data.driver_count);
-
-		for (; state.current_idx < next_idx; state.current_idx++) {
-			auto driver = GDALGetDriver((int)state.current_idx);
-			
-			// Check if the driver is a vector driver
-			if (GDALGetMetadataItem(driver, GDAL_DCAP_VECTOR, nullptr) == nullptr) {
-				continue;
-			}
-
-			auto short_name = Value::CreateValue(GDALGetDriverShortName(driver));
-			auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
-
-
-			output.data[0].SetValue(count, short_name);
-			output.data[1].SetValue(count, long_name);
-			count++;
-		}
-		output.SetCardinality(count);
-}
-
-void GdalDriversTableFunction::Register(ClientContext &context) {
-	TableFunction func("st_read_drivers", {}, Execute, Bind, Init);
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(func);
-	catalog.CreateTableFunction(context, &info);
-}
-
 
 } // namespace gdal
 

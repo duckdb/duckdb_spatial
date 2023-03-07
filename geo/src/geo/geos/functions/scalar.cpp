@@ -45,13 +45,13 @@ static void WKBFromBlobFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto reader = ctx.CreateWKBReader();
 	auto writer = ctx.CreateWKBWriter();
 
-	// We read a BLOB as wkb, and if it succeeds we write it back as wkb but this time as a WKB_BLOB type (since we now know it is valid)
+	// We read a BLOB as wkb, and if it succeeds we write it back as wkb but this time as a WKB_BLOB type (since we now
+	// know it is valid)
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkb) {
 		auto geom = reader.Read(wkb);
 		return writer.Write(geom, result);
 	});
 }
-
 
 // Property Accessors
 static void WKBAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -172,11 +172,12 @@ static void WKBSimplifyFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto reader = ctx.CreateWKBReader();
 	auto writer = ctx.CreateWKBWriter();
 
-	BinaryExecutor::Execute<string_t, double, string_t>(input, tolerance, result, count, [&](string_t &wkb, double tol) {
-		auto geom = reader.Read(wkb);
-		auto simplified = geom.Simplify(tol);
-		return writer.Write(simplified, result);
-	});
+	BinaryExecutor::Execute<string_t, double, string_t>(input, tolerance, result, count,
+	                                                    [&](string_t &wkb, double tol) {
+		                                                    auto geom = reader.Read(wkb);
+		                                                    auto simplified = geom.Simplify(tol);
+		                                                    return writer.Write(simplified, result);
+	                                                    });
 }
 
 static void WKBSimplifyPreserveTopologyFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -187,11 +188,12 @@ static void WKBSimplifyPreserveTopologyFunction(DataChunk &args, ExpressionState
 	auto reader = ctx.CreateWKBReader();
 	auto writer = ctx.CreateWKBWriter();
 
-	BinaryExecutor::Execute<string_t, double, string_t>(input, tolerance, result, count, [&](string_t &wkb, double tol) {
-		auto geom = reader.Read(wkb);
-		auto simplified = geom.SimplifyPreserveTopology(tol);
-		return writer.Write(simplified, result);
-	});
+	BinaryExecutor::Execute<string_t, double, string_t>(input, tolerance, result, count,
+	                                                    [&](string_t &wkb, double tol) {
+		                                                    auto geom = reader.Read(wkb);
+		                                                    auto simplified = geom.SimplifyPreserveTopology(tol);
+		                                                    return writer.Write(simplified, result);
+	                                                    });
 }
 
 static void WKBBufferFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -203,11 +205,12 @@ static void WKBBufferFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto writer = ctx.CreateWKBWriter();
 
 	// TODO: Add support for optional arguments (quadsegs, endcapstyle, joinstyle, mitrelimit)
-	BinaryExecutor::Execute<string_t, double, string_t>(input, distance, result, count, [&](string_t &wkb, double dist) {
-		auto geom = reader.Read(wkb);
-		auto buffered = geom.Buffer(dist, 9);
-		return writer.Write(buffered, result);
-	});
+	BinaryExecutor::Execute<string_t, double, string_t>(input, distance, result, count,
+	                                                    [&](string_t &wkb, double dist) {
+		                                                    auto geom = reader.Read(wkb);
+		                                                    auto buffered = geom.Buffer(dist, 9);
+		                                                    return writer.Write(buffered, result);
+	                                                    });
 }
 
 static void WKBBoundaryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -274,12 +277,13 @@ static void WKBIntersectionFunction(DataChunk &args, ExpressionState &state, Vec
 	auto reader = ctx.CreateWKBReader();
 	auto writer = ctx.CreateWKBWriter();
 
-	BinaryExecutor::Execute<string_t, string_t, string_t>(input_left, input_right, result, count, [&](string_t &wkb_left, string_t &wkb_right) {
-		auto geom_left = reader.Read(wkb_left);
-		auto geom_right = reader.Read(wkb_right);
-		auto intersection = geom_left.Intersection(geom_right);
-		return writer.Write(intersection, result);
-	});
+	BinaryExecutor::Execute<string_t, string_t, string_t>(input_left, input_right, result, count,
+	                                                      [&](string_t &wkb_left, string_t &wkb_right) {
+		                                                      auto geom_left = reader.Read(wkb_left);
+		                                                      auto geom_right = reader.Read(wkb_right);
+		                                                      auto intersection = geom_left.Intersection(geom_right);
+		                                                      return writer.Write(intersection, result);
+	                                                      });
 }
 
 // Mutators
@@ -297,7 +301,6 @@ static void WKBNormalizeFunction(DataChunk &args, ExpressionState &state, Vector
 	});
 }
 
-
 // Spatial Predicates
 static void WKBCoversFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto left = args.data[0];
@@ -306,11 +309,12 @@ static void WKBCoversFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Covers(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Covers(right_geom);
+	                                                  });
 }
 
 static void WKBCoveredByFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -320,11 +324,12 @@ static void WKBCoveredByFunction(DataChunk &args, ExpressionState &state, Vector
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.CoveredBy(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.CoveredBy(right_geom);
+	                                                  });
 }
 
 static void WKBCrossesFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -334,11 +339,12 @@ static void WKBCrossesFunction(DataChunk &args, ExpressionState &state, Vector &
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Crosses(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Crosses(right_geom);
+	                                                  });
 }
 
 static void WKBDisjointFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -348,11 +354,12 @@ static void WKBDisjointFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Disjoint(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Disjoint(right_geom);
+	                                                  });
 }
 
 static void WKBEqualsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -362,11 +369,12 @@ static void WKBEqualsFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Equals(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Equals(right_geom);
+	                                                  });
 }
 
 static void WKBIntersectsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -376,11 +384,12 @@ static void WKBIntersectsFunction(DataChunk &args, ExpressionState &state, Vecto
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Intersects(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Intersects(right_geom);
+	                                                  });
 }
 
 static void WKBOverlapsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -390,11 +399,12 @@ static void WKBOverlapsFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Overlaps(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Overlaps(right_geom);
+	                                                  });
 }
 
 static void WKBTouchesFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -404,11 +414,12 @@ static void WKBTouchesFunction(DataChunk &args, ExpressionState &state, Vector &
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Touches(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Touches(right_geom);
+	                                                  });
 }
 
 static void WKBWithinFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -418,11 +429,12 @@ static void WKBWithinFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Within(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Within(right_geom);
+	                                                  });
 }
 
 static void WKBContainsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -432,145 +444,183 @@ static void WKBContainsFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t &left_wkb, string_t &right_wkb) {
-		auto left_geom = reader.Read(left_wkb);
-		auto right_geom = reader.Read(right_wkb);
-		return left_geom.Contains(right_geom);
-	});
+	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count,
+	                                                  [&](string_t &left_wkb, string_t &right_wkb) {
+		                                                  auto left_geom = reader.Read(left_wkb);
+		                                                  auto right_geom = reader.Read(right_wkb);
+		                                                  return left_geom.Contains(right_geom);
+	                                                  });
 }
-
 
 void GeosScalarFunctions::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	/////////// Conversion Operations
 
-	// TODO: Rename these once we have a proper Geometry type, and not just WKB. These should probably be called ST_WkbFromText and ST_WkbFromBlob
-	CreateScalarFunctionInfo wkb_from_wkt_info(ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB, WKBFromWKTFunction));
+	// TODO: Rename these once we have a proper Geometry type, and not just WKB. These should probably be called
+	// ST_WkbFromText and ST_WkbFromBlob
+	CreateScalarFunctionInfo wkb_from_wkt_info(
+	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB, WKBFromWKTFunction));
 	wkb_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkb_from_wkt_info);
 
-	CreateScalarFunctionInfo wkt_from_wkb_info(ScalarFunction("ST_AsText", {core::GeoTypes::WKB_BLOB}, LogicalType::VARCHAR, WKTFromWKBFunction));
+	CreateScalarFunctionInfo wkt_from_wkb_info(
+	    ScalarFunction("ST_AsText", {core::GeoTypes::WKB_BLOB}, LogicalType::VARCHAR, WKTFromWKBFunction));
 	wkt_from_wkb_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkt_from_wkb_info);
 
-	CreateScalarFunctionInfo wkb_from_wkb_info(ScalarFunction("ST_GeomFromWKB", {LogicalType::BLOB}, core::GeoTypes::WKB_BLOB, WKBFromBlobFunction));
+	CreateScalarFunctionInfo wkb_from_wkb_info(
+	    ScalarFunction("ST_GeomFromWKB", {LogicalType::BLOB}, core::GeoTypes::WKB_BLOB, WKBFromBlobFunction));
 	wkb_from_wkb_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkb_from_wkb_info);
 
 	/////////// Property Accessors
-	CreateScalarFunctionInfo area_info(ScalarFunction("ST_Area", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBAreaFunction));
+	CreateScalarFunctionInfo area_info(
+	    ScalarFunction("ST_Area", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBAreaFunction));
 	area_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &area_info);
 
-	CreateScalarFunctionInfo length_info(ScalarFunction("ST_Length", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBLenFunction));
+	CreateScalarFunctionInfo length_info(
+	    ScalarFunction("ST_Length", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBLenFunction));
 	length_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &length_info);
 
-	CreateScalarFunctionInfo is_simple_info(ScalarFunction("ST_IsSimple", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsSimpleFunction));
+	CreateScalarFunctionInfo is_simple_info(
+	    ScalarFunction("ST_IsSimple", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsSimpleFunction));
 	is_simple_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_simple_info);
 
-	CreateScalarFunctionInfo is_valid_info(ScalarFunction("ST_IsValid", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsValidFunction));
+	CreateScalarFunctionInfo is_valid_info(
+	    ScalarFunction("ST_IsValid", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsValidFunction));
 	is_valid_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_valid_info);
 
-	CreateScalarFunctionInfo is_empty_info(ScalarFunction("ST_IsEmpty", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsEmptyFunction));
+	CreateScalarFunctionInfo is_empty_info(
+	    ScalarFunction("ST_IsEmpty", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsEmptyFunction));
 	is_empty_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_empty_info);
 
-	CreateScalarFunctionInfo is_ring_info(ScalarFunction("ST_IsRing", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsRingFunction));
+	CreateScalarFunctionInfo is_ring_info(
+	    ScalarFunction("ST_IsRing", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsRingFunction));
 	is_ring_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_ring_info);
 
-	CreateScalarFunctionInfo is_closed_info(ScalarFunction("ST_IsClosed", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsClosedFunction));
+	CreateScalarFunctionInfo is_closed_info(
+	    ScalarFunction("ST_IsClosed", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsClosedFunction));
 	is_closed_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_closed_info);
 
-	CreateScalarFunctionInfo x_info(ScalarFunction("ST_X", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBGetXFunction));
+	CreateScalarFunctionInfo x_info(
+	    ScalarFunction("ST_X", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBGetXFunction));
 	x_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &x_info);
 
-	CreateScalarFunctionInfo y_info(ScalarFunction("ST_Y", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBGetYFunction));
+	CreateScalarFunctionInfo y_info(
+	    ScalarFunction("ST_Y", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBGetYFunction));
 	y_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &y_info);
 
-
 	/////////// Constructive Operations
-	CreateScalarFunctionInfo simplify_info(ScalarFunction("ST_Simplify", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE}, core::GeoTypes::WKB_BLOB, WKBSimplifyFunction));
+	CreateScalarFunctionInfo simplify_info(ScalarFunction(
+	    "ST_Simplify", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE}, core::GeoTypes::WKB_BLOB, WKBSimplifyFunction));
 	simplify_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &simplify_info);
 
-	CreateScalarFunctionInfo simplify_preserve_info(ScalarFunction("ST_SimplifyPreserveTopology", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE}, core::GeoTypes::WKB_BLOB, WKBSimplifyPreserveTopologyFunction));
+	CreateScalarFunctionInfo simplify_preserve_info(
+	    ScalarFunction("ST_SimplifyPreserveTopology", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE},
+	                   core::GeoTypes::WKB_BLOB, WKBSimplifyPreserveTopologyFunction));
 	simplify_preserve_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &simplify_preserve_info);
 
-	CreateScalarFunctionInfo buffer_info(ScalarFunction("ST_Buffer", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE}, core::GeoTypes::WKB_BLOB, WKBBufferFunction));
+	CreateScalarFunctionInfo buffer_info(ScalarFunction("ST_Buffer", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE},
+	                                                    core::GeoTypes::WKB_BLOB, WKBBufferFunction));
 	buffer_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &buffer_info);
 
-	CreateScalarFunctionInfo boundary_info(ScalarFunction("ST_Boundary", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBBoundaryFunction));
+	CreateScalarFunctionInfo boundary_info(
+	    ScalarFunction("ST_Boundary", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBBoundaryFunction));
 	boundary_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &boundary_info);
 
-	CreateScalarFunctionInfo convex_hull_info(ScalarFunction("ST_ConvexHull", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBConvexHullFunction));
+	CreateScalarFunctionInfo convex_hull_info(
+	    ScalarFunction("ST_ConvexHull", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBConvexHullFunction));
 	convex_hull_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &convex_hull_info);
 
-	CreateScalarFunctionInfo centroid_info(ScalarFunction("ST_Centroid", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBCentroidFunction));
+	CreateScalarFunctionInfo centroid_info(
+	    ScalarFunction("ST_Centroid", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBCentroidFunction));
 	centroid_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &centroid_info);
 
-	CreateScalarFunctionInfo envelope_info(ScalarFunction("ST_Envelope", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBEnvelopeFunction));
+	CreateScalarFunctionInfo envelope_info(
+	    ScalarFunction("ST_Envelope", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBEnvelopeFunction));
 	envelope_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &envelope_info);
 
-	CreateScalarFunctionInfo intersection_info(ScalarFunction("ST_Intersection", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBIntersectionFunction));
+	CreateScalarFunctionInfo intersection_info(ScalarFunction("ST_Intersection",
+	                                                          {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                          core::GeoTypes::WKB_BLOB, WKBIntersectionFunction));
 	intersection_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &intersection_info);
 
 	/////////// Mutations
-	CreateScalarFunctionInfo normalize_info(ScalarFunction("ST_Normalize", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBNormalizeFunction));
+	CreateScalarFunctionInfo normalize_info(
+	    ScalarFunction("ST_Normalize", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBNormalizeFunction));
 	normalize_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &normalize_info);
 
 	/////////// Spatial Predicates
-	CreateScalarFunctionInfo contains_info(ScalarFunction("ST_Contains", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBContainsFunction));
+	CreateScalarFunctionInfo contains_info(ScalarFunction("ST_Contains",
+	                                                      {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                      LogicalType::BOOLEAN, WKBContainsFunction));
 	contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &contains_info);
 
-	CreateScalarFunctionInfo covers_info(ScalarFunction("ST_Covers", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCoversFunction));
+	CreateScalarFunctionInfo covers_info(ScalarFunction(
+	    "ST_Covers", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCoversFunction));
 	covers_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &covers_info);
 
-	CreateScalarFunctionInfo covered_by_info(ScalarFunction("ST_CoveredBy", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCoveredByFunction));
+	CreateScalarFunctionInfo covered_by_info(ScalarFunction("ST_CoveredBy",
+	                                                        {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                        LogicalType::BOOLEAN, WKBCoveredByFunction));
 	covered_by_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &covered_by_info);
 
-	CreateScalarFunctionInfo crosses_info(ScalarFunction("ST_Crosses", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCrossesFunction));
+	CreateScalarFunctionInfo crosses_info(ScalarFunction(
+	    "ST_Crosses", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCrossesFunction));
 	crosses_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &crosses_info);
 
-	CreateScalarFunctionInfo disjoint_info(ScalarFunction("ST_Disjoint", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBDisjointFunction));
+	CreateScalarFunctionInfo disjoint_info(ScalarFunction("ST_Disjoint",
+	                                                      {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                      LogicalType::BOOLEAN, WKBDisjointFunction));
 	disjoint_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &disjoint_info);
 
-	CreateScalarFunctionInfo equals_info(ScalarFunction("ST_Equals", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBEqualsFunction));
+	CreateScalarFunctionInfo equals_info(ScalarFunction(
+	    "ST_Equals", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBEqualsFunction));
 	equals_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &equals_info);
 
-	CreateScalarFunctionInfo intersects_info(ScalarFunction("ST_Intersects", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIntersectsFunction));
+	CreateScalarFunctionInfo intersects_info(ScalarFunction("ST_Intersects",
+	                                                        {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                        LogicalType::BOOLEAN, WKBIntersectsFunction));
 	intersects_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &intersects_info);
 
-	CreateScalarFunctionInfo overlaps_info(ScalarFunction("ST_Overlaps", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBOverlapsFunction));
+	CreateScalarFunctionInfo overlaps_info(ScalarFunction("ST_Overlaps",
+	                                                      {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                      LogicalType::BOOLEAN, WKBOverlapsFunction));
 	overlaps_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &overlaps_info);
 
-	CreateScalarFunctionInfo touches_info(ScalarFunction("ST_Touches", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBTouchesFunction));
+	CreateScalarFunctionInfo touches_info(ScalarFunction(
+	    "ST_Touches", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBTouchesFunction));
 	touches_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &touches_info);
 
-	CreateScalarFunctionInfo within_info(ScalarFunction("ST_Within", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBWithinFunction));
+	CreateScalarFunctionInfo within_info(ScalarFunction(
+	    "ST_Within", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBWithinFunction));
 	within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &within_info);
 }
