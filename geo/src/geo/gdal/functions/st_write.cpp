@@ -134,14 +134,30 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 	// TODO: Set string width?
 
 	switch (type.id()) {
-	case LogicalTypeId::BOOLEAN:
-	case LogicalTypeId::TINYINT:
-	case LogicalTypeId::SMALLINT:
-	case LogicalTypeId::INTEGER:
+	case LogicalTypeId::BOOLEAN: {
+		auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+		field->SetSubType(OFSTBoolean);
+		return field;
+	}
+	case LogicalTypeId::TINYINT: {
+		// There is no subtype for byte?
 		return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+	}
+	case LogicalTypeId::SMALLINT: {
+		auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+		field->SetSubType(OFSTInt16);
+		return field;
+	}
+	case LogicalTypeId::INTEGER: {
+		return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+	}
 	case LogicalTypeId::BIGINT:
 		return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger64);
-	case LogicalTypeId::FLOAT:
+	case LogicalTypeId::FLOAT: {
+		auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTReal);
+		field->SetSubType(OFSTFloat32);
+		return field;
+	}
 	case LogicalTypeId::DOUBLE:
 		return make_unique<OGRFieldDefn>(name.c_str(), OFTReal);
 	case LogicalTypeId::VARCHAR:
@@ -157,14 +173,29 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 	case LogicalTypeId::LIST: {
 		auto child_type = ListType::GetChildType(type);
 		switch (child_type.id()) {
-		case LogicalTypeId::BOOLEAN:
-		case LogicalTypeId::TINYINT:
-		case LogicalTypeId::SMALLINT:
+		case LogicalTypeId::BOOLEAN: {
+			auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+			field->SetSubType(OFSTBoolean);
+			return field;
+		}
+		case LogicalTypeId::TINYINT: {
+			// There is no subtype for byte?
+			return make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+		}
+		case LogicalTypeId::SMALLINT: {
+			auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+			field->SetSubType(OFSTInt16);
+			return field;
+		}
 		case LogicalTypeId::INTEGER:
 			return make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
 		case LogicalTypeId::BIGINT:
 			return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger64List);
-		case LogicalTypeId::FLOAT:
+		case LogicalTypeId::FLOAT: {
+			auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTRealList);
+			field->SetSubType(OFSTFloat32);
+			return field;
+		}
 		case LogicalTypeId::DOUBLE:
 			return make_unique<OGRFieldDefn>(name.c_str(), OFTRealList);
 		case LogicalTypeId::VARCHAR:
