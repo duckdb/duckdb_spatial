@@ -20,7 +20,7 @@ extern "C" unsigned char proj_db[];
 extern "C" unsigned int proj_db_len;
 extern "C" int sqlite3_memvfs_init(sqlite3 *, char **, const sqlite3_api_routines *);
 
-PJ_CONTEXT* ProjModule::GetThreadProjContext() {
+PJ_CONTEXT *ProjModule::GetThreadProjContext() {
 
 	auto ctx = proj_context_create();
 
@@ -28,10 +28,10 @@ PJ_CONTEXT* ProjModule::GetThreadProjContext() {
 	// Otherwise GDAL will try to load the proj.db from the system
 	// Any PJ_CONTEXT we create after this will inherit these settings
 	auto path = StringUtil::Format("file:/proj.db?ptr=%lu&sz=%lu&max=%lu", proj_db, proj_db_len, proj_db_len);
-	
+
 	proj_context_set_sqlite3_vfs_name(ctx, "memvfs");
 	auto ok = proj_context_set_database_path(ctx, path.c_str(), nullptr, nullptr);
-	if(!ok) {
+	if (!ok) {
 		throw InternalException("Could not set proj.db path");
 	}
 
@@ -46,7 +46,7 @@ void ProjModule::Register(ClientContext &context) {
 	// this way we don't have to worry about the user having the proj.db database installed
 	// on their system. We therefore have to tell proj to use memvfs as the sqlite3 vfs and
 	// point it to the segment of the binary that contains the proj.db database
-	
+
 	sqlite3_initialize();
 	sqlite3_memvfs_init(nullptr, nullptr, nullptr);
 	auto vfs = sqlite3_vfs_find("memvfs");
@@ -61,17 +61,16 @@ void ProjModule::Register(ClientContext &context) {
 	auto path = StringUtil::Format("file:/proj.db?ptr=%lu&sz=%lu&max=%lu", proj_db, proj_db_len, proj_db_len);
 
 	proj_context_set_sqlite3_vfs_name(nullptr, "memvfs");
-	
+
 	auto ok = proj_context_set_database_path(nullptr, path.c_str(), nullptr, nullptr);
-	if(!ok) {
+	if (!ok) {
 		throw InternalException("Could not set proj.db path");
 	}
 
 	// Register functions
 	ProjFunctions::Register(context);
-
 }
 
-} // namespace proj file:/proj.db?ptr=4513990768&sz=8302592&max=8302592D
+} // namespace proj
 
 } // namespace geo

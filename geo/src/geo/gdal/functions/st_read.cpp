@@ -417,6 +417,6 @@ void GdalTableFunction::Register(ClientContext &context) {
 	catalog.CreateTableFunction(context, &info);
 }
 
-} // namespace geo
+} // namespace gdal
 
-} // namespace duckdb
+} // namespace geo

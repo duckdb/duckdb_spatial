@@ -22,7 +22,8 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
 	return make_unique<BindData>(driver_count);
 }
 
-unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context, TableFunctionInitInput &input) {
+unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context,
+                                                                    TableFunctionInitInput &input) {
 	return make_unique<State>();
 }
 
@@ -43,7 +44,6 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 
 		auto short_name = Value::CreateValue(GDALGetDriverShortName(driver));
 		auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
-
 
 		output.data[0].SetValue(count, short_name);
 		output.data[1].SetValue(count, long_name);

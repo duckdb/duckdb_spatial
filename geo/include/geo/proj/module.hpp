@@ -10,7 +10,7 @@ namespace proj {
 
 struct ProjModule {
 public:
-	static PJ_CONTEXT* GetThreadProjContext();
+	static PJ_CONTEXT *GetThreadProjContext();
 	static void Register(ClientContext &context);
 };
 

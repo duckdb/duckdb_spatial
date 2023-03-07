@@ -9,7 +9,6 @@ namespace geo {
 
 namespace core {
 
-
 LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}});
 
 LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalTypeId::DOUBLE},
@@ -20,12 +19,10 @@ LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalTypeId::DOU
 LogicalType GeoTypes::LINESTRING_2D =
     LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}}));
 
-LogicalType GeoTypes::POLYGON_2D =
-    LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}})));
-
+LogicalType GeoTypes::POLYGON_2D = LogicalType::LIST(
+    LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalTypeId::DOUBLE}, {"y", LogicalTypeId::DOUBLE}})));
 
 LogicalType GeoTypes::WKB_BLOB = LogicalTypeId::BLOB;
-
 
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);

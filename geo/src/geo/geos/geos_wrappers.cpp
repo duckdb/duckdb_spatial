@@ -31,19 +31,19 @@ bool GeometryPtr::IsEmpty() const {
 }
 
 bool GeometryPtr::IsSimple() const {
-	return GEOSisSimple_r(ctx,ptr);
+	return GEOSisSimple_r(ctx, ptr);
 }
 
 bool GeometryPtr::IsValid() const {
-	return GEOSisValid_r(ctx,ptr);
+	return GEOSisValid_r(ctx, ptr);
 }
 
 bool GeometryPtr::IsRing() const {
-	return GEOSisRing_r(ctx,ptr);
+	return GEOSisRing_r(ctx, ptr);
 }
 
 bool GeometryPtr::IsClosed() const {
-	return GEOSisClosed_r(ctx,ptr);
+	return GEOSisClosed_r(ctx, ptr);
 }
 
 // Constructive ops
@@ -159,6 +159,6 @@ bool GeometryPtr::Contains(const GeometryPtr &other) const {
 	return GEOSContains_r(ctx, ptr, other.ptr);
 }
 
-}
+} // namespace geos
 
-}
+} // namespace geo
