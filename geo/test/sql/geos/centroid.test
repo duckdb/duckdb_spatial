@@ -1,0 +1,17 @@
+require geo
+
+# Unit tests taken from: https://github.com/libgeos/geos/blob/main/tests/unit/geom/Geometry/getCentroidTest.cpp
+query I
+SELECT ST_Centroid(ST_GeomFromText('LINESTRING(100 100, 200 200)'))
+----
+POINT (150 150)
+
+query I
+SELECT ST_Centroid(ST_GeomFromText('POLYGON((0 0, 100 0, 100 100, 0 100, 0 0))'))
+----
+POINT (50 50)
+
+query I
+SELECT ST_Centroid(ST_GeomFromText('POLYGON EMPTY'))
+----
+POINT EMPTY

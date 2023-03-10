@@ -3,13 +3,14 @@
 #include "geo_extension.hpp"
 #include "duckdb.hpp"
 #include "duckdb/common/exception.hpp"
-#include "duckdb/common/string_util.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_view_info.hpp"
 
 #include "geo/core/module.hpp"
 #include "geo/gdal/module.hpp"
+#include "geo/geos/module.hpp"
+#include "geo/proj/module.hpp"
 
 namespace duckdb {
 inline void GeoScalarFun(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -27,7 +28,9 @@ static void LoadInternal(DatabaseInstance &instance) {
 	auto &context = *con.context;
 
 	geo::core::CoreModule::Register(context);
+	geo::proj::ProjModule::Register(context);
 	geo::gdal::GdalModule::Register(context);
+	geo::geos::GeosModule::Register(context);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
 

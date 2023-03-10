@@ -1,9 +1,9 @@
 
 #include "geo/core/types.hpp"
-#include "geo/core/module.hpp"
 #include "geo/common.hpp"
 
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
+#include "duckdb/function/cast/cast_function_set.hpp"
 
 namespace geo {
 
@@ -25,8 +25,13 @@ LogicalType GeoTypes::POLYGON_2D =
 
 LogicalType GeoTypes::GEOMETRY = LogicalType::BLOB;
 
+LogicalType GeoTypes::WKB_BLOB = LogicalTypeId::BLOB;
+
+
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
+	auto &config = DBConfig::GetConfig(context);
+	auto &casts = config.GetCastFunctions();
 
 	// Point2D
 	auto point_2d = CreateTypeInfo("POINT_2D", GeoTypes::POINT_2D);
@@ -60,6 +65,7 @@ void GeoTypes::Register(ClientContext &context) {
 	entry = (TypeCatalogEntry *)catalog.CreateType(context, &box_2d);
 	LogicalType::SetCatalog(GeoTypes::BOX_2D, entry);
 
+
     // GEOMETRY
     auto geometry_name = "GEOMETRY";
     auto geometry_info = CreateTypeInfo(geometry_name, GeoTypes::GEOMETRY);
@@ -68,6 +74,16 @@ void GeoTypes::Register(ClientContext &context) {
     GeoTypes::GEOMETRY.SetAlias(geometry_name);
     auto geometry_entry = (TypeCatalogEntry *)catalog.CreateType(context, &geometry_info);
     LogicalType::SetCatalog(GeoTypes::GEOMETRY, geometry_entry);
+
+	// WKB_BLOB
+	GeoTypes::WKB_BLOB.SetAlias("WKB_BLOB");
+	auto wkb = CreateTypeInfo("WKB_BLOB", GeoTypes::WKB_BLOB);
+	wkb.internal = true;
+	wkb.temporary = true;
+	catalog.CreateType(context, &wkb);
+
+	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, LogicalType::BLOB, DefaultCasts::ReinterpretCast);
+
 }
 
 } // namespace core

@@ -10,10 +10,9 @@ struct GeoTypes {
 	static LogicalType LINESTRING_2D;
 	static LogicalType POLYGON_2D;
 	static LogicalType BOX_2D;
-
     static LogicalType GEOMETRY;
-
-    static void Register(ClientContext &context);
+	static LogicalType WKB_BLOB;
+	static void Register(ClientContext &context);
 };
 
 } // namespace core

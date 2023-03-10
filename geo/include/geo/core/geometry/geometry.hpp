@@ -445,6 +445,7 @@ public:
 	Point* CreatePoint(double x, double y) {
 		auto point = (Point*)allocator.Allocate(sizeof(Point));
 		auto point_data = (PointArray*)allocator.Allocate(sizeof(PointArray));
+
 		point->type = GeometryType::Point;
 		point->flags = 0;
 		point->point = point_data;
