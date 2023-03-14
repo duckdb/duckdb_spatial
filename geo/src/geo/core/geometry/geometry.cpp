@@ -41,7 +41,8 @@ string LineString::ToString() const {
 }
 
 uint32_t LineString::SerializedSize() const {
-	return points.SerializedSize();
+	// 4 bytes for the number of points
+	return 4 + points.SerializedSize();
 }
 
 //--------------------
@@ -83,9 +84,10 @@ string Polygon::ToString() const {
 }
 
 uint32_t Polygon::SerializedSize() const {
-	uint32_t size = sizeof(uint32_t);
+	uint32_t size = sizeof(uint32_t); // 4 bytes for the number of rings
 	for (uint32_t i = 0; i < num_rings; i++) {
-		size += rings[i].SerializedSize();
+		size += sizeof(uint32_t); // 4 bytes for the number of points in the ring
+		size += rings[i].SerializedSize(); // size of the ring
 	}
 	return size;
 }

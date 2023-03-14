@@ -226,7 +226,6 @@ Polygon GeometryContext::CreatePolygon(uint32_t num_rings, uint32_t *ring_capaci
 	return Polygon(rings, num_rings);
 }
 
-
 string_t GeometryContext::Serialize(Vector &result, const Geometry &geometry) {
 	// We always want the coordinates to be double aligned (8 bytes)
 	// layout:
@@ -270,10 +269,53 @@ string_t GeometryContext::Serialize(Vector &result, const Geometry &geometry) {
 		return StringVector::AddStringOrBlob(result, (const char*)start, total_size);
 	}
 	case GeometryType::LINESTRING: {
-		throw NotImplementedException("Geometry::Serialize(<LineString>)");
+		auto &line = geometry.GetLineString();
+		uint32_t total_size = sizeof(GeometryPrefix) + 4 + 4 + line.SerializedSize();
+		auto ptr = allocator.AllocateAligned(total_size);
+		auto start = ptr;
+		// write prefix
+		ptr += prefix.Serialize(ptr);
+		ptr += sizeof(uint32_t); // padding
+
+		// write type
+		Store((uint32_t)GeometryType::LINESTRING, ptr);
+		ptr += sizeof(uint32_t);
+
+		// write length
+		Store(line.points.Count(), ptr);
+		ptr += sizeof(uint32_t);
+
+		// write data
+		line.points.Serialize(ptr);
+		return StringVector::AddStringOrBlob(result, (const char*)start, total_size);
 	}
 	case GeometryType::POLYGON: {
-		throw NotImplementedException("Geometry::Serialize(<Polygon>)");
+		auto &poly = geometry.GetPolygon();
+		uint32_t total_size = sizeof(GeometryPrefix) + 4 + 4 + poly.SerializedSize();
+		auto ptr = allocator.AllocateAligned(total_size);
+		auto start = ptr;
+		// write prefix
+		ptr += prefix.Serialize(ptr);
+		ptr += sizeof(uint32_t); // padding
+
+		// write type
+		Store((uint32_t)GeometryType::POLYGON, ptr);
+		ptr += sizeof(uint32_t);
+
+		// write num rings
+		Store(poly.num_rings, ptr);
+		ptr += sizeof(uint32_t);
+
+		// write rings
+		for (uint32_t i = 0; i < poly.num_rings; i++) {
+			// write length
+			Store(poly.rings[i].Count(), ptr);
+			ptr += sizeof(uint32_t);
+
+			// write data
+			ptr += poly.rings[i].Serialize(ptr);
+		}
+		return StringVector::AddStringOrBlob(result, (const char*)start, total_size);
 	}
 	default:
 		throw NotImplementedException("Geometry::Serialize(<Unknown>)");
@@ -305,6 +347,34 @@ Geometry GeometryContext::Deserialize(const string_t &data) {
 		// Now read point data;
 		VertexVector vertex_data((Vertex*)ptr, 1, 1, false );
 		return Geometry(Point(std::move(vertex_data)));
+	}
+	case GeometryType::LINESTRING: {
+		// read length
+		auto length = Load<uint32_t>(ptr);
+		ptr += sizeof(uint32_t);
+
+		// read data
+		VertexVector vertex_data((Vertex*)ptr, length, length, false);
+		return Geometry(LineString(std::move(vertex_data)));
+	}
+	case GeometryType::POLYGON: {
+		// read num rings
+		auto num_rings = Load<uint32_t>(ptr);
+		ptr += sizeof(uint32_t);
+
+		// read rings
+		auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
+		for (uint32_t i = 0; i < num_rings; i++) {
+			// read length
+			auto length = Load<uint32_t>(ptr);
+			ptr += sizeof(uint32_t);
+
+			// read data
+			rings[i] = VertexVector((Vertex*)ptr, length, length, false);
+			ptr += length * sizeof(Vertex);
+		}
+
+		return Geometry(Polygon(rings, num_rings));
 	}
 	default:
 		throw NotImplementedException("Geometry::Deserialize(<Unknown>)");

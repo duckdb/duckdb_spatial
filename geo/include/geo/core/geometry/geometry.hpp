@@ -36,6 +36,9 @@ public:
 	inline double& Y() {
 		return data[0].y;
 	}
+	inline Vertex& Vertex() {
+		return data[0];
+	}
 };
 
 struct LineString {
