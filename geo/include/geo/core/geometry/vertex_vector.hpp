@@ -35,33 +35,33 @@ public:
 	inline void SetReadOnly(bool value) { flags = value ? (flags | READONLY) : (flags & ~READONLY); }
 };
 
-struct Point {
+struct Vertex {
 	double x;
 	double y;
-	explicit Point() : x(0), y(0) {}
-	explicit Point(double x, double y) : x(x), y(y) {}
+	explicit Vertex() : x(0), y(0) {}
+	explicit Vertex(double x, double y) : x(x), y(y) {}
 
 	// Distance to another point
-	double Distance(const Point &other) const;
+	double Distance(const Vertex &other) const;
 
 	// Squared distance to another point
-	double DistanceSquared(const Point &other) const;
+	double DistanceSquared(const Vertex &other) const;
 
 	// Distance to the line segment between p1 and p2
-	double Distance(const Point &p1, const Point &p2) const;
+	double Distance(const Vertex &p1, const Vertex &p2) const;
 
 	// Squared distance to the line segment between p1 and p2
-	double DistanceSquared(const Point &p1, const Point &p2) const;
+	double DistanceSquared(const Vertex &p1, const Vertex &p2) const;
 
-	bool operator==(const Point &other) const {
+	bool operator==(const Vertex &other) const {
 		return x == other.x && y == other.y;
 	}
 
-	bool operator!=(const Point &other) const {
+	bool operator!=(const Vertex &other) const {
 		return x != other.x || y != other.y;
 	}
 
-	Side SideOfLine(const Point &p1, const Point &p2) const {
+	Side SideOfLine(const Vertex &p1, const Vertex &p2) const {
 		double side = ( (x - p1.x) * (p2.y - p1.y) - (p2.x - p1.x) * (y - p1.y) );
 		if (side == 0) {
 			return Side::ON;
@@ -73,7 +73,7 @@ struct Point {
 	}
 
 	// Returns true if the point is on the line between the two points
-	bool IsOnSegment(const Point &p1, const Point &p2) const {
+	bool IsOnSegment(const Vertex &p1, const Vertex &p2) const {
 		return ((p1.x <= x && x < p2.x) || (p1.x >= x && x > p2.x)) ||
 		       ((p1.y <= y && y < p2.y) || (p1.y >= y && y > p2.y));
 	}
@@ -92,25 +92,24 @@ enum class Contains {
 	ON_EDGE
 };
 
-class PointArray {
+class VertexVector {
 private:
 	uint32_t count;
 	uint32_t capacity;
-	Point *data;
+	Vertex *data;
 	bool is_owned;
-private:
-	PointArray(Point *data, uint32_t count, uint32_t capacity, bool is_owned) : data(data), count(count), capacity(capacity), is_owned(is_owned)
-	{ }
 public:
+	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity, bool is_owned) : count(count), capacity(capacity), data(data), is_owned(is_owned)
+	{ }
 
 	// Copy constructor (deleted)
-	PointArray(const PointArray&) = delete;
+	VertexVector(const VertexVector&) = delete;
 
 	// Copy assignment (deleted)
-	PointArray& operator=(const PointArray&) = delete;
+	VertexVector& operator=(const VertexVector&) = delete;
 
 	// Move constructor
-	PointArray(PointArray &&other) noexcept : data(nullptr) {
+	VertexVector(VertexVector &&other) noexcept : data(nullptr) {
 		std::swap(other.data, data);
 		count = other.count;
 		capacity = other.capacity;
@@ -118,7 +117,7 @@ public:
 	}
 
 	// Move assignment
-	PointArray &operator=(PointArray &&other) noexcept {
+	VertexVector &operator=(VertexVector &&other) noexcept {
 		std::swap(other.data, data);
 		count = other.count;
 		capacity = other.capacity;
@@ -127,39 +126,39 @@ public:
 	}
 
 	// Destructor
-	~PointArray() {
+	~VertexVector() {
 		if (is_owned) {
 			free(data);
 		}
 	}
 
-	// Create a PointArray from an already existing buffer
-	static PointArray FromBuffer(Point *buffer, uint32_t count) {
-		PointArray array(buffer, count, count, false);
+	// Create a VertexVector from an already existing buffer
+	static VertexVector FromBuffer(Vertex *buffer, uint32_t count) {
+		VertexVector array(buffer, count, count, false);
 		return array;
 	}
 
-	// Create a PointArray by allocating a new buffer on the heap
-	static PointArray Create(uint32_t capacity) {
-		PointArray array((Point *)malloc(sizeof(Point) * capacity), 0, capacity, true);
+	// Create a VertexVector by allocating a new buffer on the heap
+	static VertexVector Create(uint32_t capacity) {
+		VertexVector array((Vertex *)malloc(sizeof(Vertex) * capacity), 0, capacity, true);
 		return array;
 	}
 
-	inline Point& operator[](uint32_t index) {
+	inline Vertex& operator[](uint32_t index) {
 		D_ASSERT(index < count);
 		return data[index];
 	}
 
-	inline const Point& operator[](uint32_t index) const {
+	inline const Vertex& operator[](uint32_t index) const {
 		D_ASSERT(index < count);
 		return data[index];
 	}
 
-	inline Point* begin() {
+	inline Vertex* begin() {
 		return data;
 	}
 
-	inline Point* end() {
+	inline Vertex* end() {
 		return data + count;
 	}
 
@@ -171,49 +170,55 @@ public:
 		return capacity;
 	}
 
-	// Returns the number of bytes that this PointArray requires to be serialized
+	inline void Add(const Vertex &v) {
+		D_ASSERT(count < capacity);
+		data[count++] = v;
+	}
+
+	// Returns the number of bytes that this VertexVector requires to be serialized
 	inline uint32_t SerializedSize() const {
-		return sizeof(Point) * count;
+		return sizeof(Vertex) * count;
 	}
 
-	// Serializes the PointArray to a buffer
-	void Serialize(const char* dst) {
-		memcpy((void*)dst, (const char*)data, count * sizeof(Point));
+	// Serializes the VertexVector to a buffer and returns the number of bytes written
+	uint32_t Serialize(data_ptr_t dst) const {
+		memcpy((void*)dst, (const char*)data, count * sizeof(Vertex));
+		return count * sizeof(Vertex);
 	}
 
-	inline Point* Data() {
+	inline Vertex* Data() {
 		return data;
 	}
 
 	double Length() const;
 	double SignedArea() const;
 	double Area() const;
-	Contains ContainsPoint(const Point &p, bool ensure_closed = true) const;
+	Contains ContainsVertex(const Vertex &p, bool ensure_closed = true) const;
 	WindingOrder GetWindingOrder() const;
 	bool IsClockwise() const;
 	bool IsCounterClockwise() const;
 
-	// Returns true if the PointArray is closed (first and last point are the same)
+	// Returns true if the VertexVector is closed (first and last point are the same)
 	bool IsClosed() const;
 
-	// Returns true if the PointArray is empty
+	// Returns true if the VertexVector is empty
 	bool IsEmpty() const;
 
-	// Returns true if the PointArray is simple (no self-intersections)
+	// Returns true if the VertexVector is simple (no self-intersections)
 	bool IsSimple() const;
 
 	// Returns the index and distance of the closest segment to the point
-	std::tuple<uint32_t, double> ClosestSegment(const Point &p) const;
+	std::tuple<uint32_t, double> ClosestSegment(const Vertex &p) const;
 
 	// Returns the index and distance of the closest point in the pointarray to the point
-	std::tuple<uint32_t, double> ClosetPoint(const Point &p) const;
+	std::tuple<uint32_t, double> ClosetVertex(const Vertex &p) const;
 
 	// Returns the closest point, how far along the pointarray it is (0-1), and the distance to that point
-	std::tuple<Point, double, double> LocatePoint(const Point &p) const;
+	std::tuple<Vertex, double, double> LocateVertex(const Vertex &p) const;
 };
 
 // Utils
-Point ClosestPointOnSegment(const Point &p, const Point &p1, const Point &p2);
+Vertex ClosestPointOnSegment(const Vertex &p, const Vertex &p1, const Vertex &p2);
 
 }
 

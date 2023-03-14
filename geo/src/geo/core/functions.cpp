@@ -2,7 +2,7 @@
 #include "geo/core/types.hpp"
 #include "geo/core/functions.hpp"
 #include "geo/core/geometry/geometry.hpp"
-
+#include "geo/core/geometry/geometry_context.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 
@@ -20,10 +20,9 @@ static void MakePoint2DFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, string_t>(x, y, result, count, [&](double x, double y) {
-		auto point = (Geometry*)ctx.CreatePoint(x, y);
-		return ctx.SaveGeometry(point, result);
+		auto point = ctx.CreatePoint(x, y);
+		return ctx.Serialize(result, Geometry(std::move(point)));
 	});
-
 }
 
 static void PointToStringOperation(Vector &input, Vector &output, idx_t count) {
@@ -32,6 +31,7 @@ static void PointToStringOperation(Vector &input, Vector &output, idx_t count) {
 	GeometryContext ctx(allocator);
 
 	UnaryExecutor::Execute<string_t, string_t>(input, output, count, [&](string_t input) {
+		/*
 		auto type = ctx.PeekType(input);
 		if (type != GeometryType::Point) {
 			throw NotImplementedException("Geometry type not implemented");
@@ -40,6 +40,33 @@ static void PointToStringOperation(Vector &input, Vector &output, idx_t count) {
 		auto x = point->X();
 		auto y = point->Y();
 		return StringUtil::Format("%.2f %.2f", x, y);
+		 */
+		auto geometry = ctx.Deserialize(input);
+		switch (geometry.Type()) {
+		case GeometryType::POINT:
+			return StringVector::AddString(output, geometry.GetPoint().ToString());
+		case GeometryType::LINESTRING:
+			return StringVector::AddString(output, geometry.GetLineString().ToString());
+		case GeometryType::POLYGON:
+			return StringVector::AddString(output, geometry.GetPolygon().ToString());
+		default:
+			throw NotImplementedException("Geometry type not implemented");
+		}
+
+	});
+}
+
+static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &default_alloc = Allocator::DefaultAllocator();
+	ArenaAllocator allocator(default_alloc);
+	GeometryContext ctx(allocator);
+
+	auto &input = args.data[0];
+	auto count = args.size();
+
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+		auto geometry = ctx.FromWKB(input.GetDataUnsafe(), input.GetSize());
+		return ctx.Serialize(result, geometry);
 	});
 }
 
@@ -64,8 +91,12 @@ void GeometryFunctions::Register(ClientContext &context) {
 	info2.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, &info2);
 
+	CreateScalarFunctionInfo info3(ScalarFunction("st_fromwkb", {GeoTypes::WKB_BLOB}, GeoTypes::GEOMETRY, GeometryFromWKBFunction));
+	info3.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.CreateFunction(context, &info3);
+
 	auto &casts = DBConfig::GetConfig(context).GetCastFunctions();
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY, LogicalType::VARCHAR, DefaultCasts::ReinterpretCast);
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY, LogicalType::VARCHAR, PointToStringCast);
 }
 
 } // namespace core

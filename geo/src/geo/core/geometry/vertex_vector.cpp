@@ -1,27 +1,27 @@
-#include "geo/core/geometry/point_array.hpp"
+#include "geo/core/geometry/vertex_vector.hpp"
 
 namespace geo {
 
 namespace core {
 
-double Point::Distance(const Point &other) const {
+double Vertex::Distance(const Vertex &other) const {
 	return std::sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
 }
 
-double Point::DistanceSquared(const Point &other) const {
+double Vertex::DistanceSquared(const Vertex &other) const {
 	return (x - other.x) * (x - other.x) + (y - other.y) * (y - other.y);
 }
 
-double Point::Distance(const Point &p1, const Point &p2) const {
+double Vertex::Distance(const Vertex &p1, const Vertex &p2) const {
 	return std::sqrt(DistanceSquared(p1, p2));
 }
 
-double Point::DistanceSquared(const Point &p1, const Point &p2) const {
+double Vertex::DistanceSquared(const Vertex &p1, const Vertex &p2) const {
 	auto p = ClosestPointOnSegment(*this, p1, p2);
 	return DistanceSquared(p);
 }
 
-double PointArray::Length() const {
+double VertexVector::Length() const {
 	double length = 0;
 	for (uint32_t i = 0; i < count - 1; i++) {
 		auto &p1 = data[i];
@@ -31,7 +31,7 @@ double PointArray::Length() const {
 	return length;
 }
 
-double PointArray::SignedArea() const {
+double VertexVector::SignedArea() const {
 	if(count < 3) {
 		return 0;
 	}
@@ -44,11 +44,11 @@ double PointArray::SignedArea() const {
 	return area * 0.5;
 }
 
-double PointArray::Area() const {
+double VertexVector::Area() const {
 	return std::abs(SignedArea());
 }
 
-bool PointArray::IsClosed() const {
+bool VertexVector::IsClosed() const {
 	if (count == 0) {
 		return false;
 	}
@@ -58,33 +58,33 @@ bool PointArray::IsClosed() const {
 	return data[0] == data[count - 1];
 }
 
-bool PointArray::IsEmpty() const {
+bool VertexVector::IsEmpty() const {
 	return count == 0;
 }
 
-WindingOrder PointArray::GetWindingOrder() const {
+WindingOrder VertexVector::GetWindingOrder() const {
 	return SignedArea() > 0 ? WindingOrder::COUNTER_CLOCKWISE : WindingOrder::CLOCKWISE;
 }
 
-bool PointArray::IsClockwise() const {
+bool VertexVector::IsClockwise() const {
 	return GetWindingOrder() == WindingOrder::CLOCKWISE;
 }
 
-bool PointArray::IsCounterClockwise() const {
+bool VertexVector::IsCounterClockwise() const {
 	return GetWindingOrder() == WindingOrder::COUNTER_CLOCKWISE;
 }
 
-bool PointArray::IsSimple() const {
-	throw NotImplementedException("PointArray::IsSimple");
+bool VertexVector::IsSimple() const {
+	throw NotImplementedException("VertexVector::IsSimple");
 }
 
-Contains PointArray::ContainsPoint(const Point &p, bool ensure_closed) const {
+Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const {
 
 	auto &p1 = data[0];
 	auto &p2 = data[count-1];
 
 	if(ensure_closed && p1 != p2) {
-		throw InternalException("PointArray::Contains: PointArray is not closed");
+		throw InternalException("VertexVector::Contains: VertexVector is not closed");
 	}
 
 	int winding_number = 0;
@@ -119,7 +119,7 @@ Contains PointArray::ContainsPoint(const Point &p, bool ensure_closed) const {
 	return winding_number == 0 ? Contains::OUTSIDE : Contains::INSIDE;
 }
 
-std::tuple<uint32_t, double> PointArray::ClosestSegment(const Point &p) const {
+std::tuple<uint32_t, double> VertexVector::ClosestSegment(const Vertex &p) const {
 	double min_distance = std::numeric_limits<double>::max();
 	uint32_t min_index = 0;
 	// Loop over all segments and find the closest one
@@ -132,7 +132,7 @@ std::tuple<uint32_t, double> PointArray::ClosestSegment(const Point &p) const {
 			min_index = i-1;
 
 			if(min_distance == 0) {
-				// if the point is on a segment, then we don't have to search any further
+				// if the Vertex is on a segment, then we don't have to search any further
 				return make_pair(min_index, 0);
 			}
 		}
@@ -142,7 +142,7 @@ std::tuple<uint32_t, double> PointArray::ClosestSegment(const Point &p) const {
 	return make_pair(min_index, std::sqrt(min_distance));
 }
 
-std::tuple<uint32_t, double> PointArray::ClosetPoint(const Point &p) const {
+std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
 	double min_distance = std::numeric_limits<double>::max();
 	uint32_t min_index = 0;
 	// Loop over all segments and find the closest one
@@ -156,7 +156,7 @@ std::tuple<uint32_t, double> PointArray::ClosetPoint(const Point &p) const {
 			min_index = i;
 
 			if(min_distance == 0) {
-				// if the point is on the pointarray, then we don't have to search any further
+				// if the Vertex is on the VertexVector, then we don't have to search any further
 				return make_pair(min_index, 0);
 			}
 		}
@@ -164,10 +164,10 @@ std::tuple<uint32_t, double> PointArray::ClosetPoint(const Point &p) const {
 	return make_pair(min_index, std::sqrt(min_distance));
 }
 
-std::tuple<Point, double, double> PointArray::LocatePoint(const Point &p) const {
+std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) const {
 
 	if(count == 0) {
-		return std::make_tuple(Point(), 0, 0);
+		return std::make_tuple(Vertex(), 0, 0);
 	}
 	if (count == 1) {
 		auto single = data[0];
@@ -187,7 +187,7 @@ std::tuple<Point, double, double> PointArray::LocatePoint(const Point &p) const 
 			min_distance = seg_distance;
 			min_index = i-1;
 			if(min_distance == 0) {
-				// if the point is on a segment, then we don't have to search any further
+				// if the Vertex is on a segment, then we don't have to search any further
 				break;
 			}
 		}
@@ -195,44 +195,44 @@ std::tuple<Point, double, double> PointArray::LocatePoint(const Point &p) const 
 	}
 
 	min_distance = std::sqrt(min_distance);
-	// Now we have the closest segment, find the closest point on that segment
-	auto closest_point = ClosestPointOnSegment(p, p1, p2);
+	// Now we have the closest segment, find the closest Vertex on that segment
+	auto closest_Vertex = ClosestPointOnSegment(p, p1, p2);
 
-	// Now we have the closest point, find the distance from the start of the segment
+	// Now we have the closest Vertex, find the distance from the start of the segment
 	auto total_length = Length();
 	if (total_length == 0) {
-		// if the pointarray is a point, then the closest point is the point itself
-		return std::make_tuple(closest_point, 0, min_distance);
+		// if the VertexVector is a Vertex, then the closest Vertex is the Vertex itself
+		return std::make_tuple(closest_Vertex, 0, min_distance);
 	}
-	auto point_length = 0.0;
+	auto Vertex_length = 0.0;
 	for (uint32_t i = 0; i < min_index; i++) {
 		p1 = data[i];
 		p2 = data[i+1];
-		point_length += p1.Distance(p2);
+		Vertex_length += p1.Distance(p2);
 	}
 
-	auto location = point_length / total_length;
-	return std::make_tuple(closest_point, location, min_distance);
+	auto location = Vertex_length / total_length;
+	return std::make_tuple(closest_Vertex, location, min_distance);
 }
 
 
 // utils
-Point ClosestPointOnSegment(const Point &p, const Point &p1, const Point &p2) {
-	// If the segment is a point, then return that point
+Vertex ClosestPointOnSegment(const Vertex &p, const Vertex &p1, const Vertex &p2) {
+	// If the segment is a Vertex, then return that Vertex
 	if(p1 == p2) {
 		return p1;
 	}
 	double r = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y)) / ((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
-	// If r is less than 0, then the point is outside the segment in the p1 direction
+	// If r is less than 0, then the Vertex is outside the segment in the p1 direction
 	if (r <= 0) {
 		return p1;
 	}
-	// If r is greater than 1, then the point is outside the segment in the p2 direction
+	// If r is greater than 1, then the Vertex is outside the segment in the p2 direction
 	if (r >= 1) {
 		return p2;
 	}
 	// Interpolate between p1 and p2
-	return Point(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
+	return Vertex(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
 }
 
 
