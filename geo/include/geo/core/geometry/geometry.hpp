@@ -36,7 +36,11 @@ public:
 	inline double& Y() {
 		return data[0].y;
 	}
-	inline Vertex& Vertex() {
+	inline Vertex& GetVertex() {
+		return data[0];
+	}
+
+	inline Vertex const& GetVertex() const {
 		return data[0];
 	}
 };
@@ -53,6 +57,8 @@ public:
     string ToString() const;
 
 	uint32_t SerializedSize() const;
+
+	double Distance(const Geometry &other) const;
 };
 
 struct Polygon {
@@ -69,6 +75,8 @@ public:
     string ToString() const;
 
 	uint32_t SerializedSize() const;
+
+	double Distance(const Geometry &other) const;
 };
 
 struct Geometry {
@@ -174,6 +182,9 @@ public:
 
 	string ToString() const;
 	uint32_t SerializedSize() const;
+
+	// Forwarding Methods
+	double Distance(const Geometry &other) const;
 };
 
 struct GeometryPrefix {
@@ -187,11 +198,11 @@ struct GeometryPrefix {
 	uint32_t SerializedSize() const {
 		return sizeof(GeometryPrefix);
 	}
+
 	uint32_t Serialize(data_ptr_t dst) const {
 		*((GeometryPrefix*)dst) = *this;
 		return sizeof(GeometryPrefix);
 	}
-
 };
 
 static_assert(sizeof(GeometryPrefix) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");

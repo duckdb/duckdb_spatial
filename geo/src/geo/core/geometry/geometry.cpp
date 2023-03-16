@@ -92,6 +92,7 @@ uint32_t Polygon::SerializedSize() const {
 	return size;
 }
 
+
 //--------------------
 // Geometry
 //--------------------
@@ -131,7 +132,6 @@ uint32_t Geometry::SerializedSize() const {
 	}
 	return result;
 }
-
 
 
 } // namespace core

@@ -143,7 +143,7 @@ static void DistanceFunction(DataChunk &args, ExpressionState &state, Vector &re
 		auto &left_point = left_geom.GetPoint();
 		auto &right_point = right_geom.GetPoint();
 
-		auto dist = left_point.Vertex().Distance(right_point.Vertex());
+		auto dist = left_point.GetVertex().Distance(right_point.GetVertex());
 
 		allocator.Reset();
 

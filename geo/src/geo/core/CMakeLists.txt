@@ -1,4 +1,5 @@
 add_subdirectory(geometry)
+add_subdirectory(layout_benchmark)
 
 set(EXTENSION_SOURCES
         ${EXTENSION_SOURCES}

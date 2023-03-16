@@ -44,6 +44,72 @@ double VertexVector::SignedArea() const {
 	return area * 0.5;
 }
 
+double ColumnarArea(vector<double> xs, vector<double> ys) {
+	double area = 0;
+
+	for (uint32_t i = 0; i < xs.size() - 1; i++) {
+		area += xs[i] * ys[i + 1];
+		area -= xs[i + 1] * ys[i];
+	}
+	return area;
+}
+
+Contains ColumnarContainsPoint(vector<double> xs, vector<double> ys, double x, double y) {
+
+	int winding_number = 0;
+	uint32_t count = xs.size();
+
+	auto x1 = xs[0];
+	auto y1 = ys[0];
+
+	for (uint32_t i = 0; i < count; i++) {
+		auto x2 = xs[i];
+		auto y2 = ys[i];
+
+		if (x1 == x2 && y1 == y2) {
+			x1 = x2;
+			y1 = y2;
+			continue;
+		}
+
+		auto y_min = std::min(y1, y2);
+		auto y_max = std::max(y1, y2);
+
+		if (y > y_max || y < y_min) {
+			x1 = x2;
+			y1 = y2;
+			continue;
+		}
+
+		auto side = Side::ON;
+		double side_v = ( (x - x1) * (y2 - y1) - (x2 - x1) * (y - y1) );
+		if (side_v == 0) {
+			side = Side::ON;
+		} else if (side_v < 0) {
+			side = Side::LEFT;
+		} else {
+			side = Side::RIGHT;
+		}
+
+		if(side == Side::ON && (
+			((x1 <= x && x < x2) || (x1 >= x && x > x2)) ||
+			       ((y1 <= y && y < y2) || (y1 >= y && y > y2)))) {
+			return Contains::ON_EDGE;
+		}
+		else if(side == Side::LEFT && (y1 < y && y <= y2)) {
+			winding_number++;
+		}
+		else if(side == Side::RIGHT && (y2 <= y && y < y1)) {
+			winding_number--;
+		}
+
+		x1 = x2;
+		y1 = y2;
+	}
+
+	return winding_number == 0 ? Contains::OUTSIDE : Contains::INSIDE;
+}
+
 double VertexVector::Area() const {
 	return std::abs(SignedArea());
 }
