@@ -17,6 +17,13 @@ namespace core {
 //--------------------
 // Point Struct
 //--------------------
+
+enum class Side {
+    LEFT,
+    RIGHT,
+    ON
+};
+
 struct Point {
     double x;
     double y;
@@ -285,7 +292,6 @@ static void CreateLine_2D_C(DataChunk &args, ExpressionState &state, Vector &res
 	auto &inner = ListVector::GetEntry(result);
 	auto lines = ListVector::GetData(result);
 
-
 	auto wkb_data = FlatVector::GetData<string_t>(wkb_blobs);
 
 	idx_t total_size = 0;
@@ -402,6 +408,8 @@ static LogicalType GEO_POINT_3D_R = LogicalType::LIST(LogicalType::DOUBLE);
 static LogicalType GEO_POINT_4D_R = LogicalType::LIST(LogicalType::DOUBLE);
 
 static LogicalType GEO_LINE_2D_R = LogicalType::LIST(GEO_POINT_2D_R);
+
+static LogicalType GEO_POLYGON_2D_R = LogicalType::LIST(GEO_LINE_2D_R);
 
 static void CreatePoint2D_R(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
@@ -558,6 +566,75 @@ static void CreateLine_2D_R(DataChunk &args, ExpressionState &state, Vector &res
 
     ListVector::SetListSize(result, total_coords_size);
     ListVector::SetListSize(coord_vec, total_coords_data_size);
+
+    if(count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+static void CreatePolygon_2D_R(DataChunk &args, ExpressionState &state, Vector &result) {
+    D_ASSERT(args.data.size() == 1);
+    auto count = args.size();
+
+    // Set up input data
+    auto &wkb_blobs = args.data[0];
+    wkb_blobs.Flatten(count);
+    auto wkb_data = FlatVector::GetData<string_t>(wkb_blobs);
+
+    // Set up output data
+    auto &ring_vec = ListVector::GetEntry(result);
+    auto &coords_vec = ListVector::GetEntry(ring_vec);
+    auto polygons = ListVector::GetData(result);
+
+    idx_t total_ring_count = 0;
+    idx_t total_point_count = 0;
+    idx_t total_coord_count = 0;
+
+    for(idx_t i = 0; i < count; i++) {
+        auto wkb = wkb_data[i];
+        auto wkb_ptr = wkb.GetDataUnsafe();
+        auto wkb_size = wkb.GetSize();
+
+        SimpleWKBReader reader(wkb_ptr, wkb_size);
+        auto polygon = reader.ReadPolygon();
+        auto ring_count = polygon.size();
+
+        polygons[i].offset = total_ring_count;
+        polygons[i].length = ring_count;
+
+        ListVector::Reserve(result, total_ring_count + ring_count);
+        // Since ListVector::Reserve potentially reallocates, we need to re-fetch the inner vector pointers
+
+        for (idx_t j = 0; j < ring_count; j++) {
+            auto ring = polygon[j];
+            auto point_count = ring.size();
+
+            ListVector::Reserve(ring_vec, total_point_count + point_count);
+            auto ring_entries = ListVector::GetData(ring_vec);
+            ListVector::Reserve(coords_vec, total_coord_count + point_count * 2);
+            auto coords_entries = ListVector::GetData(coords_vec);
+            auto &coord_inner = ListVector::GetEntry(coords_vec);
+            auto coord_inner_data = FlatVector::GetData<double>(coord_inner);
+
+            for (idx_t k = 0; k < point_count; k++) {
+                auto point = ring[k];
+                coords_entries[total_point_count + k].offset = total_coord_count;
+                coords_entries[total_point_count + k].length = 2;
+                coord_inner_data[total_coord_count] = point.x;
+                coord_inner_data[total_coord_count + 1] = point.y;
+                total_coord_count += 2;
+            }
+
+            ring_entries[total_ring_count + j].offset = total_point_count;
+            ring_entries[total_ring_count + j].length = point_count;
+
+            total_point_count += point_count;
+        }
+        total_ring_count += ring_count;
+    }
+    ListVector::SetListSize(result, total_ring_count);
+    ListVector::SetListSize(ring_vec, total_point_count);
+    ListVector::SetListSize(coords_vec, total_coord_count);
 
     if(count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -917,11 +994,6 @@ static void AreaFunction_2D_C(DataChunk &args, ExpressionState &state, Vector &r
 //----------------------------------------------------------------------
 // POINT IN POLYGON (COLUMN)
 //----------------------------------------------------------------------
-enum class Side {
-    LEFT,
-    RIGHT,
-    ON
-};
 
 static void PointInPolygon_C(DataChunk &args, ExpressionState &state, Vector &result) {
     D_ASSERT(args.data.size() == 2);
@@ -1039,6 +1111,187 @@ static void PointInPolygon_C(DataChunk &args, ExpressionState &state, Vector &re
             first = false;
         }
         result_data[polygon_idx] = contains;
+    }
+    if(count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+//----------------------------------------------------------------------
+// POLYGON AREA (ROW)
+//----------------------------------------------------------------------
+static void PointInPolygon_R(DataChunk &args, ExpressionState &state, Vector &result) {
+    D_ASSERT(args.data.size() == 2);
+
+    auto count = args.size();
+    auto &in_point = args.data[0];
+    auto &in_polygon = args.data[1];
+
+    in_polygon.Flatten(count);
+    in_point.Flatten(count);
+
+    // Setup point vectors
+    auto point_entries = ListVector::GetData(in_point);
+    auto point_data = FlatVector::GetData<double>(ListVector::GetEntry(in_point));
+
+    // Setup polygon vectors
+    auto polygon_entries = ListVector::GetData(in_polygon);
+    auto &ring_vec = ListVector::GetEntry(in_polygon);
+    auto ring_entries = ListVector::GetData(ring_vec);
+    auto &coord_vec = ListVector::GetEntry(ring_vec);
+    auto coord_entries = ListVector::GetData(coord_vec);
+    auto coord_data = FlatVector::GetData<double>(ListVector::GetEntry(coord_vec));
+
+    auto result_data = FlatVector::GetData<bool>(result);
+
+    for(idx_t polygon_idx = 0; polygon_idx < count; polygon_idx++) {
+        auto polygon = polygon_entries[polygon_idx];
+        auto polygon_offset = polygon.offset;
+        auto polygon_length = polygon.length;
+        bool first = true;
+
+        // does the point lie inside the polygon?
+        bool contains = false;
+
+        auto x = point_data[point_entries[polygon_idx].offset];
+        auto y = point_data[point_entries[polygon_idx].offset + 1];
+
+        for (idx_t ring_idx = polygon_offset; ring_idx < polygon_offset + polygon_length; ring_idx++) {
+            auto ring = ring_entries[ring_idx];
+            auto ring_offset = ring.offset;
+            auto ring_length = ring.length;
+
+            auto x1 = coord_data[coord_entries[ring_offset].offset];
+            auto y1 = coord_data[coord_entries[ring_offset].offset + 1];
+
+            int winding_number = 0;
+
+            for (idx_t coord_idx = ring_offset + 1; coord_idx < ring_offset + ring_length; coord_idx++) {
+                // foo foo foo
+                auto x2 = coord_data[coord_entries[coord_idx].offset];
+                auto y2 = coord_data[coord_entries[coord_idx].offset + 1];
+
+                if (x1 == x2 && y1 == y2) {
+                    x1 = x2;
+                    y1 = y2;
+                    continue;
+                }
+
+                auto y_min = std::min(y1, y2);
+                auto y_max = std::max(y1, y2);
+
+                if (y > y_max || y < y_min) {
+                    x1 = x2;
+                    y1 = y2;
+                    continue;
+                }
+
+                auto side = Side::ON;
+                double side_v = ( (x - x1) * (y2 - y1) - (x2 - x1) * (y - y1) );
+                if (side_v == 0) {
+                    side = Side::ON;
+                } else if (side_v < 0) {
+                    side = Side::LEFT;
+                } else {
+                    side = Side::RIGHT;
+                }
+
+                if(side == Side::ON && (
+                        ((x1 <= x && x < x2) || (x1 >= x && x > x2)) ||
+                        ((y1 <= y && y < y2) || (y1 >= y && y > y2)))) {
+
+                    //return Contains::ON_EDGE;
+                    contains = false;
+                    break;
+                }
+                else if(side == Side::LEFT && (y1 < y && y <= y2)) {
+                    winding_number++;
+                }
+                else if(side == Side::RIGHT && (y2 <= y && y < y1)) {
+                    winding_number--;
+                }
+
+                x1 = x2;
+                y1 = y2;
+            }
+            bool in_ring = winding_number != 0;
+            if(first) {
+                if(!in_ring) {
+                    // if the first ring is not inside, then the point is not inside the polygon
+                    contains = false;
+                    break;
+                } else {
+                    // if the first ring is inside, then the point is inside the polygon
+                    // but might be inside a hole, so we continue
+                    contains = true;
+                }
+            } else {
+                if(in_ring) {
+                    // if the hole is inside, then the point is not inside the polygon
+                    contains = false;
+                    break;
+                } // else continue
+            }
+            first = false;
+        }
+        result_data[polygon_idx] = contains;
+    }
+    if(count == 1) {
+        result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    }
+}
+
+//----------------------------------------------------------------------
+// POINT IN POLYGON (ROW)
+//----------------------------------------------------------------------
+static void AreaFunction_2D_R(DataChunk &args, ExpressionState &state, Vector &result) {
+    D_ASSERT(args.data.size() == 1);
+
+    auto count = args.size();
+    auto &in_polygon = args.data[0];
+
+    in_polygon.Flatten(count);
+
+    // Setup polygon vectors
+    auto polygon_entries = ListVector::GetData(in_polygon);
+    auto &ring_vec = ListVector::GetEntry(in_polygon);
+    auto ring_entries = ListVector::GetData(ring_vec);
+    auto &coord_vec = ListVector::GetEntry(ring_vec);
+    auto coord_entries = ListVector::GetData(coord_vec);
+    auto coord_data = FlatVector::GetData<double>(ListVector::GetEntry(coord_vec));
+
+    auto result_data = FlatVector::GetData<double>(result);
+
+    for(idx_t polygon_idx = 0; polygon_idx < count; polygon_idx++) {
+        auto polygon = polygon_entries[polygon_idx];
+        auto polygon_offset = polygon.offset;
+        auto polygon_length = polygon.length;
+        bool first = true;
+        auto area = 0.0;
+
+        for (idx_t ring_idx = polygon_offset; ring_idx < polygon_offset + polygon_length; ring_idx++) {
+            auto ring = ring_entries[ring_idx];
+            auto ring_offset = ring.offset;
+            auto ring_length = ring.length;
+
+            auto sum = 0.0;
+            for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
+                auto x1 = coord_data[coord_entries[ring_offset].offset];
+                auto y1 = coord_data[coord_entries[ring_offset].offset + 1];
+                auto x2 = coord_data[coord_entries[ring_offset + 1].offset];
+                auto y2 = coord_data[coord_entries[ring_offset + 1].offset + 1];
+                sum += (x2 - x1) * (y2 + y1);
+            }
+            if(first) {
+                // Add outer ring
+                area = sum * 0.5;
+                first = false;
+            } else {
+                // Subtract holes
+                area -= sum * 0.5;
+            }
+        }
+        result_data[polygon_idx] = area;
     }
     if(count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -1186,7 +1439,9 @@ void LayoutBenchmark::Register(ClientContext &context) {
             "geo_line_point_distance2d_r", {GEO_POINT_2D_R, GEO_LINE_2D_R}, LogicalType::DOUBLE, LinePointDistance_2D_R));
     catalog.CreateFunction(context, &line_point_distance_2d_r_info);
 
-
+    CreateScalarFunctionInfo create_polygon_2d_r_info(ScalarFunction(
+        "geo_create_polygon2d_r", {GeoTypes::WKB_BLOB}, GEO_POLYGON_2D_R, CreatePolygon_2D_R));
+    catalog.CreateFunction(context, &create_polygon_2d_r_info);
 
     /// LINES (ROWS)
     CreateScalarFunctionInfo create_line_2d_r_info(ScalarFunction(
@@ -1197,6 +1452,15 @@ void LayoutBenchmark::Register(ClientContext &context) {
     CreateScalarFunctionInfo length_2d_r_info(ScalarFunction(
         "geo_length2d_r", {LogicalType::ANY}, LogicalType::DOUBLE, LengthFunction_2D_R));
     catalog.CreateFunction(context, &length_2d_r_info);
+
+    /// POLYGONS (ROWS)
+    CreateScalarFunctionInfo polygon_area_2d_r_info(ScalarFunction(
+        "geo_polygon_area2d_r", {GEO_POLYGON_2D_R}, LogicalType::DOUBLE, AreaFunction_2D_R));
+    catalog.CreateFunction(context, &polygon_area_2d_r_info);
+
+    CreateScalarFunctionInfo point_in_polygon_2d_r_info(ScalarFunction(
+        "geo_point_in_polygon2d_r", {GEO_POINT_2D_R, GEO_POLYGON_2D_R}, LogicalType::BOOLEAN, PointInPolygon_R));
+    catalog.CreateFunction(context, &point_in_polygon_2d_r_info);
 
 	/*
 	 	GeoTypes::WKB_BLOB.SetAlias("WKB_BLOB");
