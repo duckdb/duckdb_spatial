@@ -60,7 +60,7 @@ static void WKBAreaFunction(DataChunk &args, ExpressionState &state, Vector &res
 	auto ctx = GeosContextWrapper();
 	auto reader = ctx.CreateWKBReader();
 
-	UnaryExecutor::Execute<string_t, bool>(input, result, count, [&](string_t &wkb) {
+	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t &wkb) {
 		auto geom = reader.Read(wkb);
 		return geom.Area();
 	});
