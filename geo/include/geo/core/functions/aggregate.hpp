@@ -1,12 +1,11 @@
 #pragma once
-
 #include "geo/common.hpp"
 
 namespace geo {
 
 namespace core {
 
-struct GeometryFunctions {
+struct CoreAggregateFunctions {
 	static void Register(ClientContext &context);
 };
 

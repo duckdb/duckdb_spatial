@@ -1,16 +1,11 @@
 #pragma once
 
 #include "geo/common.hpp"
+#include "geo/core/types.hpp"
 
 namespace geo {
 
 namespace core {
-
-enum class Side {
-	LEFT,
-	RIGHT,
-	ON
-};
 
 struct Flags {
 private:
@@ -93,13 +88,12 @@ enum class Contains {
 };
 
 class VertexVector {
-private:
+public:
 	uint32_t count;
 	uint32_t capacity;
 	Vertex *data;
-	bool is_owned;
-public:
-	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity, bool is_owned) : count(count), capacity(capacity), data(data), is_owned(is_owned)
+
+	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity) : count(count), capacity(capacity), data(data)
 	{ }
 
 	// Copy constructor (deleted)
@@ -113,7 +107,6 @@ public:
 		std::swap(other.data, data);
 		count = other.count;
 		capacity = other.capacity;
-		is_owned = other.is_owned;
 	}
 
 	// Move assignment
@@ -121,35 +114,16 @@ public:
 		std::swap(other.data, data);
 		count = other.count;
 		capacity = other.capacity;
-		is_owned = other.is_owned;
 		return *this;
-	}
-
-	// Destructor
-	~VertexVector() {
-		if (is_owned) {
-			free(data);
-		}
 	}
 
 	// Create a VertexVector from an already existing buffer
 	static VertexVector FromBuffer(Vertex *buffer, uint32_t count) {
-		VertexVector array(buffer, count, count, false);
+		VertexVector array(buffer, count, count);
 		return array;
 	}
 
-	// Create a VertexVector by allocating a new buffer on the heap
-	static VertexVector Create(uint32_t capacity) {
-		VertexVector array((Vertex *)malloc(sizeof(Vertex) * capacity), 0, capacity, true);
-		return array;
-	}
-
-	inline Vertex& operator[](uint32_t index) {
-		D_ASSERT(index < count);
-		return data[index];
-	}
-
-	inline const Vertex& operator[](uint32_t index) const {
+	inline Vertex& operator[](uint32_t index) const {
 		D_ASSERT(index < count);
 		return data[index];
 	}

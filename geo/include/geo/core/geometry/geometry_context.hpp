@@ -23,6 +23,8 @@ public:
 	Point CreatePoint(double x, double y);
 	LineString CreateLineString(uint32_t capacity);
 	Polygon CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities);
+	// Create a polygon, but leave the ring arrays uninitialized
+	Polygon CreatePolygon(uint32_t num_rings);
 
 
 	string_t Serialize(Vector &result, const Geometry &geometry);

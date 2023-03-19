@@ -47,9 +47,7 @@ public:
 
 struct LineString {
 	friend GeometryContext;
-private:
 	VertexVector points;
-public:
 	explicit LineString(VertexVector data) : points(std::move(data)) { }
 
     double Length() const;
@@ -63,10 +61,8 @@ public:
 
 struct Polygon {
 	friend GeometryContext;
-private:
     VertexVector *rings;
     uint32_t num_rings;
-public:
 	explicit Polygon(VertexVector *rings, uint32_t num_rings) : rings(rings), num_rings(num_rings) { }
 
     double Area() const;

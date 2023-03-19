@@ -55,6 +55,7 @@ public:
 		default: throw NotImplementedException("Unknown WKB byte order");
 		}
 	}
+
 private:
 	template<WKBByteOrder ORDER>
 	Geometry ReadGeometry() {
@@ -205,7 +206,7 @@ string GeometryContext::ToWKB(const Geometry &geometry) {
 
 VertexVector GeometryContext::AllocateVertexVector(uint32_t capacity) {
 	auto data = reinterpret_cast<Vertex*>(allocator.AllocateAligned(sizeof(Vertex) * capacity));
-	return VertexVector(data, 0, capacity, false);
+	return VertexVector(data, 0, capacity);
 }
 
 Point GeometryContext::CreatePoint(double x, double y) {
@@ -223,6 +224,11 @@ Polygon GeometryContext::CreatePolygon(uint32_t num_rings, uint32_t *ring_capaci
 	for (uint32_t i = 0; i < num_rings; i++) {
 		rings[i] = AllocateVertexVector(ring_capacities[i]);
 	}
+	return Polygon(rings, num_rings);
+}
+
+Polygon GeometryContext::CreatePolygon(uint32_t num_rings) {
+	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
 	return Polygon(rings, num_rings);
 }
 
@@ -291,7 +297,7 @@ string_t GeometryContext::Serialize(Vector &result, const Geometry &geometry) {
 	}
 	case GeometryType::POLYGON: {
 		auto &poly = geometry.GetPolygon();
-		uint32_t total_size = sizeof(GeometryPrefix) + 4 + 4 + poly.SerializedSize();
+		uint32_t total_size = sizeof(GeometryPrefix) + 4 + 4 /* pad to 16 */ + (12 * poly.num_rings) + poly.SerializedSize();
 		auto ptr = allocator.AllocateAligned(total_size);
 		auto start = ptr;
 		// write prefix
@@ -312,6 +318,15 @@ string_t GeometryContext::Serialize(Vector &result, const Geometry &geometry) {
 			Store(poly.rings[i].Count(), ptr);
 			ptr += sizeof(uint32_t);
 
+			// Pad to 16 byte alignment
+			// This is really excessive, we should def figure out some other way to do this
+			// This will also break once we have more than 2 dimensions?
+			// Don't actually use a Vertex* ptr, but instead use an uint8_t* ptr
+			// Then instantiate a Vertex from the doubles when we actually need it.
+			ptr += sizeof(uint32_t);
+			ptr += sizeof(uint32_t);
+			ptr += sizeof(uint32_t);
+
 			// write data
 			ptr += poly.rings[i].Serialize(ptr);
 		}
@@ -321,6 +336,9 @@ string_t GeometryContext::Serialize(Vector &result, const Geometry &geometry) {
 		throw NotImplementedException("Geometry::Serialize(<Unknown>)");
 	}
 }
+
+static inline bool is_aligned(const void * pointer, size_t byte_count)
+{ return (uintptr_t)pointer % byte_count == 0; }
 
 Geometry GeometryContext::Deserialize(const string_t &data) {
 	auto ptr = (const_data_ptr_t)data.GetDataUnsafe();
@@ -345,7 +363,7 @@ Geometry GeometryContext::Deserialize(const string_t &data) {
 		ptr += sizeof(uint32_t);
 
 		// Now read point data;
-		VertexVector vertex_data((Vertex*)ptr, 1, 1, false );
+		VertexVector vertex_data((Vertex*)ptr, 1, 1);
 		return Geometry(Point(std::move(vertex_data)));
 	}
 	case GeometryType::LINESTRING: {
@@ -354,7 +372,7 @@ Geometry GeometryContext::Deserialize(const string_t &data) {
 		ptr += sizeof(uint32_t);
 
 		// read data
-		VertexVector vertex_data((Vertex*)ptr, length, length, false);
+		VertexVector vertex_data((Vertex*)ptr, length, length);
 		return Geometry(LineString(std::move(vertex_data)));
 	}
 	case GeometryType::POLYGON: {
@@ -369,8 +387,15 @@ Geometry GeometryContext::Deserialize(const string_t &data) {
 			auto length = Load<uint32_t>(ptr);
 			ptr += sizeof(uint32_t);
 
+			// Pad to 16 byte alignment
+			ptr += sizeof(uint32_t);
+			ptr += sizeof(uint32_t);
+			ptr += sizeof(uint32_t);
+
+
 			// read data
-			rings[i] = VertexVector((Vertex*)ptr, length, length, false);
+			D_ASSERT(is_aligned(ptr, sizeof(Vertex)));
+			rings[i] = VertexVector((Vertex*)ptr, length, length);
 			ptr += length * sizeof(Vertex);
 		}
 
