@@ -32,7 +32,7 @@ VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) {
 Point GeometryFactory::CreatePoint(double x, double y) {
 	auto data = AllocateVertexVector(1);
 	data.Add(Vertex(x, y));
-	return Point(std::move(data));
+	return Point(data);
 }
 
 LineString GeometryFactory::CreateLineString(uint32_t num_points) {
@@ -62,7 +62,7 @@ Polygon GeometryFactory::CreatePolygon(uint32_t num_rings) {
 // Data (variable length)
 // -- Point
 // 	  Type ( 4 bytes)
-//    Padding (4 bytes)
+//    Count (4 bytes) (count == 0 if empty point, otherwise 1)
 //    X (8 bytes)
 //    Y (8 bytes)
 // -- LineString
@@ -72,8 +72,14 @@ Polygon GeometryFactory::CreatePolygon(uint32_t num_rings) {
 // -- Polygon
 //    Type (4 bytes)
 //    NumRings (4 bytes)
-//    Rings (variable length)
+// 	  RingsLengths (variable length)
 //    padding (4 bytes if num_rings is odd)
+//    RingsData (variable length)
+// --- Multi/Point/LineString/Polygon & GeometryCollection
+//    Type (4 bytes)
+//    NumGeometries (4 bytes)
+//    Geometries (variable length)
+
 string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	auto type = geometry.Type();
 	GeometryPrefix prefix(0, type);
@@ -141,6 +147,18 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 		SerializeMultiPolygon(ptr, multipolygon);
 		return StringVector::AddStringOrBlob(result, (const char *)start, size);
 	}
+	case GeometryType::GEOMETRYCOLLECTION: {
+		auto &collection = geometry.GetGeometryCollection();
+		auto size = header_size + GetSerializedSize(collection);
+		auto start = allocator.AllocateAligned(size);
+		auto ptr = start;
+		prefix.Serialize(ptr);
+		ptr += 4; // skip padding
+		SerializeGeometryCollection(ptr, collection);
+		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+	    }
+	default:
+		throw NotImplementedException("Unimplemented geometry type for serialization!");
 	}
 }
 
@@ -237,6 +255,46 @@ void GeometryFactory::SerializeMultiPolygon(data_ptr_t &ptr, const MultiPolygon 
 	}
 }
 
+void GeometryFactory::SerializeGeometryCollection(data_ptr_t &ptr, const GeometryCollection &collection) {
+	Store<uint32_t>((uint32_t)GeometryType::GEOMETRYCOLLECTION, ptr);
+	ptr += sizeof(uint32_t);
+
+	// write number of geometries
+	Store<uint32_t>(collection.num_geometries, ptr);
+	ptr += sizeof(uint32_t);
+
+	// write geometry data
+	for (uint32_t i = 0; i < collection.num_geometries; i++) {
+		auto &geom = collection.geometries[i];
+		switch (geom.Type()) {
+		case GeometryType::POINT:
+			SerializePoint(ptr, geom.GetPoint());
+			break;
+		case GeometryType::LINESTRING:
+			SerializeLineString(ptr, geom.GetLineString());
+			break;
+		case GeometryType::POLYGON:
+			SerializePolygon(ptr, geom.GetPolygon());
+			break;
+		case GeometryType::MULTIPOINT:
+			SerializeMultiPoint(ptr, geom.GetMultiPoint());
+			break;
+		case GeometryType::MULTILINESTRING:
+			SerializeMultiLineString(ptr, geom.GetMultiLineString());
+			break;
+		case GeometryType::MULTIPOLYGON:
+			SerializeMultiPolygon(ptr, geom.GetMultiPolygon());
+			break;
+		case GeometryType::GEOMETRYCOLLECTION:
+			SerializeGeometryCollection(ptr, geom.GetGeometryCollection());
+			break;
+		default:
+			throw NotImplementedException("Unimplemented geometry type!");
+		}
+	}
+}
+
+
 uint32_t GeometryFactory::GetSerializedSize(const Point &point) {
 	// 4 bytes for the type
 	// 4 bytes for the length
@@ -301,6 +359,28 @@ uint32_t GeometryFactory::GetSerializedSize(const MultiPolygon &multipolygon) {
 	return size;
 }
 
+uint32_t GeometryFactory::GetSerializedSize(const GeometryCollection &collection) {
+    // 4 bytes for the type
+    // 4 bytes for the number of geometries
+    // sizeof(geometry) * count
+    uint32_t size = 4 + 4;
+	for (uint32_t i = 0; i < collection.num_geometries; i++) {
+		auto &geom = collection.geometries[i];
+		switch (geom.Type()) {
+		case GeometryType::POINT: size += GetSerializedSize(geom.GetPoint()); break;
+		case GeometryType::LINESTRING: size += GetSerializedSize(geom.GetLineString()); break;
+		case GeometryType::POLYGON: size += GetSerializedSize(geom.GetPolygon()); break;
+		case GeometryType::MULTIPOINT: size += GetSerializedSize(geom.GetMultiPoint()); break;
+		case GeometryType::MULTILINESTRING: size += GetSerializedSize(geom.GetMultiLineString()); break;
+		case GeometryType::MULTIPOLYGON: size += GetSerializedSize(geom.GetMultiPolygon()); break;
+		case GeometryType::GEOMETRYCOLLECTION: size += GetSerializedSize(geom.GetGeometryCollection()); break;
+		default:
+			throw NotImplementedException("Unimplemented geometry type for serialization!");
+		}
+	}
+	return size;
+}
+
 //----------------------------------------------------------------------
 // Deserialization
 //----------------------------------------------------------------------
@@ -326,6 +406,7 @@ Geometry GeometryFactory::Deserialize(const string_t &data) {
 	case GeometryType::MULTIPOINT: return Geometry(DeserializeMultiPoint(ptr));
 	case GeometryType::MULTILINESTRING: return Geometry(DeserializeMultiLineString(ptr));
 	case GeometryType::MULTIPOLYGON: return Geometry(DeserializeMultiPolygon(ptr));
+	case GeometryType::GEOMETRYCOLLECTION: return Geometry(DeserializeGeometryCollection(ptr));
 	default:
 		throw NotImplementedException("Deserialize::Geometry type not implemented yet!");
 	}
@@ -342,14 +423,14 @@ Point GeometryFactory::DeserializePoint(const_data_ptr_t &ptr) {
 
 	if (count == 0) {
 		VertexVector vertex_data((Vertex*)ptr, 0, 0);
-		return Point(std::move(vertex_data));
+		return Point(vertex_data);
 	}
 	else {
 		D_ASSERT(count == 1);
 		VertexVector vertex_data((Vertex*)ptr, 1, 1);
 		// Move the pointer forward (in case we are reading from a collection type)
 		ptr += sizeof(Vertex);
-		return Point(std::move(vertex_data));
+		return Point(vertex_data);
 	}
 }
 
@@ -368,7 +449,7 @@ LineString GeometryFactory::DeserializeLineString(const_data_ptr_t &ptr) {
 
 	ptr += length * sizeof(Vertex);
 
-	return LineString(std::move(vertex_data));
+	return LineString(vertex_data);
 }
 
 
@@ -442,6 +523,46 @@ MultiPolygon GeometryFactory::DeserializeMultiPolygon(const_data_ptr_t &ptr) {
 		polygons[i] = DeserializePolygon(ptr);
 	}
 	return MultiPolygon(polygons, num_polygons);
+}
+
+GeometryCollection GeometryFactory::DeserializeGeometryCollection(const_data_ptr_t &ptr) {
+	auto type = Load<uint32_t>(ptr);
+	ptr += sizeof(uint32_t);
+	D_ASSERT(type == (uint32_t)GeometryType::GEOMETRYCOLLECTION);
+
+	// read num geometries
+	auto num_geometries = Load<uint32_t>(ptr);
+	ptr += sizeof(uint32_t);
+
+	auto geometries = reinterpret_cast<Geometry *>(allocator.AllocateAligned(sizeof(Geometry) * num_geometries));
+	for (uint32_t i = 0; i < num_geometries; i++) {
+		// peek at the type
+		auto geometry_type = (GeometryType)Load<uint32_t>(ptr);
+		switch (geometry_type) {
+		case GeometryType::POINT:
+			geometries[i] = Geometry(DeserializePoint(ptr));
+			break;
+		case GeometryType::LINESTRING:
+			geometries[i] = Geometry(DeserializeLineString(ptr));
+			break;
+		case GeometryType::POLYGON:
+			geometries[i] = Geometry(DeserializePolygon(ptr));
+			break;
+		case GeometryType::MULTIPOINT:
+			geometries[i] = Geometry(DeserializeMultiPoint(ptr));
+			break;
+		case GeometryType::MULTILINESTRING:
+			geometries[i] = Geometry(DeserializeMultiLineString(ptr));
+			break;
+		case GeometryType::MULTIPOLYGON:
+			geometries[i] = Geometry(DeserializeMultiPolygon(ptr));
+			break;
+		case GeometryType::GEOMETRYCOLLECTION:
+			geometries[i] = Geometry(DeserializeGeometryCollection(ptr));
+			break;
+		}
+	}
+	return GeometryCollection(geometries, num_geometries);
 }
 
 

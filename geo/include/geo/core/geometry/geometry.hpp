@@ -25,7 +25,7 @@ struct Point {
 private:
 	VertexVector data;
 public:
-	explicit Point(VertexVector data) : data(std::move(data)) { }
+	explicit Point(VertexVector data) : data(data) { }
     string ToString() const;
 	uint32_t SerializedSize() const;
 
@@ -46,7 +46,7 @@ public:
 struct LineString {
 	friend GeometryFactory;
 	VertexVector points;
-	explicit LineString(VertexVector data) : points(std::move(data)) { }
+	explicit LineString(VertexVector data) : points(data) { }
 	// Common Methods
 	string ToString() const;
 	uint32_t SerializedSize() const;
@@ -128,80 +128,6 @@ public:
 	explicit Geometry(MultiPolygon multipolygon) : type(GeometryType::MULTIPOLYGON), multipolygon(multipolygon) {}
 	explicit Geometry(GeometryCollection geometrycollection) : type(GeometryType::GEOMETRYCOLLECTION), geometrycollection(geometrycollection) {}
 
-	// Copy constructor (deleted)
-	Geometry(const Geometry&) = delete;
-
-	// Copy assignment (deleted)
-	Geometry& operator=(const Geometry&) = delete;
-
-	// Move constructor
-	Geometry(Geometry &&other) noexcept : type(other.type) {
-		switch(type) {
-		case GeometryType::POINT:
-			new (&point) struct Point(std::move(other.point));
-			break;
-		case GeometryType::LINESTRING:
-			new (&linestring) struct LineString(std::move(other.linestring));
-			break;
-		case GeometryType::POLYGON:
-			new (&polygon) struct Polygon(other.polygon);
-			break;
-		case GeometryType::MULTIPOINT:
-			new (&multipoint) struct MultiPoint(other.multipoint);
-			break;
-		case GeometryType::MULTILINESTRING:
-			new (&multilinestring) struct MultiLineString(other.multilinestring);
-			break;
-		case GeometryType::MULTIPOLYGON:
-			new (&multipolygon) struct MultiPolygon(other.multipolygon);
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			new (&geometrycollection) struct GeometryCollection(other.geometrycollection);
-			break;
-		default:
-			throw NotImplementedException("Unimplemented geometry type");
-		}
-	}
-
-	// Move assignment
-	Geometry& operator=(Geometry &&other) noexcept {
-		if (this != &other) {
-			// Destroy the current object
-			this->~Geometry();
-			// Move the other object into this one
-			new (this) Geometry(std::move(other));
-		}
-		return *this;
-	}
-
-	// Important: Call the destructor of the correct type
-	~Geometry() {
-		switch(type) {
-		case GeometryType::POINT:
-			point.~Point();
-			break;
-		case GeometryType::LINESTRING:
-			linestring.~LineString();
-			break;
-		case GeometryType::POLYGON:
-			polygon.~Polygon();
-			break;
-		case GeometryType::MULTIPOINT:
-			multipoint.~MultiPoint();
-			break;
-		case GeometryType::MULTILINESTRING:
-			multilinestring.~MultiLineString();
-			break;
-		case GeometryType::MULTIPOLYGON:
-			multipolygon.~MultiPolygon();
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			geometrycollection.~GeometryCollection();
-			break;
-		default:
-			D_ASSERT(false);
-		}
-	}
 
     // Accessor methods
     inline GeometryType Type() const {

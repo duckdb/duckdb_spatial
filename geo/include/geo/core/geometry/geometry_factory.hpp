@@ -42,6 +42,7 @@ private:
 	void SerializeMultiPoint(data_ptr_t &ptr, const MultiPoint &multipoint);
 	void SerializeMultiLineString(data_ptr_t &ptr, const MultiLineString &multilinestring);
 	void SerializeMultiPolygon(data_ptr_t &ptr, const MultiPolygon &multipolygon);
+	void SerializeGeometryCollection(data_ptr_t &ptr, const GeometryCollection &collection);
 
 	// Get Serialize Size
 	uint32_t GetSerializedSize(const Point &point);
@@ -50,6 +51,7 @@ private:
 	uint32_t GetSerializedSize(const MultiPoint &multipoint);
 	uint32_t GetSerializedSize(const MultiLineString &multilinestring);
 	uint32_t GetSerializedSize(const MultiPolygon &multipolygon);
+	uint32_t GetSerializedSize(const GeometryCollection &collection);
 
 	/*
 	uint32_t SerializeMultiPoint(data_ptr_t &ptr, const MultiPoint &multipoint);
@@ -65,6 +67,7 @@ private:
 	MultiPoint DeserializeMultiPoint(const_data_ptr_t &ptr);
 	MultiLineString DeserializeMultiLineString(const_data_ptr_t &ptr);
 	MultiPolygon DeserializeMultiPolygon(const_data_ptr_t &ptr);
+	GeometryCollection DeserializeGeometryCollection(const_data_ptr_t &ptr);
 
 	/*
 	Geometry DeserializeMultiPoint(const_data_ptr_t &ptr);

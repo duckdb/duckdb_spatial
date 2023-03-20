@@ -95,27 +95,6 @@ public:
 	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity) : count(count), capacity(capacity), data(data)
 	{ }
 
-	// Copy constructor (deleted)
-	VertexVector(const VertexVector&) = delete;
-
-	// Copy assignment (deleted)
-	VertexVector& operator=(const VertexVector&) = delete;
-
-	// Move constructor
-	VertexVector(VertexVector &&other) noexcept : data(nullptr) {
-		std::swap(other.data, data);
-		count = other.count;
-		capacity = other.capacity;
-	}
-
-	// Move assignment
-	VertexVector &operator=(VertexVector &&other) noexcept {
-		std::swap(other.data, data);
-		count = other.count;
-		capacity = other.capacity;
-		return *this;
-	}
-
 	// Create a VertexVector from an already existing buffer
 	static VertexVector FromBuffer(Vertex *buffer, uint32_t count) {
 		VertexVector array(buffer, count, count);

@@ -264,7 +264,8 @@ GeometryCollection WKBReader::ReadGeometryCollectionImpl() {
 	auto num_geometries = ReadInt<ORDER>();
 	auto geometries = reinterpret_cast<Geometry*>(factory.allocator.Allocate(sizeof(Geometry) * num_geometries));
 	for (uint32_t i = 0; i < num_geometries; i++) {
-		geometries[i] = ReadGeometry();
+		auto geom = ReadGeometry();
+		geometries[i] = std::move(geom);
 	}
 	return GeometryCollection(geometries, num_geometries);
 }

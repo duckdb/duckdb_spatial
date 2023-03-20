@@ -126,6 +126,8 @@ void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vector &res
 			return StringVector::AddString(result, geometry.GetMultiLineString().ToString());
 		case GeometryType::MULTIPOLYGON:
 			return StringVector::AddString(result, geometry.GetMultiPolygon().ToString());
+		case GeometryType::GEOMETRYCOLLECTION:
+			return StringVector::AddString(result, geometry.GetGeometryCollection().ToString());
 		default:
 			throw NotImplementedException("Geometry type not implemented");
 		}
