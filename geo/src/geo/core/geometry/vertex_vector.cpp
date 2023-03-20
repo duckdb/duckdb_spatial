@@ -33,7 +33,7 @@ double VertexVector::Length() const {
 }
 
 double VertexVector::SignedArea() const {
-	if(count < 3) {
+	if (count < 3) {
 		return 0;
 	}
 	double area = 0;
@@ -83,7 +83,7 @@ Contains ColumnarContainsPoint(vector<double> xs, vector<double> ys, double x, d
 		}
 
 		auto side = Side::ON;
-		double side_v = ( (x - x1) * (y2 - y1) - (x2 - x1) * (y - y1) );
+		double side_v = ((x - x1) * (y2 - y1) - (x2 - x1) * (y - y1));
 		if (side_v == 0) {
 			side = Side::ON;
 		} else if (side_v < 0) {
@@ -92,15 +92,12 @@ Contains ColumnarContainsPoint(vector<double> xs, vector<double> ys, double x, d
 			side = Side::RIGHT;
 		}
 
-		if(side == Side::ON && (
-			((x1 <= x && x < x2) || (x1 >= x && x > x2)) ||
-			       ((y1 <= y && y < y2) || (y1 >= y && y > y2)))) {
+		if (side == Side::ON &&
+		    (((x1 <= x && x < x2) || (x1 >= x && x > x2)) || ((y1 <= y && y < y2) || (y1 >= y && y > y2)))) {
 			return Contains::ON_EDGE;
-		}
-		else if(side == Side::LEFT && (y1 < y && y <= y2)) {
+		} else if (side == Side::LEFT && (y1 < y && y <= y2)) {
 			winding_number++;
-		}
-		else if(side == Side::RIGHT && (y2 <= y && y < y1)) {
+		} else if (side == Side::RIGHT && (y2 <= y && y < y1)) {
 			winding_number--;
 		}
 
@@ -148,9 +145,9 @@ bool VertexVector::IsSimple() const {
 Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const {
 
 	auto &p1 = data[0];
-	auto &p2 = data[count-1];
+	auto &p2 = data[count - 1];
 
-	if(ensure_closed && p1 != p2) {
+	if (ensure_closed && p1 != p2) {
 		throw InternalException("VertexVector::Contains: VertexVector is not closed");
 	}
 
@@ -172,13 +169,11 @@ Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const
 		}
 
 		auto side = p.SideOfLine(p1, p2);
-		if(side == Side::ON && p.IsOnSegment(p1, p2)) {
+		if (side == Side::ON && p.IsOnSegment(p1, p2)) {
 			return Contains::ON_EDGE;
-		}
-		else if(side == Side::LEFT && (p1.y < p.y && p.y <= p2.y)) {
+		} else if (side == Side::LEFT && (p1.y < p.y && p.y <= p2.y)) {
 			winding_number++;
-		}
-		else if(side == Side::RIGHT && (p2.y <= p.y && p.y < p1.y)) {
+		} else if (side == Side::RIGHT && (p2.y <= p.y && p.y < p1.y)) {
 			winding_number--;
 		}
 		p1 = p2;
@@ -191,14 +186,14 @@ std::tuple<uint32_t, double> VertexVector::ClosestSegment(const Vertex &p) const
 	uint32_t min_index = 0;
 	// Loop over all segments and find the closest one
 	auto &p1 = data[0];
-	for (uint32_t i = 1; i < count ; i++) {
+	for (uint32_t i = 1; i < count; i++) {
 		auto &p2 = data[i];
 		auto distance = p.DistanceSquared(p1, p2);
 		if (distance < min_distance) {
 			min_distance = distance;
-			min_index = i-1;
+			min_index = i - 1;
 
-			if(min_distance == 0) {
+			if (min_distance == 0) {
 				// if the Vertex is on a segment, then we don't have to search any further
 				return make_pair(min_index, 0);
 			}
@@ -222,7 +217,7 @@ std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
 			min_distance = distance;
 			min_index = i;
 
-			if(min_distance == 0) {
+			if (min_distance == 0) {
 				// if the Vertex is on the VertexVector, then we don't have to search any further
 				return make_pair(min_index, 0);
 			}
@@ -232,7 +227,7 @@ std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
 }
 
 std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) const {
-	if(count == 0) {
+	if (count == 0) {
 		return std::make_tuple(Vertex(), 0, 0);
 	}
 	if (count == 1) {
@@ -251,8 +246,8 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 		auto seg_distance = p.DistanceSquared(p1, p2);
 		if (seg_distance < min_distance) {
 			min_distance = seg_distance;
-			min_index = i-1;
-			if(min_distance == 0) {
+			min_index = i - 1;
+			if (min_distance == 0) {
 				// if the Vertex is on a segment, then we don't have to search any further
 				break;
 			}
@@ -273,7 +268,7 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 	auto Vertex_length = 0.0;
 	for (uint32_t i = 0; i < min_index; i++) {
 		p1 = data[i];
-		p2 = data[i+1];
+		p2 = data[i + 1];
 		Vertex_length += p1.Distance(p2);
 	}
 
@@ -281,14 +276,14 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 	return std::make_tuple(closest_Vertex, location, min_distance);
 }
 
-
 // utils
 Vertex ClosestPointOnSegment(const Vertex &p, const Vertex &p1, const Vertex &p2) {
 	// If the segment is a Vertex, then return that Vertex
-	if(p1 == p2) {
+	if (p1 == p2) {
 		return p1;
 	}
-	double r = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y)) / ((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
+	double r = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y)) /
+	           ((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
 	// If r is less than 0, then the Vertex is outside the segment in the p1 direction
 	if (r <= 0) {
 		return p1;
@@ -300,7 +295,6 @@ Vertex ClosestPointOnSegment(const Vertex &p, const Vertex &p1, const Vertex &p2
 	// Interpolate between p1 and p2
 	return Vertex(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
 }
-
 
 } // namespace core
 

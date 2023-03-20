@@ -46,8 +46,10 @@ struct GeometryPtr {
 private:
 	GEOSContextHandle_t ctx;
 	GEOSGeometry *ptr;
+
 public:
-	explicit GeometryPtr(GEOSContextHandle_t ctx, GEOSGeometry *ptr) : ctx(ctx), ptr(ptr) {}
+	explicit GeometryPtr(GEOSContextHandle_t ctx, GEOSGeometry *ptr) : ctx(ctx), ptr(ptr) {
+	}
 	GeometryPtr(const GeometryPtr &) = delete;
 	GeometryPtr &operator=(const GeometryPtr &) = delete;
 	GeometryPtr(GeometryPtr &&other) noexcept : ctx(other.ctx), ptr(other.ptr) {
@@ -67,7 +69,7 @@ public:
 		}
 	}
 
-	inline GEOSGeometry* get() const {
+	inline GEOSGeometry *get() const {
 		return ptr;
 	}
 
@@ -94,7 +96,6 @@ public:
 
 	// Mutations
 	void Normalize() const;
-
 
 	// Predicates
 	bool Contains(const GeometryPtr &other) const;
@@ -152,7 +153,7 @@ struct WKBWriter {
 		GEOSFree_r(ctx, wkb);
 	}
 
-	string_t Write(const GeometryPtr &geom, Vector& vec) const {
+	string_t Write(const GeometryPtr &geom, Vector &vec) const {
 		std::stringstream buf;
 		Write(geom, buf);
 		return StringVector::AddStringOrBlob(vec, buf.str());
@@ -202,7 +203,7 @@ struct WKTWriter {
 		GEOSFree_r(ctx, wkt);
 	}
 
-	string_t Write(const GeometryPtr &geom, Vector& vec) const {
+	string_t Write(const GeometryPtr &geom, Vector &vec) const {
 		auto wkt = GEOSWKTWriter_write_r(ctx, writer, geom.get());
 		if (!wkt) {
 			throw InvalidInputException("Could not write WKT");
@@ -213,10 +214,10 @@ struct WKTWriter {
 	}
 };
 
-
 struct GeosContextWrapper {
 private:
 	GEOSContextHandle_t ctx;
+
 public:
 	GeosContextWrapper() {
 		ctx = GEOS_init_r();
@@ -251,4 +252,4 @@ public:
 
 } // namespace geos
 
-} // namespace duckdb
+} // namespace geo

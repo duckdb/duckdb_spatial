@@ -16,25 +16,48 @@ private:
 	static constexpr const uint8_t READONLY = 0x10;
 	static constexpr const uint8_t SOLID = 0x20;
 	uint8_t flags;
-public:
-	inline bool HasZ() const { return (flags & Z) != 0; }
-	inline bool HasM() const { return (flags & M) != 0; }
-	inline bool HasBBox() const { return (flags & BBOX) != 0; }
-	inline bool IsGeodetic() const { return (flags & GEODETIC) != 0; }
-	inline bool IsReadOnly() const { return (flags & READONLY) != 0; }
 
-	inline void SetZ(bool value) { flags = value ? (flags | Z) : (flags & ~Z); }
-	inline void SetM(bool value) { flags = value ? (flags | M) : (flags & ~M); }
-	inline void SetBBox(bool value) { flags = value ? (flags | BBOX) : (flags & ~BBOX); }
-	inline void SetGeodetic(bool value) { flags = value ? (flags | GEODETIC) : (flags & ~GEODETIC); }
-	inline void SetReadOnly(bool value) { flags = value ? (flags | READONLY) : (flags & ~READONLY); }
+public:
+	inline bool HasZ() const {
+		return (flags & Z) != 0;
+	}
+	inline bool HasM() const {
+		return (flags & M) != 0;
+	}
+	inline bool HasBBox() const {
+		return (flags & BBOX) != 0;
+	}
+	inline bool IsGeodetic() const {
+		return (flags & GEODETIC) != 0;
+	}
+	inline bool IsReadOnly() const {
+		return (flags & READONLY) != 0;
+	}
+
+	inline void SetZ(bool value) {
+		flags = value ? (flags | Z) : (flags & ~Z);
+	}
+	inline void SetM(bool value) {
+		flags = value ? (flags | M) : (flags & ~M);
+	}
+	inline void SetBBox(bool value) {
+		flags = value ? (flags | BBOX) : (flags & ~BBOX);
+	}
+	inline void SetGeodetic(bool value) {
+		flags = value ? (flags | GEODETIC) : (flags & ~GEODETIC);
+	}
+	inline void SetReadOnly(bool value) {
+		flags = value ? (flags | READONLY) : (flags & ~READONLY);
+	}
 };
 
 struct Vertex {
 	double x;
 	double y;
-	explicit Vertex() : x(0), y(0) {}
-	explicit Vertex(double x, double y) : x(x), y(y) {}
+	explicit Vertex() : x(0), y(0) {
+	}
+	explicit Vertex(double x, double y) : x(x), y(y) {
+	}
 
 	// Distance to another point
 	double Distance(const Vertex &other) const;
@@ -58,7 +81,7 @@ struct Vertex {
 	}
 
 	Side SideOfLine(const Vertex &p1, const Vertex &p2) const {
-		double side = ( (x - p1.x) * (p2.y - p1.y) - (p2.x - p1.x) * (y - p1.y) );
+		double side = ((x - p1.x) * (p2.y - p1.y) - (p2.x - p1.x) * (y - p1.y));
 		if (side == 0) {
 			return Side::ON;
 		} else if (side < 0) {
@@ -75,16 +98,9 @@ struct Vertex {
 	}
 };
 
-enum class WindingOrder {
-	CLOCKWISE,
-	COUNTER_CLOCKWISE
-};
+enum class WindingOrder { CLOCKWISE, COUNTER_CLOCKWISE };
 
-enum class Contains {
-	INSIDE,
-	OUTSIDE,
-	ON_EDGE
-};
+enum class Contains { INSIDE, OUTSIDE, ON_EDGE };
 
 class VertexVector {
 public:
@@ -92,8 +108,9 @@ public:
 	uint32_t capacity;
 	Vertex *data;
 
-	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity) : count(count), capacity(capacity), data(data)
-	{ }
+	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity)
+	    : count(count), capacity(capacity), data(data) {
+	}
 
 	// Create a VertexVector from an already existing buffer
 	static VertexVector FromBuffer(Vertex *buffer, uint32_t count) {
@@ -101,16 +118,16 @@ public:
 		return array;
 	}
 
-	inline Vertex& operator[](uint32_t index) const {
+	inline Vertex &operator[](uint32_t index) const {
 		D_ASSERT(index < count);
 		return data[index];
 	}
 
-	inline Vertex* begin() {
+	inline Vertex *begin() {
 		return data;
 	}
 
-	inline Vertex* end() {
+	inline Vertex *end() {
 		return data + count;
 	}
 
@@ -133,11 +150,11 @@ public:
 	}
 
 	inline void Serialize(data_ptr_t &ptr) const {
-		memcpy((void*)ptr, (const char*)data, count * sizeof(Vertex));
+		memcpy((void *)ptr, (const char *)data, count * sizeof(Vertex));
 		ptr += count * sizeof(Vertex);
 	}
 
-	inline Vertex* Data() {
+	inline Vertex *Data() {
 		return data;
 	}
 
@@ -171,6 +188,6 @@ public:
 // Utils
 Vertex ClosestPointOnSegment(const Vertex &p, const Vertex &p1, const Vertex &p2);
 
-}
+} // namespace core
 
-}
+} // namespace geo

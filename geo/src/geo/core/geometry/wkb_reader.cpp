@@ -8,7 +8,7 @@ namespace geo {
 
 namespace core {
 
-template<>
+template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
 	D_ASSERT(cursor + sizeof(uint32_t) <= length);
 	// Read uint32_t in little endian
@@ -21,8 +21,7 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
 	return result;
 }
 
-
-template<>
+template <>
 double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
 	D_ASSERT(cursor + sizeof(double) <= length);
 	// Read double in little endian
@@ -39,8 +38,7 @@ double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
 	return *reinterpret_cast<double *>(&result);
 }
 
-
-template<>
+template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
 	D_ASSERT(cursor + sizeof(uint32_t) <= length);
 	// Read uint32_t in big endian
@@ -53,8 +51,7 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
 	return result;
 }
 
-
-template<>
+template <>
 double WKBReader::ReadDouble<WKBByteOrder::XDR>() {
 	D_ASSERT(cursor + sizeof(double) <= length);
 	// Read double in big endian
@@ -73,7 +70,7 @@ double WKBReader::ReadDouble<WKBByteOrder::XDR>() {
 
 Geometry WKBReader::ReadGeometry() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		return ReadGeometryImpl<WKBByteOrder::XDR>();
 	} else {
 		return ReadGeometryImpl<WKBByteOrder::NDR>();
@@ -82,7 +79,7 @@ Geometry WKBReader::ReadGeometry() {
 
 Point WKBReader::ReadPoint() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::POINT);
 		return ReadPointImpl<WKBByteOrder::XDR>();
@@ -95,7 +92,7 @@ Point WKBReader::ReadPoint() {
 
 LineString WKBReader::ReadLineString() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::LINESTRING);
 		return ReadLineStringImpl<WKBByteOrder::XDR>();
@@ -108,7 +105,7 @@ LineString WKBReader::ReadLineString() {
 
 Polygon WKBReader::ReadPolygon() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::POLYGON);
 		return ReadPolygonImpl<WKBByteOrder::XDR>();
@@ -121,7 +118,7 @@ Polygon WKBReader::ReadPolygon() {
 
 MultiPoint WKBReader::ReadMultiPoint() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::MULTIPOINT);
 		return ReadMultiPointImpl<WKBByteOrder::XDR>();
@@ -134,7 +131,7 @@ MultiPoint WKBReader::ReadMultiPoint() {
 
 MultiLineString WKBReader::ReadMultiLineString() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::MULTILINESTRING);
 		return ReadMultiLineStringImpl<WKBByteOrder::XDR>();
@@ -147,7 +144,7 @@ MultiLineString WKBReader::ReadMultiLineString() {
 
 MultiPolygon WKBReader::ReadMultiPolygon() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::MULTIPOLYGON);
 		return ReadMultiPolygonImpl<WKBByteOrder::XDR>();
@@ -160,7 +157,7 @@ MultiPolygon WKBReader::ReadMultiPolygon() {
 
 GeometryCollection WKBReader::ReadGeometryCollection() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
-	if(order == WKBByteOrder::XDR) {
+	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::GEOMETRYCOLLECTION);
 		return ReadGeometryCollectionImpl<WKBByteOrder::XDR>();
@@ -171,23 +168,30 @@ GeometryCollection WKBReader::ReadGeometryCollection() {
 	}
 }
 
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 Geometry WKBReader::ReadGeometryImpl() {
 	auto type = (WKBGeometryType)ReadInt<ORDER>();
-	switch(type) {
-	case WKBGeometryType::POINT: return Geometry(ReadPointImpl<ORDER>());
-	case WKBGeometryType::LINESTRING: return Geometry(ReadLineStringImpl<ORDER>());
-	case WKBGeometryType::POLYGON: return Geometry(ReadPolygonImpl<ORDER>());
-	case WKBGeometryType::MULTIPOINT: return Geometry(ReadMultiPointImpl<ORDER>());
-	case WKBGeometryType::MULTILINESTRING: return Geometry(ReadMultiLineStringImpl<ORDER>());
-	case WKBGeometryType::MULTIPOLYGON: return Geometry(ReadMultiPolygonImpl<ORDER>());
-	case WKBGeometryType::GEOMETRYCOLLECTION: return Geometry(ReadGeometryCollectionImpl<ORDER>());
+	switch (type) {
+	case WKBGeometryType::POINT:
+		return Geometry(ReadPointImpl<ORDER>());
+	case WKBGeometryType::LINESTRING:
+		return Geometry(ReadLineStringImpl<ORDER>());
+	case WKBGeometryType::POLYGON:
+		return Geometry(ReadPolygonImpl<ORDER>());
+	case WKBGeometryType::MULTIPOINT:
+		return Geometry(ReadMultiPointImpl<ORDER>());
+	case WKBGeometryType::MULTILINESTRING:
+		return Geometry(ReadMultiLineStringImpl<ORDER>());
+	case WKBGeometryType::MULTIPOLYGON:
+		return Geometry(ReadMultiPolygonImpl<ORDER>());
+	case WKBGeometryType::GEOMETRYCOLLECTION:
+		return Geometry(ReadGeometryCollectionImpl<ORDER>());
 	default:
 		throw NotImplementedException("Geometry type not implemented");
 	}
 }
 
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 Point WKBReader::ReadPointImpl() {
 	auto x = ReadDouble<ORDER>();
 	auto y = ReadDouble<ORDER>();
@@ -196,8 +200,7 @@ Point WKBReader::ReadPointImpl() {
 	return Point(std::move(point_data));
 }
 
-
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 LineString WKBReader::ReadLineStringImpl() {
 	auto num_points = ReadInt<ORDER>();
 	auto line_data = factory.AllocateVertexVector(num_points);
@@ -209,10 +212,10 @@ LineString WKBReader::ReadLineStringImpl() {
 	return LineString(std::move(line_data));
 }
 
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 Polygon WKBReader::ReadPolygonImpl() {
 	auto num_rings = ReadInt<ORDER>();
-	auto rings = reinterpret_cast<VertexVector*>(factory.allocator.Allocate(sizeof(VertexVector) * num_rings));
+	auto rings = reinterpret_cast<VertexVector *>(factory.allocator.Allocate(sizeof(VertexVector) * num_rings));
 
 	for (uint32_t i = 0; i < num_rings; i++) {
 		auto num_points = ReadInt<ORDER>();
@@ -228,48 +231,46 @@ Polygon WKBReader::ReadPolygonImpl() {
 	return Polygon(rings, num_rings);
 }
 
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 MultiPoint WKBReader::ReadMultiPointImpl() {
 	auto num_points = ReadInt<ORDER>();
-	auto points = reinterpret_cast<Point*>(factory.allocator.Allocate(sizeof(Point) * num_points));
+	auto points = reinterpret_cast<Point *>(factory.allocator.Allocate(sizeof(Point) * num_points));
 	for (uint32_t i = 0; i < num_points; i++) {
 		points[i] = ReadPoint();
 	}
 	return MultiPoint(points, num_points);
 }
 
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 MultiLineString WKBReader::ReadMultiLineStringImpl() {
 	auto num_lines = ReadInt<ORDER>();
-	auto lines = reinterpret_cast<LineString*>(factory.allocator.Allocate(sizeof(LineString) * num_lines));
+	auto lines = reinterpret_cast<LineString *>(factory.allocator.Allocate(sizeof(LineString) * num_lines));
 	for (uint32_t i = 0; i < num_lines; i++) {
 		lines[i] = ReadLineString();
 	}
 	return MultiLineString(lines, num_lines);
 }
 
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 MultiPolygon WKBReader::ReadMultiPolygonImpl() {
 	auto num_polygons = ReadInt<ORDER>();
-	auto polygons = reinterpret_cast<Polygon*>(factory.allocator.Allocate(sizeof(Polygon) * num_polygons));
+	auto polygons = reinterpret_cast<Polygon *>(factory.allocator.Allocate(sizeof(Polygon) * num_polygons));
 	for (uint32_t i = 0; i < num_polygons; i++) {
 		polygons[i] = ReadPolygon();
 	}
 	return MultiPolygon(polygons, num_polygons);
 }
 
-
-template<WKBByteOrder ORDER>
+template <WKBByteOrder ORDER>
 GeometryCollection WKBReader::ReadGeometryCollectionImpl() {
 	auto num_geometries = ReadInt<ORDER>();
-	auto geometries = reinterpret_cast<Geometry*>(factory.allocator.Allocate(sizeof(Geometry) * num_geometries));
+	auto geometries = reinterpret_cast<Geometry *>(factory.allocator.Allocate(sizeof(Geometry) * num_geometries));
 	for (uint32_t i = 0; i < num_geometries; i++) {
 		auto geom = ReadGeometry();
 		geometries[i] = std::move(geom);
 	}
 	return GeometryCollection(geometries, num_geometries);
 }
-
 
 } // namespace core
 

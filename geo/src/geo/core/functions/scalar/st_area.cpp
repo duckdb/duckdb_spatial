@@ -13,17 +13,17 @@ namespace core {
 // POLYGON_2D
 //------------------------------------------------------------------------------
 static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-    D_ASSERT(args.data.size() == 1);
+	D_ASSERT(args.data.size() == 1);
 
-    auto &input = args.data[0];
-    auto count = args.size();
+	auto &input = args.data[0];
+	auto count = args.size();
 
-    auto& ring_vec = ListVector::GetEntry(input);
-    auto ring_entries = ListVector::GetData(ring_vec);
-    auto& coord_vec = ListVector::GetEntry(ring_vec);
-    auto& coord_vec_children = StructVector::GetEntries(coord_vec);
-    auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
-    auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
+	auto &ring_vec = ListVector::GetEntry(input);
+	auto ring_entries = ListVector::GetData(ring_vec);
+	auto &coord_vec = ListVector::GetEntry(ring_vec);
+	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
+	auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
+	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, double>(input, result, count, [&](list_entry_t polygon) {
 		auto polygon_offset = polygon.offset;
@@ -40,7 +40,7 @@ static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector 
 			for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
 				sum += (x_data[coord_idx] * y_data[coord_idx + 1]) - (x_data[coord_idx + 1] * y_data[coord_idx]);
 			}
-			if(first) {
+			if (first) {
 				// Add outer ring
 				area = sum * 0.5;
 				first = false;
@@ -52,9 +52,9 @@ static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector 
 		return area;
 	});
 
-    if(count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
+	if (count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
 }
 
 //------------------------------------------------------------------------------

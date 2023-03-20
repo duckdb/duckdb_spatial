@@ -14,7 +14,8 @@ struct SimpleWKBReader {
 	uint32_t cursor = 0;
 	uint32_t length = 0;
 
-	SimpleWKBReader(const char *data, uint32_t length) : data(data), length(length) { }
+	SimpleWKBReader(const char *data, uint32_t length) : data(data), length(length) {
+	}
 
 	vector<PointXY> ReadLine() {
 		auto byte_order = ReadByte();
@@ -102,7 +103,6 @@ struct SimpleWKBReader {
 	}
 };
 
-
 //------------------------------------------------------------------------------
 // POINT_2D
 //------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ static void Point2DFromWKBFunction(DataChunk &args, ExpressionState &state, Vect
 
 	auto wkb_data = FlatVector::GetData<string_t>(wkb_blobs);
 
-	for(idx_t i = 0; i < count; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		auto wkb = wkb_data[i];
 		auto wkb_ptr = wkb.GetDataUnsafe();
 		auto wkb_size = wkb.GetSize();
@@ -129,7 +129,7 @@ static void Point2DFromWKBFunction(DataChunk &args, ExpressionState &state, Vect
 		y_data[i] = point.y;
 	}
 
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -149,7 +149,7 @@ static void LineString2DFromWKBFunction(DataChunk &args, ExpressionState &state,
 	auto wkb_data = FlatVector::GetData<string_t>(wkb_blobs);
 
 	idx_t total_size = 0;
-	for(idx_t i = 0; i < count; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		auto wkb = wkb_data[i];
 		auto wkb_ptr = wkb.GetDataUnsafe();
 		auto wkb_size = wkb.GetSize();
@@ -180,11 +180,10 @@ static void LineString2DFromWKBFunction(DataChunk &args, ExpressionState &state,
 
 	ListVector::SetListSize(result, total_size);
 
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
-
 
 //------------------------------------------------------------------------------
 // POLYGON_2D
@@ -205,7 +204,7 @@ static void Polygon2DFromWKBFunction(DataChunk &args, ExpressionState &state, Ve
 	idx_t total_ring_count = 0;
 	idx_t total_point_count = 0;
 
-	for(idx_t i = 0; i < count; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		auto wkb = wkb_data[i];
 		auto wkb_ptr = wkb.GetDataUnsafe();
 		auto wkb_size = wkb.GetSize();
@@ -250,7 +249,7 @@ static void Polygon2DFromWKBFunction(DataChunk &args, ExpressionState &state, Ve
 	ListVector::SetListSize(result, total_ring_count);
 	ListVector::SetListSize(ring_vec, total_point_count);
 
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -278,16 +277,20 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 void CoreScalarFunctions::RegisterStGeomFromWKB(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	CreateScalarFunctionInfo point2d_from_wkb_info(ScalarFunction("ST_Point2DFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::POINT_2D, Point2DFromWKBFunction));
+	CreateScalarFunctionInfo point2d_from_wkb_info(
+	    ScalarFunction("ST_Point2DFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::POINT_2D, Point2DFromWKBFunction));
 	catalog.CreateFunction(context, &point2d_from_wkb_info);
 
-	CreateScalarFunctionInfo linestring2d_from_wkb_info(ScalarFunction("ST_LineString2DFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::LINESTRING_2D, LineString2DFromWKBFunction));
+	CreateScalarFunctionInfo linestring2d_from_wkb_info(ScalarFunction(
+	    "ST_LineString2DFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::LINESTRING_2D, LineString2DFromWKBFunction));
 	catalog.CreateFunction(context, &linestring2d_from_wkb_info);
 
-	CreateScalarFunctionInfo polygon2d_from_wkb_info(ScalarFunction("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::POLYGON_2D, Polygon2DFromWKBFunction));
+	CreateScalarFunctionInfo polygon2d_from_wkb_info(
+	    ScalarFunction("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::POLYGON_2D, Polygon2DFromWKBFunction));
 	catalog.CreateFunction(context, &polygon2d_from_wkb_info);
 
-	CreateScalarFunctionInfo geometry_from_wkb_info(ScalarFunction("ST_GeomFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::GEOMETRY, GeometryFromWKBFunction));
+	CreateScalarFunctionInfo geometry_from_wkb_info(
+	    ScalarFunction("ST_GeomFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::GEOMETRY, GeometryFromWKBFunction));
 	catalog.CreateFunction(context, &geometry_from_wkb_info);
 }
 

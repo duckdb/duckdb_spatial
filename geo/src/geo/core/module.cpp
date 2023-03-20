@@ -14,7 +14,7 @@ namespace core {
 void CoreModule::Register(ClientContext &context) {
 	GeoTypes::Register(context);
 	CoreScalarFunctions::Register(context);
-	//CoreAggregateFunctions::Register(context);
+	// CoreAggregateFunctions::Register(context);
 }
 
 } // namespace core

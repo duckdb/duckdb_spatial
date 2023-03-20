@@ -19,6 +19,7 @@ public:
 		RegisterStX(context);
 		RegisterStY(context);
 	}
+
 private:
 	// ST_Area
 	static void RegisterStArea(ClientContext &context);

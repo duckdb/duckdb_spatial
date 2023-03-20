@@ -36,7 +36,7 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
 		allocator.Reset();
 		auto geometry = ctx.Deserialize(input);
-		if(geometry.Type() != GeometryType::POINT) {
+		if (geometry.Type() != GeometryType::POINT) {
 			throw InvalidInputException("ST_X only implemented for POINT geometries");
 		}
 		return geometry.GetPoint().X();

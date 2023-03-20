@@ -88,7 +88,7 @@ string Polygon::ToString() const {
 uint32_t Polygon::SerializedSize() const {
 	uint32_t size = sizeof(uint32_t); // 4 bytes for the number of rings
 	for (uint32_t i = 0; i < num_rings; i++) {
-		size += sizeof(uint32_t); // 4 bytes for the number of points in the ring
+		size += sizeof(uint32_t);          // 4 bytes for the number of points in the ring
 		size += rings[i].SerializedSize(); // size of the ring
 	}
 	return size;

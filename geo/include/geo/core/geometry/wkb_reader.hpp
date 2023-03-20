@@ -24,20 +24,20 @@ enum class WKBGeometryType : uint32_t {
 
 struct WKBReader {
 private:
-	GeometryFactory& factory;
-	const char* data;
+	GeometryFactory &factory;
+	const char *data;
 	uint32_t length;
 	uint32_t cursor;
 
 public:
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	uint32_t ReadInt() = delete;
 
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	double ReadDouble() = delete;
 
-	WKBReader(GeometryFactory &factory, const char* data, uint32_t length) :
-	      factory(factory), data(data), length(length), cursor(0){
+	WKBReader(GeometryFactory &factory, const char *data, uint32_t length)
+	    : factory(factory), data(data), length(length), cursor(0) {
 	}
 
 	void Reset() {
@@ -54,24 +54,23 @@ public:
 	GeometryCollection ReadGeometryCollection();
 
 private:
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	Geometry ReadGeometryImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	Point ReadPointImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	LineString ReadLineStringImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	Polygon ReadPolygonImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	MultiPoint ReadMultiPointImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	MultiLineString ReadMultiLineStringImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	MultiPolygon ReadMultiPolygonImpl();
-	template<WKBByteOrder ORDER>
+	template <WKBByteOrder ORDER>
 	GeometryCollection ReadGeometryCollectionImpl();
 };
-
 
 } // namespace core
 

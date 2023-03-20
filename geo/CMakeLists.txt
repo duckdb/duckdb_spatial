@@ -22,20 +22,18 @@ find_package(CURL REQUIRED)
 find_package(EXPAT REQUIRED)
 find_package(ZLIB REQUIRED)
 
-# Note: Apparently GCC is picky about the order of the libraries
-# The lib that "needs" a symbol should be listed first 
+# Note: Apparently GCC is picky about the order of the libraries The lib that
+# "needs" a symbol should be listed first
 target_link_libraries(
   ${EXTENSION_NAME}
-  PUBLIC 
-  GDAL::GDAL
-  GEOS::geos_c
-  PROJ::proj
-  CURL::libcurl
-  EXPAT::EXPAT
-  ZLIB::ZLIB
-  ${SQLITE3}
-  ${SQLITE3_MEMVFS}
-         )
+  PUBLIC GDAL::GDAL
+         GEOS::geos_c
+         PROJ::proj
+         CURL::libcurl
+         EXPAT::EXPAT
+         ZLIB::ZLIB
+         ${SQLITE3}
+         ${SQLITE3_MEMVFS})
 
 # Build extensions
 set(PARAMETERS "-warnings")

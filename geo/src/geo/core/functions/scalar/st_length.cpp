@@ -38,7 +38,7 @@ static void LineLengthFunction(DataChunk &args, ExpressionState &state, Vector &
 		return sum;
 	});
 
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }

@@ -14,12 +14,12 @@ namespace core {
 //-----------------------------------------------------------------------------
 static PointXY ClosestPointOnSegment(const PointXY &p, const PointXY &p1, const PointXY &p2) {
 	// If the segment is a Vertex, then return that Vertex
-	if(p1 == p2) {
+	if (p1 == p2) {
 		return p1;
 	}
 	auto n1 = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y));
 	auto n2 = ((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
-	auto r =  n1 / n2;
+	auto r = n1 / n2;
 	// If r is less than 0, then the Point is outside the segment in the p1 direction
 	if (r <= 0) {
 		return p1;
@@ -60,7 +60,7 @@ static void PointToPointDistanceFunction(DataChunk &args, ExpressionState &state
 	auto right_y = FlatVector::GetData<double>(*right_entries[1]);
 
 	auto out_data = FlatVector::GetData<double>(result);
-	for(idx_t i = 0; i < count; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		out_data[i] = sqrt(pow(left_x[i] - right_x[i], 2) + pow(left_y[i] - right_y[i], 2));
 	}
 }
@@ -91,7 +91,7 @@ static void PointToLineStringDistanceOperation(Vector &in_point, Vector &in_line
 	auto lines = ListVector::GetData(in_line);
 
 	auto result_data = FlatVector::GetData<double>(result);
-	for(idx_t i = 0; i < count; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		auto offset = lines[i].offset;
 		auto length = lines[i].length;
 
@@ -104,17 +104,17 @@ static void PointToLineStringDistanceOperation(Vector &in_point, Vector &in_line
 			auto b = PointXY(x_data[offset + j + 1], y_data[offset + j + 1]);
 
 			auto distance = DistanceToSegmentSquared(p, a, b);
-			if(distance < min_distance) {
+			if (distance < min_distance) {
 				min_distance = distance;
 
-				if(min_distance == 0) {
+				if (min_distance == 0) {
 					break;
 				}
 			}
 		}
 		result_data[i] = std::sqrt(min_distance);
 	}
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -174,16 +174,20 @@ void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	ScalarFunctionSet distance_function_set("st_distance");
 
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE, PointToPointDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D, GeoTypes::LINESTRING_2D}, LogicalType::DOUBLE, PointToLineStringDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE, LineStringToPointDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY, GeoTypes::GEOMETRY}, LogicalType::DOUBLE, DistanceFunction));
+	distance_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::POINT_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE, PointToPointDistanceFunction));
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D, GeoTypes::LINESTRING_2D}, LogicalType::DOUBLE,
+	                                                 PointToLineStringDistanceFunction));
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE,
+	                                                 LineStringToPointDistanceFunction));
+	distance_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY, GeoTypes::GEOMETRY}, LogicalType::DOUBLE, DistanceFunction));
 
 	CreateScalarFunctionInfo info(std::move(distance_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, &info);
 }
 
-}
+} // namespace core
 
-}
+} // namespace geo

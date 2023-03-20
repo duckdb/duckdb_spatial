@@ -42,7 +42,6 @@ static void LineString2DAsTextFunction(DataChunk &args, ExpressionState &state, 
 	auto y_data = FlatVector::GetData<double>(*children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, string_t>(input, result, count, [&](list_entry_t &line) {
-
 		auto offset = line.offset;
 		auto length = line.length;
 
@@ -73,7 +72,6 @@ static void Polygon2DAsTextFunction(DataChunk &args, ExpressionState &state, Vec
 	auto y_data = FlatVector::GetData<double>(*point_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, string_t>(poly_vector, result, count, [&](list_entry_t polygon_entry) {
-
 		auto offset = polygon_entry.offset;
 		auto length = polygon_entry.length;
 
@@ -143,9 +141,12 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 	ScalarFunctionSet as_text_function_set("st_astext");
 
 	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D}, LogicalType::VARCHAR, Point2DAsTextFunction));
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::VARCHAR, LineString2DAsTextFunction));
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsTextFunction));
+	as_text_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::VARCHAR, LineString2DAsTextFunction));
+	as_text_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
+	as_text_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsTextFunction));
 
 	CreateScalarFunctionInfo info(std::move(as_text_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

@@ -11,10 +11,11 @@ struct GeometryFactory {
 public:
 	ArenaAllocator &allocator;
 
-	explicit GeometryFactory(ArenaAllocator &allocator) : allocator(allocator) {}
+	explicit GeometryFactory(ArenaAllocator &allocator) : allocator(allocator) {
+	}
 
-	Geometry FromWKT(const char* wkt, uint32_t length);
-	Geometry FromWKB(const char* wkb, uint32_t length);
+	Geometry FromWKT(const char *wkt, uint32_t length);
+	Geometry FromWKB(const char *wkb, uint32_t length);
 	string ToWKT(const Geometry &geometry);
 	string ToWKB(const Geometry &geometry);
 
@@ -77,6 +78,6 @@ private:
 	*/
 };
 
-}
+} // namespace core
 
-}
+} // namespace geo

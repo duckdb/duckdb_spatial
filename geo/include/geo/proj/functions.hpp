@@ -9,7 +9,7 @@ namespace proj {
 struct ProjFunctions {
 
 public:
-    static void Register(ClientContext &context);
+	static void Register(ClientContext &context);
 };
 
 } // namespace proj

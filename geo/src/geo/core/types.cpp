@@ -12,30 +12,18 @@ namespace geo {
 
 namespace core {
 
-LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({
-    {"x", LogicalType::DOUBLE},
-    {"y", LogicalType::DOUBLE}
-});
+LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}});
 
-LogicalType GeoTypes::POINT_3D = LogicalType::STRUCT({
-    {"x", LogicalType::DOUBLE},
-    {"y", LogicalType::DOUBLE},
-    {"z", LogicalType::DOUBLE}
-});
+LogicalType GeoTypes::POINT_3D =
+    LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}, {"z", LogicalType::DOUBLE}});
 
-LogicalType GeoTypes::POINT_4D = LogicalType::STRUCT({
-    {"x", LogicalType::DOUBLE},
-    {"y", LogicalType::DOUBLE},
-    {"z", LogicalType::DOUBLE},
-    {"m", LogicalType::DOUBLE}
-});
+LogicalType GeoTypes::POINT_4D = LogicalType::STRUCT(
+    {{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}, {"z", LogicalType::DOUBLE}, {"m", LogicalType::DOUBLE}});
 
-LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({
-    {"min_x", LogicalType::DOUBLE},
-	{"min_y", LogicalType::DOUBLE},
-	{"max_x", LogicalType::DOUBLE},
-	{"max_y", LogicalType::DOUBLE}
-});
+LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalType::DOUBLE},
+                                                    {"min_y", LogicalType::DOUBLE},
+                                                    {"max_x", LogicalType::DOUBLE},
+                                                    {"max_y", LogicalType::DOUBLE}});
 
 LogicalType GeoTypes::LINESTRING_2D = LogicalType::LIST(GeoTypes::POINT_2D);
 
@@ -66,7 +54,7 @@ static bool ToPoint2DCast(Vector &source, Vector &result, idx_t count, CastParam
 	result_x_child->Reference(*x_child);
 	result_y_child->Reference(*y_child);
 
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 	return true;
@@ -180,7 +168,6 @@ static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastP
 	return true;
 }
 
-
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	auto &config = DBConfig::GetConfig(context);
@@ -204,7 +191,7 @@ void GeoTypes::Register(ClientContext &context) {
 	// Box2D
 	AddType(catalog, context, GeoTypes::BOX_2D, "BOX_2D");
 
-    // GEOMETRY
+	// GEOMETRY
 	AddType(catalog, context, GeoTypes::GEOMETRY, "GEOMETRY");
 
 	// WKB_BLOB

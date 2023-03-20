@@ -5,11 +5,7 @@ namespace geo {
 
 namespace core {
 
-struct GeometryVectorOperations {
-
-
-
-};
+struct GeometryVectorOperations {};
 
 } // namespace core
 

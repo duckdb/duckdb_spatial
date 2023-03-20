@@ -56,9 +56,7 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 	auto &proj_from = args.data[1];
 	auto &proj_to = args.data[2];
 
-
 	auto ctx = ProjModule::GetThreadProjContext();
-
 
 	GenericExecutor::ExecuteTernary<POINT_TYPE, PROJ_TYPE, PROJ_TYPE, POINT_TYPE>(
 	    point, proj_from, proj_to, result, count, [&](POINT_TYPE point_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
@@ -88,26 +86,24 @@ struct GenerateSpatialRefSysTable {
 
 	struct State : public GlobalTableFunctionState {
 		idx_t current_idx;
-		State() : current_idx(0) { }
+		State() : current_idx(0) {
+		}
 	};
 
-	static unique_ptr<FunctionData> 
-	Bind(ClientContext &context, TableFunctionBindInput &input, vector<LogicalType> &return_types, vector<string> &names);
-	
-	static unique_ptr<GlobalTableFunctionState> 
-	Init(ClientContext &context, TableFunctionInitInput &input);
-	
-	static void 
-	Execute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output);
-	
-	static void 
-	Register(ClientContext &context);
+	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
+	                                     vector<LogicalType> &return_types, vector<string> &names);
+
+	static unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFunctionInitInput &input);
+
+	static void Execute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output);
+
+	static void Register(ClientContext &context);
 };
 
 unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context, TableFunctionBindInput &input,
-										vector<LogicalType> &return_types, vector<string> &names) {
-	
-    names.push_back("auth_name");
+                                                          vector<LogicalType> &return_types, vector<string> &names) {
+
+	names.push_back("auth_name");
 	return_types.push_back(LogicalType::VARCHAR);
 	names.push_back("code");
 	return_types.push_back(LogicalType::VARCHAR);
@@ -132,7 +128,8 @@ unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context
 	return nullptr;
 }
 
-unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientContext &context, TableFunctionInitInput &input) {
+unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientContext &context,
+                                                                      TableFunctionInitInput &input) {
 	return make_unique<State>();
 }
 
@@ -140,7 +137,7 @@ void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionIn
 	auto &state = (State &)*input.global_state;
 	int result_count = 0;
 	auto crs_list = proj_get_crs_info_list_from_database(nullptr, nullptr, nullptr, &result_count);
-	
+
 	idx_t count = 0;
 	auto next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, result_count);
 	for (idx_t i = state.current_idx; i < next_idx; i++) {
@@ -179,7 +176,6 @@ void GenerateSpatialRefSysTable::Register(ClientContext &context) {
 	*/
 }
 
-
 void ProjFunctions::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
@@ -193,7 +189,6 @@ void ProjFunctions::Register(ClientContext &context) {
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, &info);
-
 
 	GenerateSpatialRefSysTable::Register(context);
 }
