@@ -49,7 +49,8 @@ struct Vertex {
 	double DistanceSquared(const Vertex &p1, const Vertex &p2) const;
 
 	bool operator==(const Vertex &other) const {
-		return x == other.x && y == other.y;
+		// approximate comparison
+		return fabs(x - other.x) < 1e-10 && fabs(y - other.y) < 1e-10;
 	}
 
 	bool operator!=(const Vertex &other) const {
@@ -78,8 +79,6 @@ enum class WindingOrder {
 	CLOCKWISE,
 	COUNTER_CLOCKWISE
 };
-
-
 
 enum class Contains {
 	INSIDE,
@@ -154,10 +153,9 @@ public:
 		return sizeof(Vertex) * count;
 	}
 
-	// Serializes the VertexVector to a buffer and returns the number of bytes written
-	uint32_t Serialize(data_ptr_t dst) const {
-		memcpy((void*)dst, (const char*)data, count * sizeof(Vertex));
-		return count * sizeof(Vertex);
+	inline void Serialize(data_ptr_t &ptr) const {
+		memcpy((void*)ptr, (const char*)data, count * sizeof(Vertex));
+		ptr += count * sizeof(Vertex);
 	}
 
 	inline Vertex* Data() {

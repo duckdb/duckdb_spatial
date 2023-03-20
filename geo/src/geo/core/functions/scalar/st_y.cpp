@@ -1,11 +1,9 @@
-#include "geo/common.hpp"
-#include "geo/core/types.hpp"
-#include "geo/core/functions/scalar.hpp"
-
-#include "geo/core/geometry/geometry.hpp"
-#include "geo/core/geometry/geometry_context.hpp"
-
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "geo/common.hpp"
+#include "geo/core/functions/scalar.hpp"
+#include "geo/core/geometry/geometry.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
+#include "geo/core/types.hpp"
 
 namespace geo {
 
@@ -30,7 +28,7 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
 	auto &default_alloc = Allocator::DefaultAllocator();
 	ArenaAllocator allocator(default_alloc);
-	GeometryContext ctx(allocator);
+	GeometryFactory ctx(allocator);
 
 	auto &input = args.data[0];
 	auto count = args.size();

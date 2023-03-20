@@ -1,4 +1,5 @@
 #include "geo/core/geometry/vertex_vector.hpp"
+#include <cmath>
 
 namespace geo {
 
@@ -231,7 +232,6 @@ std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
 }
 
 std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) const {
-
 	if(count == 0) {
 		return std::make_tuple(Vertex(), 0, 0);
 	}

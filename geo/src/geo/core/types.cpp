@@ -1,12 +1,12 @@
 
 #include "geo/core/types.hpp"
-#include "geo/core/geometry/geometry_context.hpp"
-#include "geo/common.hpp"
 
-#include "duckdb/parser/parsed_data/create_type_info.hpp"
+#include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
-#include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/parser/parsed_data/create_type_info.hpp"
+#include "geo/common.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
 
 namespace geo {
 
@@ -78,7 +78,7 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 
 	auto &default_alloc = Allocator::DefaultAllocator();
 	ArenaAllocator allocator(default_alloc);
-	GeometryContext ctx(allocator);
+	GeometryFactory ctx(allocator);
 
 	GenericExecutor::ExecuteUnary<POINT_TYPE, GEOMETRY_TYPE>(source, result, count, [&](POINT_TYPE &point) {
 		// Don't bother resetting the allocator, points take up a fixed amount of space anyway
@@ -91,7 +91,7 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &default_alloc = Allocator::DefaultAllocator();
 	ArenaAllocator allocator(default_alloc);
-	GeometryContext ctx(allocator);
+	GeometryFactory ctx(allocator);
 
 	auto &coord_vec = ListVector::GetEntry(source);
 	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
@@ -114,7 +114,7 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &default_alloc = Allocator::DefaultAllocator();
 	ArenaAllocator allocator(default_alloc);
-	GeometryContext ctx(allocator);
+	GeometryFactory ctx(allocator);
 
 	auto polygon_entries = ListVector::GetData(source);
 	auto &ring_vec = ListVector::GetEntry(source);
@@ -146,7 +146,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &default_alloc = Allocator::DefaultAllocator();
 	ArenaAllocator allocator(default_alloc);
-	GeometryContext ctx(allocator);
+	GeometryFactory ctx(allocator);
 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using GEOMETRY_TYPE = PrimitiveType<string_t>;
@@ -165,6 +165,17 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		geom.rings[0].data[3].y = box.d_val;
 		geom.rings[0].count = 4;
 		return ctx.Serialize(result, Geometry(geom));
+	});
+	return true;
+}
+
+static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	auto &default_alloc = Allocator::DefaultAllocator();
+	ArenaAllocator allocator(default_alloc);
+	GeometryFactory ctx(allocator);
+	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
+		auto geometry = ctx.FromWKB(input.GetDataUnsafe(), input.GetSize());
+		return ctx.Serialize(result, geometry);
 	});
 	return true;
 }
@@ -207,6 +218,9 @@ void GeoTypes::Register(ClientContext &context) {
 	casts.RegisterCastFunction(GeoTypes::POINT_2D, GeoTypes::GEOMETRY, Point2DToGeometryCast, 1);
 	casts.RegisterCastFunction(GeoTypes::POLYGON_2D, GeoTypes::GEOMETRY, Polygon2DToGeometryCast, 1);
 	casts.RegisterCastFunction(GeoTypes::BOX_2D, GeoTypes::GEOMETRY, Box2DToGeometryCast, 1);
+
+	// TODO: remove this implicit cast once we have more functions for the geometry type itself
+	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, GeoTypes::GEOMETRY, WKBToGeometryCast, 1);
 }
 
 } // namespace core

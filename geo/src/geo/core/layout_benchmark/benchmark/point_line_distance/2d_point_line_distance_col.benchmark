@@ -4,9 +4,15 @@ group point_distance
 require geo
 
 load
-CREATE TABLE lines AS SELECT geo_create_line2d_c(wkb_geometry) as line FROM st_read('../../../../../geo/test/data/amsterdam_roads.fgb');
-CREATE TABLE points AS SELECT geo_create_point2d_c(st_x(c), st_y(c)) as point FROM (SELECT st_centroid(wkb_geometry)
-FROM st_read('../../../../../geo/test/data/amsterdam_roads.fgb')) as s(c);
+CREATE TABLE pairs as SELECT
+    geo_create_point2d_c(st_x(st_centroid(l.wkb_geometry)), st_y(st_centroid(l.wkb_geometry))) as point,
+    geo_create_line2d_c(r.wkb_geometry) as line
+    FROM
+        st_read('../../../../../geo/test/data/amsterdam_roads.fgb') as l
+    CROSS JOIN
+        st_read('../../../../../geo/test/data/amsterdam_roads.fgb') as r
+    LIMIT 10000000;
+checkpoint;
 
 run
-SELECT geo_line_point_distance2d_c(point, line) FROM lines CROSS JOIN points;
+SELECT geo_line_point_distance2d_c(point, line) FROM pairs;

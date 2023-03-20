@@ -1,12 +1,11 @@
-#include "geo/common.hpp"
-#include "geo/core/types.hpp"
-#include "geo/core/functions/scalar.hpp"
-#include "geo/core/geometry/geometry.hpp"
-#include "geo/core/geometry/geometry_context.hpp"
-
-#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
+#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "geo/common.hpp"
+#include "geo/core/functions/scalar.hpp"
+#include "geo/core/geometry/geometry.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
+#include "geo/core/types.hpp"
 namespace geo {
 
 namespace core {
@@ -110,7 +109,7 @@ void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vector &res
 
 	auto &default_alloc = Allocator::DefaultAllocator();
 	ArenaAllocator allocator(default_alloc, 1024);
-	GeometryContext ctx(allocator);
+	GeometryFactory ctx(allocator);
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
 		auto geometry = ctx.Deserialize(input);
@@ -121,6 +120,12 @@ void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vector &res
 			return StringVector::AddString(result, geometry.GetLineString().ToString());
 		case GeometryType::POLYGON:
 			return StringVector::AddString(result, geometry.GetPolygon().ToString());
+		case GeometryType::MULTIPOINT:
+			return StringVector::AddString(result, geometry.GetMultiPoint().ToString());
+		case GeometryType::MULTILINESTRING:
+			return StringVector::AddString(result, geometry.GetMultiLineString().ToString());
+		case GeometryType::MULTIPOLYGON:
+			return StringVector::AddString(result, geometry.GetMultiPolygon().ToString());
 		default:
 			throw NotImplementedException("Geometry type not implemented");
 		}
