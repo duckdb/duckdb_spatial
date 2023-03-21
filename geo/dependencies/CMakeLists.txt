@@ -80,9 +80,9 @@ ExternalProject_Add(
 
 # OpenSSL
 # When running in CI we pass the AARCH64_CROSS_COMPILE environment variable to the build when building for aarch64 (on linux)
-set(OPENSSL_CONFIGURE_COMMAND ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm)
+set(OPENSSL_CONFIGURE_COMMAND perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm)
 if (DEFINED ENV{AARCH64_CROSS_COMPILE})
-    set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC="aarch64-linux-gnu-gcc" ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm linux-aarch64)
+    set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC="aarch64-linux-gnu-gcc" perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm linux-aarch64)
 endif()
 ExternalProject_Add(
     OPENSSL
