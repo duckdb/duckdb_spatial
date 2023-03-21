@@ -78,22 +78,10 @@ ExternalProject_Add(
     -DEXPAT_BUILD_DOCS=OFF
 )
 
-# OpenSSL
-ExternalProject_Add(
-    OPENSSL
-    DEPENDS ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/openssl-openssl-3.0.7.zip
-    BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ./Configure --prefix=${LOCAL_INSTALL_DIR} --openssldir=${LOCAL_INSTALL_DIR} no-shared
-    BUILD_COMMAND make build_libs
-    INSTALL_COMMAND make install_sw
-    BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}  ${LOCAL_INSTALL_DIR}/lib/libssl${CMAKE_STATIC_LIBRARY_SUFFIX}
-)
-
 # CURL
 ExternalProject_Add(
     CURL
-    DEPENDS OPENSSL
+    DEPENDS
     URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/curl-7.87.0.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/libcurl${CMAKE_STATIC_LIBRARY_SUFFIX}
@@ -110,8 +98,6 @@ ExternalProject_Add(
     -DCURL_USE_LIBPSL=OFF
     -DCURL_USE_LIBSSH=OFF
     -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
-    -DOPENSSL_ROOT_DIR=${LOCAL_INSTALL_DIR}
-    -DOpenSSL_ROOT=${LOCAL_INSTALL_DIR}
 )
 
 ExternalProject_Add(
@@ -143,7 +129,7 @@ ExternalProject_Add(
 # GDAL
 ExternalProject_Add(
     GDAL
-    DEPENDS PROJ GEOS CURL EXPAT SQLITE3 OPENSSL
+    DEPENDS PROJ GEOS CURL EXPAT SQLITE3
     GIT_REPOSITORY "https://github.com/OSGeo/gdal.git"
     GIT_TAG "release/3.6" # TODO: Change this next release
     GIT_SHALLOW TRUE
@@ -182,7 +168,6 @@ ExternalProject_Add(
     -DGDAL_USE_EXPAT=ON
     -DGDAL_USE_CURL=ON
     -DGDAL_USE_OPENSSL=ON
-    -DOPENSSL_ROOT_DIR=${LOCAL_INSTALL_DIR}
     -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
     
     # This is not true, but a bug in gdal's cmake files
@@ -222,15 +207,7 @@ add_library(expat STATIC IMPORTED)
 set_property(TARGET expat PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/libexpat${CMAKE_STATIC_LIBRARY_SUFFIX})
 set_property(TARGET expat PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
 
-# openssl-crypto
-add_library(openssl-crypto STATIC IMPORTED)
-set_property(TARGET openssl-crypto PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
-set_property(TARGET openssl-crypto PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
-
-# openssl-ssl
-add_library(openssl-ssl STATIC IMPORTED)
-set_property(TARGET openssl-ssl PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
-set_property(TARGET openssl-ssl PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
+find_package(OpenSSL REQUIRED)
 
 # curl
 add_library(curl STATIC IMPORTED)
@@ -254,9 +231,9 @@ set_property(TARGET gdal PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_
 
 
 add_library(dependencies INTERFACE)
-add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT OPENSSL CURL GEOS GDAL)
+add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT CURL GEOS GDAL)
 
-target_link_libraries(dependencies INTERFACE sqlite3 memvfs proj zlib expat openssl-crypto openssl-ssl curl geos_c geos gdal)
+target_link_libraries(dependencies INTERFACE sqlite3 memvfs proj zlib expat OpenSSL::SSL OpenSSL::Crypto curl geos_c geos gdal)
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
     $<INSTALL_INTERFACE:include>
