@@ -6,7 +6,7 @@ namespace geo {
 namespace geos {
 
 struct GeosScalarFunctions {
-    static void Register(ClientContext &context);
+	static void Register(ClientContext &context);
 };
 
 } // namespace geos

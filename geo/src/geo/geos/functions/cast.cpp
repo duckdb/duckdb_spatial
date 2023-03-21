@@ -29,7 +29,6 @@ void GeosCastFunctions::Register(ClientContext &context) {
 	auto &casts = config.GetCastFunctions();
 
 	casts.RegisterCastFunction(core::GeoTypes::WKB_BLOB, LogicalType::VARCHAR, WKBToWKTCast);
-
 };
 
 } // namespace geos

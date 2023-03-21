@@ -23,24 +23,24 @@ public:
 	static void Register(ClientContext &context);
 };
 
-
 struct GdalDriversTableFunction {
-	
+
 	struct BindData : public TableFunctionData {
 		idx_t driver_count;
-		BindData(idx_t driver_count) : driver_count(driver_count) {}
+		BindData(idx_t driver_count) : driver_count(driver_count) {
+		}
 	};
-
 
 	struct State : public GlobalTableFunctionState {
 		idx_t current_idx;
-		State() : current_idx(0) { }
+		State() : current_idx(0) {
+		}
 	};
 	static unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFunctionInitInput &input);
 	static void Execute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output);
 	static void Register(ClientContext &context);
 	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
-										vector<LogicalType> &return_types, vector<string> &names);
+	                                     vector<LogicalType> &return_types, vector<string> &names);
 };
 
 } // namespace gdal
