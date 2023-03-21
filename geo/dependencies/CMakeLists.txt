@@ -79,12 +79,17 @@ ExternalProject_Add(
 )
 
 # OpenSSL
+# When running in CI we pass the AARCH64_CROSS_COMPILE environment variable to the build when building for aarch64 (on linux)
+set(OPENSSL_CONFIGURE_COMMAND ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm)
+if (DEFINED ENV{AARCH64_CROSS_COMPILE})
+    set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC="aarch64-linux-gnu-gcc" ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm linux-aarch64)
+endif()
 ExternalProject_Add(
     OPENSSL
     DEPENDS ZLIB
     URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/openssl-openssl-3.0.7.zip
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm
+    CONFIGURE_COMMAND "${OPENSSL_CONFIGURE_COMMAND}"
     BUILD_COMMAND make build_libs
     INSTALL_COMMAND make install_sw
     BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}  ${LOCAL_INSTALL_DIR}/lib/libssl${CMAKE_STATIC_LIBRARY_SUFFIX}
