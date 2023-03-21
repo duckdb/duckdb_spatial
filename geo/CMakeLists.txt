@@ -8,41 +8,28 @@ set(CMAKE_CXX_STANDARD 11)
 
 project(${TARGET_NAME})
 
+add_subdirectory(dependencies)
+
 include_directories(include)
 add_subdirectory(src)
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Add dependencies
-find_library(SQLITE3 sqlite3)
-find_library(SQLITE3_MEMVFS memvfs)
-find_package(PROJ REQUIRED)
-find_package(GEOS REQUIRED)
-find_package(GDAL REQUIRED)
-find_package(CURL REQUIRED)
-find_package(EXPAT REQUIRED)
-find_package(ZLIB REQUIRED)
+target_link_libraries(${EXTENSION_NAME} PUBLIC dependencies)
 
-# Note: Apparently GCC is picky about the order of the libraries
-# The lib that "needs" a symbol should be listed first 
-target_link_libraries(
-  ${EXTENSION_NAME}
-  PUBLIC 
-  GDAL::GDAL
-  GEOS::geos_c
-  PROJ::proj
-  CURL::libcurl
-  EXPAT::EXPAT
-  ZLIB::ZLIB
-  ${SQLITE3}
-  ${SQLITE3_MEMVFS}
-         )
+if(APPLE)
+  find_library(CoreFoundation_Library CoreFoundation)
+  find_library(SystemConfiguration_Library SystemConfiguration)
+  target_link_libraries(${EXTENSION_NAME} PUBLIC ${CoreFoundation_Library}
+                                                 ${SystemConfiguration_Library})
+endif()
 
 # Build extensions
 set(PARAMETERS "-warnings")
 build_loadable_extension(${TARGET_NAME} ${PARAMETERS} ${EXTENSION_SOURCES})
 
 install(
-  TARGETS ${EXTENSION_NAME}
+  TARGETS ${EXTENSION_NAME} dependencies
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}")
