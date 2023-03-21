@@ -143,7 +143,7 @@ ExternalProject_Add(
 # GDAL
 ExternalProject_Add(
     GDAL
-    DEPENDS PROJ GEOS CURL EXPAT SQLITE3
+    DEPENDS PROJ GEOS CURL EXPAT SQLITE3 OPENSSL
     GIT_REPOSITORY "https://github.com/OSGeo/gdal.git"
     GIT_TAG "release/3.6" # TODO: Change this next release
     GIT_SHALLOW TRUE
@@ -184,6 +184,10 @@ ExternalProject_Add(
     -DGDAL_USE_OPENSSL=ON
     -DOPENSSL_ROOT_DIR=${LOCAL_INSTALL_DIR}
     -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
+    
+    # This is not true, but a bug in gdal's cmake files
+    -DACCEPT_MISSING_SQLITE3_RTREE:BOOL=ON
+    -DACCEPT_MISSING_SQLITE3_MUTEX_ALLOC:BOOL=ON
 
     # remove optional gdal drivers
     -DGDAL_BUILD_OPTIONAL_DRIVERS=OFF
