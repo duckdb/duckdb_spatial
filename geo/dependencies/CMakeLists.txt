@@ -262,8 +262,11 @@ set_property(TARGET gdal PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_
 add_library(dependencies INTERFACE)
 add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT OPENSSL CURL GEOS GDAL)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 # Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
-target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat sqlite3 memvfs zlib)
+target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat sqlite3 memvfs zlib Threads::Threads)
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
     $<INSTALL_INTERFACE:include>
