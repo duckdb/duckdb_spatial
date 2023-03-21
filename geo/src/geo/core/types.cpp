@@ -66,7 +66,8 @@ void GeoTypes::Register(ClientContext &context) {
 	auto wkb = CreateTypeInfo("WKB_BLOB", GeoTypes::WKB_BLOB);
 	wkb.internal = true;
 	wkb.temporary = true;
-	catalog.CreateType(context, &wkb);
+	auto wkb_entry = (TypeCatalogEntry *)catalog.CreateType(context, &wkb);
+	LogicalType::SetCatalog(GeoTypes::WKB_BLOB, wkb_entry);
 
 	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, LogicalType::BLOB, DefaultCasts::ReinterpretCast);
 }
