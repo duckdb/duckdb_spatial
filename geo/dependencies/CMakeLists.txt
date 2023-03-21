@@ -257,7 +257,7 @@ add_library(dependencies INTERFACE)
 add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT OPENSSL CURL GEOS GDAL)
 
 # Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
-target_link_libraries(dependencies INTERFACE gdal geos geos_c proj curl openssl-crypto openssl-ssl expat sqlite3 memvfs zlib)
+target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-crypto openssl-ssl expat sqlite3 memvfs zlib)
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
     $<INSTALL_INTERFACE:include>
