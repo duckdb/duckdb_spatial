@@ -84,7 +84,7 @@ ExternalProject_Add(
     DEPENDS ZLIB
     URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/openssl-openssl-3.0.7.zip
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND ./Configure --prefix=${LOCAL_INSTALL_DIR} --openssldir=${LOCAL_INSTALL_DIR} no-shared
+    CONFIGURE_COMMAND ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm
     BUILD_COMMAND make build_libs
     INSTALL_COMMAND make install_sw
     BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}  ${LOCAL_INSTALL_DIR}/lib/libssl${CMAKE_STATIC_LIBRARY_SUFFIX}
