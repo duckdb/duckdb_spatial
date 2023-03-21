@@ -28,6 +28,9 @@ jobs:
 
       - name: Install Ninja
         run: brew install ninja
+      
+      - name: Install Sqlite3
+        run: brew install sqlite3
 
       - uses: actions/setup-python@v2
         with:

@@ -44,6 +44,7 @@ ExternalProject_Add(
     URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/proj-9.1.1.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/libproj${CMAKE_STATIC_LIBRARY_SUFFIX} # otherwise ninja gets confused
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/proj_use_path_sqlite3_patch.patch
     CMAKE_ARGS
     # CMake options
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
