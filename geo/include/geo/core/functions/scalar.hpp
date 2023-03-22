@@ -13,6 +13,7 @@ public:
 		RegisterStAsWKB(context);
 		RegisterStContains(context);
 		RegisterStDistance(context);
+		RegisterStGeometryType(context);
 		RegisterStGeomFromWKB(context);
 		RegisterStLength(context);
 		RegisterStPoint(context);
@@ -35,6 +36,9 @@ private:
 
 	// ST_Distance
 	static void RegisterStDistance(ClientContext &context);
+
+	// ST_GeometryType
+	static void RegisterStGeometryType(ClientContext &context);
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(ClientContext &context);

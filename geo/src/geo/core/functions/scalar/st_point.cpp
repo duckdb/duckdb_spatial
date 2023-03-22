@@ -111,7 +111,7 @@ static void PointFunction(DataChunk &args, ExpressionState &state, Vector &resul
 	BinaryExecutor::Execute<double, double, string_t>(x, y, result, count, [&](double x, double y) {
 		allocator.Reset();
 		auto point = ctx.CreatePoint(x, y);
-		return ctx.Serialize(result, Geometry(std::move(point)));
+		return ctx.Serialize(result, Geometry(point));
 	});
 }
 

@@ -24,22 +24,22 @@ string GeometryFactory::ToWKB(const Geometry &geometry) {
 	throw NotImplementedException("WKB not implemented yet");
 }
 
-VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) {
+VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) const {
 	auto data = reinterpret_cast<Vertex *>(allocator.AllocateAligned(sizeof(Vertex) * capacity));
 	return VertexVector(data, 0, capacity);
 }
 
-Point GeometryFactory::CreatePoint(double x, double y) {
+Point GeometryFactory::CreatePoint(double x, double y) const {
 	auto data = AllocateVertexVector(1);
 	data.Add(Vertex(x, y));
 	return Point(data);
 }
 
-LineString GeometryFactory::CreateLineString(uint32_t num_points) {
+LineString GeometryFactory::CreateLineString(uint32_t num_points) const {
 	return LineString(AllocateVertexVector(num_points));
 }
 
-Polygon GeometryFactory::CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities) {
+Polygon GeometryFactory::CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities) const {
 	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
 	for (uint32_t i = 0; i < num_rings; i++) {
 		rings[i] = AllocateVertexVector(ring_capacities[i]);
@@ -47,10 +47,31 @@ Polygon GeometryFactory::CreatePolygon(uint32_t num_rings, uint32_t *ring_capaci
 	return Polygon(rings, num_rings);
 }
 
-Polygon GeometryFactory::CreatePolygon(uint32_t num_rings) {
+Polygon GeometryFactory::CreatePolygon(uint32_t num_rings) const {
 	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
 	return Polygon(rings, num_rings);
 }
+
+MultiPoint GeometryFactory::CreateMultiPoint(uint32_t num_points) const {
+	auto points = reinterpret_cast<Point *>(allocator.AllocateAligned(sizeof(Point) * num_points));
+	return MultiPoint(points, num_points);
+}
+
+MultiLineString GeometryFactory::CreateMultiLineString(uint32_t num_linestrings) const {
+	auto linestrings = reinterpret_cast<LineString *>(allocator.AllocateAligned(sizeof(LineString) * num_linestrings));
+	return MultiLineString(linestrings, num_linestrings);
+}
+
+MultiPolygon GeometryFactory::CreateMultiPolygon(uint32_t num_polygons) const {
+	auto polygons = reinterpret_cast<Polygon *>(allocator.AllocateAligned(sizeof(Polygon) * num_polygons));
+	return MultiPolygon(polygons, num_polygons);
+}
+
+GeometryCollection GeometryFactory::CreateGeometryCollection(uint32_t num_geometries) const {
+	auto geometries = reinterpret_cast<Geometry *>(allocator.AllocateAligned(sizeof(Geometry) * num_geometries));
+	return GeometryCollection(geometries, num_geometries);
+}
+
 
 //----------------------------------------------------------------------
 // Serialization

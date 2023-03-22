@@ -1,6 +1,7 @@
 #pragma once
 #include "geo/common.hpp"
-
+#include "geo/core/geometry/geometry.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
 #include "geos_c.h"
 
 namespace geo {
@@ -61,6 +62,12 @@ public:
 		std::swap(other.ptr, ptr);
 		ctx = other.ctx;
 		return *this;
+	}
+
+	GEOSGeometry *release() {
+		auto result = ptr;
+		ptr = nullptr;
+		return result;
 	}
 
 	~GeometryPtr() {
@@ -248,6 +255,28 @@ public:
 	WKTReader CreateWKTReader() const {
 		return WKTReader(ctx);
 	}
+
+	GEOSCoordSeq FromVertexVector(const core::VertexVector &vec) const;
+	GeometryPtr FromPoint(const core::Point &point) const;
+	GeometryPtr FromLineString(const core::LineString &line) const;
+	GeometryPtr FromPolygon(const core::Polygon &poly) const;
+	GeometryPtr FromMultiPoint(const core::MultiPoint &mpoint) const;
+	GeometryPtr FromMultiLineString(const core::MultiLineString &mline) const;
+	GeometryPtr FromMultiPolygon(const core::MultiPolygon &mpoly) const;
+	GeometryPtr FromGeometryCollection(const core::GeometryCollection &gc) const;
+	GeometryPtr FromGeometry(core::Geometry &geom) const;
+
+
+	core::VertexVector ToVertexVector(const core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
+	core::Geometry ToGeometry(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::Point ToPoint(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::LineString ToLineString(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::Polygon ToPolygon(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiPoint ToMultiPoint(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiLineString ToMultiLineString(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiPolygon ToMultiPolygon(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::GeometryCollection ToGeometryCollection(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+
 };
 
 } // namespace geos

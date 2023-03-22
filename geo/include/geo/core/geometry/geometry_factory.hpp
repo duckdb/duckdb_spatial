@@ -19,18 +19,18 @@ public:
 	string ToWKT(const Geometry &geometry);
 	string ToWKB(const Geometry &geometry);
 
-	VertexVector AllocateVertexVector(uint32_t capacity);
+	VertexVector AllocateVertexVector(uint32_t capacity) const;
 
-	Point CreatePoint(double x, double y);
-	LineString CreateLineString(uint32_t capacity);
-	Polygon CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities);
+	Point CreatePoint(double x, double y) const;
+	LineString CreateLineString(uint32_t capacity) const;
+	Polygon CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities) const;
 	// Create a polygon, but leave the ring arrays uninitialized
-	Polygon CreatePolygon(uint32_t num_rings);
+	Polygon CreatePolygon(uint32_t num_rings) const;
 
-	MultiPoint CreateMultiPoint(uint32_t capacity);
-	MultiLineString CreateMultiLineString(uint32_t capacity);
-	MultiPolygon CreateMultiPolygon(uint32_t capacity);
-	GeometryCollection CreateGeometryCollection(uint32_t capacity);
+	MultiPoint CreateMultiPoint(uint32_t capacity) const;
+	MultiLineString CreateMultiLineString(uint32_t capacity) const;
+	MultiPolygon CreateMultiPolygon(uint32_t capacity) const;
+	GeometryCollection CreateGeometryCollection(uint32_t capacity) const;
 
 	string_t Serialize(Vector &result, const Geometry &geometry);
 	Geometry Deserialize(const string_t &data);

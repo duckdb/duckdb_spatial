@@ -22,11 +22,8 @@ enum class GeometryType : uint8_t {
 
 struct Point {
 	friend GeometryFactory;
-
-private:
-	VertexVector data;
-
 public:
+	VertexVector data;
 	explicit Point(VertexVector data) : data(data) {
 	}
 	string ToString() const;

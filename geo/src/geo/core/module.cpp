@@ -3,6 +3,7 @@
 
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
+#include "geo/core/functions/cast.hpp"
 #include "geo/core/functions/aggregate.hpp"
 #include "geo/core/layout_benchmark/test.hpp"
 #include "geo/core/types.hpp"
