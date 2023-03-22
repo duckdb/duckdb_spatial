@@ -28,6 +28,10 @@ jobs:
 
       - name: Install Ninja
         run: brew install ninja
+      
+      # We need this for bulding PROJ
+      - name: Install Sqlite3
+        run: brew install sqlite3
 
       - uses: actions/setup-python@v2
         with:
@@ -39,7 +43,12 @@ jobs:
           cd duckdb
           git checkout ${{ matrix.duckdb_version }}
       
-
+      # Setup ccache
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-${{ github.job }}
+      
       # Build extension
       - name: Build extension
         shell: bash

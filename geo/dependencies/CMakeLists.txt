@@ -9,6 +9,9 @@ set_directory_properties(PROPERTIES EP_BASE ${CMAKE_CURRENT_BINARY_DIR}/base)
 
 set(CMAKE_CXX_STANDARD 11)
 
+# Escape semicolons in CMAKE_OSX_ARCHITECTURES before passing to ExternalProject_Add
+string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_PACKED "${CMAKE_OSX_ARCHITECTURES}")
+
 # SQLite3
 ExternalProject_Add(
     SQLITE3
@@ -20,6 +23,7 @@ ExternalProject_Add(
     CMAKE_ARGS 
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 )
 
@@ -33,6 +37,7 @@ ExternalProject_Add(
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DBUILD_SHARED_LIBS=OFF
 )
@@ -48,8 +53,10 @@ ExternalProject_Add(
     # CMake options
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DSQLITE3_INCLUDE_DIR=${LOCAL_INSTALL_DIR}/include
+    -DSQLITE3_LIBRARY=${LOCAL_INSTALL_DIR}/lib/libsqlite3${CMAKE_STATIC_LIBRARY_SUFFIX}
     # PROJ options
     -DBUILD_SHARED_LIBS=OFF
     -DBUILD_APPS=OFF
@@ -69,6 +76,7 @@ ExternalProject_Add(
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     # EXPAT options
     -DEXPAT_SHARED_LIBS=OFF
@@ -83,6 +91,11 @@ ExternalProject_Add(
 set(OPENSSL_CONFIGURE_COMMAND perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm)
 if ($ENV{AARCH64_CROSS_COMPILE})
     set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=aarch64-linux-gnu-gcc perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm linux-aarch64)
+endif()
+if (APPLE AND OSX_BUILD_UNIVERSAL)
+    set(CC_ARGS "clang -arch x86_64 -arch arm64")
+    set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=${CC_ARGS} perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm darwin64-x86_64-cc)
+    unset(CC_ARGS)
 endif()
 ExternalProject_Add(
     OPENSSL
@@ -107,6 +120,7 @@ ExternalProject_Add(
     -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_DEBUG_POSTFIX=${} # Do not append "d" to the library name when building in debug mode
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DBUILD_SHARED_LIBS=OFF
     -DHTTP_ONLY=ON
@@ -136,6 +150,7 @@ ExternalProject_Add(
     # CMake options
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     # GEOS options
     -DBUILD_SHARED_LIBS=OFF
@@ -159,6 +174,7 @@ ExternalProject_Add(
     CMAKE_ARGS 
     # CMake options
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
     -DCMAKE_MODULE_PATH=${LOCAL_INSTALL_DIR}/lib/cmake
@@ -212,6 +228,10 @@ set_property(TARGET proj PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_
 add_library(sqlite3 STATIC IMPORTED)
 set_property(TARGET sqlite3 PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/libsqlite3${CMAKE_STATIC_LIBRARY_SUFFIX})
 set_property(TARGET sqlite3 PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+set_property(TARGET sqlite3 PROPERTY IMPORTED_LINK_INTERFACE_LIBRARIES Threads::Threads)
+
 
 # sqlite3_memvfs
 add_library(memvfs STATIC IMPORTED)
@@ -262,7 +282,9 @@ add_library(dependencies INTERFACE)
 add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT OPENSSL CURL GEOS GDAL)
 
 # Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
-target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat sqlite3 memvfs zlib)
+target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat memvfs sqlite3 zlib)
+
+
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
     $<INSTALL_INTERFACE:include>
