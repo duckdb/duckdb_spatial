@@ -21,7 +21,7 @@ target_compile_definitions(sqlite3 PUBLIC SQLITE_ENABLE_COLUMN_METADATA=1)
 target_compile_definitions(sqlite3 PUBLIC SQLITE_USE_URI=1)
 
 find_package(Threads REQUIRED)
-target_link_libraries(sqlite3 PUBLIC Threads::Threads)
+target_link_libraries(sqlite PUBLIC Threads::Threads)
 find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
     target_link_libraries(sqlite PUBLIC ${MATH_LIBRARY})

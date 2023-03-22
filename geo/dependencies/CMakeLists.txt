@@ -123,12 +123,7 @@ ExternalProject_Add(
 ExternalProject_Add(
     GEOS
     DEPENDS CURL
-    GIT_REPOSITORY "https://github.com/Maxxen/geos.git"
-    # GEOS now requires c++14, but this commit fixes a build bug an and is still c++11
-    # At some point we should fork..? Or go back and use the stable c api.
-    GIT_TAG "312f771f997dd1023ad264c08773756bf76c1f57"
-    GIT_SHALLOW TRUE
-    UPDATE_DISCONNECTED TRUE
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/geos-3.11.2.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
     BUILD_BYPRODUCTS 
         ${LOCAL_INSTALL_DIR}/lib/${GEOS_C_LIB_NAME}
