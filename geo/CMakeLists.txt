@@ -26,10 +26,6 @@ if(APPLE)
 endif()
 
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-target_link_libraries(${EXTENSION_NAME} PUBLIC Threads::Threads)
-
 # Build extensions
 set(PARAMETERS "-warnings")
 build_loadable_extension(${TARGET_NAME} ${PARAMETERS} ${EXTENSION_SOURCES})

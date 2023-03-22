@@ -226,6 +226,10 @@ set_property(TARGET proj PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_
 add_library(sqlite3 STATIC IMPORTED)
 set_property(TARGET sqlite3 PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/libsqlite3${CMAKE_STATIC_LIBRARY_SUFFIX})
 set_property(TARGET sqlite3 PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+set_property(TARGET sqlite3 PROPERTY IMPORTED_LINK_INTERFACE_LIBRARIES Threads::Threads)
+
 
 # sqlite3_memvfs
 add_library(memvfs STATIC IMPORTED)
@@ -276,11 +280,8 @@ add_library(dependencies INTERFACE)
 add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT OPENSSL CURL GEOS GDAL)
 
 # Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
-target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat sqlite3 memvfs zlib)
+target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat memvfs sqlite3 zlib)
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-target_link_libraries(dependencies INTERFACE Threads::Threads)
 
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
