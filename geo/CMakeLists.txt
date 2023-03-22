@@ -16,7 +16,7 @@ add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Add dependencies
 # link twice to make sure all symbols are resolved
-target_link_libraries(${EXTENSION_NAME} PUBLIC dependencies dependencies)
+target_link_libraries(${EXTENSION_NAME} PUBLIC dependencies)
 
 if(APPLE)
   find_library(CoreFoundation_Library CoreFoundation)
@@ -24,6 +24,11 @@ if(APPLE)
   target_link_libraries(${EXTENSION_NAME} PUBLIC ${CoreFoundation_Library}
                                                  ${SystemConfiguration_Library})
 endif()
+
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(${EXTENSION_NAME} PUBLIC Threads::Threads)
 
 # Build extensions
 set(PARAMETERS "-warnings")
