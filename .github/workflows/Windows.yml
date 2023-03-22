@@ -31,6 +31,11 @@ jobs:
         run: |
           choco install openssl -y --force
       
+      - name: Install SQLite
+        shell: bash
+        run: |
+          choco install sqlite -y --force
+      
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
         with:
