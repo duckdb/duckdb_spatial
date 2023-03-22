@@ -53,16 +53,17 @@ jobs:
       run: |
         cd duckdb
         git checkout ${{ matrix.duckdb_version }}
-    - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      uses: ./duckdb/.github/actions/centos_7_setup
-      with:
-        openssl: 1
 
     # Setup ccache
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
+    
+    - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      uses: ./duckdb/.github/actions/centos_7_setup
+      with:
+        openssl: 1
 
     - if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
       uses: ./duckdb/.github/actions/ubuntu_16_setup
