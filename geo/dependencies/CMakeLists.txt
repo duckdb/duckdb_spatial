@@ -90,6 +90,11 @@ set(OPENSSL_CONFIGURE_COMMAND perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --l
 if ($ENV{AARCH64_CROSS_COMPILE})
     set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=aarch64-linux-gnu-gcc perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm linux-aarch64)
 endif()
+if (APPLE AND OSX_BUILD_UNIVERSAL)
+    set(CC_ARGS "clang -arch x86_64 -arch arm64")
+    set(OPENSSL_CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env CC=${CC_ARGS} perl ./Configure --prefix=${LOCAL_INSTALL_DIR} --libdir=lib --openssldir=${LOCAL_INSTALL_DIR} no-shared no-asm darwin64-x86_64-cc)
+    unset(CC_ARGS)
+endif()
 ExternalProject_Add(
     OPENSSL
     DEPENDS ZLIB
@@ -270,11 +275,13 @@ set_property(TARGET gdal PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_
 add_library(dependencies INTERFACE)
 add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT OPENSSL CURL GEOS GDAL)
 
+# Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
+target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat sqlite3 memvfs zlib)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+target_link_libraries(dependencies INTERFACE Threads::Threads)
 
-# Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
-target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl openssl-ssl openssl-crypto expat sqlite3 memvfs zlib Threads::Threads)
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
     $<INSTALL_INTERFACE:include>
