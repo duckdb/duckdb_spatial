@@ -151,10 +151,7 @@ ExternalProject_Add(
 ExternalProject_Add(
     GDAL
     DEPENDS PROJ GEOS CURL EXPAT SQLITE3
-    GIT_REPOSITORY "https://github.com/OSGeo/gdal.git"
-    GIT_TAG "release/3.6" # TODO: Change this next release
-    GIT_SHALLOW TRUE
-    UPDATE_DISCONNECTED TRUE
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gdal363.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/${GDAL_LIB_NAME}
     CMAKE_ARGS 
