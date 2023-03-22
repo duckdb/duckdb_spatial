@@ -15,7 +15,6 @@ add_subdirectory(src)
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Add dependencies
-# link twice to make sure all symbols are resolved
 target_link_libraries(${EXTENSION_NAME} PUBLIC dependencies)
 
 if(APPLE)

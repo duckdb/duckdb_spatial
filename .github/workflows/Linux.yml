@@ -56,7 +56,7 @@ jobs:
     - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
       uses: ./duckdb/.github/actions/centos_7_setup
       with:
-        openssl: 0
+        openssl: 1
 
     # Setup ccache
     - name: ccache
@@ -76,7 +76,6 @@ jobs:
         STATIC_LIBCPP: 1
         CC: ${{ matrix.arch == 'linux_arm64' && 'aarch64-linux-gnu-gcc' || '' }}
         CXX: ${{ matrix.arch == 'linux_arm64' && 'aarch64-linux-gnu-g++' || '' }}
-        AARCH64_CROSS_COMPILE: ${{ matrix.arch == 'linux_arm64' && 1 }}
       run: |
         export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         make release
