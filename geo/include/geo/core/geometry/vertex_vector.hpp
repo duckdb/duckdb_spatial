@@ -3,6 +3,8 @@
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
 
+#include <cmath>
+
 namespace geo {
 
 namespace core {

@@ -7,10 +7,10 @@ CREATE TABLE t1 (geom GEOMETRY);
 
 statement ok
 INSERT INTO t1 VALUES
-	(ST_GeomFromText('LINESTRING(0 0, 1 1, 2 2, 3 3, 4 4, 5 5)')),
+	(ST_GeomFromText('LINESTRING(0 0, 0 1, 0 2, 0 3, 1 3, 2 3)')),
 	(ST_GeomFromText('LINESTRING EMPTY')),
 	(ST_GeomFromText('MULTILINESTRING EMPTY')),
-	(ST_GeomFromText('MULTILINESTRING( (0 0, 1 1, 2 2, 3 3, 4 4, 5 5), (0 0, 1 1, 2 2, 3 3, 4 4, 5 5) )')),
+	(ST_GeomFromText('MULTILINESTRING( (0 0, 0 1, 0 2, 0 3, 1 3, 2 3), (0 0, 0 1, 0 2, 0 3, 1 3, 2 3) )')),
 	(NULL),
 	(ST_GeomFromText('POINT(0 0)')),
 	(ST_GeomFromText('MULTIPOINT(0 0, 1 1)')),
@@ -18,15 +18,15 @@ INSERT INTO t1 VALUES
 	(ST_GeomFromText('MULTIPOLYGON EMPTY')),
 	(ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)))')),
 	(ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)),((0 0, 1 0, 1 1, 0 1, 0 0)))')),
-	(ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1, 2 2, 3 3, 4 4, 5 5))')),
+	(ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 0 1, 0 2, 0 3, 1 3, 2 3))')),
 
 query I
 SELECT ST_Length(geom) FROM t1;
 ----
-7.0710678118654755
+5.0
 0.0
 0.0
-14.142135623730951
+10.0
 NULL
 0.0
 0.0
@@ -34,7 +34,7 @@ NULL
 0.0
 0.0
 0.0
-7.0710678118654755
+5.0
 
 # LINESTRING_2D
 statement ok
@@ -42,13 +42,13 @@ CREATE TABLE t2 (geom LINESTRING_2D);
 
 statement ok
 INSERT INTO t2 VALUES
-	(ST_GeomFromText('LINESTRING(0 0, 1 1, 2 2, 3 3, 4 4, 5 5)')),
+	(ST_GeomFromText('LINESTRING(0 0, 0 1, 0 2, 0 3, 1 3, 2 3)')),
 	(ST_GeomFromText('LINESTRING EMPTY')),
 	(NULL);
 
 query I
 SELECT ST_Length(geom) FROM t2;
 ----
-7.0710678118654755
+5.0
 0.0
 NULL
