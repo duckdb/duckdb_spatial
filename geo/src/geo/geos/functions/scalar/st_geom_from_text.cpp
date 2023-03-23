@@ -30,8 +30,7 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 		if(geos_geom.get() == nullptr) {
 			throw InvalidInputException("Invalid WKT string");
 		}
-
-		auto multidimensional = (GEOSHasM(geos_geom.get()) == 1) || (GEOSHasZ(geos_geom.get()) == 1);
+		auto multidimensional = (GEOSHasZ_r(lstate.ctx.GetCtx(), geos_geom.get()) == 1);
 		if(multidimensional) {
 			throw InvalidInputException("3D/4D geometries are not supported");
 		}
