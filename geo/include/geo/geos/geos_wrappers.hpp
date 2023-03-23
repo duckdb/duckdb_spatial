@@ -241,6 +241,10 @@ public:
 		GEOS_finish_r(ctx);
 	}
 
+	inline const GEOSContextHandle_t& GetCtx() {
+		return ctx;
+	}
+
 	WKBReader CreateWKBReader() const {
 		return WKBReader(ctx);
 	}
