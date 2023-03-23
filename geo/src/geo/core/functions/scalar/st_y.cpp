@@ -33,13 +33,21 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
+	UnaryExecutor::ExecuteWithNulls<string_t, double>(input, result, count, [&](string_t input,  ValidityMask &mask, idx_t idx) {
 		allocator.Reset();
-		auto geometry = ctx.Deserialize(input);
-		if (geometry.Type() != GeometryType::POINT) {
-			throw InvalidInputException("ST_Y only implemented for POINT geometries");
+		if(mask.RowIsValid(idx)) {
+			auto geometry = ctx.Deserialize(input);
+			if (geometry.Type() != GeometryType::POINT) {
+				throw InvalidInputException("ST_Y only implemented for POINT geometries");
+			}
+			auto &point = geometry.GetPoint();
+			if(point.IsEmpty()) {
+				mask.SetInvalid(idx);
+			} else {
+				return point.GetVertex().y;
+			}
 		}
-		return geometry.GetPoint().Y();
+		return 0.0;
 	});
 }
 

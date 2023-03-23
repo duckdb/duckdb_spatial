@@ -27,18 +27,14 @@ public:
 	explicit Point(VertexVector data) : data(data) {
 	}
 	string ToString() const;
-	uint32_t SerializedSize() const;
 
-	inline double &X() {
-		return data[0].x;
-	}
-	inline double &Y() {
-		return data[0].y;
+	bool IsEmpty() const {
+		return data.Count() == 0;
 	}
 	inline Vertex &GetVertex() {
 		return data[0];
 	}
-	inline Vertex const &GetVertex() const {
+	inline const Vertex &GetVertex() const {
 		return data[0];
 	}
 };
@@ -50,10 +46,10 @@ struct LineString {
 	}
 	// Common Methods
 	string ToString() const;
-	uint32_t SerializedSize() const;
 	// Geometry Methods
 	double Length() const;
 	Geometry Centroid() const;
+	uint32_t Count() const;
 };
 
 struct Polygon {
@@ -64,7 +60,6 @@ struct Polygon {
 	}
 	// Common Methods
 	string ToString() const;
-	uint32_t SerializedSize() const;
 	// Geometry Methods
 	double Area() const;
 	double Perimiter() const;
@@ -78,7 +73,6 @@ struct MultiPoint {
 	explicit MultiPoint(Point *points, uint32_t num_points) : points(points), num_points(num_points) {
 	}
 	string ToString() const;
-	uint32_t SerializedSize() const;
 };
 
 struct MultiLineString {
@@ -89,7 +83,8 @@ struct MultiLineString {
 	    : linestrings(linestrings), num_linestrings(num_linestrings) {
 	}
 	string ToString() const;
-	uint32_t SerializedSize() const;
+	// Geometry Methods
+	double Length() const;
 };
 
 struct MultiPolygon {
@@ -99,7 +94,6 @@ struct MultiPolygon {
 	explicit MultiPolygon(Polygon *polygons, uint32_t num_polygons) : polygons(polygons), num_polygons(num_polygons) {
 	}
 	string ToString() const;
-	uint32_t SerializedSize() const;
 };
 
 struct GeometryCollection {
@@ -110,7 +104,9 @@ struct GeometryCollection {
 	    : geometries(geometries), num_geometries(num_geometries) {
 	}
 	string ToString() const;
-	uint32_t SerializedSize() const;
+
+	template<class AGG, class RESULT_TYPE>
+	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
 };
 
 struct Geometry {
@@ -129,9 +125,9 @@ private:
 	};
 
 public:
-	explicit Geometry(Point point) : type(GeometryType::POINT), point(std::move(point)) {
+	explicit Geometry(Point point) : type(GeometryType::POINT), point(point) {
 	}
-	explicit Geometry(LineString linestring) : type(GeometryType::LINESTRING), linestring(std::move(linestring)) {
+	explicit Geometry(LineString linestring) : type(GeometryType::LINESTRING), linestring(linestring) {
 	}
 	explicit Geometry(Polygon polygon) : type(GeometryType::POLYGON), polygon(polygon) {
 	}
@@ -222,8 +218,21 @@ public:
 	}
 
 	string ToString() const;
-	uint32_t SerializedSize() const;
 };
+
+template<class AGG, class RESULT_TYPE>
+RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
+	RESULT_TYPE result = zero;
+	for (idx_t i = 0; i < num_geometries; i++) {
+		auto &geometry = geometries[i];
+		if(geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
+			result = geometry.GetGeometryCollection().Aggregate(agg, result);
+		} else {
+			result = agg(geometry, result);
+		}
+	}
+	return result;
+}
 
 struct GeometryPrefix {
 	uint8_t flags;

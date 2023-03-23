@@ -32,6 +32,33 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 }
 
 //------------------------------------------------------------------------------
+// Geometry -> Point2D
+//------------------------------------------------------------------------------
+static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	using POINT_TYPE = StructTypeBinary<double, double>;
+	using GEOMETRY_TYPE = PrimitiveType<string_t>;
+
+	auto &default_alloc = Allocator::DefaultAllocator();
+	ArenaAllocator allocator(default_alloc);
+	GeometryFactory ctx(allocator);
+
+	GenericExecutor::ExecuteUnary<GEOMETRY_TYPE, POINT_TYPE>(source, result, count, [&](GEOMETRY_TYPE &geometry) {
+		auto geom = ctx.Deserialize(geometry.val);
+		if (geom.Type() != GeometryType::POINT) {
+			throw CastException("Cannot cast non-point GEOMETRY to POINT_2D");
+		}
+		auto &point = geom.GetPoint();
+		if(point.IsEmpty()) {
+			throw CastException("Cannot cast empty point GEOMETRY to POINT_2D");
+		}
+		auto &vertex = point.GetVertex();
+		return POINT_TYPE { vertex.x, vertex.y };
+	});
+	return true;
+}
+
+
+//------------------------------------------------------------------------------
 // LineString2D -> Geometry
 //------------------------------------------------------------------------------
 static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
@@ -52,8 +79,45 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 			geom.points[i].x = x;
 			geom.points[i].y = y;
 		}
-		return ctx.Serialize(result, Geometry(std::move(geom)));
+		return ctx.Serialize(result, Geometry(geom));
 	});
+	return true;
+}
+
+//------------------------------------------------------------------------------
+// Geometry -> LineString2D
+//------------------------------------------------------------------------------
+static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	auto &default_alloc = Allocator::DefaultAllocator();
+	ArenaAllocator allocator(default_alloc);
+	GeometryFactory ctx(allocator);
+
+	auto &coord_vec = ListVector::GetEntry(result);
+	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
+	auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
+	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
+
+	idx_t total_coords = 0;
+	UnaryExecutor::Execute<string_t, list_entry_t>(source, result, count, [&](string_t &geom) {
+		auto geometry = ctx.Deserialize(geom);
+		if (geometry.Type() != GeometryType::LINESTRING) {
+			throw CastException("Cannot cast non-linestring GEOMETRY to LINESTRING_2D");
+		}
+
+		auto &line = geometry.GetLineString();
+		auto line_size = line.Count();
+
+		auto entry = list_entry_t(total_coords, line_size);
+		total_coords += line_size;
+		ListVector::Reserve(result, total_coords);
+
+		for (idx_t i = 0; i < line_size; i++) {
+			x_data[entry.offset + i] = line.points[i].x;
+			y_data[entry.offset + i] = line.points[i].y;
+		}
+		return entry;
+	});
+	ListVector::SetListSize(result, total_coords);
 	return true;
 }
 
@@ -66,7 +130,6 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 	ArenaAllocator allocator(default_alloc);
 	GeometryFactory ctx(allocator);
 
-	auto polygon_entries = ListVector::GetData(source);
 	auto &ring_vec = ListVector::GetEntry(source);
 	auto ring_entries = ListVector::GetData(ring_vec);
 	auto &coord_vec = ListVector::GetEntry(ring_vec);
@@ -126,12 +189,16 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 //  Register functions
 //------------------------------------------------------------------------------
 void CoreCastFunctions::RegisterGeometryCasts(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY, GeoTypes::LINESTRING_2D, GeometryToLineString2DCast, 2);
+
 	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D, GeoTypes::GEOMETRY, LineString2DToGeometryCast, 1);
+
 	casts.RegisterCastFunction(GeoTypes::POINT_2D, GeoTypes::GEOMETRY, Point2DToGeometryCast, 1);
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY, GeoTypes::POINT_2D, GeometryToPoint2DCast, 1);
+
 	casts.RegisterCastFunction(GeoTypes::POLYGON_2D, GeoTypes::GEOMETRY, Polygon2DToGeometryCast, 1);
 	casts.RegisterCastFunction(GeoTypes::BOX_2D, GeoTypes::GEOMETRY, Box2DToGeometryCast, 1);
 }

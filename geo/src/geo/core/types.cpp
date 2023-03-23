@@ -25,7 +25,7 @@ LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalType::DOUBL
                                                     {"max_x", LogicalType::DOUBLE},
                                                     {"max_y", LogicalType::DOUBLE}});
 
-LogicalType GeoTypes::LINESTRING_2D = LogicalType::LIST(GeoTypes::POINT_2D);
+LogicalType GeoTypes::LINESTRING_2D = LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}}));
 
 LogicalType GeoTypes::POLYGON_2D = LogicalType::LIST(GeoTypes::LINESTRING_2D);
 
@@ -34,12 +34,11 @@ LogicalType GeoTypes::GEOMETRY = LogicalType::BLOB;
 LogicalType GeoTypes::WKB_BLOB = LogicalType::BLOB;
 
 static void AddType(Catalog &catalog, ClientContext &context, LogicalType &type, const string &name) {
+	type.SetAlias(name);
 	auto type_info = CreateTypeInfo(name, type);
 	type_info.temporary = true;
 	type_info.internal = true;
-	type.SetAlias(name);
-	auto type_entry = (TypeCatalogEntry *)catalog.CreateType(context, &type_info);
-	LogicalType::SetCatalog(type, type_entry);
+	catalog.CreateType(context, &type_info);
 }
 
 // Casts

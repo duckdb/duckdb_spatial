@@ -195,9 +195,13 @@ template <WKBByteOrder ORDER>
 Point WKBReader::ReadPointImpl() {
 	auto x = ReadDouble<ORDER>();
 	auto y = ReadDouble<ORDER>();
+	if(std::isnan(x) && std::isnan(y)) {
+		auto point_data = factory.AllocateVertexVector(0);
+		return Point(point_data);
+	}
 	auto point_data = factory.AllocateVertexVector(1);
 	point_data.Add(Vertex(x, y));
-	return Point(std::move(point_data));
+	return Point(point_data);
 }
 
 template <WKBByteOrder ORDER>
@@ -209,7 +213,7 @@ LineString WKBReader::ReadLineStringImpl() {
 		auto y = ReadDouble<ORDER>();
 		line_data.Add(Vertex(x, y));
 	}
-	return LineString(std::move(line_data));
+	return LineString(line_data);
 }
 
 template <WKBByteOrder ORDER>
@@ -266,8 +270,7 @@ GeometryCollection WKBReader::ReadGeometryCollectionImpl() {
 	auto num_geometries = ReadInt<ORDER>();
 	auto geometries = reinterpret_cast<Geometry *>(factory.allocator.Allocate(sizeof(Geometry) * num_geometries));
 	for (uint32_t i = 0; i < num_geometries; i++) {
-		auto geom = ReadGeometry();
-		geometries[i] = std::move(geom);
+		geometries[i] = ReadGeometry();
 	}
 	return GeometryCollection(geometries, num_geometries);
 }

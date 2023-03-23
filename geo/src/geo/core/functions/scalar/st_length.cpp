@@ -58,13 +58,22 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 		allocator.Reset();
 		auto geometry = ctx.Deserialize(input);
 		switch (geometry.Type()) {
-		case GeometryType::POINT:
-		case GeometryType::POLYGON:
-			return 0.0; //
 		case GeometryType::LINESTRING:
 			return geometry.GetLineString().Length();
+		case GeometryType::MULTILINESTRING:
+			return geometry.GetMultiLineString().Length();
+		case GeometryType::GEOMETRYCOLLECTION:
+			return geometry.GetGeometryCollection().Aggregate([](Geometry &geom, double state){
+				if(geom.Type() == GeometryType::LINESTRING) {
+					return state + geom.GetLineString().Length();
+				} else if(geom.Type() == GeometryType::MULTILINESTRING) {
+					return state + geom.GetMultiLineString().Length();
+				} else {
+					return state;
+				}
+			}, 0.0);
 		default:
-			throw NotImplementedException("Geometry type not implemented");
+			return 0.0;
 		}
 	});
 }

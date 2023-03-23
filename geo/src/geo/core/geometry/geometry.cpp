@@ -10,11 +10,17 @@ namespace core {
 //------------------------------------------------------------------------------
 
 string Point::ToString() const {
-	return "POINT (" + std::to_string(data[0].x) + " " + std::to_string(data[0].y) + ")";
-}
-
-uint32_t Point::SerializedSize() const {
-	return data.SerializedSize();
+	if(IsEmpty()) {
+        return "POINT EMPTY";
+    }
+	auto &vert = data[0];
+	if (std::isnan(vert.x) && std::isnan(vert.y)) {
+		// This is a special case for WKB. WKB does not support empty points,
+		// and instead writes a point with NaN coordinates. We therefore need to
+		// check for this case and return POINT EMPTY instead to round-trip safely
+		return "POINT EMPTY";
+	}
+    return "POINT (" + std::to_string(data[0].x) + " " + std::to_string(data[0].y) + ")";
 }
 
 //------------------------------------------------------------------------------
@@ -30,6 +36,11 @@ Geometry LineString::Centroid() const {
 }
 
 string LineString::ToString() const {
+	auto count = points.Count();
+	if(count == 0) {
+        return "LINESTRING EMPTY";
+    }
+
 	string result = "LINESTRING (";
 	for (uint32_t i = 0; i < points.Count(); i++) {
 		result += std::to_string(points[i].x) + " " + std::to_string(points[i].y);
@@ -41,9 +52,8 @@ string LineString::ToString() const {
 	return result;
 }
 
-uint32_t LineString::SerializedSize() const {
-	// 4 bytes for the number of points
-	return 4 + points.SerializedSize();
+uint32_t LineString::Count() const {
+	return points.Count();
 }
 
 //------------------------------------------------------------------------------
@@ -67,6 +77,16 @@ Geometry Polygon::Centroid() const {
 }
 
 string Polygon::ToString() const {
+
+	// check if the polygon is empty
+	uint32_t total_verts = 0;
+	for (uint32_t i = 0; i < num_rings; i++) {
+        total_verts += rings[i].Count();
+    }
+	if(total_verts == 0) {
+        return "POLYGON EMPTY";
+    }
+
 	string result = "POLYGON (";
 	for (uint32_t i = 0; i < num_rings; i++) {
 		result += "(";
@@ -85,31 +105,27 @@ string Polygon::ToString() const {
 	return result;
 }
 
-uint32_t Polygon::SerializedSize() const {
-	uint32_t size = sizeof(uint32_t); // 4 bytes for the number of rings
-	for (uint32_t i = 0; i < num_rings; i++) {
-		size += sizeof(uint32_t);          // 4 bytes for the number of points in the ring
-		size += rings[i].SerializedSize(); // size of the ring
-	}
-	return size;
-}
 //------------------------------------------------------------------------------
 // MultiPoint
 //------------------------------------------------------------------------------
 
 string MultiPoint::ToString() const {
+	if(num_points == 0) {
+        return "MULTIPOINT EMPTY";
+    }
 	string str = "MULTIPOINT (";
 	for (uint32_t i = 0; i < num_points; i++) {
-		str += std::to_string(points[i].X()) + " " + std::to_string(points[i].Y());
-		if (i < num_points - 1) {
-			str += ", ";
+		if(points[i].IsEmpty()) {
+			str += "EMPTY";
+        } else {
+			auto &vert = points[i].GetVertex();
+			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
 		}
+        if (i < num_points - 1) {
+            str += ", ";
+        }
 	}
 	return str + ")";
-}
-
-uint32_t MultiPoint::SerializedSize() const {
-	return sizeof(uint32_t) + num_points * sizeof(Point); // TODO: this is wrong
 }
 
 //------------------------------------------------------------------------------
@@ -117,6 +133,9 @@ uint32_t MultiPoint::SerializedSize() const {
 //------------------------------------------------------------------------------
 
 string MultiLineString::ToString() const {
+	if(num_linestrings == 0) {
+        return "MULTILINESTRING EMPTY";
+    }
 	string str = "MULTILINESTRING (";
 	for (uint32_t i = 0; i < num_linestrings; i++) {
 		str += "(";
@@ -134,12 +153,13 @@ string MultiLineString::ToString() const {
 	return str + ")";
 }
 
-uint32_t MultiLineString::SerializedSize() const {
-	uint32_t size = sizeof(uint32_t); // 4 bytes for the number of linestrings
-	for (uint32_t i = 0; i < num_linestrings; i++) {
-		size += linestrings[i].SerializedSize();
-	}
-	return size;
+
+double MultiLineString::Length() const {
+    double length = 0;
+    for (uint32_t i = 0; i < num_linestrings; i++) {
+        length += linestrings[i].Length();
+    }
+    return length;
 }
 
 //------------------------------------------------------------------------------
@@ -147,6 +167,9 @@ uint32_t MultiLineString::SerializedSize() const {
 //------------------------------------------------------------------------------
 
 string MultiPolygon::ToString() const {
+	if(num_polygons == 0) {
+        return "MULTIPOLYGON EMPTY";
+    }
 	string str = "MULTIPOLYGON (";
 	for (uint32_t i = 0; i < num_polygons; i++) {
 		str += "(";
@@ -171,19 +194,14 @@ string MultiPolygon::ToString() const {
 	return str + ")";
 }
 
-uint32_t MultiPolygon::SerializedSize() const {
-	uint32_t size = sizeof(uint32_t); // 4 bytes for the number of polygons
-	for (uint32_t i = 0; i < num_polygons; i++) {
-		size += polygons[i].SerializedSize();
-	}
-	return size;
-}
-
 //------------------------------------------------------------------------------
 // GeometryCollection
 //------------------------------------------------------------------------------
 
 string GeometryCollection::ToString() const {
+	if(num_geometries == 0) {
+        return "GEOMETRYCOLLECTION EMPTY";
+    }
 	string str = "GEOMETRYCOLLECTION (";
 	for (uint32_t i = 0; i < num_geometries; i++) {
 		str += geometries[i].ToString();
@@ -194,53 +212,30 @@ string GeometryCollection::ToString() const {
 	return str + ")";
 }
 
-uint32_t GeometryCollection::SerializedSize() const {
-	uint32_t size = sizeof(uint32_t); // 4 bytes for the number of geometries
-	for (uint32_t i = 0; i < num_geometries; i++) {
-		size += geometries[i].SerializedSize();
-	}
-	return size;
-}
-
 //------------------------------------------------------------------------------
 // Geometry
 //------------------------------------------------------------------------------
 string Geometry::ToString() const {
-	string result;
 	switch (type) {
 	case GeometryType::POINT:
-		result = point.ToString();
-		break;
+		return point.ToString();
 	case GeometryType::LINESTRING:
-		result = linestring.ToString();
-		break;
-	case GeometryType::POLYGON:
-		result = polygon.ToString();
-		break;
+		return linestring.ToString();
+    case GeometryType::POLYGON:
+        return polygon.ToString();
+    case GeometryType::MULTIPOINT:
+        return multipoint.ToString();
+    case GeometryType::MULTILINESTRING:
+        return multilinestring.ToString();
+    case GeometryType::MULTIPOLYGON:
+        return multipolygon.ToString();
+    case GeometryType::GEOMETRYCOLLECTION:
+        return geometrycollection.ToString();
 	default:
 		throw NotImplementedException("Geometry::ToString()");
 	}
-	return result;
 }
 
-// Returns the size of the serialized geometry in bytes, excluding the GeometryPrefix
-uint32_t Geometry::SerializedSize() const {
-	uint32_t result = 0;
-	switch (type) {
-	case GeometryType::POINT:
-		result = point.SerializedSize();
-		break;
-	case GeometryType::LINESTRING:
-		result = linestring.SerializedSize();
-		break;
-	case GeometryType::POLYGON:
-		result = polygon.SerializedSize();
-		break;
-	default:
-		throw NotImplementedException("Geometry::SerializedSize()");
-	}
-	return result;
-}
 
 } // namespace core
 

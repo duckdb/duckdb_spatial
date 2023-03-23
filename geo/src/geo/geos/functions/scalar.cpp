@@ -1,5 +1,8 @@
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
+#include "geo/core/geometry/geometry.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
+
 #include "geo/geos/functions/scalar.hpp"
 #include "geo/geos/geos_wrappers.hpp"
 
@@ -7,11 +10,39 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
+
 namespace geo {
 
 namespace geos {
 
 // Conversion operations
+static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto count = args.size();
+	auto input = args.data[0];
+	auto ctx = GeosContextWrapper();
+
+	auto reader = ctx.CreateWKTReader();
+
+	ArenaAllocator arena(Allocator::DefaultAllocator());
+	core::GeometryFactory factory(arena);
+
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkt) {
+		arena.Reset();
+		auto geos_geom = reader.Read(wkt);
+		if(geos_geom.get() == nullptr) {
+			throw InvalidInputException("Invalid WKT string");
+		}
+
+		auto multidimensional = (GEOSHasM(geos_geom.get()) == 1) || (GEOSHasZ(geos_geom.get()) == 1);
+		if(multidimensional) {
+			throw InvalidInputException("3D/4D geometries are not supported");
+		}
+
+		auto geometry = ctx.ToGeometry(factory, geos_geom.get());
+		return factory.Serialize(result, geometry);
+	});
+}
+
 static void WKBFromWKTFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();
 	auto input = args.data[0];
@@ -458,8 +489,14 @@ void GeosScalarFunctions::Register(ClientContext &context) {
 
 	// TODO: Rename these once we have a proper Geometry type, and not just WKB. These should probably be called
 	// ST_WkbFromText and ST_WkbFromBlob
+
+	CreateScalarFunctionInfo geometry_from_wkt_info(
+	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY, GeometryFromWKTFunction));
+	geometry_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.AddFunction(context, &geometry_from_wkt_info);
+
 	CreateScalarFunctionInfo wkb_from_wkt_info(
-	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB, WKBFromWKTFunction));
+	    ScalarFunction("ST_WKBFromWKT", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB, WKBFromWKTFunction));
 	wkb_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkb_from_wkt_info);
 

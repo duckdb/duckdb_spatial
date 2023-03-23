@@ -265,7 +265,8 @@ core::VertexVector GeosContextWrapper::ToVertexVector(const core::GeometryFactor
 	unsigned int size;
 	GEOSCoordSeq_getSize_r(ctx, seq, &size);
 	auto vec = factory.AllocateVertexVector(size);
-	auto ok = GEOSCoordSeq_copyToBuffer(seq, (double*)vec.data, false, false);
+	vec.count = size;
+	auto ok = 1 == GEOSCoordSeq_copyToBuffer_r(ctx, seq, (double*)vec.data, false, false);
 	if(!ok) {
 		throw InvalidInputException("Failed to copy coordinates to buffer");
 	}
@@ -273,21 +274,21 @@ core::VertexVector GeosContextWrapper::ToVertexVector(const core::GeometryFactor
 }
 
 core::Point GeosContextWrapper::ToPoint(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	D_ASSERT(GEOSGeomTypeId(geom) == GEOS_POINT);
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POINT);
 	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
 	auto vec = ToVertexVector(factory, seq);
 	return core::Point(vec);
 }
 
 core::LineString GeosContextWrapper::ToLineString(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	D_ASSERT(GEOSGeomTypeId(geom) == GEOS_LINESTRING);
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_LINESTRING);
 	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
 	auto vec = ToVertexVector(factory, seq);
 	return core::LineString(vec);
 }
 
 core::Polygon GeosContextWrapper::ToPolygon(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	D_ASSERT(GEOSGeomTypeId(geom) == GEOS_POLYGON);
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POLYGON);
 	auto shell_ptr = GEOSGetExteriorRing_r(ctx, geom);
 	auto shell_seq = GEOSGeom_getCoordSeq_r(ctx, shell_ptr);
 	auto shell_vec = ToVertexVector(factory, shell_seq);
@@ -307,7 +308,7 @@ core::Polygon GeosContextWrapper::ToPolygon(const core::GeometryFactory &factory
 }
 
 core::MultiPoint GeosContextWrapper::ToMultiPoint(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	D_ASSERT(GEOSGeomTypeId(geom) == GEOS_MULTIPOINT);
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTIPOINT);
 	auto num_points = GEOSGetNumGeometries_r(ctx, geom);
 	auto mpoint = factory.CreateMultiPoint(num_points);
 	for (int i = 0; i < num_points; i++) {
@@ -319,7 +320,7 @@ core::MultiPoint GeosContextWrapper::ToMultiPoint(const core::GeometryFactory &f
 }
 
 core::MultiLineString GeosContextWrapper::ToMultiLineString(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-    D_ASSERT(GEOSGeomTypeId(geom) == GEOS_MULTILINESTRING);
+    D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTILINESTRING);
 	auto num_lines = GEOSGetNumGeometries_r(ctx, geom);
 	auto mline = factory.CreateMultiLineString(num_lines);
 	for (int i = 0; i < num_lines; i++) {
@@ -331,7 +332,7 @@ core::MultiLineString GeosContextWrapper::ToMultiLineString(const core::Geometry
 }
 
 core::MultiPolygon GeosContextWrapper::ToMultiPolygon(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	D_ASSERT(GEOSGeomTypeId(geom) == GEOS_MULTIPOLYGON);
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTIPOLYGON);
 	auto num_polys = GEOSGetNumGeometries_r(ctx, geom);
 	auto mpoly = factory.CreateMultiPolygon(num_polys);
 	for (int i = 0; i < num_polys; i++) {
@@ -343,7 +344,7 @@ core::MultiPolygon GeosContextWrapper::ToMultiPolygon(const core::GeometryFactor
 }
 
 core::GeometryCollection GeosContextWrapper::ToGeometryCollection(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	D_ASSERT(GEOSGeomTypeId(geom) == GEOS_GEOMETRYCOLLECTION);
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_GEOMETRYCOLLECTION);
 	auto num_geoms = GEOSGetNumGeometries_r(ctx, geom);
 	auto collection = factory.CreateGeometryCollection(num_geoms);
 	for (int i = 0; i < num_geoms; i++) {
@@ -355,7 +356,7 @@ core::GeometryCollection GeosContextWrapper::ToGeometryCollection(const core::Ge
 }
 
 core::Geometry GeosContextWrapper::ToGeometry(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
-	switch (GEOSGeomTypeId(geom)) {
+	switch (GEOSGeomTypeId_r(ctx, geom)) {
 	case GEOS_POINT: {
 		return core::Geometry(ToPoint(factory, geom));
 	}
@@ -378,7 +379,7 @@ core::Geometry GeosContextWrapper::ToGeometry(const core::GeometryFactory &facto
 		return core::Geometry(ToGeometryCollection(factory, geom));
 	}
 	default:
-		throw InvalidInputException("Unsupported geometry type");
+		throw InvalidInputException(StringUtil::Format("Unsupported geometry type %d", GEOSGeomTypeId_r(ctx, geom)));
 	}
 }
 

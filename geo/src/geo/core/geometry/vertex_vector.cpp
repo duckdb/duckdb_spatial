@@ -24,6 +24,9 @@ double Vertex::DistanceSquared(const Vertex &p1, const Vertex &p2) const {
 
 double VertexVector::Length() const {
 	double length = 0;
+	if(count < 2) {
+		return 0.0;
+	}
 	for (uint32_t i = 0; i < count - 1; i++) {
 		auto &p1 = data[i];
 		auto &p2 = data[i + 1];
