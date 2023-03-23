@@ -110,73 +110,73 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	case GeometryType::POINT: {
 		auto &point = geometry.GetPoint();
 		auto size = header_size + GetSerializedSize(point);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializePoint(ptr, point);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	case GeometryType::LINESTRING: {
 		auto &linestring = geometry.GetLineString();
 		auto size = header_size + GetSerializedSize(linestring);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializeLineString(ptr, linestring);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	case GeometryType::POLYGON: {
 		auto &polygon = geometry.GetPolygon();
 		auto size = header_size + GetSerializedSize(polygon);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializePolygon(ptr, polygon);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	case GeometryType::MULTIPOINT: {
 		auto &multipoint = geometry.GetMultiPoint();
 		auto size = header_size + GetSerializedSize(multipoint);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializeMultiPoint(ptr, multipoint);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	case GeometryType::MULTILINESTRING: {
 		auto &multilinestring = geometry.GetMultiLineString();
 		auto size = header_size + GetSerializedSize(multilinestring);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializeMultiLineString(ptr, multilinestring);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	case GeometryType::MULTIPOLYGON: {
 		auto &multipolygon = geometry.GetMultiPolygon();
 		auto size = header_size + GetSerializedSize(multipolygon);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializeMultiPolygon(ptr, multipolygon);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
 		auto &collection = geometry.GetGeometryCollection();
 		auto size = header_size + GetSerializedSize(collection);
-		auto start = allocator.AllocateAligned(size);
-		auto ptr = start;
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (uint8_t *)str.GetDataUnsafe();
 		prefix.Serialize(ptr);
 		ptr += 4; // skip padding
 		SerializeGeometryCollection(ptr, collection);
-		return StringVector::AddStringOrBlob(result, (const char *)start, size);
+		return str;
 	}
 	default:
 		throw NotImplementedException("Unimplemented geometry type for serialization!");
