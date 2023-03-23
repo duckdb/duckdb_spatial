@@ -73,7 +73,7 @@ struct Vertex {
 
 	bool operator==(const Vertex &other) const {
 		// approximate comparison
-		return fabs(x - other.x) < 1e-10 && fabs(y - other.y) < 1e-10;
+		return std::fabs(x - other.x) < 1e-10 && std::fabs(y - other.y) < 1e-10;
 	}
 
 	bool operator!=(const Vertex &other) const {
