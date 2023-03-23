@@ -144,10 +144,10 @@ void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
 	ScalarFunctionSet distance_function_set("ST_Distance");
 
 	distance_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::POINT_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE, PointToPointDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D, GeoTypes::LINESTRING_2D}, LogicalType::DOUBLE,
+	    ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointToPointDistanceFunction));
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE,
 	                                                 PointToLineStringDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE,
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE,
 	                                                 LineStringToPointDistanceFunction));
 
 

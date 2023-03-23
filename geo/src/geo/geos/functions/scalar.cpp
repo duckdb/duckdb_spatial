@@ -489,173 +489,173 @@ void GeosScalarFunctions::Register(ClientContext &context) {
 	// ST_WkbFromText and ST_WkbFromBlob
 
 	CreateScalarFunctionInfo geometry_from_wkt_info(
-	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY, GeometryFromWKTFunction, nullptr, nullptr, nullptr, core::GeometryFunctionLocalState::Init));
+	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY(), GeometryFromWKTFunction, nullptr, nullptr, nullptr, core::GeometryFunctionLocalState::Init));
 	geometry_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &geometry_from_wkt_info);
 
 	CreateScalarFunctionInfo wkb_from_wkt_info(
-	    ScalarFunction("ST_WKBFromWKT", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB, WKBFromWKTFunction));
+	    ScalarFunction("ST_WKBFromWKT", {LogicalType::VARCHAR}, core::GeoTypes::WKB_BLOB(), WKBFromWKTFunction));
 	wkb_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkb_from_wkt_info);
 
 	CreateScalarFunctionInfo wkt_from_wkb_info(
-	    ScalarFunction("ST_AsText", {core::GeoTypes::WKB_BLOB}, LogicalType::VARCHAR, WKTFromWKBFunction));
+	    ScalarFunction("ST_AsText", {core::GeoTypes::WKB_BLOB()}, LogicalType::VARCHAR, WKTFromWKBFunction));
 	wkt_from_wkb_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkt_from_wkb_info);
 
 	CreateScalarFunctionInfo wkb_from_wkb_info(
-	    ScalarFunction("ST_GeomFromWKB", {LogicalType::BLOB}, core::GeoTypes::WKB_BLOB, WKBFromBlobFunction));
+	    ScalarFunction("ST_GeomFromWKB", {LogicalType::BLOB}, core::GeoTypes::WKB_BLOB(), WKBFromBlobFunction));
 	wkb_from_wkb_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &wkb_from_wkb_info);
 
 	/////////// Property Accessors
 	CreateScalarFunctionInfo area_info(
-	    ScalarFunction("ST_Area", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBAreaFunction));
+	    ScalarFunction("ST_Area", {core::GeoTypes::WKB_BLOB()}, LogicalType::DOUBLE, WKBAreaFunction));
 	area_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &area_info);
 
 	CreateScalarFunctionInfo length_info(
-	    ScalarFunction("ST_Length", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBLenFunction));
+	    ScalarFunction("ST_Length", {core::GeoTypes::WKB_BLOB()}, LogicalType::DOUBLE, WKBLenFunction));
 	length_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &length_info);
 
 	CreateScalarFunctionInfo is_simple_info(
-	    ScalarFunction("ST_IsSimple", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsSimpleFunction));
+	    ScalarFunction("ST_IsSimple", {core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBIsSimpleFunction));
 	is_simple_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_simple_info);
 
 	CreateScalarFunctionInfo is_valid_info(
-	    ScalarFunction("ST_IsValid", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsValidFunction));
+	    ScalarFunction("ST_IsValid", {core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBIsValidFunction));
 	is_valid_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_valid_info);
 
 	CreateScalarFunctionInfo is_empty_info(
-	    ScalarFunction("ST_IsEmpty", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsEmptyFunction));
+	    ScalarFunction("ST_IsEmpty", {core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBIsEmptyFunction));
 	is_empty_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_empty_info);
 
 	CreateScalarFunctionInfo is_ring_info(
-	    ScalarFunction("ST_IsRing", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsRingFunction));
+	    ScalarFunction("ST_IsRing", {core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBIsRingFunction));
 	is_ring_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_ring_info);
 
 	CreateScalarFunctionInfo is_closed_info(
-	    ScalarFunction("ST_IsClosed", {core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBIsClosedFunction));
+	    ScalarFunction("ST_IsClosed", {core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBIsClosedFunction));
 	is_closed_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &is_closed_info);
 
 	CreateScalarFunctionInfo x_info(
-	    ScalarFunction("ST_X", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBGetXFunction));
+	    ScalarFunction("ST_X", {core::GeoTypes::WKB_BLOB()}, LogicalType::DOUBLE, WKBGetXFunction));
 	x_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &x_info);
 
 	CreateScalarFunctionInfo y_info(
-	    ScalarFunction("ST_Y", {core::GeoTypes::WKB_BLOB}, LogicalType::DOUBLE, WKBGetYFunction));
+	    ScalarFunction("ST_Y", {core::GeoTypes::WKB_BLOB()}, LogicalType::DOUBLE, WKBGetYFunction));
 	y_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &y_info);
 
 	/////////// Constructive Operations
 	CreateScalarFunctionInfo simplify_info(ScalarFunction(
-	    "ST_Simplify", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE}, core::GeoTypes::WKB_BLOB, WKBSimplifyFunction));
+	    "ST_Simplify", {core::GeoTypes::WKB_BLOB(), LogicalType::DOUBLE}, core::GeoTypes::WKB_BLOB(), WKBSimplifyFunction));
 	simplify_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &simplify_info);
 
 	CreateScalarFunctionInfo simplify_preserve_info(
-	    ScalarFunction("ST_SimplifyPreserveTopology", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE},
-	                   core::GeoTypes::WKB_BLOB, WKBSimplifyPreserveTopologyFunction));
+	    ScalarFunction("ST_SimplifyPreserveTopology", {core::GeoTypes::WKB_BLOB(), LogicalType::DOUBLE},
+	                   core::GeoTypes::WKB_BLOB(), WKBSimplifyPreserveTopologyFunction));
 	simplify_preserve_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &simplify_preserve_info);
 
-	CreateScalarFunctionInfo buffer_info(ScalarFunction("ST_Buffer", {core::GeoTypes::WKB_BLOB, LogicalType::DOUBLE},
-	                                                    core::GeoTypes::WKB_BLOB, WKBBufferFunction));
+	CreateScalarFunctionInfo buffer_info(ScalarFunction("ST_Buffer", {core::GeoTypes::WKB_BLOB(), LogicalType::DOUBLE},
+	                                                    core::GeoTypes::WKB_BLOB(), WKBBufferFunction));
 	buffer_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &buffer_info);
 
 	CreateScalarFunctionInfo boundary_info(
-	    ScalarFunction("ST_Boundary", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBBoundaryFunction));
+	    ScalarFunction("ST_Boundary", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBBoundaryFunction));
 	boundary_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &boundary_info);
 
 	CreateScalarFunctionInfo convex_hull_info(
-	    ScalarFunction("ST_ConvexHull", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBConvexHullFunction));
+	    ScalarFunction("ST_ConvexHull", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBConvexHullFunction));
 	convex_hull_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &convex_hull_info);
 
 	CreateScalarFunctionInfo centroid_info(
-	    ScalarFunction("ST_Centroid", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBCentroidFunction));
+	    ScalarFunction("ST_Centroid", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBCentroidFunction));
 	centroid_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &centroid_info);
 
 	CreateScalarFunctionInfo envelope_info(
-	    ScalarFunction("ST_Envelope", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBEnvelopeFunction));
+	    ScalarFunction("ST_Envelope", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBEnvelopeFunction));
 	envelope_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &envelope_info);
 
 	CreateScalarFunctionInfo intersection_info(ScalarFunction("ST_Intersection",
-	                                                          {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
-	                                                          core::GeoTypes::WKB_BLOB, WKBIntersectionFunction));
+	                                                          {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()},
+	                                                          core::GeoTypes::WKB_BLOB(), WKBIntersectionFunction));
 	intersection_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &intersection_info);
 
 	/////////// Mutations
 	CreateScalarFunctionInfo normalize_info(
-	    ScalarFunction("ST_Normalize", {core::GeoTypes::WKB_BLOB}, core::GeoTypes::WKB_BLOB, WKBNormalizeFunction));
+	    ScalarFunction("ST_Normalize", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBNormalizeFunction));
 	normalize_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &normalize_info);
 
 	/////////// Spatial Predicates
 	CreateScalarFunctionInfo contains_info(ScalarFunction("ST_Contains",
-	                                                      {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                      {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()},
 	                                                      LogicalType::BOOLEAN, WKBContainsFunction));
 	contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &contains_info);
 
 	CreateScalarFunctionInfo covers_info(ScalarFunction(
-	    "ST_Covers", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCoversFunction));
+	    "ST_Covers", {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBCoversFunction));
 	covers_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &covers_info);
 
 	CreateScalarFunctionInfo covered_by_info(ScalarFunction("ST_CoveredBy",
-	                                                        {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                        {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()},
 	                                                        LogicalType::BOOLEAN, WKBCoveredByFunction));
 	covered_by_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &covered_by_info);
 
 	CreateScalarFunctionInfo crosses_info(ScalarFunction(
-	    "ST_Crosses", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBCrossesFunction));
+	    "ST_Crosses", {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBCrossesFunction));
 	crosses_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &crosses_info);
 
 	CreateScalarFunctionInfo disjoint_info(ScalarFunction("ST_Disjoint",
-	                                                      {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                      {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()},
 	                                                      LogicalType::BOOLEAN, WKBDisjointFunction));
 	disjoint_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &disjoint_info);
 
 	CreateScalarFunctionInfo equals_info(ScalarFunction(
-	    "ST_Equals", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBEqualsFunction));
+	    "ST_Equals", {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBEqualsFunction));
 	equals_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &equals_info);
 
 	CreateScalarFunctionInfo intersects_info(ScalarFunction("ST_Intersects",
-	                                                        {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                        {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()},
 	                                                        LogicalType::BOOLEAN, WKBIntersectsFunction));
 	intersects_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &intersects_info);
 
 	CreateScalarFunctionInfo overlaps_info(ScalarFunction("ST_Overlaps",
-	                                                      {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB},
+	                                                      {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()},
 	                                                      LogicalType::BOOLEAN, WKBOverlapsFunction));
 	overlaps_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &overlaps_info);
 
 	CreateScalarFunctionInfo touches_info(ScalarFunction(
-	    "ST_Touches", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBTouchesFunction));
+	    "ST_Touches", {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBTouchesFunction));
 	touches_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &touches_info);
 
 	CreateScalarFunctionInfo within_info(ScalarFunction(
-	    "ST_Within", {core::GeoTypes::WKB_BLOB, core::GeoTypes::WKB_BLOB}, LogicalType::BOOLEAN, WKBWithinFunction));
+	    "ST_Within", {core::GeoTypes::WKB_BLOB(), core::GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBWithinFunction));
 	within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &within_info);
 }

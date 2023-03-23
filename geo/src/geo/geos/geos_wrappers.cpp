@@ -292,7 +292,6 @@ core::Polygon GeosContextWrapper::ToPolygon(core::GeometryFactory &factory, cons
 	auto shell_ptr = GEOSGetExteriorRing_r(ctx, geom);
 
 	// Special case, empty polygon
-	unsigned int shell_size;
 	if(1 == GEOSisEmpty_r(ctx, shell_ptr)) {
 		return factory.CreatePolygon(0, nullptr);
 	}
@@ -304,11 +303,11 @@ core::Polygon GeosContextWrapper::ToPolygon(core::GeometryFactory &factory, cons
 
 	poly.rings[0] = shell_vec;
 
-	for (int i = 1; i < num_holes; i++) {
+	for (int i = 0; i < num_holes; i++) {
 		auto hole_ptr = GEOSGetInteriorRingN_r(ctx, geom, i);
 		auto hole_seq = GEOSGeom_getCoordSeq_r(ctx, hole_ptr);
 		auto hole_vec = ToVertexVector(factory, hole_seq);
-		poly.rings[i] = hole_vec;
+		poly.rings[1 + i] = hole_vec;
 	}
 
 	return poly;

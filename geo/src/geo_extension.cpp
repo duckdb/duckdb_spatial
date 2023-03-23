@@ -32,12 +32,6 @@ static void LoadInternal(DatabaseInstance &instance) {
 	geo::gdal::GdalModule::Register(context);
 	geo::geos::GeosModule::Register(context);
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
-	CreateScalarFunctionInfo geo_fun_info(
-	    ScalarFunction("geo", {LogicalType::VARCHAR}, LogicalType::VARCHAR, GeoScalarFun));
-	geo_fun_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &geo_fun_info);
 	con.Commit();
 }
 

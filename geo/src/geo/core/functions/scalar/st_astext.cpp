@@ -138,13 +138,13 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 
 	ScalarFunctionSet as_text_function_set("st_astext");
 
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D}, LogicalType::VARCHAR, Point2DAsTextFunction));
+	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::VARCHAR, Point2DAsTextFunction));
 	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::VARCHAR, LineString2DAsTextFunction));
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::VARCHAR, LineString2DAsTextFunction));
 	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
+	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
 	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsTextFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_text_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

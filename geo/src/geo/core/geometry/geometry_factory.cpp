@@ -58,8 +58,8 @@ MultiPoint GeometryFactory::CreateMultiPoint(uint32_t num_points)  {
 }
 
 MultiLineString GeometryFactory::CreateMultiLineString(uint32_t num_linestrings)  {
-	auto linestrings = reinterpret_cast<LineString *>(allocator.AllocateAligned(sizeof(LineString) * num_linestrings));
-	return MultiLineString(linestrings, num_linestrings);
+	auto line_strings = reinterpret_cast<LineString *>(allocator.AllocateAligned(sizeof(LineString) * num_linestrings));
+	return MultiLineString(line_strings, num_linestrings);
 }
 
 MultiPolygon GeometryFactory::CreateMultiPolygon(uint32_t num_polygons)  {

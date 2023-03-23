@@ -85,13 +85,13 @@ void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	ScalarFunctionSet geometry_type_set("ST_GeometryType");
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D}, LogicalType::ANY,
+	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::ANY,
 	                                             Point2DTypeFunction, GeometryTypeFunctionBind));
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::ANY,
+	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::ANY,
 	                                             Linestring2DTypeFunction, GeometryTypeFunctionBind));
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::ANY,
+	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::ANY,
 	                                             Polygon2DTypeFunction, GeometryTypeFunctionBind));
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::ANY,
+	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::ANY,
 	                                             GeometryTypeFunction, GeometryTypeFunctionBind, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(geometry_type_set));

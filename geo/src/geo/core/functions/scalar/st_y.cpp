@@ -60,8 +60,8 @@ void CoreScalarFunctions::RegisterStY(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	ScalarFunctionSet st_y("st_y");
-	st_y.AddFunction(ScalarFunction({GeoTypes::POINT_2D}, LogicalType::DOUBLE, Point2DFunction));
-	st_y.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::DOUBLE, GeometryFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	st_y.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction));
+	st_y.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(st_y));
 	catalog.AddFunction(context, &info);

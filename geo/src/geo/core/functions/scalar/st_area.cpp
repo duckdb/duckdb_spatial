@@ -89,8 +89,8 @@ void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
 
 	ScalarFunctionSet area_function_set("st_area");
 
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::DOUBLE, PolygonAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(area_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

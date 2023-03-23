@@ -120,22 +120,22 @@ void CoreScalarFunctions::RegisterStPoint(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	CreateScalarFunctionInfo st_point_info(
-	    ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY, PointFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	    ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY(), PointFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	catalog.CreateFunction(context, &st_point_info);
 
 	// Non-standard
 	CreateScalarFunctionInfo st_point_2d_info(
-	    ScalarFunction("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::POINT_2D, Point2DFunction));
+	    ScalarFunction("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::POINT_2D(), Point2DFunction));
 	catalog.CreateFunction(context, &st_point_2d_info);
 
 	CreateScalarFunctionInfo st_point_3d_info(
 	    ScalarFunction("ST_Point3D", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-	                   GeoTypes::POINT_3D, Point3DFunction));
+	                   GeoTypes::POINT_3D(), Point3DFunction));
 	catalog.CreateFunction(context, &st_point_3d_info);
 
 	CreateScalarFunctionInfo st_point_4d_info(ScalarFunction(
 	    "ST_Point4D", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-	    GeoTypes::POINT_4D, Point4DFunction));
+	    GeoTypes::POINT_4D(), Point4DFunction));
 	catalog.CreateFunction(context, &st_point_4d_info);
 }
 

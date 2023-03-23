@@ -37,8 +37,8 @@ void CoreCastFunctions::RegisterDimensionalCasts(ClientContext &context) {
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 
-	casts.RegisterCastFunction(GeoTypes::POINT_4D, GeoTypes::POINT_2D, ToPoint2DCast, 1);
-	casts.RegisterCastFunction(GeoTypes::POINT_3D, GeoTypes::POINT_2D, ToPoint2DCast, 1);
+	casts.RegisterCastFunction(GeoTypes::POINT_4D(), GeoTypes::POINT_2D(), ToPoint2DCast, 1);
+	casts.RegisterCastFunction(GeoTypes::POINT_3D(), GeoTypes::POINT_2D(), ToPoint2DCast, 1);
 }
 
 } // namespace core

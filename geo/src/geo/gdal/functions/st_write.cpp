@@ -117,13 +117,13 @@ static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, Functi
 // Init Global
 //===--------------------------------------------------------------------===//
 static bool IsGeometryType(const LogicalType &type) {
-	return type == core::GeoTypes::WKB_BLOB || type == core::GeoTypes::POINT_2D;
+	return type == core::GeoTypes::WKB_BLOB() || type == core::GeoTypes::POINT_2D();
 }
 static unique_ptr<OGRGeomFieldDefn> OGRGeometryFieldTypeFromLogicalType(const string &name, const LogicalType &type) {
 	// TODO: Support more geometry types
-	if (type == core::GeoTypes::WKB_BLOB) {
+	if (type == core::GeoTypes::WKB_BLOB()) {
 		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
-	} else if (type == core::GeoTypes::POINT_2D) {
+	} else if (type == core::GeoTypes::POINT_2D()) {
 		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbPoint);
 	} else {
 		throw NotImplementedException("Unsupported geometry type");
@@ -273,7 +273,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 //===--------------------------------------------------------------------===//
 
 static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value) {
-	if (type == core::GeoTypes::WKB_BLOB) {
+	if (type == core::GeoTypes::WKB_BLOB()) {
 		auto str = value.GetValueUnsafe<string_t>();
 
 		OGRGeometry *ptr;
@@ -286,7 +286,7 @@ static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const 
 		}
 		return OGRGeometryUniquePtr(ptr);
 	}
-	if (type == core::GeoTypes::POINT_2D) {
+	if (type == core::GeoTypes::POINT_2D()) {
 		auto children = StructValue::GetChildren(value);
 		auto x = children[0].GetValue<double>();
 		auto y = children[1].GetValue<double>();

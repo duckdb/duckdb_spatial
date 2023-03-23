@@ -13,30 +13,69 @@ namespace geo {
 
 namespace core {
 
-LogicalType GeoTypes::POINT_2D = LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}});
+LogicalType GeoTypes::POINT_2D() {
+	auto type = LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}});
+	type.SetAlias("POINT_2D");
+	return type;
+}
 
-LogicalType GeoTypes::POINT_3D =
-    LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}, {"z", LogicalType::DOUBLE}});
+LogicalType GeoTypes::POINT_3D() {
+	auto type = LogicalType::STRUCT({{"x", LogicalType::DOUBLE},
+	                                {"y", LogicalType::DOUBLE},
+	                                {"z", LogicalType::DOUBLE}});
+	type.SetAlias("POINT_3D");
+	return type;
+}
 
-LogicalType GeoTypes::POINT_4D = LogicalType::STRUCT(
-    {{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}, {"z", LogicalType::DOUBLE}, {"m", LogicalType::DOUBLE}});
+LogicalType GeoTypes::POINT_4D() {
+	auto type = LogicalType::STRUCT({{"x", LogicalType::DOUBLE},
+	                                {"y", LogicalType::DOUBLE},
+	                                {"z", LogicalType::DOUBLE},
+	                                {"m", LogicalType::DOUBLE}});
+	type.SetAlias("POINT_4D");
+	return type;
+}
 
-LogicalType GeoTypes::BOX_2D = LogicalType::STRUCT({{"min_x", LogicalType::DOUBLE},
-                                                    {"min_y", LogicalType::DOUBLE},
-                                                    {"max_x", LogicalType::DOUBLE},
-                                                    {"max_y", LogicalType::DOUBLE}});
 
-LogicalType GeoTypes::LINESTRING_2D = LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}}));
+LogicalType GeoTypes::BOX_2D() {
+	auto type = LogicalType::STRUCT({{"min_x", LogicalType::DOUBLE},
+								{"min_y", LogicalType::DOUBLE},
+								{"max_x", LogicalType::DOUBLE},
+								{"max_y", LogicalType::DOUBLE}});
+	type.SetAlias("BOX_2D");
+	return type;
+}
 
-LogicalType GeoTypes::POLYGON_2D = LogicalType::LIST(GeoTypes::LINESTRING_2D);
+LogicalType GeoTypes::LINESTRING_2D() {
+	auto type = LogicalType::LIST(LogicalType::STRUCT({
+	    {"x", LogicalType::DOUBLE},
+	    {"y", LogicalType::DOUBLE}}));
+	type.SetAlias("LINESTRING_2D");
+	return type;
+}
 
-LogicalType GeoTypes::GEOMETRY = LogicalType::BLOB;
+LogicalType GeoTypes::POLYGON_2D() {
+	auto type = LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({
+	    {"x", LogicalType::DOUBLE},
+	    {"y", LogicalType::DOUBLE}})));
+	type.SetAlias("POLYGON_2D");
+	return type;
+}
 
-LogicalType GeoTypes::WKB_BLOB = LogicalType::BLOB;
+LogicalType GeoTypes::GEOMETRY() {
+	auto blob_type = LogicalType(LogicalTypeId::BLOB);
+	blob_type.SetAlias("GEOMETRY");
+	return blob_type;
+}
 
-static void AddType(Catalog &catalog, ClientContext &context, LogicalType &type, const string &name) {
-	type.SetAlias(name);
-	auto type_info = CreateTypeInfo(name, type);
+LogicalType GeoTypes::WKB_BLOB() {
+	auto blob_type = LogicalType(LogicalTypeId::BLOB);
+	blob_type.SetAlias("WKB_BLOB");
+	return blob_type;
+}
+
+static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, const char* name) {
+	CreateTypeInfo type_info(name, std::move(type));
 	type_info.temporary = true;
 	type_info.internal = true;
 	catalog.CreateType(context, &type_info);
@@ -59,33 +98,33 @@ void GeoTypes::Register(ClientContext &context) {
 	auto &casts = config.GetCastFunctions();
 
 	// POINT_2D
-	AddType(catalog, context, GeoTypes::POINT_2D, "POINT_2D");
+	AddType(catalog, context, GeoTypes::POINT_2D(), "POINT_2D");
 
 	// POINT_3D
-	AddType(catalog, context, GeoTypes::POINT_3D, "POINT_3D");
+	AddType(catalog, context, GeoTypes::POINT_3D(), "POINT_3D");
 
 	// POINT_4D
-	AddType(catalog, context, GeoTypes::POINT_4D, "POINT_4D");
+	AddType(catalog, context, GeoTypes::POINT_4D(), "POINT_4D");
 
 	// LineString2D
-	AddType(catalog, context, GeoTypes::LINESTRING_2D, "LINESTRING_2D");
+	AddType(catalog, context, GeoTypes::LINESTRING_2D(), "LINESTRING_2D");
 
 	// Polygon2D
-	AddType(catalog, context, GeoTypes::POLYGON_2D, "POLYGON_2D");
+	AddType(catalog, context, GeoTypes::POLYGON_2D(), "POLYGON_2D");
 
 	// Box2D
-	AddType(catalog, context, GeoTypes::BOX_2D, "BOX_2D");
+	AddType(catalog, context, GeoTypes::BOX_2D(), "BOX_2D");
 
 	// GEOMETRY
-	AddType(catalog, context, GeoTypes::GEOMETRY, "GEOMETRY");
+	AddType(catalog, context, GeoTypes::GEOMETRY(), "GEOMETRY");
 
 	// WKB_BLOB
-	AddType(catalog, context, GeoTypes::WKB_BLOB, "WKB_BLOB");
+	AddType(catalog, context, GeoTypes::WKB_BLOB(), "WKB_BLOB");
 
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, LogicalType::BLOB, DefaultCasts::ReinterpretCast);
+	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast);
 
 	// TODO: remove this implicit cast once we have more functions for the geometry type itself
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, GeoTypes::GEOMETRY, BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(), BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

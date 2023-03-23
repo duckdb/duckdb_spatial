@@ -181,10 +181,10 @@ void ProjFunctions::Register(ClientContext &context) {
 
 	ScalarFunctionSet set("st_transform");
 
-	set.AddFunction(ScalarFunction({geo::core::GeoTypes::BOX_2D, LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               geo::core::GeoTypes::BOX_2D, Box2DTransformFunction));
-	set.AddFunction(ScalarFunction({geo::core::GeoTypes::POINT_2D, LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               geo::core::GeoTypes::POINT_2D, Point2DTransformFunction));
+	set.AddFunction(ScalarFunction({geo::core::GeoTypes::BOX_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
+	                               geo::core::GeoTypes::BOX_2D(), Box2DTransformFunction));
+	set.AddFunction(ScalarFunction({geo::core::GeoTypes::POINT_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
+	                               geo::core::GeoTypes::POINT_2D(), Point2DTransformFunction));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

@@ -90,9 +90,9 @@ void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
 
 	ScalarFunctionSet is_empty_function_set("ST_IsEmpty");
 
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::BOOLEAN, LineIsEmptyFunction));
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::BOOLEAN, PolygonIsEmptyFunction));
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::BOOLEAN, GeometryIsEmptyFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::BOOLEAN, LineIsEmptyFunction));
+	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN, PolygonIsEmptyFunction));
+	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, GeometryIsEmptyFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(is_empty_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

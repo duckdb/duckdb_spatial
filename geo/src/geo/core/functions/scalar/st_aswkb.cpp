@@ -43,7 +43,7 @@ void CoreScalarFunctions::RegisterStAsWKB(ClientContext &context) {
 
 	ScalarFunctionSet as_wkb_function_set("st_aswkb");
 
-	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsWBKFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsWBKFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_wkb_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

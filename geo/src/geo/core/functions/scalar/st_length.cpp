@@ -89,8 +89,8 @@ void CoreScalarFunctions::RegisterStLength(ClientContext &context) {
 
 	ScalarFunctionSet length_function_set("ST_Length");
 
-	length_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::DOUBLE, LineLengthFunction));
-	length_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::DOUBLE, GeometryLengthFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	length_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineLengthFunction));
+	length_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryLengthFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(length_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
