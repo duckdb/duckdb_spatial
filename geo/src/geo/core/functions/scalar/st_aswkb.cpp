@@ -3,7 +3,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
-#include "geo/core/geometry/geometry.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/types.hpp"
 namespace geo {
@@ -18,12 +18,10 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc, 1024);
-	GeometryFactory ctx(allocator);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
-		auto geometry = ctx.Deserialize(input);
+		auto geometry = lstate.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::POINT:
 			return StringVector::AddString(result, geometry.GetPoint().ToString());
@@ -45,7 +43,7 @@ void CoreScalarFunctions::RegisterStAsWKB(ClientContext &context) {
 
 	ScalarFunctionSet as_wkb_function_set("st_aswkb");
 
-	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsWBKFunction));
+	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsWBKFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_wkb_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

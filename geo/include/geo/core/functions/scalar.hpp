@@ -1,5 +1,6 @@
 #pragma once
 #include "geo/common.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
 
 namespace geo {
 

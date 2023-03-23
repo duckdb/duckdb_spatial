@@ -1,8 +1,8 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry.hpp"
-#include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/types.hpp"
 
 namespace geo {
@@ -60,18 +60,15 @@ static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector 
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-
 static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc, 1024);
-	GeometryFactory ctx(allocator);
+
+	auto &ctx = GeometryFunctionLocalState::ResetAndGet(state);
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
 	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
-		allocator.Reset();
-		auto geometry = ctx.Deserialize(input);
+		auto geometry = ctx.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::POINT:
 		case GeometryType::LINESTRING:
@@ -92,8 +89,8 @@ void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
 
 	ScalarFunctionSet area_function_set("st_area");
 
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::DOUBLE, PolygonAreaFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::DOUBLE, GeometryAreaFunction));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::DOUBLE, PolygonAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(area_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

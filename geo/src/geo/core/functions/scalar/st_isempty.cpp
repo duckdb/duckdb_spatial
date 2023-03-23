@@ -1,6 +1,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/types.hpp"
@@ -49,16 +50,13 @@ static void PolygonIsEmptyFunction(DataChunk &args, ExpressionState &state, Vect
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc);
-	GeometryFactory ctx(allocator);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
 	UnaryExecutor::Execute<string_t, bool>(input, result, count, [&](string_t input) {
-		allocator.Reset();
-		auto geometry = ctx.Deserialize(input);
+		auto geometry = lstate.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::POINT:
 			return geometry.GetPoint().IsEmpty();
@@ -94,7 +92,7 @@ void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
 
 	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D}, LogicalType::BOOLEAN, LineIsEmptyFunction));
 	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::BOOLEAN, PolygonIsEmptyFunction));
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::BOOLEAN, GeometryIsEmptyFunction));
+	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::BOOLEAN, GeometryIsEmptyFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(is_empty_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

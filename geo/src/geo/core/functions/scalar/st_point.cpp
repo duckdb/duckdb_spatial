@@ -1,6 +1,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/types.hpp"
@@ -100,18 +101,15 @@ static void Point4DFunction(DataChunk &args, ExpressionState &state, Vector &res
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void PointFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc, 1024);
-	GeometryFactory ctx(allocator);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	auto &x = args.data[0];
 	auto &y = args.data[1];
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, string_t>(x, y, result, count, [&](double x, double y) {
-		allocator.Reset();
-		auto point = ctx.CreatePoint(x, y);
-		return ctx.Serialize(result, Geometry(point));
+		auto point = lstate.factory.CreatePoint(x, y);
+		return lstate.factory.Serialize(result, Geometry(point));
 	});
 }
 
@@ -122,7 +120,7 @@ void CoreScalarFunctions::RegisterStPoint(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	CreateScalarFunctionInfo st_point_info(
-	    ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY, PointFunction));
+	    ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY, PointFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	catalog.CreateFunction(context, &st_point_info);
 
 	// Non-standard

@@ -263,7 +263,6 @@ struct GeometryPrefix {
 		dst += sizeof(uint8_t);
 	}
 };
-
 static_assert(sizeof(GeometryPrefix) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");
 } // namespace core
 

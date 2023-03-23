@@ -4,7 +4,7 @@
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
 #include "geo/core/geometry/geometry.hpp"
-#include "geo/core/geometry/geometry_factory.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/types.hpp"
 namespace geo {
 
@@ -105,12 +105,10 @@ void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vector &res
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc, 1024);
-	GeometryFactory ctx(allocator);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
-		auto geometry = ctx.Deserialize(input);
+		auto geometry = lstate.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::POINT:
 			return StringVector::AddString(result, geometry.GetPoint().ToString());
@@ -146,7 +144,7 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
 	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsTextFunction));
+	    ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::VARCHAR, GeometryAsTextFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_text_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

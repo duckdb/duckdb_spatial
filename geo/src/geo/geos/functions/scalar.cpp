@@ -2,7 +2,7 @@
 #include "geo/core/types.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
-
+#include "geo/core/functions/common.hpp"
 #include "geo/geos/functions/scalar.hpp"
 #include "geo/geos/geos_wrappers.hpp"
 
@@ -23,11 +23,9 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 
 	auto reader = ctx.CreateWKTReader();
 
-	ArenaAllocator arena(Allocator::DefaultAllocator());
-	core::GeometryFactory factory(arena);
+	auto &lstate = core::GeometryFunctionLocalState::ResetAndGet(state);
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkt) {
-		arena.Reset();
 		auto geos_geom = reader.Read(wkt);
 		if(geos_geom.get() == nullptr) {
 			throw InvalidInputException("Invalid WKT string");
@@ -38,8 +36,8 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 			throw InvalidInputException("3D/4D geometries are not supported");
 		}
 
-		auto geometry = ctx.ToGeometry(factory, geos_geom.get());
-		return factory.Serialize(result, geometry);
+		auto geometry = ctx.ToGeometry(lstate.factory, geos_geom.get());
+		return lstate.factory.Serialize(result, geometry);
 	});
 }
 
@@ -491,7 +489,7 @@ void GeosScalarFunctions::Register(ClientContext &context) {
 	// ST_WkbFromText and ST_WkbFromBlob
 
 	CreateScalarFunctionInfo geometry_from_wkt_info(
-	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY, GeometryFromWKTFunction));
+	    ScalarFunction("ST_GeomFromText", {LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY, GeometryFromWKTFunction, nullptr, nullptr, nullptr, core::GeometryFunctionLocalState::Init));
 	geometry_from_wkt_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &geometry_from_wkt_info);
 

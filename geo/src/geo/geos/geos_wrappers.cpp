@@ -261,7 +261,7 @@ GeometryPtr GeosContextWrapper::FromGeometry(core::Geometry &geom) const {
 //----------------------------------------------------------------------
 // To Geometry
 //----------------------------------------------------------------------
-core::VertexVector GeosContextWrapper::ToVertexVector(const core::GeometryFactory &factory, const GEOSCoordSequence *seq) const {
+core::VertexVector GeosContextWrapper::ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const {
 	unsigned int size;
 	GEOSCoordSeq_getSize_r(ctx, seq, &size);
 	auto vec = factory.AllocateVertexVector(size);
@@ -273,21 +273,21 @@ core::VertexVector GeosContextWrapper::ToVertexVector(const core::GeometryFactor
 	return vec;
 }
 
-core::Point GeosContextWrapper::ToPoint(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::Point GeosContextWrapper::ToPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POINT);
 	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
 	auto vec = ToVertexVector(factory, seq);
 	return core::Point(vec);
 }
 
-core::LineString GeosContextWrapper::ToLineString(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::LineString GeosContextWrapper::ToLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_LINESTRING);
 	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
 	auto vec = ToVertexVector(factory, seq);
 	return core::LineString(vec);
 }
 
-core::Polygon GeosContextWrapper::ToPolygon(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::Polygon GeosContextWrapper::ToPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POLYGON);
 	auto shell_ptr = GEOSGetExteriorRing_r(ctx, geom);
 
@@ -314,7 +314,7 @@ core::Polygon GeosContextWrapper::ToPolygon(const core::GeometryFactory &factory
 	return poly;
 }
 
-core::MultiPoint GeosContextWrapper::ToMultiPoint(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::MultiPoint GeosContextWrapper::ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTIPOINT);
 	auto num_points = GEOSGetNumGeometries_r(ctx, geom);
 	auto mpoint = factory.CreateMultiPoint(num_points);
@@ -326,7 +326,7 @@ core::MultiPoint GeosContextWrapper::ToMultiPoint(const core::GeometryFactory &f
 	return mpoint;
 }
 
-core::MultiLineString GeosContextWrapper::ToMultiLineString(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::MultiLineString GeosContextWrapper::ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
     D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTILINESTRING);
 	auto num_lines = GEOSGetNumGeometries_r(ctx, geom);
 	auto mline = factory.CreateMultiLineString(num_lines);
@@ -338,7 +338,7 @@ core::MultiLineString GeosContextWrapper::ToMultiLineString(const core::Geometry
 	return mline;
 }
 
-core::MultiPolygon GeosContextWrapper::ToMultiPolygon(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::MultiPolygon GeosContextWrapper::ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTIPOLYGON);
 	auto num_polys = GEOSGetNumGeometries_r(ctx, geom);
 	auto mpoly = factory.CreateMultiPolygon(num_polys);
@@ -350,7 +350,7 @@ core::MultiPolygon GeosContextWrapper::ToMultiPolygon(const core::GeometryFactor
 	return mpoly;
 }
 
-core::GeometryCollection GeosContextWrapper::ToGeometryCollection(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::GeometryCollection GeosContextWrapper::ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_GEOMETRYCOLLECTION);
 	auto num_geoms = GEOSGetNumGeometries_r(ctx, geom);
 	auto collection = factory.CreateGeometryCollection(num_geoms);
@@ -362,7 +362,7 @@ core::GeometryCollection GeosContextWrapper::ToGeometryCollection(const core::Ge
 	return collection;
 }
 
-core::Geometry GeosContextWrapper::ToGeometry(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+core::Geometry GeosContextWrapper::ToGeometry(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	switch (GEOSGeomTypeId_r(ctx, geom)) {
 	case GEOS_POINT: {
 		return core::Geometry(ToPoint(factory, geom));

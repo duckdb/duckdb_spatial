@@ -7,6 +7,7 @@
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
+#include "geo/core/functions/common.hpp"
 
 namespace geo {
 
@@ -43,12 +44,11 @@ static void AddType(Catalog &catalog, ClientContext &context, LogicalType &type,
 
 // Casts
 static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc);
-	GeometryFactory ctx(allocator);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+
 	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
-		auto geometry = ctx.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		return ctx.Serialize(result, geometry);
+		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
+		return lstate.factory.Serialize(result, geometry);
 	});
 	return true;
 }
@@ -85,7 +85,7 @@ void GeoTypes::Register(ClientContext &context) {
 	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, LogicalType::BLOB, DefaultCasts::ReinterpretCast);
 
 	// TODO: remove this implicit cast once we have more functions for the geometry type itself
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, GeoTypes::GEOMETRY, WKBToGeometryCast, 1);
+	casts.RegisterCastFunction(GeoTypes::WKB_BLOB, GeoTypes::GEOMETRY, BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

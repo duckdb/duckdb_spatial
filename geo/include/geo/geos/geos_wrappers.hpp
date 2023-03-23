@@ -267,15 +267,15 @@ public:
 	GeometryPtr FromGeometry(core::Geometry &geom) const;
 
 
-	core::VertexVector ToVertexVector(const core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
-	core::Geometry ToGeometry(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::Point ToPoint(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::LineString ToLineString(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::Polygon ToPolygon(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiPoint ToMultiPoint(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiLineString ToMultiLineString(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiPolygon ToMultiPolygon(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::GeometryCollection ToGeometryCollection(const core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::VertexVector ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
+	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
 
 };
 

@@ -3,6 +3,7 @@
 #include "geo/core/functions/scalar.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/types.hpp"
 
 namespace geo {
@@ -65,15 +66,14 @@ static void Polygon2DTypeFunction(DataChunk &args, ExpressionState &state, Vecto
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void GeometryTypeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc);
-	GeometryFactory factory(allocator);
+
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
 	UnaryExecutor::Execute<string_t, uint8_t>(input, result, count, [&](string_t input) {
-		auto geom = factory.Deserialize(input);
+		auto geom = lstate.factory.Deserialize(input);
 		return static_cast<uint8_t>(geom.Type());
 	});
 }
@@ -92,7 +92,7 @@ void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
 	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D}, LogicalType::ANY,
 	                                             Polygon2DTypeFunction, GeometryTypeFunctionBind));
 	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY}, LogicalType::ANY,
-	                                             GeometryTypeFunction, GeometryTypeFunctionBind));
+	                                             GeometryTypeFunction, GeometryTypeFunctionBind, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(geometry_type_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

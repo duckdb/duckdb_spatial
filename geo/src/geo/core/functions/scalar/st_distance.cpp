@@ -1,6 +1,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/types.hpp"
@@ -136,43 +137,11 @@ static void LineStringToPointDistanceFunction(DataChunk &args, ExpressionState &
 }
 
 //------------------------------------------------------------------------------
-// GEOMETRY - GEOMETRY
-//------------------------------------------------------------------------------
-static void DistanceFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &alloc = state.GetAllocator();
-	ArenaAllocator allocator(alloc, 1024);
-	GeometryFactory ctx(allocator);
-
-	auto &left = args.data[0];
-	auto &right = args.data[1];
-	auto count = args.size();
-
-	BinaryExecutor::Execute<string_t, string_t, double>(left, right, result, count, [&](string_t left, string_t right) {
-		allocator.Reset();
-		auto left_geom = ctx.Deserialize(left);
-		auto right_geom = ctx.Deserialize(right);
-
-		if (left_geom.Type() != GeometryType::POINT || right_geom.Type() != GeometryType::POINT) {
-			throw NotImplementedException("Geometry type not implemented");
-		}
-
-		auto &left_point = left_geom.GetPoint();
-		auto &right_point = right_geom.GetPoint();
-
-		auto dist = left_point.GetVertex().Distance(right_point.GetVertex());
-
-		allocator.Reset();
-
-		return dist;
-	});
-}
-
-//------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
-	ScalarFunctionSet distance_function_set("st_distance");
+	ScalarFunctionSet distance_function_set("ST_Distance");
 
 	distance_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POINT_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE, PointToPointDistanceFunction));
@@ -180,8 +149,7 @@ void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
 	                                                 PointToLineStringDistanceFunction));
 	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D, GeoTypes::POINT_2D}, LogicalType::DOUBLE,
 	                                                 LineStringToPointDistanceFunction));
-	distance_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::GEOMETRY, GeoTypes::GEOMETRY}, LogicalType::DOUBLE, DistanceFunction));
+
 
 	CreateScalarFunctionInfo info(std::move(distance_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

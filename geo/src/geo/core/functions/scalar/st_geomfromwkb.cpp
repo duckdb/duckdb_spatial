@@ -1,6 +1,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
+#include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/types.hpp"
@@ -258,16 +259,13 @@ static void Polygon2DFromWKBFunction(DataChunk &args, ExpressionState &state, Ve
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &default_alloc = Allocator::DefaultAllocator();
-	ArenaAllocator allocator(default_alloc);
-	GeometryFactory ctx(allocator);
-
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 	auto &input = args.data[0];
 	auto count = args.size();
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
-		auto geometry = ctx.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		return ctx.Serialize(result, geometry);
+		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
+		return lstate.factory.Serialize(result, geometry);
 	});
 }
 
@@ -290,7 +288,7 @@ void CoreScalarFunctions::RegisterStGeomFromWKB(ClientContext &context) {
 	catalog.CreateFunction(context, &polygon2d_from_wkb_info);
 
 	CreateScalarFunctionInfo geometry_from_wkb_info(
-	    ScalarFunction("ST_GeomFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::GEOMETRY, GeometryFromWKBFunction));
+	    ScalarFunction("ST_GeomFromWKB", {GeoTypes::WKB_BLOB}, GeoTypes::GEOMETRY, GeometryFromWKBFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	catalog.CreateFunction(context, &geometry_from_wkb_info);
 }
 
