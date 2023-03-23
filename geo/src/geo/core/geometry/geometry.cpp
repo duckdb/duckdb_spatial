@@ -31,6 +31,10 @@ double LineString::Length() const {
 	return points.Length();
 }
 
+bool LineString::IsEmpty() const {
+	return points.Count() == 0;
+}
+
 Geometry LineString::Centroid() const {
 	throw NotImplementedException("Centroid not implemented for LineString");
 }
@@ -68,7 +72,14 @@ double Polygon::Area() const {
 	return area;
 }
 
+bool Polygon::IsEmpty() const {
+	return num_rings == 0;
+}
+
 double Polygon::Perimiter() const {
+	if(IsEmpty()) {
+        return 0;
+    }
 	return rings[0].Length();
 }
 
@@ -128,6 +139,10 @@ string MultiPoint::ToString() const {
 	return str + ")";
 }
 
+bool MultiPoint::IsEmpty() const {
+    return num_points == 0;
+}
+
 //------------------------------------------------------------------------------
 // MultiLineString
 //------------------------------------------------------------------------------
@@ -162,6 +177,10 @@ double MultiLineString::Length() const {
     return length;
 }
 
+bool MultiLineString::IsEmpty() const {
+    return num_linestrings == 0;
+}
+
 //------------------------------------------------------------------------------
 // MultiPolygon
 //------------------------------------------------------------------------------
@@ -194,6 +213,10 @@ string MultiPolygon::ToString() const {
 	return str + ")";
 }
 
+bool MultiPolygon::IsEmpty() const {
+    return num_polygons == 0;
+}
+
 //------------------------------------------------------------------------------
 // GeometryCollection
 //------------------------------------------------------------------------------
@@ -210,6 +233,10 @@ string GeometryCollection::ToString() const {
 		}
 	}
 	return str + ")";
+}
+
+bool GeometryCollection::IsEmpty() const {
+    return num_geometries == 0;
 }
 
 //------------------------------------------------------------------------------

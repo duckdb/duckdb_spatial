@@ -157,7 +157,66 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 }
 
 //------------------------------------------------------------------------------
-// Polygon2D -> Geometry
+// Geometry -> Polygon2D
+//------------------------------------------------------------------------------
+static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	auto &default_alloc = Allocator::DefaultAllocator();
+	ArenaAllocator allocator(default_alloc);
+	GeometryFactory ctx(allocator);
+
+	auto poly_entries = ListVector::GetData(result);
+	auto &ring_vec = ListVector::GetEntry(result);
+
+	idx_t total_rings = 0;
+	idx_t total_coords = 0;
+
+	UnaryExecutor::Execute<string_t, list_entry_t>(source, result, count, [&](string_t &geom) {
+		auto geometry = ctx.Deserialize(geom);
+		if (geometry.Type() != GeometryType::POLYGON) {
+			throw CastException("Cannot cast non-linestring GEOMETRY to POLYGON_2D");
+		}
+
+		auto &poly = geometry.GetPolygon();
+		auto poly_size = poly.num_rings;
+		auto poly_entry = list_entry_t(total_rings, poly_size);
+
+		ListVector::Reserve(result, total_rings + poly_size);
+
+		for (idx_t ring_idx = 0; ring_idx < poly_size; ring_idx++) {
+			auto ring = poly.rings[ring_idx];
+			auto ring_size = ring.Count();
+			auto ring_entry = list_entry_t(total_coords, ring_size);
+
+			ListVector::Reserve(ring_vec, total_coords + ring_size);
+
+			auto ring_entries = ListVector::GetData(ring_vec);
+			auto &coord_vec = ListVector::GetEntry(ring_vec);
+			auto &coord_vec_children = StructVector::GetEntries(coord_vec);
+			auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
+			auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
+
+			ring_entries[total_rings + ring_idx] = ring_entry;
+
+			for (idx_t j = 0; j < ring_size; j++) {
+				x_data[ring_entry.offset + j] = ring.data[j].x;
+				y_data[ring_entry.offset + j] = ring.data[j].y;
+			}
+			total_coords += ring_size;
+		}
+		total_rings += poly_size;
+
+		return poly_entry;
+	});
+
+	ListVector::SetListSize(result, total_rings);
+	ListVector::SetListSize(ring_vec, total_coords);
+
+	return true;
+}
+
+
+//------------------------------------------------------------------------------
+// BOX_2D -> Geometry
 //------------------------------------------------------------------------------
 // Since BOX is a non-standard geometry type, we serialize it as a polygon
 static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
@@ -192,14 +251,15 @@ void CoreCastFunctions::RegisterGeometryCasts(ClientContext &context) {
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY, GeoTypes::LINESTRING_2D, GeometryToLineString2DCast, 2);
-
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY, GeoTypes::LINESTRING_2D, GeometryToLineString2DCast, 1);
 	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D, GeoTypes::GEOMETRY, LineString2DToGeometryCast, 1);
 
 	casts.RegisterCastFunction(GeoTypes::POINT_2D, GeoTypes::GEOMETRY, Point2DToGeometryCast, 1);
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY, GeoTypes::POINT_2D, GeometryToPoint2DCast, 1);
 
 	casts.RegisterCastFunction(GeoTypes::POLYGON_2D, GeoTypes::GEOMETRY, Polygon2DToGeometryCast, 1);
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY, GeoTypes::POLYGON_2D, GeometryToPolygon2DCast, 1);
+
 	casts.RegisterCastFunction(GeoTypes::BOX_2D, GeoTypes::GEOMETRY, Box2DToGeometryCast, 1);
 }
 

@@ -49,6 +49,10 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 		}
 		return 0.0;
 	});
+
+	if (count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
 }
 
 //------------------------------------------------------------------------------

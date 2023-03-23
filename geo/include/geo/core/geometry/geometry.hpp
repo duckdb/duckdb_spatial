@@ -47,6 +47,7 @@ struct LineString {
 	// Common Methods
 	string ToString() const;
 	// Geometry Methods
+	bool IsEmpty() const;
 	double Length() const;
 	Geometry Centroid() const;
 	uint32_t Count() const;
@@ -62,6 +63,7 @@ struct Polygon {
 	string ToString() const;
 	// Geometry Methods
 	double Area() const;
+	bool IsEmpty() const;
 	double Perimiter() const;
 	Geometry Centroid() const;
 };
@@ -73,6 +75,7 @@ struct MultiPoint {
 	explicit MultiPoint(Point *points, uint32_t num_points) : points(points), num_points(num_points) {
 	}
 	string ToString() const;
+	bool IsEmpty() const;
 };
 
 struct MultiLineString {
@@ -84,6 +87,7 @@ struct MultiLineString {
 	}
 	string ToString() const;
 	// Geometry Methods
+	bool IsEmpty() const;
 	double Length() const;
 };
 
@@ -93,6 +97,7 @@ struct MultiPolygon {
 	uint32_t num_polygons;
 	explicit MultiPolygon(Polygon *polygons, uint32_t num_polygons) : polygons(polygons), num_polygons(num_polygons) {
 	}
+	bool IsEmpty() const;
 	string ToString() const;
 };
 
@@ -104,7 +109,7 @@ struct GeometryCollection {
 	    : geometries(geometries), num_geometries(num_geometries) {
 	}
 	string ToString() const;
-
+	bool IsEmpty() const;
 	template<class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
 };

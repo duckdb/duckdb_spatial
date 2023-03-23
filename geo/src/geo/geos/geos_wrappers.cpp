@@ -290,6 +290,13 @@ core::LineString GeosContextWrapper::ToLineString(const core::GeometryFactory &f
 core::Polygon GeosContextWrapper::ToPolygon(const core::GeometryFactory &factory, const GEOSGeometry *geom) const {
 	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POLYGON);
 	auto shell_ptr = GEOSGetExteriorRing_r(ctx, geom);
+
+	// Special case, empty polygon
+	unsigned int shell_size;
+	if(1 == GEOSisEmpty_r(ctx, shell_ptr)) {
+		return factory.CreatePolygon(0, nullptr);
+	}
+
 	auto shell_seq = GEOSGeom_getCoordSeq_r(ctx, shell_ptr);
 	auto shell_vec = ToVertexVector(factory, shell_seq);
 	auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);

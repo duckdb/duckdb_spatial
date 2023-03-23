@@ -76,6 +76,10 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 			return 0.0;
 		}
 	});
+
+	if (count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
 }
 
 //------------------------------------------------------------------------------
