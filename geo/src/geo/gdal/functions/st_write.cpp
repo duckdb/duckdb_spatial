@@ -221,26 +221,26 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	}
 
 	// Create the dataset
-	vector<char *> dcos;
-	dcos.reserve(gdal_data.dataset_creation_options.size());
+	char **dco = nullptr;
 	for (auto &option : gdal_data.dataset_creation_options) {
-		dcos.push_back(const_cast<char *>(option.c_str()));
+		CSLAddString(dco, option.c_str());
 	}
-	auto dataset = GDALDatasetUniquePtr(driver->Create(file_path.c_str(), 0, 0, 0, GDT_Unknown, dcos.data()));
+	auto dataset = GDALDatasetUniquePtr(driver->Create(file_path.c_str(), 0, 0, 0, GDT_Unknown, dco));
 	if (!dataset) {
 		throw IOException("Could not open dataset");
 	}
+	CSLDestroy(dco);
 
-	// Create the layer
-	vector<char *> lcos;
-	lcos.reserve(gdal_data.layer_creation_options.size());
+	char **lco = nullptr;
 	for (auto &option : gdal_data.layer_creation_options) {
-		lcos.push_back(const_cast<char *>(option.c_str()));
+		CSLAddString(lco, option.c_str());
 	}
-	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), nullptr, wkbUnknown, lcos.data());
+
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), nullptr, wkbUnknown, lco);
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
+	CSLDestroy(lco);
 
 	// Create the layer field definitions
 	idx_t geometry_field_count = 0;

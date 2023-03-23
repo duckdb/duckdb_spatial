@@ -53,22 +53,25 @@ jobs:
       run: |
         cd duckdb
         git checkout ${{ matrix.duckdb_version }}
-    - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      uses: ./duckdb/.github/actions/centos_7_setup
-      with:
-        openssl: 0
 
     # Setup ccache
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
-
+    
     - if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
       uses: ./duckdb/.github/actions/ubuntu_16_setup
       with:
         aarch64_cross_compile: ${{ matrix.arch == 'linux_arm64' && 1 }}
-
+        openssl: 1
+    
+    - name: Configure OpenSSL path
+      shell: bash
+      run: |
+          export OPENSSL_ROOT_DIR=`pwd`/build/openssl/build
+          echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
+    
       # Build extension
     - name: Build extension
       env:
@@ -76,7 +79,6 @@ jobs:
         STATIC_LIBCPP: 1
         CC: ${{ matrix.arch == 'linux_arm64' && 'aarch64-linux-gnu-gcc' || '' }}
         CXX: ${{ matrix.arch == 'linux_arm64' && 'aarch64-linux-gnu-g++' || '' }}
-        AARCH64_CROSS_COMPILE: ${{ matrix.arch == 'linux_arm64' && 1 }}
       run: |
         export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         make release
