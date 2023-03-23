@@ -100,7 +100,8 @@ public:
 	GeometryPtr ConvexHull() const;
 	GeometryPtr Envelope() const;
 	GeometryPtr Intersection(const GeometryPtr &other) const;
-
+	GeometryPtr Union(const GeometryPtr &other) const;
+	GeometryPtr Difference(const GeometryPtr &other) const;
 	// Mutations
 	void Normalize() const;
 

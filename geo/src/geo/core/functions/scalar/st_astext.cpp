@@ -13,6 +13,8 @@ namespace core {
 //------------------------------------------------------------------------------
 // POINT_2D
 //------------------------------------------------------------------------------
+
+// TODO: We want to format these to trim trailing zeros
 static void Point2DAsTextFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 	auto &input = args.data[0];
@@ -31,6 +33,8 @@ static void Point2DAsTextFunction(DataChunk &args, ExpressionState &state, Vecto
 //------------------------------------------------------------------------------
 // LINESTRING_2D
 //------------------------------------------------------------------------------
+
+// TODO: We want to format these to trim trailing zeros
 static void LineString2DAsTextFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 	auto &input = args.data[0];
@@ -60,6 +64,8 @@ static void LineString2DAsTextFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 // POLYGON_2D
 //------------------------------------------------------------------------------
+
+// TODO: We want to format these to trim trailing zeros
 static void Polygon2DAsTextFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 	auto count = args.size();
@@ -98,53 +104,18 @@ static void Polygon2DAsTextFunction(DataChunk &args, ExpressionState &state, Vec
 }
 
 //------------------------------------------------------------------------------
-// GEOMETRY
-//------------------------------------------------------------------------------
-void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	D_ASSERT(args.data.size() == 1);
-	auto &input = args.data[0];
-	auto count = args.size();
-
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		switch (geometry.Type()) {
-		case GeometryType::POINT:
-			return StringVector::AddString(result, geometry.GetPoint().ToString());
-		case GeometryType::LINESTRING:
-			return StringVector::AddString(result, geometry.GetLineString().ToString());
-		case GeometryType::POLYGON:
-			return StringVector::AddString(result, geometry.GetPolygon().ToString());
-		case GeometryType::MULTIPOINT:
-			return StringVector::AddString(result, geometry.GetMultiPoint().ToString());
-		case GeometryType::MULTILINESTRING:
-			return StringVector::AddString(result, geometry.GetMultiLineString().ToString());
-		case GeometryType::MULTIPOLYGON:
-			return StringVector::AddString(result, geometry.GetMultiPolygon().ToString());
-		case GeometryType::GEOMETRYCOLLECTION:
-			return StringVector::AddString(result, geometry.GetGeometryCollection().ToString());
-		default:
-			throw NotImplementedException("Geometry type not implemented");
-		}
-	});
-}
-
-//------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	ScalarFunctionSet as_text_function_set("st_astext");
+	ScalarFunctionSet as_text_function_set("ST_AsText");
 
 	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::VARCHAR, Point2DAsTextFunction));
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::VARCHAR, LineString2DAsTextFunction));
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
-	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_text_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

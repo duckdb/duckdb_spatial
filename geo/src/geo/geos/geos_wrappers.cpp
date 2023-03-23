@@ -111,6 +111,22 @@ GeometryPtr GeometryPtr::Intersection(const GeometryPtr &other) const {
 	return GeometryPtr(ctx, result);
 }
 
+GeometryPtr GeometryPtr::Union(const GeometryPtr &other) const {
+	auto result = GEOSUnion_r(ctx, ptr, other.ptr);
+	if (!result) {
+		throw Exception("Could not compute union");
+	}
+	return GeometryPtr(ctx, result);
+}
+
+GeometryPtr GeometryPtr::Difference(const GeometryPtr &other) const {
+	auto result = GEOSDifference_r(ctx, ptr, other.ptr);
+	if (!result) {
+		throw Exception("Could not compute difference");
+	}
+	return GeometryPtr(ctx, result);
+}
+
 void GeometryPtr::Normalize() const {
 	auto result = GEOSNormalize_r(ctx, ptr);
 	if (result == -1) {
@@ -168,29 +184,42 @@ GEOSCoordSeq GeosContextWrapper::FromVertexVector(const core::VertexVector &vec)
 }
 
 GeometryPtr GeosContextWrapper::FromPoint(const core::Point &point) const {
+	if(point.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyPoint_r(ctx));
+	}
 	auto seq = FromVertexVector(point.data);
 	auto ptr = GEOSGeom_createPoint_r(ctx, seq);
 	return GeometryPtr(ctx, ptr);
 }
 
 GeometryPtr GeosContextWrapper::FromLineString(const core::LineString &line) const {
+	if(line.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyLineString_r(ctx));
+	}
 	auto seq = FromVertexVector(line.points);
 	auto ptr = GEOSGeom_createLineString_r(ctx, seq);
 	return GeometryPtr(ctx, ptr);
 }
 
 GeometryPtr GeosContextWrapper::FromPolygon(const core::Polygon &poly) const {
-	auto shell_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[0]));
-	auto poly_ptr = malloc(sizeof(GEOSGeometry*) * poly.num_rings);
-	for (size_t i = 0; i < poly.num_rings; i++) {
-		auto ring_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[i]));
-		((GEOSGeometry**)poly_ptr)[i] = ring_ptr;
+	if(poly.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyPolygon_r(ctx));
 	}
-	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, (GEOSGeometry**)poly_ptr, poly.num_rings);
+
+	auto shell_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[0]));
+	auto poly_ptr = malloc(sizeof(GEOSGeometry*) * poly.num_rings - 1);
+	for (size_t i = 1; i < poly.num_rings; i++) {
+		auto ring_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[i]));
+		((GEOSGeometry**)poly_ptr)[i - 1] = ring_ptr;
+	}
+	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, (GEOSGeometry**)poly_ptr, poly.num_rings - 1);
 	return GeometryPtr(ctx, ptr);
 }
 
 GeometryPtr GeosContextWrapper::FromMultiPoint(const core::MultiPoint &mpoint) const {
+	if(mpoint.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOINT));
+	}
 	auto ptr = malloc(sizeof(GEOSGeometry*) * mpoint.num_points);
 	for (size_t i = 0; i < mpoint.num_points; i++) {
 		auto point_ptr = FromPoint(mpoint.points[i]);
@@ -201,6 +230,9 @@ GeometryPtr GeosContextWrapper::FromMultiPoint(const core::MultiPoint &mpoint) c
 }
 
 GeometryPtr GeosContextWrapper::FromMultiLineString(const core::MultiLineString &mline) const {
+	if(mline.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTILINESTRING));
+	}
 	auto ptr = malloc(sizeof(GEOSGeometry*) * mline.num_linestrings);
 	for (size_t i = 0; i < mline.num_linestrings; i++) {
 		auto line_ptr = FromLineString(mline.linestrings[i]);
@@ -211,6 +243,9 @@ GeometryPtr GeosContextWrapper::FromMultiLineString(const core::MultiLineString 
 }
 
 GeometryPtr GeosContextWrapper::FromMultiPolygon(const core::MultiPolygon &mpoly) const {
+	if(mpoly.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOLYGON));
+	}
 	auto ptr = malloc(sizeof(GEOSGeometry*) * mpoly.num_polygons);
 	for (size_t i = 0; i < mpoly.num_polygons; i++) {
 		auto poly_ptr = FromPolygon(mpoly.polygons[i]);
@@ -221,6 +256,9 @@ GeometryPtr GeosContextWrapper::FromMultiPolygon(const core::MultiPolygon &mpoly
 }
 
 GeometryPtr GeosContextWrapper::FromGeometryCollection(const core::GeometryCollection &collection) const {
+	if(collection.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_GEOMETRYCOLLECTION));
+	}
 	auto ptr = malloc(sizeof(GEOSGeometry*) * collection.num_geometries);
 	for (size_t i = 0; i < collection.num_geometries; i++) {
 		auto geom_ptr = FromGeometry(collection.geometries[i]);

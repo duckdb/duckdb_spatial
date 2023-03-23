@@ -70,13 +70,22 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
 		auto geometry = ctx.factory.Deserialize(input);
 		switch (geometry.Type()) {
-		case GeometryType::POINT:
-		case GeometryType::LINESTRING:
-			return 0.0;
 		case GeometryType::POLYGON:
 			return geometry.GetPolygon().Area();
+		case GeometryType::MULTIPOLYGON:
+			return geometry.GetMultiPolygon().Area();
+		case GeometryType::GEOMETRYCOLLECTION:
+			return geometry.GetGeometryCollection().Aggregate([](Geometry &geom, double state){
+				if(geom.Type() == GeometryType::POLYGON) {
+					return state + geom.GetPolygon().Area();
+				} else if(geom.Type() == GeometryType::MULTIPOLYGON) {
+					return state + geom.GetMultiPolygon().Area();
+				} else {
+					return state;
+				}
+			}, 0.0);
 		default:
-			throw NotImplementedException("Geometry type not implemented");
+			return 0.0;
 		}
 	});
 }
@@ -87,7 +96,7 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	ScalarFunctionSet area_function_set("st_area");
+	ScalarFunctionSet area_function_set("ST_Area");
 
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));

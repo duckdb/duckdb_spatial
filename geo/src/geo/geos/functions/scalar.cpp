@@ -1,7 +1,5 @@
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
-#include "geo/core/geometry/geometry.hpp"
-#include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/functions/common.hpp"
 #include "geo/geos/functions/scalar.hpp"
 #include "geo/geos/geos_wrappers.hpp"
@@ -242,19 +240,6 @@ static void WKBBufferFunction(DataChunk &args, ExpressionState &state, Vector &r
 	                                                    });
 }
 
-static void WKBBoundaryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto input = args.data[0];
-	auto count = args.size();
-	auto ctx = GeosContextWrapper();
-	auto reader = ctx.CreateWKBReader();
-	auto writer = ctx.CreateWKBWriter();
-
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t &wkb) {
-		auto geom = reader.Read(wkb);
-		auto boundary = geom.Boundary();
-		return writer.Write(boundary, result);
-	});
-}
 
 static void WKBCentroidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto input = args.data[0];
@@ -481,6 +466,7 @@ static void WKBContainsFunction(DataChunk &args, ExpressionState &state, Vector 
 	                                                  });
 }
 
+/*
 void GeosScalarFunctions::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	/////////// Conversion Operations
@@ -571,10 +557,6 @@ void GeosScalarFunctions::Register(ClientContext &context) {
 	buffer_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &buffer_info);
 
-	CreateScalarFunctionInfo boundary_info(
-	    ScalarFunction("ST_Boundary", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBBoundaryFunction));
-	boundary_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, &boundary_info);
 
 	CreateScalarFunctionInfo convex_hull_info(
 	    ScalarFunction("ST_ConvexHull", {core::GeoTypes::WKB_BLOB()}, core::GeoTypes::WKB_BLOB(), WKBConvexHullFunction));
@@ -659,6 +641,7 @@ void GeosScalarFunctions::Register(ClientContext &context) {
 	within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, &within_info);
 }
+ */
 
 } // namespace geos
 

@@ -98,6 +98,7 @@ struct MultiPolygon {
 	explicit MultiPolygon(Polygon *polygons, uint32_t num_polygons) : polygons(polygons), num_polygons(num_polygons) {
 	}
 	bool IsEmpty() const;
+	double Area() const;
 	string ToString() const;
 };
 

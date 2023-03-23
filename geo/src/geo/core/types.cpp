@@ -1,12 +1,9 @@
-
 #include "geo/core/types.hpp"
 
-#include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
 #include "geo/common.hpp"
-#include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/core/functions/common.hpp"
 
 namespace geo {

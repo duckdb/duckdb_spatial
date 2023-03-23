@@ -69,7 +69,7 @@ double Polygon::Area() const {
 	for (uint32_t i = 0; i < num_rings; i++) {
 		area += rings[i].SignedArea();
 	}
-	return area;
+	return std::abs(area);
 }
 
 bool Polygon::IsEmpty() const {
@@ -215,6 +215,14 @@ string MultiPolygon::ToString() const {
 
 bool MultiPolygon::IsEmpty() const {
     return num_polygons == 0;
+}
+
+double MultiPolygon::Area() const {
+	double area = 0;
+	for (uint32_t i = 0; i < num_polygons; i++) {
+		area += polygons[i].Area();
+	}
+	return area;
 }
 
 //------------------------------------------------------------------------------
