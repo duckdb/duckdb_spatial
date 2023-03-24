@@ -1,6 +1,7 @@
 #pragma once
 #include "geo/common.hpp"
-
+#include "geo/core/geometry/geometry.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
 #include "geos_c.h"
 
 namespace geo {
@@ -63,6 +64,12 @@ public:
 		return *this;
 	}
 
+	GEOSGeometry *release() {
+		auto result = ptr;
+		ptr = nullptr;
+		return result;
+	}
+
 	~GeometryPtr() {
 		if (ptr) {
 			GEOSGeom_destroy_r(ctx, ptr);
@@ -93,7 +100,8 @@ public:
 	GeometryPtr ConvexHull() const;
 	GeometryPtr Envelope() const;
 	GeometryPtr Intersection(const GeometryPtr &other) const;
-
+	GeometryPtr Union(const GeometryPtr &other) const;
+	GeometryPtr Difference(const GeometryPtr &other) const;
 	// Mutations
 	void Normalize() const;
 
@@ -233,6 +241,10 @@ public:
 		GEOS_finish_r(ctx);
 	}
 
+	inline const GEOSContextHandle_t& GetCtx() {
+		return ctx;
+	}
+
 	WKBReader CreateWKBReader() const {
 		return WKBReader(ctx);
 	}
@@ -248,6 +260,28 @@ public:
 	WKTReader CreateWKTReader() const {
 		return WKTReader(ctx);
 	}
+
+	GEOSCoordSeq FromVertexVector(const core::VertexVector &vec) const;
+	GeometryPtr FromPoint(const core::Point &point) const;
+	GeometryPtr FromLineString(const core::LineString &line) const;
+	GeometryPtr FromPolygon(const core::Polygon &poly) const;
+	GeometryPtr FromMultiPoint(const core::MultiPoint &mpoint) const;
+	GeometryPtr FromMultiLineString(const core::MultiLineString &mline) const;
+	GeometryPtr FromMultiPolygon(const core::MultiPolygon &mpoly) const;
+	GeometryPtr FromGeometryCollection(const core::GeometryCollection &gc) const;
+	GeometryPtr FromGeometry(core::Geometry &geom) const;
+
+
+	core::VertexVector ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
+	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
+
 };
 
 } // namespace geos

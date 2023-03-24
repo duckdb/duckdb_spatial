@@ -111,6 +111,22 @@ GeometryPtr GeometryPtr::Intersection(const GeometryPtr &other) const {
 	return GeometryPtr(ctx, result);
 }
 
+GeometryPtr GeometryPtr::Union(const GeometryPtr &other) const {
+	auto result = GEOSUnion_r(ctx, ptr, other.ptr);
+	if (!result) {
+		throw Exception("Could not compute union");
+	}
+	return GeometryPtr(ctx, result);
+}
+
+GeometryPtr GeometryPtr::Difference(const GeometryPtr &other) const {
+	auto result = GEOSDifference_r(ctx, ptr, other.ptr);
+	if (!result) {
+		throw Exception("Could not compute difference");
+	}
+	return GeometryPtr(ctx, result);
+}
+
 void GeometryPtr::Normalize() const {
 	auto result = GEOSNormalize_r(ctx, ptr);
 	if (result == -1) {
@@ -157,6 +173,258 @@ bool GeometryPtr::Within(const GeometryPtr &other) const {
 
 bool GeometryPtr::Contains(const GeometryPtr &other) const {
 	return GEOSContains_r(ctx, ptr, other.ptr);
+}
+
+
+//----------------------------------------------------------------------
+// From Geometry
+//----------------------------------------------------------------------
+GEOSCoordSeq GeosContextWrapper::FromVertexVector(const core::VertexVector &vec) const {
+	return GEOSCoordSeq_copyFromBuffer_r(ctx, (double*)vec.data, vec.count, false, false);
+}
+
+GeometryPtr GeosContextWrapper::FromPoint(const core::Point &point) const {
+	if(point.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyPoint_r(ctx));
+	}
+	auto seq = FromVertexVector(point.data);
+	auto ptr = GEOSGeom_createPoint_r(ctx, seq);
+	return GeometryPtr(ctx, ptr);
+}
+
+GeometryPtr GeosContextWrapper::FromLineString(const core::LineString &line) const {
+	if(line.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyLineString_r(ctx));
+	}
+	auto seq = FromVertexVector(line.points);
+	auto ptr = GEOSGeom_createLineString_r(ctx, seq);
+	return GeometryPtr(ctx, ptr);
+}
+
+GeometryPtr GeosContextWrapper::FromPolygon(const core::Polygon &poly) const {
+	if(poly.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyPolygon_r(ctx));
+	}
+
+	auto shell_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[0]));
+	auto poly_ptr = malloc(sizeof(GEOSGeometry*) * poly.num_rings - 1);
+	for (size_t i = 1; i < poly.num_rings; i++) {
+		auto ring_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[i]));
+		((GEOSGeometry**)poly_ptr)[i - 1] = ring_ptr;
+	}
+	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, (GEOSGeometry**)poly_ptr, poly.num_rings - 1);
+	return GeometryPtr(ctx, ptr);
+}
+
+GeometryPtr GeosContextWrapper::FromMultiPoint(const core::MultiPoint &mpoint) const {
+	if(mpoint.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOINT));
+	}
+	auto ptr = malloc(sizeof(GEOSGeometry*) * mpoint.num_points);
+	for (size_t i = 0; i < mpoint.num_points; i++) {
+		auto point_ptr = FromPoint(mpoint.points[i]);
+		((GEOSGeometry**)ptr)[i] = point_ptr.release();
+	}
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOINT, (GEOSGeometry**)ptr, mpoint.num_points);
+	return GeometryPtr(ctx, result);
+}
+
+GeometryPtr GeosContextWrapper::FromMultiLineString(const core::MultiLineString &mline) const {
+	if(mline.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTILINESTRING));
+	}
+	auto ptr = malloc(sizeof(GEOSGeometry*) * mline.num_linestrings);
+	for (size_t i = 0; i < mline.num_linestrings; i++) {
+		auto line_ptr = FromLineString(mline.linestrings[i]);
+		((GEOSGeometry**)ptr)[i] = line_ptr.release();
+	}
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTILINESTRING, (GEOSGeometry**)ptr, mline.num_linestrings);
+	return GeometryPtr(ctx, result);
+}
+
+GeometryPtr GeosContextWrapper::FromMultiPolygon(const core::MultiPolygon &mpoly) const {
+	if(mpoly.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOLYGON));
+	}
+	auto ptr = malloc(sizeof(GEOSGeometry*) * mpoly.num_polygons);
+	for (size_t i = 0; i < mpoly.num_polygons; i++) {
+		auto poly_ptr = FromPolygon(mpoly.polygons[i]);
+		((GEOSGeometry**)ptr)[i] = poly_ptr.release();
+	}
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOLYGON, (GEOSGeometry**)ptr, mpoly.num_polygons);
+	return GeometryPtr(ctx, result);
+}
+
+GeometryPtr GeosContextWrapper::FromGeometryCollection(const core::GeometryCollection &collection) const {
+	if(collection.IsEmpty()) {
+		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_GEOMETRYCOLLECTION));
+	}
+	auto ptr = malloc(sizeof(GEOSGeometry*) * collection.num_geometries);
+	for (size_t i = 0; i < collection.num_geometries; i++) {
+		auto geom_ptr = FromGeometry(collection.geometries[i]);
+		((GEOSGeometry**)ptr)[i] = geom_ptr.release();
+	}
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, (GEOSGeometry**)ptr, collection.num_geometries);
+	return GeometryPtr(ctx, result);
+}
+
+GeometryPtr GeosContextWrapper::FromGeometry(core::Geometry &geom) const {
+	switch(geom.Type()) {
+	case core::GeometryType::POINT: {
+		return FromPoint(geom.GetPoint());
+	}
+	case core::GeometryType::LINESTRING: {
+		return FromLineString(geom.GetLineString());
+	}
+	case core::GeometryType::POLYGON: {
+		return FromPolygon(geom.GetPolygon());
+	}
+	case core::GeometryType::MULTIPOINT: {
+		return FromMultiPoint(geom.GetMultiPoint());
+	}
+	case core::GeometryType::MULTILINESTRING: {
+		return FromMultiLineString(geom.GetMultiLineString());
+	}
+	case core::GeometryType::MULTIPOLYGON: {
+		return FromMultiPolygon(geom.GetMultiPolygon());
+	}
+	case core::GeometryType::GEOMETRYCOLLECTION: {
+		return FromGeometryCollection(geom.GetGeometryCollection());
+	}
+	default:
+		throw InvalidInputException("Unsupported geometry type");
+	}
+}
+
+//----------------------------------------------------------------------
+// To Geometry
+//----------------------------------------------------------------------
+core::VertexVector GeosContextWrapper::ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const {
+	unsigned int size;
+	GEOSCoordSeq_getSize_r(ctx, seq, &size);
+	auto vec = factory.AllocateVertexVector(size);
+	vec.count = size;
+	auto ok = 1 == GEOSCoordSeq_copyToBuffer_r(ctx, seq, (double*)vec.data, false, false);
+	if(!ok) {
+		throw InvalidInputException("Failed to copy coordinates to buffer");
+	}
+	return vec;
+}
+
+core::Point GeosContextWrapper::ToPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POINT);
+	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
+	auto vec = ToVertexVector(factory, seq);
+	return core::Point(vec);
+}
+
+core::LineString GeosContextWrapper::ToLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_LINESTRING);
+	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
+	auto vec = ToVertexVector(factory, seq);
+	return core::LineString(vec);
+}
+
+core::Polygon GeosContextWrapper::ToPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_POLYGON);
+	auto shell_ptr = GEOSGetExteriorRing_r(ctx, geom);
+
+	// Special case, empty polygon
+	if(1 == GEOSisEmpty_r(ctx, shell_ptr)) {
+		return factory.CreatePolygon(0, nullptr);
+	}
+
+	auto shell_seq = GEOSGeom_getCoordSeq_r(ctx, shell_ptr);
+	auto shell_vec = ToVertexVector(factory, shell_seq);
+	auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
+	auto poly = factory.CreatePolygon(num_holes + 1);
+
+	poly.rings[0] = shell_vec;
+
+	for (int i = 0; i < num_holes; i++) {
+		auto hole_ptr = GEOSGetInteriorRingN_r(ctx, geom, i);
+		auto hole_seq = GEOSGeom_getCoordSeq_r(ctx, hole_ptr);
+		auto hole_vec = ToVertexVector(factory, hole_seq);
+		poly.rings[1 + i] = hole_vec;
+	}
+
+	return poly;
+}
+
+core::MultiPoint GeosContextWrapper::ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTIPOINT);
+	auto num_points = GEOSGetNumGeometries_r(ctx, geom);
+	auto mpoint = factory.CreateMultiPoint(num_points);
+	for (int i = 0; i < num_points; i++) {
+		auto point_ptr = GEOSGetGeometryN_r(ctx, geom, i);
+		auto point = ToPoint(factory, point_ptr);
+		mpoint.points[i] = point;
+	}
+	return mpoint;
+}
+
+core::MultiLineString GeosContextWrapper::ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+    D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTILINESTRING);
+	auto num_lines = GEOSGetNumGeometries_r(ctx, geom);
+	auto mline = factory.CreateMultiLineString(num_lines);
+	for (int i = 0; i < num_lines; i++) {
+		auto line_ptr = GEOSGetGeometryN_r(ctx, geom, i);
+		auto line = ToLineString(factory, line_ptr);
+		mline.linestrings[i] = line;
+	}
+	return mline;
+}
+
+core::MultiPolygon GeosContextWrapper::ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_MULTIPOLYGON);
+	auto num_polys = GEOSGetNumGeometries_r(ctx, geom);
+	auto mpoly = factory.CreateMultiPolygon(num_polys);
+	for (int i = 0; i < num_polys; i++) {
+		auto poly_ptr = GEOSGetGeometryN_r(ctx, geom, i);
+		auto poly = ToPolygon(factory, poly_ptr);
+		mpoly.polygons[i] = poly;
+	}
+	return mpoly;
+}
+
+core::GeometryCollection GeosContextWrapper::ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	D_ASSERT(GEOSGeomTypeId_r(ctx, geom) == GEOS_GEOMETRYCOLLECTION);
+	auto num_geoms = GEOSGetNumGeometries_r(ctx, geom);
+	auto collection = factory.CreateGeometryCollection(num_geoms);
+	for (int i = 0; i < num_geoms; i++) {
+		auto geom_ptr = GEOSGetGeometryN_r(ctx, geom, i);
+		auto item = ToGeometry(factory, geom_ptr);
+		collection.geometries[i] = item;
+	}
+	return collection;
+}
+
+core::Geometry GeosContextWrapper::ToGeometry(core::GeometryFactory &factory, const GEOSGeometry *geom) const {
+	switch (GEOSGeomTypeId_r(ctx, geom)) {
+	case GEOS_POINT: {
+		return core::Geometry(ToPoint(factory, geom));
+	}
+	case GEOS_LINESTRING: {
+		return core::Geometry(ToLineString(factory, geom));
+	}
+	case GEOS_POLYGON: {
+		return core::Geometry(ToPolygon(factory, geom));
+	}
+	case GEOS_MULTIPOINT: {
+		return core::Geometry(ToMultiPoint(factory, geom));
+	}
+	case GEOS_MULTILINESTRING: {
+		return core::Geometry(ToMultiLineString(factory, geom));
+	}
+	case GEOS_MULTIPOLYGON: {
+		return core::Geometry(ToMultiPolygon(factory, geom));
+	}
+	case GEOS_GEOMETRYCOLLECTION: {
+		return core::Geometry(ToGeometryCollection(factory, geom));
+	}
+	default:
+		throw InvalidInputException(StringUtil::Format("Unsupported geometry type %d", GEOSGeomTypeId_r(ctx, geom)));
+	}
 }
 
 } // namespace geos

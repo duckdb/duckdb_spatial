@@ -1,0 +1,16 @@
+set(EXTENSION_SOURCES
+    ${EXTENSION_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_area.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_astext.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_aswkb.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_contains.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_distance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_geometrytype.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_x.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_y.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_isempty.cpp
+    PARENT_SCOPE
+)

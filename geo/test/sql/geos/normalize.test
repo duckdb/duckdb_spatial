@@ -3,22 +3,22 @@ require geo
 # Unit tests taken from: https://github.com/libgeos/geos/blob/main/tests/unit/geom/Geometry/normalizeTest.cpp
 
 statement ok
-CREATE TABLE t1(a WKB_BLOB, b WKB_BLOB);
+CREATE TABLE t1(a GEOMETRY, b GEOMETRY);
 
 # TODO: add the rest
 statement ok
 INSERT INTO t1 VALUES
     (ST_GeomFromText('LINESTRING(100 0,100 100,0 100,0 0)'), ST_GeomFromText('LINESTRING (0 0, 0 100, 100 100, 100 0)')),
     (ST_GeomFromText('POLYGON ((0 0,100 0,100 100,0 100,0 0), (10 10,20 10,20 20,10 20,10 10), (40 10,40 20,60 20,60 10,40 10))'), ST_GeomFromText('POLYGON((0 0, 0 100, 100 100, 100 0, 0 0), (40 10, 60 10, 60 20, 40 20, 40 10), (10 10,20 10,20 20,10 20,10 10))')),
-    (ST_GeomFromText('MULTIPOINT (0 100, 5 6)'), ST_GeomFromText('MULTIPOINT (5 6, 0 100)')),
-    (ST_GeomFromText('LINESTRING M (8 15 0, 15 8 1, 22 15 2, 15 22 3, 8 15 0)'), ST_GeomFromText('LINESTRING M (8 15 0, 15 22 3, 22 15 2, 15 8 1, 8 15 0)')),
-    (ST_GeomFromText('LINESTRING M (100 0 0, 100 100 1, 0 100 2, 0 0 3)'), ST_GeomFromText('LINESTRING M (0 0 3, 0 100 2, 100 100 1, 100 0 0)'));
+    (ST_GeomFromText('MULTIPOINT (0 100, 5 6)'), ST_GeomFromText('MULTIPOINT (5 6, 0 100)'));
+
+# 3D/4D is not supported yet
+#(ST_GeomFromText('LINESTRING M (8 15 0, 15 8 1, 22 15 2, 15 22 3, 8 15 0)'), ST_GeomFromText('LINESTRING M (8 15 0, 15 22 3, 22 15 2, 15 8 1, 8 15 0)')),
+#(ST_GeomFromText('LINESTRING M (100 0 0, 100 100 1, 0 100 2, 0 0 3)'), ST_GeomFromText('LINESTRING M (0 0 3, 0 100 2, 100 100 1, 100 0 0)'));
 
 query I
 SELECT ST_Equals(a, ST_Normalize(b)) FROM t1;
 ----
-true
-true
 true
 true
 true

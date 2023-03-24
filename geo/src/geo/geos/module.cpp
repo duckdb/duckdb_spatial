@@ -10,7 +10,7 @@ namespace geo {
 namespace geos {
 
 void GeosModule::Register(ClientContext &context) {
-	GeosScalarFunctions::Register(context);
+	GEOSScalarFunctions::Register(context);
 	GeosAggregateFunctions::Register(context);
 	GeosCastFunctions::Register(context);
 }

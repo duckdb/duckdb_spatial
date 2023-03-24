@@ -43,8 +43,8 @@ struct GdalDriversTableFunction {
 	static void Register(ClientContext &context);
 	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
 	                                     vector<LogicalType> &return_types, vector<string> &names);
-};
 
+};
 struct GdalCopyFunction {
 	static void Register(ClientContext &context);
 };

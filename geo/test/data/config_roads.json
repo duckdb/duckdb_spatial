@@ -1,0 +1,20 @@
+{
+  "attributes": {
+    "type":      false,
+    "id":        false,
+    "version":   false,
+    "changeset": false,
+    "timestamp": false,
+    "uid":       false,
+    "user":      false,
+    "way_nodes": false
+  },
+  "format_options": {
+  },
+  "linear_tags":  true,
+  "area_tags":    true,
+  "exclude_tags": [],
+  "include_tags": [
+    "kind=motorway,trunk,primary,secondary,tertiary,service,unclassified,residential"
+  ]
+}

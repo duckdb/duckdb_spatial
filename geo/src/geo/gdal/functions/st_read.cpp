@@ -198,7 +198,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			}
 		}
 
-		if (loption == "spatial_filter_box" && kv.second.type() == core::GeoTypes::BOX_2D) {
+		if (loption == "spatial_filter_box" && kv.second.type() == core::GeoTypes::BOX_2D()) {
 			if (result->spatial_filter) {
 				throw BinderException("Only one spatial filter can be specified");
 			}
@@ -210,7 +210,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			result->spatial_filter = make_unique<RectangleSpatialFilter>(minx, miny, maxx, maxy);
 		}
 
-		if (loption == "spatial_filter" && kv.second.type() == core::GeoTypes::WKB_BLOB) {
+		if (loption == "spatial_filter" && kv.second.type() == core::GeoTypes::WKB_BLOB()) {
 			if (result->spatial_filter) {
 				throw BinderException("Only one spatial filter can be specified");
 			}
@@ -270,7 +270,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		if (attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
 			// This is a WKB geometry blob
 			GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx);
-			return_types.emplace_back(core::GeoTypes::WKB_BLOB);
+			return_types.emplace_back(core::GeoTypes::WKB_BLOB());
 		} else if (attribute.dictionary) {
 			result->arrow_convert_data[col_idx] =
 			    make_unique<ArrowConvertData>(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
@@ -411,8 +411,8 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["open_options"] = LogicalType::LIST(LogicalType::VARCHAR);
 	scan.named_parameters["allowed_drivers"] = LogicalType::LIST(LogicalType::VARCHAR);
 	scan.named_parameters["sibling_files"] = LogicalType::LIST(LogicalType::VARCHAR);
-	scan.named_parameters["spatial_filter_box"] = core::GeoTypes::BOX_2D;
-	scan.named_parameters["spatial_filter"] = core::GeoTypes::WKB_BLOB;
+	scan.named_parameters["spatial_filter_box"] = core::GeoTypes::BOX_2D();
+	scan.named_parameters["spatial_filter"] = core::GeoTypes::WKB_BLOB();
 	set.AddFunction(scan);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);

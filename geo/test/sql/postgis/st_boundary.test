@@ -1,0 +1,30 @@
+# Example taken from the PostGIS manual @ http://postgis.net, licensed under the Creative Commons Attribution-Share Alike 3.0 License.
+require geo
+
+query I
+SELECT ST_AsText(ST_Boundary(ST_GeomFromText('LINESTRING(1 1,0 0, -1 1)')));
+----
+MULTIPOINT (1 1, -1 1)
+
+
+query I
+SELECT ST_AsText(ST_Boundary(ST_GeomFromText('POLYGON((1 1,0 0, -1 1, 1 1))')));
+----
+LINESTRING (1 1, 0 0, -1 1, 1 1)
+
+# We dont support 3d yet
+
+#
+#--Using a 3d polygon
+#SELECT ST_AsEWKT(ST_Boundary(ST_GeomFromEWKT('POLYGON((1 1 1,0 0 1, -1 1 1, 1 1 1))')));
+#
+#st_asewkt
+#-----------------------------------
+#LINESTRING(1 1 1,0 0 1,-1 1 1,1 1 1)
+#
+#--Using a 3d multilinestring
+#SELECT ST_AsEWKT(ST_Boundary(ST_GeomFromEWKT('MULTILINESTRING((1 1 1,0 0 0.5, -1 1 1),(1 1 0.5,0 0 0.5, -1 1 0.5, 1 1 0.5) )')));
+#
+#st_asewkt
+#----------
+#MULTIPOINT((-1 1 1),(1 1 0.75))
