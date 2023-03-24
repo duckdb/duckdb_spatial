@@ -67,7 +67,11 @@ uint32_t LineString::Count() const {
 double Polygon::Area() const {
 	double area = 0;
 	for (uint32_t i = 0; i < num_rings; i++) {
-		area += rings[i].SignedArea();
+		if(i == 0) {
+			area += rings[i].SignedArea();
+		} else {
+			area -= rings[i].SignedArea();
+		}
 	}
 	return std::abs(area);
 }

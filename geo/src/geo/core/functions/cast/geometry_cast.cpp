@@ -216,19 +216,26 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using GEOMETRY_TYPE = PrimitiveType<string_t>;
-	uint32_t capacity = 4;
+	uint32_t capacity = 5; // 4 vertices + 1 for closing the polygon
 	GenericExecutor::ExecuteUnary<BOX_TYPE, GEOMETRY_TYPE>(source, result, count, [&](BOX_TYPE &box) {
 		// Don't bother resetting the allocator, boxes take up a fixed amount of space anyway
+		auto minx = box.a_val;
+		auto miny = box.b_val;
+		auto maxx = box.c_val;
+		auto maxy = box.d_val;
+
 		auto geom = lstate.factory.CreatePolygon(1, &capacity);
-		geom.rings[0].data[0].x = box.a_val;
-		geom.rings[0].data[0].y = box.b_val;
-		geom.rings[0].data[1].x = box.c_val;
-		geom.rings[0].data[1].y = box.b_val;
-		geom.rings[0].data[2].x = box.c_val;
-		geom.rings[0].data[2].y = box.d_val;
-		geom.rings[0].data[3].x = box.a_val;
-		geom.rings[0].data[3].y = box.d_val;
-		geom.rings[0].count = 4;
+		geom.rings[0].data[0].x = minx;
+		geom.rings[0].data[0].y = miny;
+		geom.rings[0].data[1].x = maxx;
+		geom.rings[0].data[1].y = miny;
+		geom.rings[0].data[2].x = maxx;
+		geom.rings[0].data[2].y = maxy;
+		geom.rings[0].data[3].x = minx;
+		geom.rings[0].data[3].y = maxy;
+		geom.rings[0].data[4].x = minx;
+		geom.rings[0].data[4].y = miny;
+		geom.rings[0].count = 5;
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
 	return true;

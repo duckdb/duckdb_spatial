@@ -1,9 +1,11 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "geo/common.hpp"
 #include "geo/core/functions/scalar.hpp"
 #include "geo/core/functions/common.hpp"
 #include "geo/core/geometry/geometry.hpp"
 #include "geo/core/types.hpp"
+
 
 namespace geo {
 
@@ -58,6 +60,45 @@ static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector 
 }
 
 //------------------------------------------------------------------------------
+// LINESTRING_2D
+//------------------------------------------------------------------------------
+static void LineStringAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto input = args.data[0];
+	UnaryExecutor::Execute<string_t, double>(input, result, args.size(), [](string_t blob) {
+		(void)blob;
+		return 0;
+	});
+}
+
+//------------------------------------------------------------------------------
+// POINT_2D
+//------------------------------------------------------------------------------
+static void PointAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto input = args.data[0];
+	UnaryExecutor::Execute<string_t, double>(input, result, args.size(), [](string_t blob) {
+		(void)blob;
+		return 0;
+	});
+}
+
+//------------------------------------------------------------------------------
+// BOX_2D
+//------------------------------------------------------------------------------
+static void BoxAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+
+	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
+	using AREA_TYPE = PrimitiveType<double>;
+
+	GenericExecutor::ExecuteUnary<BOX_TYPE, AREA_TYPE>(args.data[0], result, args.size(), [&](BOX_TYPE &box) {
+		auto minx = box.a_val;
+		auto miny = box.b_val;
+		auto maxx = box.c_val;
+		auto maxy = box.d_val;
+		return AREA_TYPE { (maxx - minx) * (maxy - miny) };
+	});
+}
+
+//------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -97,10 +138,12 @@ void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	ScalarFunctionSet area_function_set("ST_Area");
-
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointAreaFunction));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineStringAreaFunction));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction));
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
+	
 	CreateScalarFunctionInfo info(std::move(area_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, &info);
