@@ -10,7 +10,7 @@ If you or your organization have any interest in sponsoring development of this 
 ### Multi-tiered Geometry Type System
 This extension implements 5 different geometry types. Like almost all geospatial databases we include a `GEOMETRY` type that (at least strives) to follow the Simple Features geometry model. This includes support for the standard subtypes, such as `POINT`, `LINESTRING`, `POLYGON`, `MULTIPOINT`, `MULTILINESTRING`, `MULTIPOLYGON`, `GEOMETRYCOLLECTION` that we all know and love, internally represented in a row-wise fashion on top of DuckDB `BLOB`s. The internal binary format is very similar to the one used by PostGIS - basically `double` aligned WKB, and we may eventually look into enforcing the format to be properly compatible with PostGIS (which may be useful for the PostGIS scanner extension). Most functions that are implemented for this type uses the [GEOS library](https://github.com/libgeos/geos), which is a battle-tested C++ port of the famous `JTS` library, to perform the actual operations on the geometries.
 
-While having a flexible and dynamic `GEOMETRY` type like is great to have, experience shows us that once you've imported a bunch of geospatial data in your database and finished the initial cleaning process, it is comparatively rare to work with columns containing mixed-geometries. In fact, in most OLAP use cases you will probably only have a single geometry type in a table, and in those cases you're paying the performance cost to de/serialize and branch on the internal geometry format unneccessarily, i.e. you're paying for flexibility you're not using. For those cases we implement a set of non-standard DuckDB "native" geometry types, `POINT_2D`, `LINESTRING_2D`, `POLYGON_2D`, and `BOX_2D`. These types are built on DuckDBs `STRUCT` and `LIST` types, and are stored in a columnar fashion with the coordinate dimensions stored in separate "vectors". This makes it possible to leverage DuckDB's per-column statistics, compress much more efficiently and perform spatial operations on these geometries without having to de/serialize them first. Storing the coordinate dimensions into separate vectors also allows casting and converting between geometries with multiple dimensions basically for free. And if you truly need to mix a couple of different geometry types, you can always use a DuckDB [UNION type](https://duckdb.org/docs/sql/data_types/union).
+While having a flexible and dynamic `GEOMETRY` type is great to have, experience shows us that once you've imported a bunch of geospatial data in your database and finished the initial cleaning process, it is comparatively rare to work with columns containing mixed-geometries. In fact, in most OLAP use cases you will probably only have a single geometry type in a table, and in those cases you're paying the performance cost to de/serialize and branch on the internal geometry format unneccessarily, i.e. you're paying for flexibility you're not using. For those cases we implement a set of non-standard DuckDB "native" geometry types, `POINT_2D`, `LINESTRING_2D`, `POLYGON_2D`, and `BOX_2D`. These types are built on DuckDBs `STRUCT` and `LIST` types, and are stored in a columnar fashion with the coordinate dimensions stored in separate "vectors". This makes it possible to leverage DuckDB's per-column statistics, compress much more efficiently and perform spatial operations on these geometries without having to de/serialize them first. Storing the coordinate dimensions into separate vectors also allows casting and converting between geometries with multiple dimensions basically for free. And if you truly need to mix a couple of different geometry types, you can always use a DuckDB [UNION type](https://duckdb.org/docs/sql/data_types/union).
 
 For now only a small amount of spatial functions are overloaded for these native types and we plan to add a lot more in the future, but since they can be implicitly cast to `GEOMETRY` you can always use any of the functions that are implemented for `GEOMETRY` on them as well in the meantime (although with a de/serialization penalty).
 
@@ -23,68 +23,11 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 [PROJ](https://proj.org/#) is a generic coordinate transformation library that transforms geospatial coordinates from one projected coordinate reference system (CRS) to another. This extension experiments with including an embedded version of the PROJ database inside the extension binary itself so that you don't have to worry about installing the PROJ library separately. This also potentially makes it possible to use this functionality in WASM.
 
 ### Embedded GDAL based Input/Output Functions
-[GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `ST_Write` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the following GDAL formats, with more to come:
-
-<details>
-<summary>Supported Formats</summary>
-Note that far from all of these formats have been tested properly, if you run into any issues please first [consult the GDAL docs](https://gdal.org/drivers/vector/index.html), or open an issue here on GitHub.
-```sql
+[GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `ST_Write` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats, check for yourself by running:
+```
 SELECT * FROM st_list_drivers();
 ```
-| driver_short_name |                   driver_long_name                   |
-|-------------------|------------------------------------------------------|
-| ESRI Shapefile    | ESRI Shapefile                                       |
-| MapInfo File      | MapInfo File                                         |
-| UK .NTF           | UK .NTF                                              |
-| LVBAG             | Kadaster LV BAG Extract 2.0                          |
-| S57               | IHO S-57 (ENC)                                       |
-| DGN               | Microstation DGN                                     |
-| OGR_VRT           | VRT - Virtual Datasource                             |
-| Memory            | Memory                                               |
-| CSV               | Comma Separated Value (.csv)                         |
-| GML               | Geography Markup Language (GML)                      |
-| GPX               | GPX                                                  |
-| KML               | Keyhole Markup Language (KML)                        |
-| GeoJSON           | GeoJSON                                              |
-| GeoJSONSeq        | GeoJSON Sequence                                     |
-| ESRIJSON          | ESRIJSON                                             |
-| TopoJSON          | TopoJSON                                             |
-| OGR_GMT           | GMT ASCII Vectors (.gmt)                             |
-| GPKG              | GeoPackage                                           |
-| SQLite            | SQLite / Spatialite                                  |
-| WAsP              | WAsP .map format                                     |
-| OpenFileGDB       | ESRI FileGDB                                         |
-| DXF               | AutoCAD DXF                                          |
-| CAD               | AutoCAD Driver                                       |
-| FlatGeobuf        | FlatGeobuf                                           |
-| Geoconcept        | Geoconcept                                           |
-| GeoRSS            | GeoRSS                                               |
-| VFK               | Czech Cadastral Exchange Data Format                 |
-| PGDUMP            | PostgreSQL SQL dump                                  |
-| OSM               | OpenStreetMap XML and PBF                            |
-| GPSBabel          | GPSBabel                                             |
-| WFS               | OGC WFS (Web Feature Service)                        |
-| OAPIF             | OGC API - Features                                   |
-| EDIGEO            | French EDIGEO exchange format                        |
-| SVG               | Scalable Vector Graphics                             |
-| ODS               | Open Document/ LibreOffice / OpenOffice Spreadsheet  |
-| XLSX              | MS Office Open XML spreadsheet                       |
-| Elasticsearch     | Elastic Search                                       |
-| Carto             | Carto                                                |
-| AmigoCloud        | AmigoCloud                                           |
-| SXF               | Storage and eXchange Format                          |
-| Selafin           | Selafin                                              |
-| JML               | OpenJUMP JML                                         |
-| PLSCENES          | Planet Labs Scenes API                               |
-| CSW               | OGC CSW (Catalog  Service for the Web)               |
-| VDV               | VDV-451/VDV-452/INTREST Data Format                  |
-| MVT               | Mapbox Vector Tiles                                  |
-| NGW               | NextGIS Web                                          |
-| MapML             | MapML                                                |
-| TIGER             | U.S. Census TIGER/Line                               |
-| AVCBin            | Arc/Info Binary Coverage                             |
-| AVCE00            | Arc/Info E00 (ASCII) Coverage                        |
-</details>
+Note that far from all of these formats have been tested properly, if you run into any issues please first [consult the GDAL docs](https://gdal.org/drivers/vector/index.html), or open an issue here on GitHub.
 
 
 `ST_Read` also supports limited support for predicate pushdown and spatial filtering (if the underlying GDAL driver supports it), but column pruning (projection pushdown) while technically feasible is not yet implemented. 
