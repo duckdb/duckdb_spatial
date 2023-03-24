@@ -5,6 +5,7 @@
 
 #include "geo/common.hpp"
 #include "geo/core/types.hpp"
+#include "geo/core/geometry/geometry_factory.hpp"
 #include "geo/proj/functions.hpp"
 #include "geo/proj/module.hpp"
 
@@ -14,18 +15,46 @@ namespace geo {
 
 namespace proj {
 
-using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
-using POINT_TYPE = StructTypeBinary<double, double>;
-using PROJ_TYPE = PrimitiveType<string_t>;
+struct ProjFunctionLocalState : public FunctionLocalState {
+
+	PJ_CONTEXT *proj_ctx;
+	core::GeometryFactory factory;
+
+ProjFunctionLocalState(ClientContext &context)
+    	: proj_ctx(ProjModule::GetThreadProjContext()), factory(BufferAllocator::Get(context)) {
+}
+
+~ProjFunctionLocalState() override {
+	proj_context_destroy(proj_ctx);
+}
+
+static unique_ptr<FunctionLocalState> Init(
+    ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
+	return make_unique<ProjFunctionLocalState>(state.GetContext());
+}
+
+static ProjFunctionLocalState& ResetAndGet(ExpressionState &state) {
+	auto &local_state = (ProjFunctionLocalState &)*ExecuteFunctionState::GetFunctionState(state);
+	local_state.factory.allocator.Reset();
+	return local_state;
+}
+
+
+
+};
 
 static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
+	using PROJ_TYPE = PrimitiveType<string_t>;
+
 	auto count = args.size();
 	auto &box = args.data[0];
 	auto &proj_from = args.data[1];
 	auto &proj_to = args.data[2];
 
-	auto proj_ctx = ProjModule::GetThreadProjContext();
-
+	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
+	auto &proj_ctx = local_state.proj_ctx;
+	
 	GenericExecutor::ExecuteTernary<BOX_TYPE, PROJ_TYPE, PROJ_TYPE, BOX_TYPE>(
 	    box, proj_from, proj_to, result, count, [&](BOX_TYPE box_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
 		    auto from_str = proj_from.val.GetString();
@@ -46,24 +75,26 @@ static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vect
 
 		    return box_out;
 	    });
-
-	proj_context_destroy(proj_ctx);
 }
 
 static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	using POINT_TYPE = StructTypeBinary<double, double>;
+	using PROJ_TYPE = PrimitiveType<string_t>;
+
 	auto count = args.size();
 	auto &point = args.data[0];
 	auto &proj_from = args.data[1];
 	auto &proj_to = args.data[2];
 
-	auto ctx = ProjModule::GetThreadProjContext();
+	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
+	auto &proj_ctx = local_state.proj_ctx;
 
 	GenericExecutor::ExecuteTernary<POINT_TYPE, PROJ_TYPE, PROJ_TYPE, POINT_TYPE>(
 	    point, proj_from, proj_to, result, count, [&](POINT_TYPE point_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
 		    auto from_str = proj_from.val.GetString();
 		    auto to_str = proj_to.val.GetString();
 
-		    auto crs = proj_create_crs_to_crs(ctx, from_str.c_str(), to_str.c_str(), nullptr);
+		    auto crs = proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr);
 		    if (!crs) {
 			    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
 		    }
@@ -77,8 +108,6 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 
 		    return point_out;
 	    });
-
-	proj_context_destroy(ctx);
 }
 
 // SPATIAL_REF_SYS table function
@@ -182,9 +211,9 @@ void ProjFunctions::Register(ClientContext &context) {
 	ScalarFunctionSet set("st_transform");
 
 	set.AddFunction(ScalarFunction({geo::core::GeoTypes::BOX_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               geo::core::GeoTypes::BOX_2D(), Box2DTransformFunction));
+	                               geo::core::GeoTypes::BOX_2D(), Box2DTransformFunction, nullptr, nullptr, nullptr, ProjFunctionLocalState::Init));
 	set.AddFunction(ScalarFunction({geo::core::GeoTypes::POINT_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               geo::core::GeoTypes::POINT_2D(), Point2DTransformFunction));
+	                               geo::core::GeoTypes::POINT_2D(), Point2DTransformFunction, nullptr, nullptr, nullptr, ProjFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
