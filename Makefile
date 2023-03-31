@@ -23,7 +23,7 @@ BUILD_FLAGS=-DEXTENSION_STATIC_BUILD=1 ${OSX_BUILD_UNIVERSAL_FLAG} ${STATIC_LIBC
 CLIENT_FLAGS :=
 
 # These flags will make DuckDB build the extension
-EXTENSION_FLAGS=-DENABLE_SANITIZER=OFF -DDUCKDB_OOT_EXTENSION_NAMES="geo" -DDUCKDB_OOT_EXTENSION_GEO_PATH="$(PROJ_DIR)geo" -DDUCKDB_OOT_EXTENSION_GEO_SHOULD_LINK="TRUE" -DDUCKDB_OOT_EXTENSION_GEO_INCLUDE_PATH="$(PROJ_DIR)geo/include"
+EXTENSION_FLAGS=-DENABLE_SANITIZER=OFF -DDUCKDB_OOT_EXTENSION_NAMES="spatial" -DDUCKDB_OOT_EXTENSION_SPATIAL_PATH="$(PROJ_DIR)spatial" -DDUCKDB_OOT_EXTENSION_SPATIAL_SHOULD_LINK="TRUE" -DDUCKDB_OOT_EXTENSION_SPATIAL_INCLUDE_PATH="$(PROJ_DIR)spatial/include"
 
 pull:
 	git submodule init
@@ -68,13 +68,13 @@ release_python: release
 test: test_release
 
 test_release: release
-	./build/release/test/unittest --test-dir ./geo "test/sql/*"
+	./build/release/test/unittest --test-dir ./spatial "test/sql/*"
 
 test_debug: debug
-	./build/debug/test/unittest --test-dir ./geo "test/sql/*"
+	./build/debug/test/unittest --test-dir ./spatial "test/sql/*"
 
 test_debug_lldb: debug
-	lldb ./build/debug/test/unittest -- --test-dir ./geo "test/sql/*"
+	lldb ./build/debug/test/unittest -- --test-dir ./spatial "test/sql/*"
 
 # Client tests
 test_js: test_debug_js
@@ -92,9 +92,9 @@ test_release_python: release_python
 	cd test/python && python3 -m pytest
 
 format:
-	find geo/src/ -iname *.hpp -o -iname *.cpp | xargs clang-format --sort-includes=0 -style=file -i
-	find geo/include -iname *.hpp -o -iname *.cpp | xargs clang-format --sort-includes=0 -style=file -i
-	cmake-format -i geo/CMakeLists.txt
+	find spatial/src/ -iname *.hpp -o -iname *.cpp | xargs clang-format --sort-includes=0 -style=file -i
+	find spatial/include -iname *.hpp -o -iname *.cpp | xargs clang-format --sort-includes=0 -style=file -i
+	cmake-format -i spatial/CMakeLists.txt
 
 update:
 	git submodule update --remote --merge

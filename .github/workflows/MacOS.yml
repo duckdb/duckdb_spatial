@@ -75,3 +75,10 @@ jobs:
         run: |
           make release
           make test
+
+      # Upload artefact
+      - uses: actions/upload-artifact@v2
+        with:
+          name: macos_universal-extensions
+          path: |
+            build/release/extension/spatial/spatial.duckdb_extension

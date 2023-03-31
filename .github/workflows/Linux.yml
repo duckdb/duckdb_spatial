@@ -90,4 +90,4 @@ jobs:
       with:
         name: ${{matrix.arch}}-extensions
         path: |
-          build/release/extension/geo/geo.duckdb_extension
+          build/release/extension/spatial/spatial.duckdb_extension

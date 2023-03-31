@@ -1,0 +1,11 @@
+name columnar 4d point 2d distance
+group point_distance
+
+require spatial
+
+load
+CREATE TABLE points AS SELECT geo_create_point4d_c(st_x(c), st_y(c), (st_x(c) + st_y(c)) / 2.0, (st_x(c) + st_y(c)) / 4.0) as p FROM (SELECT st_centroid(wkb_geometry)
+FROM st_read('../../../../../spatial/test/data/amsterdam_roads.fgb') LIMIT 100000) as s(c);
+
+run
+SELECT geo_distance2d_c(a.p, b.p) FROM points as a CROSS JOIN points as b;

@@ -1,0 +1,10 @@
+name columnar 2d point distance
+group point_distance
+
+require spatial
+
+load
+CREATE TABLE lines AS SELECT geo_create_line2d_r(wkb_geometry) as line FROM st_read('../../../../../spatial/test/data/germany_roads.fgb');
+
+run
+SELECT geo_length2d_r(line) FROM lines;

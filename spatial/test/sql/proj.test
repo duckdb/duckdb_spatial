@@ -1,0 +1,16 @@
+# name: test/sql/proj.test
+# description: test geo proj extension
+# group: [geo]
+
+require spatial
+
+# Note:
+# ST_Transform does not read the source SRID from the geometry, but requires it to be passed as a parameter.
+# This is because we don't have a SPATIAL_REF_SYS table yet where we can lookup the projection parameters from the SRID.
+# Additionally, if you decide to store the SRID in a separate column, you will automatically benefit from
+# dictionary compression on strings. This is not possible if you store the SRID in the geometry itself.
+
+query I
+SELECT st_transform({'x': 52.3676, 'y': 4.9041}::POINT_2D, 'EPSG:4326', 'EPSG:3857')
+----
+{'x': 545921.9147992929, 'y': 6866867.121983132}

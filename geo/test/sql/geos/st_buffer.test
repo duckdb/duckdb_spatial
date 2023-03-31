@@ -1,6 +1,0 @@
-require geo
-
-query I
-SELECT ST_Area(ST_Buffer(ST_GeomFromText('POINT(0 0)'), 5, 1)) AS geom
-----
-50

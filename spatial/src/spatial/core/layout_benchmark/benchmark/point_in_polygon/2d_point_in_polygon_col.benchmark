@@ -1,0 +1,17 @@
+name columnar 2d point in polygon
+group point_distance
+
+require spatial
+
+load
+CREATE TABLE t1 as SELECT
+    geo_create_polygon2d_c(wkb_geometry) as geom,
+    geo_create_point2d_c(st_x(st_centroid(wkb_geometry)), st_y(st_centroid(wkb_geometry))) as centroid
+FROM st_read('../../../../../spatial/test/data/germany/forest/forest.fgb');
+
+
+run
+SELECT geo_point_in_polygon2d_c(centroid, geom) as x FROM t1;
+
+
+
