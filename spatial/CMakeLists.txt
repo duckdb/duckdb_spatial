@@ -15,7 +15,10 @@ add_subdirectory(src)
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Add dependencies
-target_link_libraries(${EXTENSION_NAME} PUBLIC dependencies)
+target_link_libraries(${EXTENSION_NAME} PRIVATE dependencies)
+target_include_directories(${EXTENSION_NAME} INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/local/include>
+        $<INSTALL_INTERFACE:include>)
 
 if(APPLE)
   find_library(CoreFoundation_Library CoreFoundation)

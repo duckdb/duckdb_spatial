@@ -1,0 +1,60 @@
+name: Windows
+on: [push, pull_request,repository_dispatch]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' || github.sha }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  windows:
+    name: Release
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        # Add commits/tags to build against other DuckDB versions
+        duckdb_version: [ 'v0.7.1' ]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
+      - name: Install OpenSSL
+        shell: bash
+        run: |
+          choco install openssl -y --force
+      
+      - name: Install SQLite
+        shell: bash
+        run: |
+          choco install sqlite -y --force
+      
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ runner.os }}-${{ github.job }}
+
+      - name: Checkout DuckDB to version
+        # Add commits/tags to build against other DuckDB versions
+        if: ${{ matrix.duckdb_version != '<submodule_version>'}}
+        run: |
+          cd duckdb
+          git checkout ${{ matrix.duckdb_version }}
+      
+      - name: Build extension
+        run: |
+          make release
+          build/release/test/Release/unittest.exe
+        
+      - uses: actions/upload-artifact@v2
+        with:
+          name: windows_x64-extensions
+          path: |
+            build/release/extension/spatial/spatial.duckdb_extension

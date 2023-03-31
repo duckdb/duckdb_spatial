@@ -4,8 +4,8 @@ project(dependecies-build)
 
 # Install and build dependencies locally
 include(ExternalProject)
-set(LOCAL_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/local)
-set_directory_properties(PROPERTIES EP_BASE ${CMAKE_CURRENT_BINARY_DIR}/base)
+set(LOCAL_INSTALL_DIR ${CMAKE_BINARY_DIR}/local)
+set_directory_properties(PROPERTIES EP_BASE ${CMAKE_BINARY_DIR}/dependencies)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -262,7 +262,6 @@ add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT CURL GEOS GDAL)
 
 # Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
 target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl expat memvfs sqlite3 zlib)
-
 
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  
