@@ -1,0 +1,62 @@
+require spatial
+
+# Test ST_Centroid for points
+query I
+SELECT ST_Centroid(ST_GeomFromText('POINT(0 0)')::POINT_2D);
+----
+POINT (0 0)
+
+
+# Test ST_Centroid for lines
+query I
+SELECT ST_Centroid(ST_GeomFromText('LINESTRING(0 0, 1 1, 2 2)')::LINESTRING_2D);
+----
+POINT (1 1)
+
+# Test ST_Centroid for lines
+query I
+SELECT ST_Centroid(ST_GeomFromText('LINESTRING(0 0, 5 0, 5 4, 8 4)')::LINESTRING_2D);
+----
+POINT (4.333333333333333 1.666666666666667)
+
+
+# Test ST_Centroid for box
+query I
+SELECT ST_Centroid({'min_x': 0.0, 'min_y': 0.0, 'max_x': 1.0, 'max_y': 1.0}::BOX_2D);
+----
+POINT (0.5 0.5)
+
+query I
+SELECT ST_Centroid({'min_x': -10.0, 'min_y': -10.0, 'max_x': 10.0, 'max_y': 10.0}::BOX_2D);
+----
+POINT (0 0)
+
+query I
+SELECT ST_Centroid({'min_x': 10.0, 'min_y': 10.0, 'max_x': -10.0, 'max_y': -10.0}::BOX_2D);
+----
+POINT (0 0)
+
+
+# Test ST_Centroid for a polygon thats a triangle
+query I
+SELECT ST_Centroid(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 0 0))')::POLYGON_2D);
+----
+POINT (0.333333333333333 0.666666666666667)
+
+# Test ST_Centroid for polygons
+query I
+SELECT ST_Centroid(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))')::POLYGON_2D);
+----
+POINT (0.5 0.5)
+
+# Test ST_Centroid for polygons with holes
+query I
+SELECT ST_Centroid(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.1 0.1, 0.1 0.9, 0.9 0.9, 0.9 0.1, 0.1 0.1))')::POLYGON_2D);
+----
+POINT (0.5 0.5)
+
+# Move the hole to the right
+query I
+SELECT ST_Centroid(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.5 0.1, 0.5 0.9, 0.9 0.9, 0.9 0.1, 0.5 0.1))')::POLYGON_2D);
+----
+POINT (0.405882352941176 0.5)

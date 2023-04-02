@@ -18,7 +18,6 @@ set(MEMVFS_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}memvfs${CMAKE_STATIC_LIBRARY_S
 set(ZLIB_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(PROJ_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}proj${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(EXPAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}expat${CMAKE_STATIC_LIBRARY_SUFFIX})
-set(CURL_LIB_NAME libcurl${CMAKE_STATIC_LIBRARY_SUFFIX}) # its called libcurl on windows too
 set(GEOS_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}geos${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(GEOS_C_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}geos_c${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(GDAL_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}gdal${CMAKE_STATIC_LIBRARY_SUFFIX})
@@ -104,31 +103,9 @@ ExternalProject_Add(
 )
 
 
-# CURL
-ExternalProject_Add(
-    CURL
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/curl-7.87.0.zip
-    CONFIGURE_HANDLED_BY_BUILD TRUE
-    BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/${CURL_LIB_NAME}
-    CMAKE_ARGS
-    -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
-    -DCMAKE_PREFIX_PATH=${LOCAL_INSTALL_DIR}
-    -DCMAKE_DEBUG_POSTFIX=${} # Do not append "d" to the library name when building in debug mode
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
-    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-    -DBUILD_SHARED_LIBS=OFF
-    -DHTTP_ONLY=ON
-    # Disable some defaults for now
-    -DCURL_USE_LIBSSH2=OFF
-    -DCURL_USE_LIBPSL=OFF
-    -DCURL_USE_LIBSSH=OFF
-    -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
-)
 
 ExternalProject_Add(
     GEOS
-    DEPENDS CURL
     URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/geos-3.11.2.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
     BUILD_BYPRODUCTS 
@@ -151,7 +128,7 @@ ExternalProject_Add(
 # GDAL
 ExternalProject_Add(
     GDAL
-    DEPENDS PROJ GEOS CURL EXPAT SQLITE3
+    DEPENDS PROJ GEOS EXPAT SQLITE3
     URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gdal363.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     BUILD_BYPRODUCTS ${LOCAL_INSTALL_DIR}/lib/${GDAL_LIB_NAME}
@@ -185,9 +162,7 @@ ExternalProject_Add(
     -DGDAL_USE_GEOS=ON
     -DGDAL_USE_SQLITE3=ON
     -DGDAL_USE_EXPAT=ON
-    -DGDAL_USE_CURL=ON
-    -DGDAL_USE_OPENSSL=ON
-    -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
+    -DOPENSSL_USE_STATIC_LIBS=FALSE # Propagate to FindOpenSSL.cmake
     
     # This is not true, but a bug in gdal's cmake files
     -DACCEPT_MISSING_SQLITE3_RTREE:BOOL=ON
@@ -230,14 +205,6 @@ add_library(expat STATIC IMPORTED)
 set_property(TARGET expat PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/${EXPAT_LIB_NAME})
 set_property(TARGET expat PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
 
-# curl
-add_library(curl STATIC IMPORTED)
-set_property(TARGET curl PROPERTY IMPORTED_LOCATION ${LOCAL_INSTALL_DIR}/lib/${CURL_LIB_NAME})
-set_property(TARGET curl PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INSTALL_DIR}/include)
-set(OPENSSL_USE_STATIC_LIBS TRUE)
-find_package(OpenSSL REQUIRED)
-set_property(TARGET curl PROPERTY IMPORTED_LINK_INTERFACE_LIBRARIES OpenSSL::SSL OpenSSL::Crypto)
-
 
 # geos_c
 add_library(geos_c STATIC IMPORTED)
@@ -258,10 +225,10 @@ if(WIN32)
 endif()
 
 add_library(dependencies INTERFACE)
-add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT CURL GEOS GDAL)
+add_dependencies(dependencies SQLITE3 PROJ ZLIB EXPAT GEOS GDAL)
 
 # Ouch! Remember that the order of these libraries is important! (reverse order of dependencies)
-target_link_libraries(dependencies INTERFACE gdal geos_c geos proj curl expat memvfs sqlite3 zlib)
+target_link_libraries(dependencies INTERFACE gdal geos_c geos proj expat memvfs sqlite3 zlib)
 
 target_include_directories(dependencies INTERFACE 
     $<BUILD_INTERFACE:${LOCAL_INSTALL_DIR}/include>  

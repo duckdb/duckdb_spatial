@@ -26,7 +26,7 @@ static void Point2DAsTextFunction(DataChunk &args, ExpressionState &state, Vecto
 	GenericExecutor::ExecuteUnary<POINT_TYPE, TEXT_TYPE>(input, result, count, [&](POINT_TYPE &point) {
 		auto x = point.a_val;
 		auto y = point.b_val;
-		return StringVector::AddString(result, StringUtil::Format("POINT(%f %f)", x, y));
+		return StringVector::AddString(result, StringUtil::Format("POINT (%f %f)", x, y));
 	});
 }
 
@@ -49,7 +49,7 @@ static void LineString2DAsTextFunction(DataChunk &args, ExpressionState &state, 
 		auto offset = line.offset;
 		auto length = line.length;
 
-		string result_str = "LINESTRING(";
+		string result_str = "LINESTRING (";
 		for (idx_t i = offset; i < offset + length; i++) {
 			result_str += StringUtil::Format("%f %f", x_data[i], y_data[i]);
 			if (i < offset + length - 1) {
@@ -81,7 +81,7 @@ static void Polygon2DAsTextFunction(DataChunk &args, ExpressionState &state, Vec
 		auto offset = polygon_entry.offset;
 		auto length = polygon_entry.length;
 
-		string result_str = "POLYGON(";
+		string result_str = "POLYGON (";
 		for (idx_t i = offset; i < offset + length; i++) {
 			auto ring_entry = ring_entries[i];
 			auto ring_offset = ring_entry.offset;

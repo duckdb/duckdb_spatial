@@ -10,7 +10,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 
-namespace geo {
+namespace spatial {
 
 namespace core {
 
@@ -1279,4 +1279,4 @@ void LayoutBenchmark::Register(ClientContext &context) {
 
 // D CREATE TABLE t1 as SELECT geo_create_polygon2d_c(wkb_geometry) as geom,
 // geo_create_point2d_c(st_x(st_centroid(wkb_geometry)), st_y(st_centroid(wkb_geometry))) as centroid FROM
-// st_read('./geo/test/data/germany/forest/forest.fgb') LIMIT 1000;
+// st_read('./spatial/test/data/germany/forest/forest.fgb') LIMIT 1000;
