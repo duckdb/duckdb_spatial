@@ -120,6 +120,10 @@ string Polygon::ToString() const {
 	return result;
 }
 
+uint32_t Polygon::Count() const {
+    return num_rings;
+}
+
 //------------------------------------------------------------------------------
 // MultiPoint
 //------------------------------------------------------------------------------
@@ -145,6 +149,10 @@ string MultiPoint::ToString() const {
 
 bool MultiPoint::IsEmpty() const {
     return num_points == 0;
+}
+
+uint32_t MultiPoint::Count() const {
+    return num_points;
 }
 
 //------------------------------------------------------------------------------
@@ -183,6 +191,10 @@ double MultiLineString::Length() const {
 
 bool MultiLineString::IsEmpty() const {
     return num_linestrings == 0;
+}
+
+uint32_t MultiLineString::Count() const {
+    return num_linestrings;
 }
 
 //------------------------------------------------------------------------------
@@ -229,6 +241,10 @@ double MultiPolygon::Area() const {
 	return area;
 }
 
+uint32_t MultiPolygon::Count() const {
+    return num_polygons;
+}
+
 //------------------------------------------------------------------------------
 // GeometryCollection
 //------------------------------------------------------------------------------
@@ -249,6 +265,10 @@ string GeometryCollection::ToString() const {
 
 bool GeometryCollection::IsEmpty() const {
     return num_geometries == 0;
+}
+
+uint32_t GeometryCollection::Count() const {
+    return num_geometries;
 }
 
 //------------------------------------------------------------------------------

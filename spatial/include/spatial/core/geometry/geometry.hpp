@@ -66,6 +66,7 @@ struct Polygon {
 	bool IsEmpty() const;
 	double Perimiter() const;
 	Geometry Centroid() const;
+	uint32_t Count() const;
 };
 
 struct MultiPoint {
@@ -76,6 +77,7 @@ struct MultiPoint {
 	}
 	string ToString() const;
 	bool IsEmpty() const;
+	uint32_t Count() const;
 };
 
 struct MultiLineString {
@@ -89,6 +91,7 @@ struct MultiLineString {
 	// Geometry Methods
 	bool IsEmpty() const;
 	double Length() const;
+	uint32_t Count() const;
 };
 
 struct MultiPolygon {
@@ -100,6 +103,7 @@ struct MultiPolygon {
 	bool IsEmpty() const;
 	double Area() const;
 	string ToString() const;
+	uint32_t Count() const;
 };
 
 struct GeometryCollection {
@@ -111,6 +115,8 @@ struct GeometryCollection {
 	}
 	string ToString() const;
 	bool IsEmpty() const;
+	uint32_t Count() const;
+
 	template<class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
 };
