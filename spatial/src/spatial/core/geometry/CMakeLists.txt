@@ -4,5 +4,6 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/geometry_factory.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vertex_vector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wkb_reader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/wkb_writer.cpp
     PARENT_SCOPE
 )

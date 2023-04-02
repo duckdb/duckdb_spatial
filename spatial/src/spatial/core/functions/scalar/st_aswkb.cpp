@@ -6,6 +6,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
 namespace spatial {
 
 namespace core {
@@ -22,16 +23,11 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
-		switch (geometry.Type()) {
-		case GeometryType::POINT:
-			return StringVector::AddString(result, geometry.GetPoint().ToString());
-		case GeometryType::LINESTRING:
-			return StringVector::AddString(result, geometry.GetLineString().ToString());
-		case GeometryType::POLYGON:
-			return StringVector::AddString(result, geometry.GetPolygon().ToString());
-		default:
-			throw NotImplementedException("Geometry type not implemented");
-		}
+		auto size = WKBWriter::GetRequiredSize(geometry);
+		auto str = StringVector::EmptyString(result, size);
+		auto ptr = (data_ptr_t)(str.GetDataUnsafe());
+		WKBWriter::Write(geometry, ptr);
+		return str;
 	});
 }
 
@@ -41,9 +37,9 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 void CoreScalarFunctions::RegisterStAsWKB(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	ScalarFunctionSet as_wkb_function_set("st_aswkb");
+	ScalarFunctionSet as_wkb_function_set("ST_AsWKB");
 
-	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsWBKFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_wkb_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
