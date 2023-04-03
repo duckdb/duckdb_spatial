@@ -4,6 +4,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_astext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_aswkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_centroid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_collect.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_contains.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_distance.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp

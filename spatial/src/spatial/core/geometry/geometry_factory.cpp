@@ -601,6 +601,95 @@ GeometryCollection GeometryFactory::DeserializeGeometryCollection(const_data_ptr
 	return GeometryCollection(geometries, num_geometries);
 }
 
+//----------------------------------------------------------------------
+// Copy 
+//----------------------------------------------------------------------
+
+VertexVector GeometryFactory::CopyVertexVector(const VertexVector &vector) {
+	auto result = VertexVector(vector);
+	result.data = (Vertex *)allocator.AllocateAligned(vector.capacity * sizeof(Vertex));
+	memcpy(result.data, vector.data, vector.capacity * sizeof(Vertex));
+	return result;
+}
+
+Point GeometryFactory::CopyPoint(const Point &point) {
+	auto result = Point(point);
+	result.data = CopyVertexVector(point.data);
+	return result;
+}
+
+LineString GeometryFactory::CopyLineString(const LineString &linestring) {
+	auto result = LineString(linestring);
+	result.points = CopyVertexVector(linestring.points);
+	return result;
+}
+
+Polygon GeometryFactory::CopyPolygon(const Polygon &polygon) {
+	auto result = Polygon(polygon);
+	result.rings = (VertexVector *)allocator.AllocateAligned(sizeof(VertexVector) * polygon.num_rings);
+	for (idx_t i = 0; i < polygon.num_rings; i++) {
+		result.rings[i] = CopyVertexVector(polygon.rings[i]);
+	}
+	return result;
+}
+
+MultiPoint GeometryFactory::CopyMultiPoint(const MultiPoint &multipoint) {
+	auto result = MultiPoint(multipoint);
+	result.points = (Point *)allocator.AllocateAligned(sizeof(Point) * multipoint.num_points);
+	for (idx_t i = 0; i < multipoint.num_points; i++) {
+		result.points[i] = CopyPoint(multipoint.points[i]);
+	}
+	return result;
+}
+
+MultiLineString GeometryFactory::CopyMultiLineString(const MultiLineString &multilinestring) {
+	auto result = MultiLineString(multilinestring);
+	result.linestrings = (LineString *)allocator.AllocateAligned(sizeof(LineString) * multilinestring.Count());
+	for (idx_t i = 0; i < multilinestring.Count(); i++) {
+		result.linestrings[i] = CopyLineString(multilinestring.linestrings[i]);
+	}
+	return result;
+}
+
+MultiPolygon GeometryFactory::CopyMultiPolygon(const MultiPolygon &multipolygon) {
+	auto result = MultiPolygon(multipolygon);
+	result.polygons = (Polygon *)allocator.AllocateAligned(sizeof(Polygon) * multipolygon.Count());
+	for (idx_t i = 0; i < multipolygon.Count(); i++) {
+		result.polygons[i] = CopyPolygon(multipolygon.polygons[i]);
+	}
+	return result;
+}
+
+GeometryCollection GeometryFactory::CopyGeometryCollection(const GeometryCollection &collection) {
+	auto result = GeometryCollection(collection);
+	result.geometries = (Geometry *)allocator.AllocateAligned(sizeof(Geometry) * collection.Count());
+	for (idx_t i = 0; i < collection.Count(); i++) {
+		result.geometries[i] = CopyGeometry(collection.geometries[i]);
+	}
+	return result;
+}
+
+Geometry GeometryFactory::CopyGeometry(const Geometry &geometry) {
+	switch (geometry.type) {
+	case GeometryType::POINT:
+		return Geometry(CopyPoint(geometry.GetPoint()));
+	case GeometryType::LINESTRING:
+		return Geometry(CopyLineString(geometry.GetLineString()));
+	case GeometryType::POLYGON:
+		return Geometry(CopyPolygon(geometry.GetPolygon()));
+	case GeometryType::MULTIPOINT:
+		return Geometry(CopyMultiPoint(geometry.GetMultiPoint()));
+	case GeometryType::MULTILINESTRING:
+		return Geometry(CopyMultiLineString(geometry.GetMultiLineString()));
+	case GeometryType::MULTIPOLYGON:
+		return Geometry(CopyMultiPolygon(geometry.GetMultiPolygon()));
+	case GeometryType::GEOMETRYCOLLECTION:
+		return Geometry(CopyGeometryCollection(geometry.GetGeometryCollection()));
+	default:
+		throw NotImplementedException("Unimplemented geometry type for copy");
+	}
+}
+
 } // namespace core
 
 } // namespace spatial

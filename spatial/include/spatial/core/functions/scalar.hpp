@@ -13,6 +13,7 @@ public:
 		RegisterStAsText(context);
 		RegisterStAsWKB(context);
 		RegisterStCentroid(context);
+		RegisterStCollect(context);
 		RegisterStContains(context);
 		RegisterStDistance(context);
 		RegisterStGeometryType(context);
@@ -36,6 +37,9 @@ private:
 
 	// ST_Centroid
 	static void RegisterStCentroid(ClientContext &context);
+
+	// ST_Collect
+	static void RegisterStCollect(ClientContext &context);
 
 	// ST_Contains
 	static void RegisterStContains(ClientContext &context);

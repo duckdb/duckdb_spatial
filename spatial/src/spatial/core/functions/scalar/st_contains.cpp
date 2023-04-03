@@ -127,16 +127,16 @@ static void PointInPolygonOperation(Vector &in_point, Vector &in_polygon, Vector
 static void PolygonContainsPointFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 	auto count = args.size();
-	auto &in_point = args.data[0];
-	auto &in_polygon = args.data[1];
+	auto &in_polygon = args.data[0];
+	auto &in_point = args.data[1];
 	PointInPolygonOperation(in_point, in_polygon, result, count);
 }
 
 static void PointWithinPolygonFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 	auto count = args.size();
-	auto &in_point = args.data[1];
-	auto &in_polygon = args.data[0];
+	auto &in_point = args.data[0];
+	auto &in_polygon = args.data[1];
 	PointInPolygonOperation(in_point, in_polygon, result, count);
 }
 
