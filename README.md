@@ -1,11 +1,96 @@
-# DuckDB Geometry Extension
+# DuckDB Spatial Extension
 
 ## What is this?
-This is a prototype of a geospatial extension for DuckDB that adds support for geometry types and functions.
+This is a prototype of a geospatial extension for DuckDB that adds support for working with spatial data and functions in the form of a `GEOMETRY` type based on the the "Simple Features" geometry model, as well as non-standard specialized columnar DuckDB native geometry types that provide better compression and faster execution in exchange for flexibility.
+
+Please note that this extension is still in a very early stage of development, and the internal storage format for the geometry types may change indiscriminately between commits. We are actively working on it, and we welcome contributions and feedback.
 
 If you or your organization have any interest in sponsoring development of this extension, or have any particular use cases you'd like to see prioritized or supported, please consider [sponsoring the DuckDB foundation](https://duckdb.org/foundation/) or [contacting DuckDB Labs](https://duckdblabs.com) for commercial support.
 
-## Main Features
+## Example Usage
+```sql
+-- Load the spatial extension and the parquet extension so we can read the NYC 
+-- taxi ride data in GeoParquet format
+LOAD spatial
+LOAD parquet
+
+CREATE TABLE rides AS SELECT * FROM './spatial/test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet'
+
+-- Load the NYC taxi zone data from a shapefile using the gdal-based st_read function
+CREATE TABLE zones AS SELECT zone, LocationId, borough, ST_GeomFromWKB(wkb_geometry) AS geom 
+FROM st_read('./spatial/test/data/nyc_taxi/taxi_zones/taxi_zones.shx');
+
+-- Compare the trip distance to the linear distance between the pickup and dropoff points to figure out how efficient 
+-- the taxi drivers are (or how dirty the data is, since some diffs are negative). Transform the coordinates from WGS84 
+-- (EPSG:4326) (lat/lon) to the NAD83 / New York Long Island ftUS (ESRI:102718) projection. Calculate the distance in 
+-- feet using the ST_Distance and convert to miles (5280 ft/mile). Trips that are smaller than the aerial distance are 
+-- likely to be erroneous, so we use this query to filter out some bad data. Although this is not entirely accurate 
+-- since the distance we use does not take into account the curvature of the earth, but it is a good enough 
+-- approximation for our purposes.
+CREATE TABLE cleaned_rides AS SELECT 
+    st_point(pickup_latitude, pickup_longitude) as pickup_point,
+    st_point(dropoff_latitude, dropoff_longitude) as dropoff_point,
+    dropoff_datetime::TIMESTAMP - pickup_datetime::TIMESTAMP as time,
+    trip_distance,
+    st_distance(
+        st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), 
+        st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718')) / 5280 as aerial_distance, 
+    trip_distance - aerial_distance as diff 
+FROM rides 
+WHERE diff > 0
+ORDER BY diff DESC;
+
+-- Since we dont have spatial indexes yet, use smaller dataset for the following example.
+DELETE FROM cleaned_rides WHERE rowid > 5000;
+
+-- Join the taxi rides with the taxi zones to get the start and end zone for each ride using the ST_Within function
+-- to check if a point is within a polygon. Again we need to transform the coordinates from WGS84 to the NAD83 since
+-- the taxi zone data is in that projection.
+CREATE TABLE joined AS 
+SELECT 
+    pickup_point,
+    dropoff_point,
+    start_zone.zone as start_zone,
+    end_zone.zone as end_zone, 
+    trip_distance,
+    time,
+FROM cleaned_rides 
+JOIN zones as start_zone 
+ON ST_Within(st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), start_zone.geom) 
+JOIN zones as end_zone 
+ON ST_Within(st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718'), end_zone.geom)
+
+-- Export the joined table to a GeoJSONSeq file using the gdal copy function, passing in a layer creation option. 
+-- Since GeoJSON only supports a single geometry per feature, we need to use the ST_Collect function to combine the
+-- pickup and dropoff points into a single multi point geometry.
+COPY (SELECT ST_AsWKB(ST_Collect([pickup_point, dropoff_point])) as geom, start_zone, end_zone, time::VARCHAR as trip_time FROM joined) TO 'joined.geojsonseq' 
+WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES');
+```
+
+## How to build
+This extension is based on the [DuckDB extension template](https://github.com/duckdb/extension-template).
+You need a recent version of CMake (3.20) and a C++11 compatible compiler.
+If you're cross-compiling, you need a host sqlite3 executable in your path, otherwise the build should create and use its own sqlite3 executable. (This is required for creating the PROJ database).
+You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`.
+
+We bundle all the other required dependencies in the `third_party` directory, which should be automatically built and statically linked into the extension. This may take some time the first time you build, but subsequent builds should be much faster.
+
+We also highly recommend that you install [Ninja](https://ninja-build.org) which you can select when building by setting the `GEN=ninja` environment variable.
+
+```
+git clone --recurse-submodules https://github.com/duckdblabs/duckdb_spatial.git
+cd duckdb_spatial
+make debug
+```
+You can then invoke the built DuckDB (with the extension statically linked)
+```
+./build/debug/duckdb
+```
+
+Please see the Makefile for more options, or the extension template documentation for more details.
+
+
+## Internals and technical details
 
 ### Multi-tiered Geometry Type System
 This extension implements 5 different geometry types. Like almost all geospatial databases we include a `GEOMETRY` type that (at least strives) to follow the Simple Features geometry model. This includes support for the standard subtypes, such as `POINT`, `LINESTRING`, `POLYGON`, `MULTIPOINT`, `MULTILINESTRING`, `MULTIPOLYGON`, `GEOMETRYCOLLECTION` that we all know and love, internally represented in a row-wise fashion on top of DuckDB `BLOB`s. The internal binary format is very similar to the one used by PostGIS - basically `double` aligned WKB, and we may eventually look into enforcing the format to be properly compatible with PostGIS (which may be useful for the PostGIS scanner extension). Most functions that are implemented for this type uses the [GEOS library](https://github.com/libgeos/geos), which is a battle-tested C++ port of the famous `JTS` library, to perform the actual operations on the geometries.
@@ -49,8 +134,10 @@ Please feel free to also open an issue if you have a specific use case that you 
 ## Function Support/Implementation Table
 
 GEOS - functions that are implemented using the [GEOS](https://trac.osgeo.org/geos/) library
-DuckDB - functions that are implemented natively in this extension that are capable of operating directly on the DuckDB geometry data type
-CAST(GEOMETRY) - functions that are supported by implicitly casting to `GEOMETRY` and then using the `GEOMETRY` implementation.
+
+DuckDB - functions that are implemented natively in this extension that are capable of operating directly on the DuckDB types
+
+CAST(GEOMETRY) - functions that are supported by implicitly casting to `GEOMETRY` and then using the `GEOMETRY` implementation
 
 We are currently working on implementing more functions, and will update this table as we go.
 Again, please feel free to open an issue if there is a particular function you would like to see implemented. Contributions are also welcome!
@@ -65,6 +152,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Boundary                 | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_Buffer                   | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_Centroid                 | GEOS     | DuckDB                   | DuckDB                   | DuckDB                   | DuckDB                    |
+| ST_Collect                  | DuckDB   | DuckDB                   | DuckDB                   | DuckDB                   | DuckDB                    |
 | ST_Contains                 | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | DuckDB or CAST(GEOMETRY) | CAST(GEOMETRY as POLYGON) |
 | ST_ConvexHull               | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_CoveredBy                | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
@@ -95,27 +183,4 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Union                    | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_Within                   | GEOS     | DuckDB or CAST(GEOMETRY) | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_X                        | GEOS     | DuckDB                   | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
-| ST_Y                        | GEOS     | DuckDB                   |                          |                          |                           |
-
-
-# How to build
-This extension is based on the [DuckDB extension template](https://github.com/duckdb/extension-template).
-You need a recent version of CMake (3.20) and a C++11 compatible compiler.
-If you're cross-compiling, you need a host sqlite3 executable in your path, otherwise the build should create and use its own sqlite3 executable. (This is required for creating the PROJ database).
-You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`.
-
-We bundle all the other required dependencies in the `third_party` directory, which should be automatically built and statically linked into the extension. This may take some time the first time you build, but subsequent builds should be much faster.
-
-We also highly recommend that you install [Ninja](https://ninja-build.org) which you can select when building by setting the `GEN=ninja` environment variable.
-
-```
-git clone --recurse-submodules https://github.com/duckdblabs/duckdb_spatial.git
-cd duckdb_spatial
-make debug
-```
-You can then invoke the built DuckDB (with the extension statically linked)
-```
-./build/debug/duckdb
-```
-
-Please see the Makefile for more options.
+| ST_Y                        | GEOS     | DuckDB                   | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)            |
