@@ -61,9 +61,10 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Point                    | DuckDB   | DuckDB                   |                          |                          |                           |
 | ST_Area                     | DuckDB   | DuckDB                   | DuckDB                   | DuckDB                   | DuckDB                    |
 | ST_AsText                   | GEOS     | DuckDB                   | DuckDB                   | DuckDB                   | CAST(GEOMETRY as POLYGON) |
-| ST_AsWKB                    | BROKEN   | BROKEN                   | BROKEN                   | BROKEN                   | BROKEN                    |
+| ST_AsWKB                    | DuckDB   | DuckDB                   | DuckDB                   | DuckDB                   | DuckDB                    |
 | ST_Boundary                 | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_Buffer                   | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
+| ST_Centroid                 | GEOS     | DuckDB                   | DuckDB                   | DuckDB                   | DuckDB                    |
 | ST_Contains                 | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | DuckDB or CAST(GEOMETRY) | CAST(GEOMETRY as POLYGON) |
 | ST_ConvexHull               | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |
 | ST_CoveredBy                | GEOS     | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY)           | CAST(GEOMETRY as POLYGON) |

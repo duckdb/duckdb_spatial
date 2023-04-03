@@ -12,6 +12,10 @@ add_subdirectory(dependencies)
 
 include_directories(include)
 add_subdirectory(src)
+
+include_directories(third_party/ryu/include)
+add_subdirectory(third_party/ryu)
+
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Add dependencies
