@@ -109,7 +109,11 @@ SELECT
 
 ```
 
-## How to build
+## How do I get it?
+
+In the future we will provide pre-built binaries downloadable from the DuckDB CLI like we do for our other extensions. 
+For now you can grab binaries for Windows (x64), Linux (x64 and ARM) and MacOS (universal) from the CI runs or the release page here on GitHub. You can also build the extension yourself following the instructions below.
+
 This extension is based on the [DuckDB extension template](https://github.com/duckdb/extension-template).
 You need a recent version of CMake (3.20) and a C++11 compatible compiler.
 If you're cross-compiling, you need a host sqlite3 executable in your path, otherwise the build should create and use its own sqlite3 executable. (This is required for creating the PROJ database).
