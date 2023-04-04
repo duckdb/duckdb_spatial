@@ -352,6 +352,8 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 
 		auto feature = OGRFeatureUniquePtr(OGRFeature::CreateFeature(layer->GetLayerDefn()));
 
+		// Geometry fields do not count towards the field index, so we need to keep track of them separately.
+		idx_t field_idx = 0;
 		for (idx_t col_idx = 0; col_idx < input.ColumnCount(); col_idx++) {
 			auto &name = bind_data.field_names[col_idx];
 			auto &type = bind_data.field_sql_types[col_idx];
@@ -364,7 +366,8 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 					throw IOException("Could not set geometry");
 				}
 			} else {
-				SetOgrFieldFromValue(feature.get(), (int)col_idx, type, value);
+				SetOgrFieldFromValue(feature.get(), (int)field_idx, type, value);
+				field_idx++;
 			}
 		}
 		if (layer->CreateFeature(feature.get()) != OGRERR_NONE) {
