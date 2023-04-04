@@ -12,6 +12,7 @@
   - [Multi-tiered Geometry Type System](#multi-tiered-geometry-type-system)
   - [Per-thread Arena Allocation for Geometry Objects](#per-thread-arena-allocation-for-geometry-objects)
   - [Embedded PROJ Database](#embedded-proj-database)
+  - [Embedded GDAL based Input/Output Functions](#embedded-gdal-based-inputoutput-functions)
 - [Supported Functions](#supported-functions)
 
 # What is this?
@@ -235,7 +236,7 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 ## Embedded PROJ Database
 [PROJ](https://proj.org/#) is a generic coordinate transformation library that transforms geospatial coordinates from one projected coordinate reference system (CRS) to another. This extension experiments with including an embedded version of the PROJ database inside the extension binary itself so that you don't have to worry about installing the PROJ library separately. This also opens up the possibility to use this functionality in WASM.
 
-🔄### Embedded GDAL based Input/Output Functions
+## Embedded GDAL based Input/Output Functions
 [GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `COPY ... TO ... WITH (FORMAT GDAL)` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats - check for yourself by running `SELECT * FROM st_list_drivers();`!
 
 Note that far from all of these formats have been tested properly, if you run into any issues please first [consult the GDAL docs](https://gdal.org/drivers/vector/index.html), or open an issue here on GitHub.
