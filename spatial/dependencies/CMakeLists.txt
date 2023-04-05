@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
+
+
 project(dependecies-build)
 
 # Install and build dependencies locally
@@ -11,8 +13,14 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
+if(APPLE AND ${OSX_BUILD_UNIVERSAL})
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
+
+endif()
+
 # Escape semicolons in CMAKE_OSX_ARCHITECTURES before passing to ExternalProject_Add
 string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_PACKED "${CMAKE_OSX_ARCHITECTURES}")
+message(FATAL_ERROR "CMAKE_OSX_ARCHITECTURES: ${CMAKE_OSX_ARCHITECTURES_PACKED}")
 
 # ZLIB
 ExternalProject_Add(
