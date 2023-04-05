@@ -67,7 +67,7 @@ ExternalProject_Add(
     -DCURL_USE_LIBSSH2=OFF
     -DCURL_USE_LIBPSL=OFF
     -DCURL_USE_LIBSSH=OFF
-    -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
+    -DOPENSSL_USE_STATIC_LIBS=ON # Propagate to FindOpenSSL.cmake
 )
 
 find_program(EXE_SQLITE3 sqlite3)
@@ -169,7 +169,7 @@ ExternalProject_Add(
     -DGDAL_USE_EXPAT=ON
     -DGDAL_USE_CURL=ON
     -DGDAL_USE_OPENSSL=ON
-    -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
+    -DOPENSSL_USE_STATIC_LIBS=ON # Propagate to FindOpenSSL.cmake
     
     # This is not true, but a bug in gdal's cmake files
     -DACCEPT_MISSING_SQLITE3_RTREE:BOOL=ON

@@ -56,6 +56,7 @@ find_package(GEOS REQUIRED)
 find_package(GDAL REQUIRED)
 find_package(CURL REQUIRED)
 find_package(EXPAT REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Important: The link order matters, its the reverse order of dependency
 target_link_libraries(
