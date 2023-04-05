@@ -60,6 +60,7 @@ ExternalProject_Add(
     -DCMAKE_DEBUG_POSTFIX=${} # Do not append "d" to the library name when building in debug mode
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
     -DBUILD_SHARED_LIBS=OFF
     -DHTTP_ONLY=ON
     # Disable some defaults for now
