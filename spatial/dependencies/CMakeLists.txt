@@ -7,7 +7,9 @@ include(ExternalProject)
 set(LOCAL_INSTALL_DIR ${CMAKE_BINARY_DIR}/local)
 set_directory_properties(PROPERTIES EP_BASE ${CMAKE_BINARY_DIR}/base)
 
-cmake_policy(SET CMP0135 NEW)
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+    cmake_policy(SET CMP0135 NEW)
+endif()
 
 # Escape semicolons in CMAKE_OSX_ARCHITECTURES before passing to ExternalProject_Add
 string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_PACKED "${CMAKE_OSX_ARCHITECTURES}")
