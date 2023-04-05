@@ -35,7 +35,7 @@ if(NOT DEPENDENCIES_GENERATE_RESULT EQUAL 0)
 endif()
 execute_process(
     # Build project
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/dependencies
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/dependencies --config ${CMAKE_BUILD_TYPE}
     RESULT_VARIABLE DEPENDENCIES_BUILD_RESULT
 )
 if(NOT DEPENDENCIES_BUILD_RESULT EQUAL 0)
@@ -45,7 +45,9 @@ endif()
 
 # Add dependencies
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_BINARY_DIR}/dependencies/local)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} MD.lib) # annoyingly for expat on windows
 set(ZLIB_USE_STATIC_LIBS ON)
+set(OPENSSL_USE_STATIC_LIBS ON)
 find_library(SQLITE3_MEMVFS memvfs)
 find_package(ZLIB REQUIRED)
 find_package(PROJ REQUIRED)
@@ -55,17 +57,24 @@ find_package(GDAL REQUIRED)
 find_package(CURL REQUIRED)
 find_package(EXPAT REQUIRED)
 
+# Important: The link order matters, its the reverse order of dependency
 target_link_libraries(
   ${EXTENSION_NAME}
   PUBLIC
-  ZLIB::ZLIB
-  SQLite::SQLite3 
-  PROJ::proj
-  GEOS::geos_c
   GDAL::GDAL
+  GEOS::geos_c
+  PROJ::proj
   CURL::libcurl
   EXPAT::EXPAT
+  OpenSSL::SSL
+  OpenSSL::Crypto
+  SQLite::SQLite3 
+  ZLIB::ZLIB
   ${SQLITE3_MEMVFS})
+
+if(WIN32)
+  target_link_libraries(${EXTENSION_NAME} PUBLIC wbemuuid.lib)
+endif()
 
 if(APPLE)
   find_library(CoreFoundation_Library CoreFoundation)
