@@ -45,7 +45,9 @@ endif()
 
 # Add dependencies
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_BINARY_DIR}/dependencies/local)
+set(ZLIB_USE_STATIC_LIBS ON)
 find_library(SQLITE3_MEMVFS memvfs)
+find_package(ZLIB REQUIRED)
 find_package(PROJ REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(GEOS REQUIRED)
@@ -56,6 +58,7 @@ find_package(EXPAT REQUIRED)
 target_link_libraries(
   ${EXTENSION_NAME}
   PUBLIC
+  ZLIB::ZLIB
   SQLite::SQLite3 
   PROJ::proj
   GEOS::geos_c
