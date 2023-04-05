@@ -16,10 +16,12 @@ public:
 		RegisterStCollect(context);
 		RegisterStContains(context);
 		RegisterStDistance(context);
+		RegisterStFlipCoordinates(context);
 		RegisterStGeometryType(context);
 		RegisterStGeomFromWKB(context);
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
+		RegisterStMakeLine(context);
 		RegisterStPoint(context);
 		RegisterStX(context);
 		RegisterStY(context);
@@ -47,6 +49,9 @@ private:
 	// ST_Distance
 	static void RegisterStDistance(ClientContext &context);
 
+	// ST_FlipCoordinates
+	static void RegisterStFlipCoordinates(ClientContext &context);
+
 	// ST_GeometryType
 	static void RegisterStGeometryType(ClientContext &context);
 
@@ -58,6 +63,9 @@ private:
 
 	// ST_Length
 	static void RegisterStLength(ClientContext &context);
+
+	// ST_MakeLine
+	static void RegisterStMakeLine(ClientContext &context);
 
 	// ST_Point
 	static void RegisterStPoint(ClientContext &context);

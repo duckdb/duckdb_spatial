@@ -301,6 +301,7 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 	// TODO: Set field by index always instead of by name for performance.
 	if (value.IsNull()) {
 		feature->SetFieldNull(field_idx);
+		return;
 	}
 	switch (type.id()) {
 	case LogicalTypeId::BOOLEAN:

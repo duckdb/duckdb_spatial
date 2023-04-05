@@ -7,7 +7,9 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_collect.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_contains.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_distance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_flipcoordinates.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_makeline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geometrytype.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp

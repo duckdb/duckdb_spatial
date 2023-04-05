@@ -1,0 +1,52 @@
+require spatial
+
+query I
+SELECT ST_FlipCoordinates(ST_Point2D(1,2))
+----
+POINT (2 1)
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('LINESTRING(1 2, 3 4)'))
+----
+LINESTRING (2 1, 4 3)
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('POLYGON((1 2, 3 4, 5 6, 1 2))'))
+----
+POLYGON ((2 1, 4 3, 6 5, 2 1))
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('MULTIPOINT(1 2, 3 4)'))
+----
+MULTIPOINT (2 1, 4 3)
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('MULTILINESTRING((1 2, 3 4), (5 6, 7 8))'))
+----
+MULTILINESTRING ((2 1, 4 3), (6 5, 8 7))
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('MULTIPOLYGON(((1 2, 3 4, 5 6, 1 2)), ((7 8, 9 10, 11 12, 7 8)))'))
+----
+MULTIPOLYGON (((2 1, 4 3, 6 5, 2 1)), ((8 7, 10 9, 12 11, 8 7)))
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('GEOMETRYCOLLECTION(POINT(1 2), LINESTRING(3 4, 5 6))'))
+----
+GEOMETRYCOLLECTION (POINT (2 1), LINESTRING (4 3, 6 5))
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY'))
+----
+GEOMETRYCOLLECTION EMPTY
+
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('POINT EMPTY'))
+----
+POINT EMPTY
+
+query I
+SELECT ST_FlipCoordinates(NULL)
+----
+NULL
+

@@ -12,8 +12,6 @@ namespace spatial {
 
 namespace core {
 
-using namespace spatial::core;
-
 static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
     auto count = args.size();

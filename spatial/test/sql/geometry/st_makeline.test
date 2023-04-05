@@ -1,0 +1,56 @@
+require spatial
+
+# Test MakeLine binary function
+query I
+SELECT ST_AsText(ST_MakeLine(ST_Point(1,1), ST_Point(2,2)))
+----
+LINESTRING (1 1, 2 2)
+
+# Test MakeLine list function
+query I
+SELECT ST_AsText(ST_MakeLine([ST_Point(1,1), ST_Point(2,2)]))
+----
+LINESTRING (1 1, 2 2)
+
+query I
+SELECT ST_AsText(ST_MakeLine([ST_Point(1,1), ST_Point(2,2), ST_Point(3,3)]))
+----
+LINESTRING (1 1, 2 2, 3 3)
+
+# Test MakeLine list function with empty list
+query I
+SELECT ST_AsText(ST_MakeLine([]))
+----
+LINESTRING EMPTY
+
+# Test MakeLine list function with null
+query I
+SELECT ST_AsText(ST_MakeLine([ST_Point(1,1), NULL, ST_Point(3,3)]))
+----
+LINESTRING (1 1, 3 3)
+
+query I
+SELECT ST_AsText(ST_MakeLine([NULL]))
+----
+LINESTRING EMPTY
+
+# Handle invalid cases (not enough points)
+statement error
+SELECT ST_AsText(ST_MakeLine([ST_Point(1,1), NULL]))
+----
+Invalid Input Error: ST_MakeLine requires zero or two or more POINT geometries
+
+statement error
+SELECT ST_AsText(ST_MakeLine([ST_Point(1,1), NULL, ST_GeomFromText('POINT EMPTY')]))
+----
+Invalid Input Error: ST_MakeLine requires zero or two or more POINT geometries
+
+statement error
+SELECT ST_AsText(ST_MakeLine(ST_Point(1,2), ST_GeomFromText('POINT EMPTY')))
+----
+Invalid Input Error: ST_MakeLine requires zero or two or more POINT geometries
+
+query I
+SELECT ST_AsText(ST_MakeLine(NULL, ST_Point(1,2)))
+----
+NULL

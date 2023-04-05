@@ -1,5 +1,7 @@
 # DuckDB Spatial Extension
 
+🚧 WORK IN PROGRESS 🚧
+
 **Table of contents**
 - [DuckDB Spatial Extension](#duckdb-spatial-extension)
 - [What is this?](#what-is-this)
@@ -150,14 +152,14 @@ ON ST_Within(st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718'), end_zone.g
 </details>
 
 We can export the joined table to a GeoJSONSeq file using the GDAL copy function, passing in a GDAL layer creation option. 
-Since GeoJSON only supports a single geometry per feature, we need to use the `ST_Collect` function to combine the pickup and dropoff points into a single multi point geometry.
+Since GeoJSON only supports a single geometry per feature, we can use the `ST_MakeLine` function to combine the pickup and dropoff points into a single line geometry. The default coordinate reference system for GeoJSON is WGS84, but the coordinates are expected to be in longitude/latitude, so we need to flip the geometry using the `ST_FlipCoordinates` function.
 
 ```sql
 COPY (
     SELECT 
-        ST_AsWKB(ST_Collect([pickup_point, dropoff_point])) as wkb_geometry,
-        start_zone, 
-        end_zone, 
+        ST_AsWKB(ST_FlipCoordinates(ST_MakeLine(pickup_point, dropoff_point))) as wkb_geometry,
+        start_zone,
+        end_zone,
         time::VARCHAR as trip_time 
     FROM joined) 
 TO 'joined.geojsonseq' 
@@ -169,16 +171,16 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 </summary>
 
 ```json
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:52:00" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.643515, -73.789923 ], [ 40.680395, -73.97608 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:35:00" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.645422, -73.776445 ], [ 40.670782, -73.98427 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:45:42" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.645065, -73.776878 ], [ 40.662571, -73.992153 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:36:00" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.641508, -73.788028 ], [ 40.670927, -73.97584 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:47:58" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.644749, -73.781855 ], [ 40.663663, -73.980129 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:32:10" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.641559, -73.787494 ], [ 40.673479, -73.974694 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:36:59" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.643342, -73.790138 ], [ 40.662379, -73.982721 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:32:00" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.641248, -73.786952 ], [ 40.676237, -73.97421 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:33:21" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.648514, -73.783892 ], [ 40.669721, -73.979283 ] ] } }
-{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:35:45" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 40.645272, -73.776643 ], [ 40.66723, -73.978873 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:52:00" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.789923, 40.643515 ], [ -73.97608, 40.680395 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:35:00" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.776445, 40.645422 ], [ -73.98427, 40.670782 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:45:42" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.776878, 40.645065 ], [ -73.992153, 40.662571 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:36:00" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.788028, 40.641508 ], [ -73.97584, 40.670927 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:47:58" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.781855, 40.644749 ], [ -73.980129, 40.663663 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:32:10" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.787494, 40.641559 ], [ -73.974694, 40.673479 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:36:59" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.790138, 40.643342 ], [ -73.982721, 40.662379 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:32:00" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.786952, 40.641248 ], [ -73.97421, 40.676237 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:33:21" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.783892, 40.648514 ], [ -73.979283, 40.669721 ] ] } }
+{ "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:35:45" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.776643, 40.645272 ], [ -73.978873, 40.66723 ] ] } }
 ```
 </details>
 
@@ -281,9 +283,11 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_DWithin                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Envelope                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Equals                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_FlipCoordinates          | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_GeomFromText             | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_GeomFromWKB              | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_GeometryType             | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_MakeLine                 | 🦆        |           | 🦆            |            |                 |
 | ST_Intersection             | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Intersects               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_IsClosed                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
