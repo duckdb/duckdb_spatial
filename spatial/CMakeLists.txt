@@ -8,8 +8,6 @@ set(CMAKE_CXX_STANDARD 11)
 
 project(${TARGET_NAME})
 
-add_subdirectory(dependencies)
-
 include_directories(include)
 add_subdirectory(src)
 
@@ -18,11 +16,53 @@ add_subdirectory(third_party/ryu)
 
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
+# Build dependencies
+# TODO: in the future we should allow users to dynamically link to their own dependencies
+# if they are building locally. If they have a local (compatible) GDAL installation, 
+# we should use that instead of building our own. (unless a static build is requested)
+execute_process(
+    # Generate project
+    COMMAND ${CMAKE_COMMAND}
+    -G ${CMAKE_GENERATOR}
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DOSX_BUILD_UNIVERSAL=${OSX_BUILD_UNIVERSAL} 
+    -S ${CMAKE_CURRENT_SOURCE_DIR}/dependencies 
+    -B ${CMAKE_BINARY_DIR}/dependencies
+    RESULT_VARIABLE DEPENDENCIES_GENERATE_RESULT
+)
+if(NOT DEPENDENCIES_GENERATE_RESULT EQUAL 0)
+    message(FATAL_ERROR "Could not generate dependencies project")
+endif()
+execute_process(
+    # Build project
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/dependencies
+    RESULT_VARIABLE DEPENDENCIES_BUILD_RESULT
+)
+if(NOT DEPENDENCIES_BUILD_RESULT EQUAL 0)
+    message(FATAL_ERROR "Could not build dependencies project")
+endif()
+
+
 # Add dependencies
-target_link_libraries(${EXTENSION_NAME} PRIVATE dependencies)
-target_include_directories(${EXTENSION_NAME} INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/local/include>
-        $<INSTALL_INTERFACE:include>)
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_BINARY_DIR}/dependencies/local)
+find_library(SQLITE3_MEMVFS memvfs)
+find_package(PROJ REQUIRED)
+find_package(SQLite3 REQUIRED)
+find_package(GEOS REQUIRED)
+find_package(GDAL REQUIRED)
+find_package(CURL REQUIRED)
+find_package(EXPAT REQUIRED)
+
+target_link_libraries(
+  ${EXTENSION_NAME}
+  PUBLIC
+  SQLite::SQLite3 
+  PROJ::proj
+  GEOS::geos_c
+  GDAL::GDAL
+  CURL::libcurl
+  EXPAT::EXPAT
+  ${SQLITE3_MEMVFS})
 
 if(APPLE)
   find_library(CoreFoundation_Library CoreFoundation)
@@ -37,7 +77,7 @@ set(PARAMETERS "-warnings")
 build_loadable_extension(${TARGET_NAME} ${PARAMETERS} ${EXTENSION_SOURCES})
 
 install(
-  TARGETS ${EXTENSION_NAME} dependencies
+  TARGETS ${EXTENSION_NAME}
   EXPORT "${DUCKDB_EXPORT_SET}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}")
