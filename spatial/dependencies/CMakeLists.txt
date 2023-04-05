@@ -20,7 +20,6 @@ endif()
 
 # Escape semicolons in CMAKE_OSX_ARCHITECTURES before passing to ExternalProject_Add
 string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_PACKED "${CMAKE_OSX_ARCHITECTURES}")
-message(FATAL_ERROR "CMAKE_OSX_ARCHITECTURES: ${CMAKE_OSX_ARCHITECTURES_PACKED}")
 
 # ZLIB
 ExternalProject_Add(
@@ -70,6 +69,7 @@ ExternalProject_Add(
     -DOPENSSL_USE_STATIC_LIBS=TRUE # Propagate to FindOpenSSL.cmake
 )
 
+find_program(EXE_SQLITE3 sqlite3)
 # PROJ
 ExternalProject_Add(
     PROJ
@@ -89,6 +89,7 @@ ExternalProject_Add(
     -DBUILD_TESTING=OFF
     -DENABLE_CURL=OFF
     -DENABLE_TIFF=OFF
+    -DEXE_SQLITE3=${EXE_SQLITE3} # use the sqlite3 executable from the system
 )
 
 # EXPAT
