@@ -53,7 +53,7 @@ find_package(SQLite3 REQUIRED)
 find_package(GEOS REQUIRED)
 find_package(GDAL REQUIRED)
 find_package(CURL REQUIRED)
-find_package(EXPAT CONFIG REQUIRED)
+find_package(EXPAT REQUIRED)
 
 target_link_libraries(
   ${EXTENSION_NAME}
