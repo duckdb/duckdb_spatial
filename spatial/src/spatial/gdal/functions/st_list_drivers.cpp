@@ -15,8 +15,16 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
                                                         vector<LogicalType> &return_types, vector<string> &names) {
 	return_types.emplace_back(LogicalType::VARCHAR);
 	return_types.emplace_back(LogicalType::VARCHAR);
-	names.emplace_back("driver_short_name");
-	names.emplace_back("driver_long_name");
+	return_types.emplace_back(LogicalType::VARCHAR);
+	return_types.emplace_back(LogicalType::VARCHAR);
+	return_types.emplace_back(LogicalType::VARCHAR);
+	return_types.emplace_back(LogicalType::VARCHAR);
+	names.emplace_back("short_name");
+	names.emplace_back("long_name");
+	names.emplace_back("can_create");
+	names.emplace_back("can_copy");
+	names.emplace_back("can_open");
+	names.emplace_back("help_url");
 
 	auto driver_count = GDALGetDriverCount();
 	return make_unique<BindData>(driver_count);
@@ -45,8 +53,24 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 		auto short_name = Value::CreateValue(GDALGetDriverShortName(driver));
 		auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
 
+		const char *create_flag = GDALGetMetadataItem(driver, GDAL_DCAP_CREATE, nullptr);
+		auto create_value = create_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(create_flag);
+
+		const char *copy_flag = GDALGetMetadataItem(driver, GDAL_DCAP_CREATECOPY, nullptr);
+		auto copy_value = copy_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(copy_flag);
+
+		const char *open_flag = GDALGetMetadataItem(driver, GDAL_DCAP_OPEN, nullptr);
+		auto open_value = open_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(open_flag);
+		
+		auto help_topic_flag = GDALGetDriverHelpTopic(driver);
+		auto help_topic_value = help_topic_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(StringUtil::Format("https://gdal.org/%s", help_topic_flag));
+
 		output.data[0].SetValue(count, short_name);
 		output.data[1].SetValue(count, long_name);
+		output.data[2].SetValue(count, create_value);
+		output.data[3].SetValue(count, copy_value);
+		output.data[4].SetValue(count, open_value);
+		output.data[5].SetValue(count, help_topic_value);
 		count++;
 	}
 	output.SetCardinality(count);
