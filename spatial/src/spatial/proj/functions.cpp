@@ -335,12 +335,16 @@ unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientCont
 }
 
 void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
+	// TODO: This is a lot slower than it has to be, ideally we only do one call to proj_get_crs_info_list
+	// and return the whole list in one go.
 	auto &state = (State &)*input.global_state;
 	int result_count = 0;
 	auto crs_list = proj_get_crs_info_list_from_database(nullptr, nullptr, nullptr, &result_count);
 
 	idx_t count = 0;
 	auto next_idx = MinValue<idx_t>(state.current_idx + STANDARD_VECTOR_SIZE, result_count);
+
+	// TODO: this just returns the crs info, not a spatial_ref_sys table that follows the schema.
 	for (idx_t i = state.current_idx; i < next_idx; i++) {
 		auto proj = crs_list[i];
 		output.SetValue(0, count, Value(proj->auth_name));
@@ -355,6 +359,8 @@ void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionIn
 	}
 
 	proj_crs_info_list_destroy(crs_list);
+	
+	state.current_idx += count;
 	output.SetCardinality(count);
 }
 
