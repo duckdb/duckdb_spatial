@@ -2,6 +2,7 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
 
 namespace spatial {
 
@@ -20,8 +21,13 @@ Geometry GeometryFactory::FromWKB(const char *wkb, uint32_t length) {
 	return reader.ReadGeometry();
 }
 
-string GeometryFactory::ToWKB(const Geometry &geometry) {
-	throw NotImplementedException("WKB not implemented yet");
+data_ptr_t GeometryFactory::ToWKB(const Geometry &geometry, uint32_t* size) {
+	auto required_size = WKBWriter::GetRequiredSize(geometry);
+	auto ptr = allocator.AllocateAligned(required_size);
+	auto cursor = ptr;
+	WKBWriter::Write(geometry, cursor);
+	*size = required_size;
+	return ptr;
 }
 
 VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) {
@@ -102,79 +108,58 @@ GeometryCollection GeometryFactory::CreateGeometryCollection(uint32_t num_geomet
 //    Geometries (variable length)
 
 string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
+	auto geom_size = GetSerializedSize(geometry);
+
 	auto type = geometry.Type();
-	GeometryPrefix prefix(0, type);
+	
+	// Hash geom_size uint32_t to uint16_t 
+	uint16_t hash = 0;
+	for (uint32_t i = 0; i < sizeof(uint32_t); i++) {
+		hash ^= (geom_size >> (i * 8)) & 0xFF;
+	}
+
+	GeometryPrefix prefix(0, type, hash);
 	auto header_size = prefix.SerializedSize() + 4; // + 4 for padding
+
+	auto size = header_size + geom_size;
+	auto str = StringVector::EmptyString(result, size);
+	auto ptr = (uint8_t *)str.GetDataUnsafe();
+	prefix.Serialize(ptr);
+	ptr += 4; // skip padding
 
 	switch (type) {
 	case GeometryType::POINT: {
 		auto &point = geometry.GetPoint();
-		auto size = header_size + GetSerializedSize(point);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializePoint(ptr, point);
 		return str;
 	}
 	case GeometryType::LINESTRING: {
 		auto &linestring = geometry.GetLineString();
-		auto size = header_size + GetSerializedSize(linestring);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializeLineString(ptr, linestring);
 		return str;
 	}
 	case GeometryType::POLYGON: {
 		auto &polygon = geometry.GetPolygon();
-		auto size = header_size + GetSerializedSize(polygon);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializePolygon(ptr, polygon);
 		return str;
 	}
 	case GeometryType::MULTIPOINT: {
 		auto &multipoint = geometry.GetMultiPoint();
-		auto size = header_size + GetSerializedSize(multipoint);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializeMultiPoint(ptr, multipoint);
 		return str;
 	}
 	case GeometryType::MULTILINESTRING: {
 		auto &multilinestring = geometry.GetMultiLineString();
-		auto size = header_size + GetSerializedSize(multilinestring);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializeMultiLineString(ptr, multilinestring);
 		return str;
 	}
 	case GeometryType::MULTIPOLYGON: {
 		auto &multipolygon = geometry.GetMultiPolygon();
-		auto size = header_size + GetSerializedSize(multipolygon);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializeMultiPolygon(ptr, multipolygon);
 		return str;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
 		auto &collection = geometry.GetGeometryCollection();
-		auto size = header_size + GetSerializedSize(collection);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (uint8_t *)str.GetDataUnsafe();
-		prefix.Serialize(ptr);
-		ptr += 4; // skip padding
 		SerializeGeometryCollection(ptr, collection);
 		return str;
 	}
@@ -384,34 +369,30 @@ uint32_t GeometryFactory::GetSerializedSize(const GeometryCollection &collection
 	// sizeof(geometry) * count
 	uint32_t size = 4 + 4;
 	for (uint32_t i = 0; i < collection.num_geometries; i++) {
-		auto &geom = collection.geometries[i];
-		switch (geom.Type()) {
-		case GeometryType::POINT:
-			size += GetSerializedSize(geom.GetPoint());
-			break;
-		case GeometryType::LINESTRING:
-			size += GetSerializedSize(geom.GetLineString());
-			break;
-		case GeometryType::POLYGON:
-			size += GetSerializedSize(geom.GetPolygon());
-			break;
-		case GeometryType::MULTIPOINT:
-			size += GetSerializedSize(geom.GetMultiPoint());
-			break;
-		case GeometryType::MULTILINESTRING:
-			size += GetSerializedSize(geom.GetMultiLineString());
-			break;
-		case GeometryType::MULTIPOLYGON:
-			size += GetSerializedSize(geom.GetMultiPolygon());
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			size += GetSerializedSize(geom.GetGeometryCollection());
-			break;
-		default:
-			throw NotImplementedException("Unimplemented geometry type for serialization!");
-		}
+		size += GetSerializedSize(collection.geometries[i]);
 	}
 	return size;
+}
+
+uint32_t GeometryFactory::GetSerializedSize(const Geometry &geometry) {
+	switch (geometry.Type()) {
+	case GeometryType::POINT:
+		return GetSerializedSize(geometry.GetPoint());
+	case GeometryType::LINESTRING:
+		return GetSerializedSize(geometry.GetLineString());
+	case GeometryType::POLYGON:
+		return GetSerializedSize(geometry.GetPolygon());
+	case GeometryType::MULTIPOINT:
+		return GetSerializedSize(geometry.GetMultiPoint());
+	case GeometryType::MULTILINESTRING:
+		return GetSerializedSize(geometry.GetMultiLineString());
+	case GeometryType::MULTIPOLYGON:
+		return GetSerializedSize(geometry.GetMultiPolygon());
+	case GeometryType::GEOMETRYCOLLECTION:
+		return GetSerializedSize(geometry.GetGeometryCollection());
+	default:
+		throw NotImplementedException("Unimplemented geometry type!");
+	}
 }
 
 //----------------------------------------------------------------------
@@ -422,10 +403,10 @@ Geometry GeometryFactory::Deserialize(const string_t &data) {
 	// read prefix
 	auto type = (GeometryType)Load<uint8_t>(ptr++);
 	auto flags = (uint8_t)Load<uint8_t>(ptr++);
-	auto _pad1 = (uint8_t)Load<uint8_t>(ptr++);
-	auto _pad2 = (uint8_t)Load<uint8_t>(ptr++);
+	auto hash = Load<uint16_t>(ptr);
+	ptr += sizeof(uint16_t);
 
-	GeometryPrefix prefix(flags, type);
+	GeometryPrefix prefix(flags, type, hash);
 
 	// skip padding
 	ptr += sizeof(uint32_t);

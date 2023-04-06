@@ -249,10 +249,9 @@ RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
 struct GeometryPrefix {
 	uint8_t flags;
 	GeometryType type;
-	uint8_t _pad1;
-	uint8_t _pad2;
+	uint16_t hash;
 
-	GeometryPrefix(uint8_t flags, GeometryType type) : flags(flags), type(type), _pad1(0), _pad2(0) {
+	GeometryPrefix(uint8_t flags, GeometryType type, uint16_t hash) : flags(flags), type(type), hash(hash) {
 	}
 
 	uint32_t SerializedSize() const {
@@ -264,10 +263,8 @@ struct GeometryPrefix {
 		dst += sizeof(uint8_t);
 		Store<uint8_t>((uint8_t)type, dst);
 		dst += sizeof(GeometryType);
-		Store<uint8_t>(_pad1, dst);
-		dst += sizeof(uint8_t);
-		Store<uint8_t>(_pad2, dst);
-		dst += sizeof(uint8_t);
+		Store<uint16_t>(hash, dst);
+		dst += sizeof(uint16_t);
 	}
 };
 static_assert(sizeof(GeometryPrefix) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");

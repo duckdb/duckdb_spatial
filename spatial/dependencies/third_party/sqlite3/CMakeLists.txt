@@ -19,6 +19,7 @@ target_compile_definitions(memvfs PUBLIC SQLITE_CORE)
 target_compile_definitions(sqlite3 PUBLIC SQLITE_ENABLE_RTREE=1)
 target_compile_definitions(sqlite3 PUBLIC SQLITE_ENABLE_COLUMN_METADATA=1)
 target_compile_definitions(sqlite3 PUBLIC SQLITE_USE_URI=1)
+target_compile_definitions(sqlite3 PUBLIC SQLITE_TEMP_STORE=3)
 
 find_package(Threads REQUIRED)
 target_link_libraries(sqlite PUBLIC Threads::Threads)
