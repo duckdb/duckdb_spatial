@@ -17,7 +17,7 @@ public:
 	Geometry FromWKT(const char *wkt, uint32_t length);
 	Geometry FromWKB(const char *wkb, uint32_t length);
 	string ToWKT(const Geometry &geometry);
-	string ToWKB(const Geometry &geometry);
+	data_ptr_t ToWKB(const Geometry &geometry, uint32_t *size);
 
 	VertexVector AllocateVertexVector(uint32_t capacity);
 
@@ -64,6 +64,7 @@ private:
 	uint32_t GetSerializedSize(const MultiLineString &multilinestring);
 	uint32_t GetSerializedSize(const MultiPolygon &multipolygon);
 	uint32_t GetSerializedSize(const GeometryCollection &collection);
+	uint32_t GetSerializedSize(const Geometry &geometry);
 
 	// Deserialize
 	Point DeserializePoint(const_data_ptr_t &ptr);

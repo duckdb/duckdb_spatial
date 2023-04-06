@@ -188,20 +188,31 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 # How do I get it?
 
 ## Pre-built binaries
-In the future we'd like to provide pre-built binaries downloadable from the DuckDB CLI like we do for our other extensions, but for now you can grab binaries for Windows (x64), Linux (x64 and ARM) and MacOS (universal) for DuckDB `v0.7.1` from the CI runs or the release page here on GitHub. You can also build the extension yourself following the instructions below.
+In the future we'd like to provide pre-built binaries downloadable from the DuckDB CLI like we do for our other extensions, but for now you can grab binaries for Windows (x64), Linux (x64 and ARM) and MacOS (universal) for DuckDB `v0.7.1` from the CI runs or the release page here on GitHub. 
+
+Once you have downloaded the extension for your platform, you need to:
+- Unzip the archive
+- Start duckdb with the `-unsigned` flag to allow loading unsigned extensions. (This won't be neccessary in the future)
+- Run `INSTALL 'absolute/or/relative/path/to/the/unzipped/extension';`
+- The extension is now installed, you can now load it with `LOAD spatial;` whenever you want to use it.
+
+You can also build the extension yourself following the instructions below.
 
 ## Building from source
 This extension is based on the [DuckDB extension template](https://github.com/duckdb/extension-template).
+
+**Dependencies**
+
 You need a recent version of CMake (3.20) and a C++11 compatible compiler.
 If you're cross-compiling, you need a host sqlite3 executable in your path, otherwise the build should create and use its own sqlite3 executable. (This is required for creating the PROJ database).
-You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`.
+You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`. Note that brew installs openssl in a non-standard location, so you may need to set a `OPENSSL_ROOT_DIR=$(brew --prefix openssl)` environment variable when building.
 
 We bundle all the other required dependencies in the `third_party` directory, which should be automatically built and statically linked into the extension. This may take some time the first time you build, but subsequent builds should be much faster.
 
 We also highly recommend that you install [Ninja](https://ninja-build.org) which you can select when building by setting the `GEN=ninja` environment variable.
 
 ```
-git clone --recurse-submodules https://github.com/duckdblabs/duckdb_spatial.git
+git clone --recurse-submodules https://github.com/duckdblabs/duckdb_spatial
 cd duckdb_spatial
 make debug
 ```
@@ -305,3 +316,13 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Within                   | 🧭        | 🦆 or 🔄  | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_X                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Y                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+
+
+```sql
+LOAD spatial;
+LOAD parquet;
+CREATE TABLE zones AS SELECT zone, LocationId, borough, ST_GeomFromWKB(wkb_geometry) AS geom  FROM st_read('./spatial/test/data/nyc_taxi/taxi_zones/taxi_zones.shx');
+CREATE TABLE rides AS SELECT *  FROM './spatial/test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet';
+CREATE TABLE cleaned_rides AS SELECT st_point(pickup_latitude, pickup_longitude) as pickup_point, st_point(dropoff_latitude, dropoff_longitude) as dropoff_point, dropoff_datetime::TIMESTAMP - pickup_datetime::TIMESTAMP as time, trip_distance, st_distance(st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718')) / 5280 as aerial_distance, trip_distance - aerial_distance as diff  FROM rides  WHERE diff > 0 ORDER BY diff DESC LIMIT 5000;
+CREATE TABLE joined AS  SELECT      pickup_point,     dropoff_point,     start_zone.zone as start_zone,     end_zone.zone as end_zone,      trip_distance, aerial_distance,    time, FROM cleaned_rides  JOIN zones as start_zone  ON ST_Within(st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), start_zone.geom)  JOIN zones as end_zone  ON ST_Within(st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718'), end_zone.geom);
+```
