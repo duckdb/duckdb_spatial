@@ -15,9 +15,9 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
                                                         vector<LogicalType> &return_types, vector<string> &names) {
 	return_types.emplace_back(LogicalType::VARCHAR);
 	return_types.emplace_back(LogicalType::VARCHAR);
-	return_types.emplace_back(LogicalType::VARCHAR);
-	return_types.emplace_back(LogicalType::VARCHAR);
-	return_types.emplace_back(LogicalType::VARCHAR);
+	return_types.emplace_back(LogicalType::BOOLEAN);
+	return_types.emplace_back(LogicalType::BOOLEAN);
+	return_types.emplace_back(LogicalType::BOOLEAN);
 	return_types.emplace_back(LogicalType::VARCHAR);
 	names.emplace_back("short_name");
 	names.emplace_back("long_name");
@@ -54,13 +54,12 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 		auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
 
 		const char *create_flag = GDALGetMetadataItem(driver, GDAL_DCAP_CREATE, nullptr);
-		auto create_value = create_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(create_flag);
+		auto create_value = Value::CreateValue(create_flag != nullptr);
 
 		const char *copy_flag = GDALGetMetadataItem(driver, GDAL_DCAP_CREATECOPY, nullptr);
-		auto copy_value = copy_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(copy_flag);
-
+		auto copy_value = Value::CreateValue(copy_flag != nullptr);
 		const char *open_flag = GDALGetMetadataItem(driver, GDAL_DCAP_OPEN, nullptr);
-		auto open_value = open_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(open_flag);
+		auto open_value = Value::CreateValue(open_flag != nullptr);
 		
 		auto help_topic_flag = GDALGetDriverHelpTopic(driver);
 		auto help_topic_value = help_topic_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(StringUtil::Format("https://gdal.org/%s", help_topic_flag));
@@ -77,7 +76,8 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 }
 
 void GdalDriversTableFunction::Register(ClientContext &context) {
-	TableFunction func("st_list_drivers", {}, Execute, Bind, Init);
+	TableFunction func("st_drivers", {}, Execute, Bind, Init);
+
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateTableFunctionInfo info(func);
 	catalog.CreateTableFunction(context, &info);
