@@ -126,6 +126,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_open_options.push_back(StringValue::Get(param).c_str());
 		}
 	}
+	if(!gdal_open_options.empty()) {
+		gdal_open_options.push_back(nullptr);
+	}
 
 	auto gdal_allowed_drivers = vector<char const *>();
 	auto drivers_param = input.named_parameters.find("allowed_drivers");
@@ -134,6 +137,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_allowed_drivers.push_back(StringValue::Get(param).c_str());
 		}
 	}
+	if(!gdal_allowed_drivers.empty()) {
+		gdal_allowed_drivers.push_back(nullptr);
+	}
 
 	auto gdal_sibling_files = vector<char const *>();
 	auto siblings_params = input.named_parameters.find("sibling_files");
@@ -141,6 +147,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		for (auto &param : ListValue::GetChildren(drivers_param->second)) {
 			gdal_sibling_files.push_back(StringValue::Get(param).c_str());
 		}
+	}
+	if(!gdal_sibling_files.empty()) {
+		gdal_sibling_files.push_back(nullptr);
 	}
 
 	// Now we can open the dataset
@@ -163,7 +172,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 	// Now we can bind the additonal options
 	auto result = make_unique<GdalScanFunctionData>();
-
+	bool sequential_layer_scan = false;
 	for (auto &kv : input.named_parameters) {
 		auto loption = StringUtil::Lower(kv.first);
 		if (loption == "layer") {
@@ -225,6 +234,10 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			}
 			result->max_threads = (idx_t)max_threads;
 		}
+
+		if (loption == "sequential_layer_scan") {
+			sequential_layer_scan = BooleanValue::Get(kv.second);
+		}
 	}
 
 	// set default max_threads
@@ -233,7 +246,24 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Get the schema for the selected layer
-	auto layer = dataset->GetLayer(result->layer_idx);
+	OGRLayer *layer;
+	if(sequential_layer_scan) {
+		// Get the layer from the dataset
+		for(idx_t i = 0; i < dataset->GetLayerCount(); i++) {
+			layer = dataset->GetLayer(i);
+			if(i == result->layer_idx) {
+				break;
+			}
+			// else scan through and empty the layer
+			OGRFeature *feature;
+			while( (feature = layer->GetNextFeature()) != nullptr) {
+				OGRFeature::DestroyFeature(feature);
+			}
+		}
+	} else {
+		// Get the layer from the dataset
+		layer = dataset->GetLayer(result->layer_idx);
+	}
 
 	struct ArrowArrayStream stream;
 	if (!layer->GetArrowStream(&stream, LAYER_CREATION_OPTIONS)) {
@@ -413,6 +443,8 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["sibling_files"] = LogicalType::LIST(LogicalType::VARCHAR);
 	scan.named_parameters["spatial_filter_box"] = core::GeoTypes::BOX_2D();
 	scan.named_parameters["spatial_filter"] = core::GeoTypes::WKB_BLOB();
+	scan.named_parameters["layer"] = LogicalType::VARCHAR;
+	scan.named_parameters["sequential_layer_scan"] = LogicalType::BOOLEAN;
 	set.AddFunction(scan);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
