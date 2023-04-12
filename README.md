@@ -322,7 +322,7 @@ Note that far from all of these formats have been tested properly, if you run in
 
 # Supported Functions
 
-🧭 - GEOS - functions that are implemented using the [GEOS](https://trac.osgeo.org/geos/) library
+🧭 - GEOS - functions that are implemented using the [GEOS](https://libgeos.org/) library
 
 🦆 - DuckDB - functions that are implemented natively in this extension that are capable of operating directly on the DuckDB types
 
