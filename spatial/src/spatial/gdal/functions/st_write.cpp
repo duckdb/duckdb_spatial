@@ -8,6 +8,8 @@
 #include "duckdb/parser/parsed_data/create_copy_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
 #include "spatial/gdal/functions.hpp"
 
 #include "ogrsf_frmts.h"
@@ -32,7 +34,13 @@ struct BindData : public TableFunctionData {
 	}
 };
 
-struct LocalState : public LocalFunctionData {};
+struct LocalState : public LocalFunctionData {
+	core::GeometryFactory factory;
+	explicit LocalState(ClientContext &context)
+	: factory(BufferAllocator::Get(context)) {
+		
+	}
+};
 
 struct GlobalState : public GlobalFunctionData {
 	mutex lock;
@@ -109,7 +117,8 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 //===--------------------------------------------------------------------===//
 static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, FunctionData &bind_data) {
 	auto &gdal_data = (BindData &)bind_data;
-	auto local_data = make_unique<LocalState>();
+
+	auto local_data = make_unique<LocalState>(context.client);
 	return std::move(local_data);
 }
 
@@ -117,7 +126,7 @@ static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, Functi
 // Init Global
 //===--------------------------------------------------------------------===//
 static bool IsGeometryType(const LogicalType &type) {
-	return type == core::GeoTypes::WKB_BLOB() || type == core::GeoTypes::POINT_2D();
+	return type == core::GeoTypes::WKB_BLOB() || type == core::GeoTypes::POINT_2D() || type == core::GeoTypes::GEOMETRY();
 }
 static unique_ptr<OGRGeomFieldDefn> OGRGeometryFieldTypeFromLogicalType(const string &name, const LogicalType &type) {
 	// TODO: Support more geometry types
@@ -125,6 +134,8 @@ static unique_ptr<OGRGeomFieldDefn> OGRGeometryFieldTypeFromLogicalType(const st
 		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
 	} else if (type == core::GeoTypes::POINT_2D()) {
 		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbPoint);
+	} else if(type == core::GeoTypes::GEOMETRY()) {
+		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
 	} else {
 		throw NotImplementedException("Unsupported geometry type");
 	}
@@ -273,7 +284,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 // Sink
 //===--------------------------------------------------------------------===//
 
-static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value) {
+static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value, core::GeometryFactory &factory) {
 	if (type == core::GeoTypes::WKB_BLOB()) {
 		auto str = value.GetValueUnsafe<string_t>();
 
@@ -286,8 +297,21 @@ static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const 
 			throw IOException("Could not parse WKB");
 		}
 		return OGRGeometryUniquePtr(ptr);
+	} else if (type == core::GeoTypes::GEOMETRY()) {
+		auto blob = value.GetValueUnsafe<string_t>();
+		auto geom = factory.Deserialize(blob);
+
+		uint32_t size;
+		auto wkb = factory.ToWKB(geom, &size);
+		
+		OGRGeometry *ptr;
+		auto ok = OGRGeometryFactory::createFromWkb(wkb, nullptr, &ptr, size, wkbVariantIso);
+		if (ok != OGRERR_NONE) {
+			throw IOException("Could not parse WKB");
+		}
+		return OGRGeometryUniquePtr(ptr);
 	}
-	if (type == core::GeoTypes::POINT_2D()) {
+	else if (type == core::GeoTypes::POINT_2D()) {
 		auto children = StructValue::GetChildren(value);
 		auto x = children[0].GetValue<double>();
 		auto y = children[1].GetValue<double>();
@@ -344,6 +368,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 	auto &bind_data = (BindData &)bdata;
 	auto &global_state = (GlobalState &)gstate;
 	auto &local_state = (LocalState &)lstate;
+	local_state.factory.allocator.Reset();
 
 	lock_guard<mutex> d_lock(global_state.lock);
 	auto layer = global_state.layer;
@@ -363,7 +388,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 
 			if (IsGeometryType(type)) {
 				// TODO: check how many geometry fields there are and use the correct one.
-				auto geom = OGRGeometryFromValue(type, value);
+				auto geom = OGRGeometryFromValue(type, value, local_state.factory);
 				if (feature->SetGeometry(geom.get()) != OGRERR_NONE) {
 					throw IOException("Could not set geometry");
 				}
