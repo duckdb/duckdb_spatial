@@ -221,9 +221,10 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	}
 
 	// Create the dataset
+	auto data_creation_options = vector<char const *>();
 	char **dco = nullptr;
 	for (auto &option : gdal_data.dataset_creation_options) {
-		CSLAddString(dco, option.c_str());
+		dco = CSLAddString(dco, option.c_str());
 	}
 	auto dataset = GDALDatasetUniquePtr(driver->Create(file_path.c_str(), 0, 0, 0, GDT_Unknown, dco));
 	if (!dataset) {
@@ -233,7 +234,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 
 	char **lco = nullptr;
 	for (auto &option : gdal_data.layer_creation_options) {
-		CSLAddString(lco, option.c_str());
+		lco = CSLAddString(lco, option.c_str());
 	}
 
 	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), nullptr, wkbUnknown, lco);

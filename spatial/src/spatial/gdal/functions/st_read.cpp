@@ -92,6 +92,7 @@ static const char* LAYER_CREATION_OPTIONS[2] = { "INCLUDE_FID=NO", nullptr };
 
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
+	bool sequential_layer_scan;
 	unique_ptr<SpatialFilter> spatial_filter;
 	GDALDatasetUniquePtr dataset;
 	unordered_map<idx_t, unique_ptr<ArrowConvertData>> arrow_convert_data;
@@ -172,7 +173,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 	// Now we can bind the additonal options
 	auto result = make_unique<GdalScanFunctionData>();
-	bool sequential_layer_scan = false;
+	result->sequential_layer_scan = false;
 	for (auto &kv : input.named_parameters) {
 		auto loption = StringUtil::Lower(kv.first);
 		if (loption == "layer") {
@@ -202,7 +203,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 					}
 				}
 				if (!found) {
-					throw BinderException(StringUtil::Format("Layer '%s' could not be found in dataset"), name);
+					throw BinderException(StringUtil::Format("Layer '%s' could not be found in dataset", name));
 				}
 			}
 		}
@@ -236,7 +237,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		}
 
 		if (loption == "sequential_layer_scan") {
-			sequential_layer_scan = BooleanValue::Get(kv.second);
+			result->sequential_layer_scan = BooleanValue::Get(kv.second);
 		}
 	}
 
@@ -246,25 +247,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Get the schema for the selected layer
-	OGRLayer *layer;
-	if(sequential_layer_scan) {
-		// Get the layer from the dataset
-		for(idx_t i = 0; i < dataset->GetLayerCount(); i++) {
-			layer = dataset->GetLayer(i);
-			if(i == result->layer_idx) {
-				break;
-			}
-			// else scan through and empty the layer
-			OGRFeature *feature;
-			while( (feature = layer->GetNextFeature()) != nullptr) {
-				OGRFeature::DestroyFeature(feature);
-			}
-		}
-	} else {
-		// Get the layer from the dataset
-		layer = dataset->GetLayer(result->layer_idx);
-	}
-
+	auto layer = dataset->GetLayer(result->layer_idx);
 	struct ArrowArrayStream stream;
 	if (!layer->GetArrowStream(&stream, LAYER_CREATION_OPTIONS)) {
 		// layer is owned by GDAL, we do not need to destory it
@@ -346,7 +329,25 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	auto global_state = make_unique<GdalScanGlobalState>();
 
 	// Get selected layer
-	auto layer = data.dataset->GetLayer(data.layer_idx);
+	OGRLayer *layer;
+	if(data.sequential_layer_scan) {
+		// Get the layer from the dataset by scanning through the layers
+		for(idx_t i = 0; i < data.dataset->GetLayerCount(); i++) {
+			layer = data.dataset->GetLayer(i);
+			if(i == data.layer_idx) {
+				// desired layer found
+				break;
+			}
+			// else scan through and empty the layer
+			OGRFeature *feature;
+			while( (feature = layer->GetNextFeature()) != nullptr) {
+				OGRFeature::DestroyFeature(feature);
+			}
+		}
+	} else {
+		// Otherwise get the layer directly
+		layer = data.dataset->GetLayer(data.layer_idx);
+	}
 
 	// Apply spatial filter (if we got one)
 	if (data.spatial_filter != nullptr) {
