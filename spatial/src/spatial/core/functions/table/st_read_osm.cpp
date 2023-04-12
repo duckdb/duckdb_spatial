@@ -11,153 +11,12 @@ namespace spatial {
 namespace core {
 
 //------------------------------------------------------------------------------
-// OSM PBF Parsing
+// Utils
 //------------------------------------------------------------------------------
 namespace pz = protozero;
 
 static int32_t ReadInt32BigEndian(data_ptr_t ptr) {
 	return (ptr[0] << 24) | (ptr[1] << 16) | (ptr[2] << 8) | ptr[3];
-}
-
-enum class OsmFileBlockType {
-	Header,
-	Data,
-};
-
-struct OsmBlobHeader {
-	OsmFileBlockType type;
-	int32_t blob_size;
-
-	explicit OsmBlobHeader(OsmFileBlockType type, int32_t blob_size) : type(type), blob_size(blob_size) {
-	}
-};
-
-static OsmBlobHeader GetNextBlobHeader(ClientContext &context, FileHandle &file_handle, idx_t &offset) {
-	auto &buffer_manager = BufferManager::GetBufferManager(context);
-
-	// Read the length of the BlobHeader
-	int32_t header_length_be = 0;
-	file_handle.Read((data_ptr_t)&header_length_be, sizeof(int32_t), offset);
-	offset += sizeof(int32_t);
-
-	int32_t header_length = ReadInt32BigEndian((data_ptr_t)&header_length_be);
-
-	// Read the BlobHeader
-	auto header_handle = buffer_manager.Allocate(header_length);
-	file_handle.Read(header_handle.Ptr(), header_length, offset);
-
-	pz::pbf_reader reader((const char *)header_handle.Ptr(), header_length);
-
-	OsmFileBlockType type;
-	reader.next();
-	if (reader.tag() != 1) {
-		throw ParserException("Unexpected tag in Blob");
-	}
-	auto type_str = reader.get_string();
-	if (type_str == "OSMHeader") {
-		type = OsmFileBlockType::Header;
-	} else if (type_str == "OSMData") {
-		type = OsmFileBlockType::Data;
-	} else {
-		throw ParserException("Unexpected fileblock type in Blob");
-	}
-	reader.next();
-	if (reader.tag() == 2) {
-		// indexdata, skip
-		reader.skip();
-		reader.next();
-	}
-	if (reader.tag() != 3) {
-		throw ParserException("Unexpected tag in Blob");
-	}
-	// size of the next blob
-	auto blob_size = reader.get_int32();
-
-	offset += header_length;
-
-	return OsmBlobHeader(type, blob_size);
-}
-
-struct OsmHeaderBlock {
-	// todo: bbox & metadata
-};
-
-static OsmHeaderBlock GetOsmHeaderBlock(ClientContext &context, FileHandle &file_handle, idx_t &offset) {
-	auto header = GetNextBlobHeader(context, file_handle, offset);
-	if (header.type != OsmFileBlockType::Header) {
-		throw ParserException("Expected OSMHeader, got OSMData");
-	}
-
-	auto &buffer_manager = BufferManager::GetBufferManager(context);
-
-	auto header_handle = buffer_manager.Allocate(header.blob_size);
-	file_handle.Read(header_handle.Ptr(), header.blob_size, offset);
-
-	pz::pbf_reader reader((const char *)header_handle.Ptr(), header.blob_size);
-
-	OsmHeaderBlock header_block;
-	while (reader.next()) {
-		switch (reader.tag()) {
-		case 1: // optional HeaderBBox bbox = 1;
-			reader.skip();
-			break;
-		case 2: // optional string required_features = 2;
-			reader.skip();
-			break;
-		case 3: // optional string optional_features = 3;
-			reader.skip();
-			break;
-		case 4: // optional string writingprogram = 4;
-			reader.skip();
-			break;
-		case 5: // optional string source = 5;
-			reader.skip();
-			break;
-		case 16: // optional int32 osmosis_replication_timestamp = 16;
-			reader.skip();
-			break;
-		case 17: // optional int64 osmosis_replication_sequence_number = 17;
-			reader.skip();
-			break;
-		case 32: // optional int32 osmosis_replication_timestamp = 32;
-			reader.skip();
-			break;
-		case 33: // optional int32 osmosis_replication_sequence_number = 33;
-			reader.skip();
-			break;
-		case 34: // optional int32 osmosis_replication_base_url = 34;
-			reader.skip();
-			break;
-		default:
-			reader.skip();
-		}
-	}
-	offset += header.blob_size;
-
-	return header_block;
-}
-
-struct OsmPrimitiveBlock {
-	BufferHandle data_handle;
-	idx_t size;
-
-	OsmPrimitiveBlock(BufferHandle data_handle, idx_t size) : data_handle(std::move(data_handle)), size(size) {
-	}
-};
-
-static OsmPrimitiveBlock GetOsmPrimitiveBlock(ClientContext &context, FileHandle &file_handle, idx_t &offset) {
-	auto header = GetNextBlobHeader(context, file_handle, offset);
-	if (header.type != OsmFileBlockType::Data) {
-		throw ParserException("Expected OSMData, got OSMHeader");
-	}
-
-	auto &buffer_manager = BufferManager::GetBufferManager(context);
-	auto data_handle = buffer_manager.Allocate(header.blob_size);
-	file_handle.Read(data_handle.Ptr(), header.blob_size, offset);
-
-	offset += header.blob_size;
-
-	return OsmPrimitiveBlock(std::move(data_handle), header.blob_size);
 }
 
 //------------------------------------------------------------------------------
@@ -174,15 +33,29 @@ struct BindData : TableFunctionData {
 static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
                                      vector<LogicalType> &return_types, vector<string> &names) {
 
+	// Create an enum type for all geometry types
+	// Ensure that these are in the same order as the GeometryType enum
+	vector<string_t> enum_values = {"Node", "DenseNode", "Way", "Relation", "ChangeSet"};
+
+	auto varchar_vector = Vector(LogicalType::VARCHAR, enum_values.size());
+	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
+	for (idx_t i = 0; i < enum_values.size(); i++) {
+		auto str = enum_values[i];
+		varchar_data[i] = str.IsInlined() ? str : StringVector::AddString(varchar_vector, str);
+	}
+
 	// Set return types
-	return_types.push_back(LogicalType::VARCHAR);
-	names.push_back("type");
+	return_types.push_back(LogicalType::ENUM("OsmEntity", varchar_vector, enum_values.size()));
+	names.push_back("kind");
 
-	return_types.push_back(LogicalType::INTEGER);
-	names.push_back("size");
+	return_types.push_back(LogicalType::BIGINT);
+	names.push_back("id");
 
-    return_types.push_back(LogicalType::LIST(LogicalType::VARCHAR));
-    names.push_back("groups");
+	return_types.push_back(LogicalType::MAP(LogicalType::VARCHAR, LogicalType::VARCHAR));
+	names.push_back("tags");
+
+	return_types.push_back(LogicalType::LIST(LogicalType::BIGINT));
+	names.push_back("refs");
 
 	// Create bind data
 	auto &config = DBConfig::GetConfig(context);
@@ -255,11 +128,11 @@ static unique_ptr<FileBlock> DecompressBlob(ClientContext &context, OsmBlob &blo
 class GlobalState : public GlobalTableFunctionState {
 	mutex lock;
 	unique_ptr<FileHandle> handle;
-	atomic<idx_t> offset;
+	idx_t offset;
 	idx_t blob_index;
 	bool done;
 	idx_t file_size;
-    idx_t max_threads;
+	idx_t max_threads;
 
 public:
 	GlobalState(unique_ptr<FileHandle> handle, idx_t file_size, idx_t max_threads)
@@ -271,13 +144,13 @@ public:
 		return done;
 	}
 
-    double GetProgress() {
-        return (double)offset / (double)file_size;
-    }
+	double GetProgress() {
+		return (double)offset / (double)file_size;
+	}
 
-    idx_t MaxThreads() const override {
-        return max_threads;
-    }
+	idx_t MaxThreads() const override {
+		return max_threads;
+	}
 
 	unique_ptr<OsmBlob> GetNextBlob(ClientContext &context) {
 		lock_guard<mutex> glock(lock);
@@ -347,15 +220,15 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 	                          FileCompressionType::UNCOMPRESSED, opener);
 	auto file_size = handle->GetFileSize();
 
-    auto max_threads = context.db->NumberOfThreads();
+	auto max_threads = context.db->NumberOfThreads();
 
-    auto global_state = make_unique<GlobalState>(std::move(handle), file_size, max_threads);
+	auto global_state = make_unique<GlobalState>(std::move(handle), file_size, max_threads);
 
-    // Read the first blob to get the header
-    auto blob = global_state->GetNextBlob(context);
-    if(blob->type != FileBlockType::Header) {
-        throw ParserException("First blob in file is not a header");
-    }
+	// Read the first blob to get the header
+	auto blob = global_state->GetNextBlob(context);
+	if (blob->type != FileBlockType::Header) {
+		throw ParserException("First blob in file is not a header");
+	}
 
 	return global_state;
 }
@@ -363,116 +236,475 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 struct LocalState : LocalTableFunctionState {
 	// The index of the current blob
 
-    unique_ptr<FileBlock> block;
-    pz::pbf_reader reader;
+	unique_ptr<FileBlock> block;
+	vector<string> string_table;
 
 	explicit LocalState(unique_ptr<FileBlock> block) : block(std::move(block)) {
-        InitializeReader();
-    }
+		InitializeReader();
+	}
 
-    void SetBlock(unique_ptr<FileBlock> block) {
-        this->block = std::move(block);
-        InitializeReader();
-    }
+	void SetBlock(unique_ptr<FileBlock> block) {
+		this->block = std::move(block);
+		InitializeReader();
+	}
 
-    void InitializeReader() {
-        reader = pz::pbf_reader((const char *)block->data.get(), block->size);
-        reader.next(1); // String table - skip for now
-        reader.skip();
-    }
+	void InitializeReader() {
+		// Reset
+		string_table.clear();
 
-    bool TryRead(DataChunk &output, idx_t index) {
-        // TODO: Manage state machine here
-        
-        output.data[0].SetValue(index, Value::CreateValue(block->type == FileBlockType::Data ? "Data" : "Header"));
-		output.data[1].SetValue(index, Value::CreateValue(block->size));
-        
-        vector<Value> values;
-        while(reader.next(2)) {
-            auto group = reader.get_message();
-            
-            group.next();
-            switch(group.tag()) {
-                case 1: { 
-                    // Nodes
-                    values.push_back(Value::CreateValue("Node"));
-                } break;
-                case 2: {
-                    // Dense nodes
-                    values.push_back(Value::CreateValue("DenseNode"));
-                } break;
-                case 3: {
-                    // Ways
-                    values.push_back(Value::CreateValue("Way"));
+		block_reader = pz::pbf_reader((const char *)block->data.get(), block->size);
+		block_reader.next(1); // String table
+		auto string_table_reader = block_reader.get_message();
+		while (string_table_reader.next(1)) {
+			string_table.push_back(string_table_reader.get_string());
+		}
 
-                } break;
-                case 4: {
-                    // Relations
-                    values.push_back(Value::CreateValue("Relation"));
+		state = ParseState::Block;
+	}
 
-                } break;
-                case 5: {
-                    // Changesets
-                    values.push_back(Value::CreateValue("Changeset"));
-                } break;
-            }
-        }
-        output.data[2].SetValue(index, Value::LIST(LogicalType::VARCHAR, std::move(values)));
-        return true;
-    }
+	pz::pbf_reader block_reader;
+	pz::pbf_reader group_reader;
+
+	idx_t dense_node_index;
+	vector<idx_t> dense_node_ids;
+	vector<uint32_t> dense_node_tags;
+	vector<list_entry_t> dense_node_tag_entries;
+	vector<idx_t> dense_node_lats;
+	vector<idx_t> dense_node_lons;
+
+	enum class ParseState { Block, Group, DenseNodes, End };
+
+	ParseState state = ParseState::Block;
+
+	// Returns false if there is data left to read but we've reached the capacity
+	// Returns true if block is empty
+	bool TryRead(DataChunk &output, idx_t &index, idx_t capacity) {
+		while (index < capacity) {
+			switch (state) {
+			case ParseState::Block:
+				if (block_reader.next(2)) {
+					group_reader = block_reader.get_message();
+					state = ParseState::Group;
+				} else {
+					state = ParseState::End;
+				}
+				break;
+			case ParseState::Group:
+				if (group_reader.next()) {
+					switch (group_reader.tag()) {
+					// Nodes
+					case 1: {
+						auto node = group_reader.get_message();
+						node.next(1);
+						auto id = node.get_int64();
+
+						FlatVector::GetData<uint8_t>(output.data[0])[index] = 0;
+						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+						FlatVector::SetNull(output.data[2], index, true);
+
+						index++;
+					} break;
+					// Dense nodes
+					case 2: {
+						dense_node_index = 0;
+						dense_node_ids.clear();
+						dense_node_tags.clear();
+						dense_node_tag_entries.clear();
+						dense_node_lats.clear();
+						dense_node_lons.clear();
+
+						auto dense_nodes = group_reader.get_message();
+						dense_nodes.next(1);
+
+						auto ids = dense_nodes.get_packed_sint64();
+						auto last_id = 0;
+						for (auto id : ids) {
+							last_id += id;
+							dense_node_ids.push_back(last_id);
+						}
+
+						if(dense_nodes.next(10)) {
+							auto tags = dense_nodes.get_packed_uint32();
+							auto current_entry = list_entry_t(0, 0);
+							idx_t idx = 0;
+							for (auto tag : tags) {
+								// 0 are used as delimiters
+								if(tag == 0) {
+									current_entry.length = idx - current_entry.offset;
+									dense_node_tag_entries.push_back(current_entry);
+									current_entry.offset = idx;
+								} else {
+									dense_node_tags.push_back(tag);
+								}
+								idx++;
+							}
+						}
+
+						state = ParseState::DenseNodes;
+					} break;
+					// Way
+					case 3: {
+						auto way = group_reader.get_message();
+						way.next(1);
+						auto id = way.get_int64();
+
+						FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
+						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+
+						// Read tags
+						if (way.next(2)) {
+
+							auto key_iter = way.get_packed_uint32();
+							//vector<uint32_t> keys(key_iter.begin(), key_iter.end());
+
+							way.next(3);
+							auto val_iter = way.get_packed_uint32();
+							//vector<uint32_t> vals(val_iter.begin(), val_iter.end());
+
+							auto tag_count = key_iter.size();
+
+							auto total_tags = ListVector::GetListSize(output.data[2]);
+							ListVector::Reserve(output.data[2], total_tags + tag_count);
+							ListVector::SetListSize(output.data[2], total_tags + tag_count);
+							auto &tag_entry = ListVector::GetData(output.data[2])[index];
+
+							tag_entry.offset = total_tags;
+							tag_entry.length = tag_count;
+
+							auto &key_vector = MapVector::GetKeys(output.data[2]);
+							auto &value_vector = MapVector::GetValues(output.data[2]);
+
+							auto keys = key_iter.begin();
+							auto vals = val_iter.begin();
+							for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
+								FlatVector::GetData<string_t>(key_vector)[i] =
+								    StringVector::AddString(key_vector, string_table[*keys++]);
+								FlatVector::GetData<string_t>(value_vector)[i] =
+								    StringVector::AddString(value_vector, string_table[*vals++]);
+							}
+						} else {
+							FlatVector::SetNull(output.data[2], index, true);
+						}
+
+						// Refs
+						if(way.next(8)) {
+	                        auto ref_iter = way.get_packed_sint64();
+							auto ref_count = ref_iter.size();
+
+							auto total_refs = ListVector::GetListSize(output.data[3]);
+							ListVector::Reserve(output.data[3], total_refs + ref_count);
+							ListVector::SetListSize(output.data[3], total_refs + ref_count);
+							auto &ref_entry = ListVector::GetData(output.data[3])[index];
+							auto &ref_vector = ListVector::GetEntry(output.data[3]);
+							ref_entry.offset = total_refs;
+							ref_entry.length = ref_count;
+
+							auto ref_data = FlatVector::GetData<int64_t>(ref_vector);
+
+	                        int64_t last_ref = 0;
+	                        for (auto ref : ref_iter) {
+	                            last_ref += ref;
+	                            ref_data[total_refs++] = last_ref;
+	                        }
+						} else {
+							FlatVector::SetNull(output.data[3], index, true);
+						}
+						index++;
+					} break;
+					// Relation
+					case 4: {
+						auto relation = group_reader.get_message();
+						relation.next(1);
+						auto id = relation.get_int64();
+
+						FlatVector::GetData<uint8_t>(output.data[0])[index] = 3;
+						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+						
+						// Read tags
+						if (relation.next(2)) {
+
+							auto key_iter = relation.get_packed_uint32();
+
+							relation.next(3);
+							auto val_iter = relation.get_packed_uint32();
+
+							auto tag_count = key_iter.size();
+
+							auto total_tags = ListVector::GetListSize(output.data[2]);
+							ListVector::Reserve(output.data[2], total_tags + tag_count);
+							ListVector::SetListSize(output.data[2], total_tags + tag_count);
+							auto &tag_entry = ListVector::GetData(output.data[2])[index];
+
+							tag_entry.offset = total_tags;
+							tag_entry.length = tag_count;
+
+							auto &key_vector = MapVector::GetKeys(output.data[2]);
+							auto &value_vector = MapVector::GetValues(output.data[2]);
+
+							auto keys = key_iter.begin();
+							auto vals = val_iter.begin();
+							for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
+								FlatVector::GetData<string_t>(key_vector)[i] =
+								    StringVector::AddString(key_vector, string_table[*keys++]);
+								FlatVector::GetData<string_t>(value_vector)[i] =
+								    StringVector::AddString(value_vector, string_table[*vals++]);
+							}
+						} else {
+							FlatVector::SetNull(output.data[2], index, true);
+						}
+
+						// Refs
+						if(relation.next(9)) {
+	                        auto ref_iter = relation.get_packed_sint64();
+							auto ref_count = ref_iter.size();
+
+							auto total_refs = ListVector::GetListSize(output.data[3]);
+							ListVector::Reserve(output.data[3], total_refs + ref_count);
+							ListVector::SetListSize(output.data[3], total_refs + ref_count);
+							auto &ref_entry = ListVector::GetData(output.data[3])[index];
+							auto &ref_vector = ListVector::GetEntry(output.data[3]);
+							ref_entry.offset = total_refs;
+							ref_entry.length = ref_count;
+
+							auto ref_data = FlatVector::GetData<int64_t>(ref_vector);
+
+	                        int64_t last_ref = 0;
+	                        for (auto ref : ref_iter) {
+	                            last_ref += ref;
+	                            ref_data[total_refs++] = last_ref;
+	                        }
+						} else {
+							FlatVector::SetNull(output.data[3], index, true);
+						}
+
+						index++;
+
+					} break;
+					// Changeset
+					case 5: {
+						group_reader.skip();
+					} break;
+					default: {
+						group_reader.skip();
+					} break;
+					}
+				} else {
+					state = ParseState::Block;
+				}
+				break;
+			case ParseState::DenseNodes: {
+				// TODO: Write multiple nodes at once as long as we have capacity
+				auto nodes_to_write = capacity - index;
+				auto nodes_to_read = std::min(nodes_to_write, dense_node_ids.size() - dense_node_index);
+
+				auto kind_data = FlatVector::GetData<uint8_t>(output.data[0]);
+				auto id_data = FlatVector::GetData<int64_t>(output.data[1]);
+				for (idx_t i = 0; i < nodes_to_read; i++) {
+					auto id = dense_node_ids[dense_node_index];
+
+					id_data[index] = id;
+					kind_data[index] = 1;
+					
+					FlatVector::SetNull(output.data[2], index, true);
+					FlatVector::SetNull(output.data[3], index, true);
+
+					dense_node_index++;
+					index++;
+				}
+				if(dense_node_index >= dense_node_ids.size()) {
+					state = ParseState::Group;
+				}
+			} break;
+			case ParseState::End:
+			default:
+				return true;
+			}
+		}
+		return false;
+	}
+	/*
+	bool TryRead(DataChunk &output, idx_t index) {
+	    // TODO: Manage state machine here
+
+	    //output.data[0].SetValue(index, Value::CreateValue(block->type == FileBlockType::Data ? "Data" : "Header"));
+	    //output.data[1].SetValue(index, Value::CreateValue(block->size));
+
+	    while(block_reader.next(2)) {
+	        group_reader = block_reader.get_message();
+
+	        while(group_reader.next()) {
+	            switch(group_reader.tag()) {
+	                case 1: {
+	                    // Nodes
+	                    auto node = group_reader.get_message();
+
+	                    output.data[0].SetValue(index, Value::CreateValue("Node"));
+	                    FlatVector::SetNull(output.data[1], index, true);
+	                    FlatVector::SetNull(output.data[2], index, true);
+	                    FlatVector::SetNull(output.data[3], index, true);
+	                } break;
+	                case 2: {
+	                    // Dense nodes
+	                    auto dense_node = group_reader.get_message();
+	                    output.data[0].SetValue(index, Value::CreateValue("Dense Node"));
+	                    FlatVector::SetNull(output.data[1], index, true);
+	                    FlatVector::SetNull(output.data[2], index, true);
+	                    FlatVector::SetNull(output.data[3], index, true);
+
+	                } break;
+	                case 3: {
+	                    // Ways
+	                    output.data[0].SetValue(index, Value::CreateValue("Way"));
+	                    auto way = group_reader.get_message();
+	                    way.next(1);
+	                    auto id = way.get_int64();
+	                    output.data[1].SetValue(index, id);
+
+
+	                    vector<Value> pairs;
+	                    if(way.next(2)) {
+	                        vector<string> keys;
+	                        vector<string> vals;
+	                        auto key_iter = way.get_packed_uint32();
+	                        for (auto it = key_iter.begin(); it != key_iter.end(); ++it) {
+	                            auto idx = *it;
+	                            keys.push_back(string_table[idx]);
+	                        }
+	                        way.next(3);
+	                        auto val_iter = way.get_packed_uint32();
+	                        for (auto val_idx : val_iter) {
+	                            vals.push_back(string_table[val_idx]);
+	                        }
+
+	                        for(idx_t i = 0; i < keys.size(); i++) {
+	                            pairs.push_back(Value::STRUCT({{ "key", keys[i] }, {"value", vals[i]}}));
+	                        }
+	                    }
+	                    output.data[2].SetValue(index, Value::MAP(LogicalType::STRUCT({{"key", LogicalType::VARCHAR},
+	{"value", LogicalType::VARCHAR}}), pairs));
+
+
+	                    vector<Value> refs;
+	                    if(way.next(8)) {
+	                        auto ref_iter = way.get_packed_sint64();
+	                        int64_t last_ref = 0;
+	                        for (auto ref : ref_iter) {
+	                            last_ref += ref;
+	                            refs.push_back(Value::BIGINT(last_ref));
+	                        }
+	                    }
+	                    output.data[3].SetValue(index, Value::LIST(LogicalType::BIGINT, refs));
+	                } break;
+	                case 4: {
+	                    // Relations
+	                    output.data[0].SetValue(index, Value::CreateValue("Relation"));
+	                    auto relation = group_reader.get_message();
+	                    relation.next(1);
+	                    auto id = relation.get_int64();
+	                    output.data[1].SetValue(index, id);
+
+
+	                    vector<Value> pairs;
+	                    if(relation.next(2)) {
+
+	                        vector<string> keys;
+	                        vector<string> vals;
+	                        auto key_iter = relation.get_packed_uint32();
+	                        for (auto it = key_iter.begin(); it != key_iter.end(); ++it) {
+	                            auto idx = *it;
+	                            keys.push_back(string_table[idx]);
+	                        }
+	                        relation.next(3);
+	                        auto val_iter = relation.get_packed_uint32();
+	                        for (auto val_idx : val_iter) {
+	                            vals.push_back(string_table[val_idx]);
+	                        }
+	                        for(idx_t i = 0; i < keys.size(); i++) {
+	                            pairs.push_back(Value::STRUCT({{ "key", keys[i] }, {"value", vals[i]}}));
+	                        }
+	                    }
+
+	                    output.data[2].SetValue(index, Value::MAP(LogicalType::STRUCT({{"key", LogicalType::VARCHAR},
+	{"value", LogicalType::VARCHAR}}), pairs)); FlatVector::SetNull(output.data[3], index, true);
+
+	                } break;
+	                case 5: {
+	                    // Changesets
+	                    output.data[0].SetValue(index, Value::CreateValue("Changeset"));
+	                    group_reader.skip();
+	                    FlatVector::SetNull(output.data[1], index, true);
+	                    FlatVector::SetNull(output.data[2], index, true);
+	                    FlatVector::SetNull(output.data[3], index, true);
+
+
+	                } break;
+	                default: {
+	                    output.data[0].SetValue(index, Value::CreateValue("Unknown"));
+	                    group_reader.skip();
+	                    FlatVector::SetNull(output.data[1], index, true);
+	                    FlatVector::SetNull(output.data[2], index, true);
+	                    FlatVector::SetNull(output.data[3], index, true);
+
+
+	                } break;
+	            }
+	        }
+	    }
+	    return true;
+	}
+	*/
 };
 
 static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, TableFunctionInitInput &input,
                                                      GlobalTableFunctionState *global_state) {
-    auto &bind_data = (BindData &)*input.bind_data;
-    auto &global = (GlobalState &)*global_state;
+	auto &bind_data = (BindData &)*input.bind_data;
+	auto &global = (GlobalState &)*global_state;
 
-    auto blob = global.GetNextBlob(context.client);
-    if(blob == nullptr) {
-        return nullptr;
-    }
-    auto block = DecompressBlob(context.client, *blob);
+	auto blob = global.GetNextBlob(context.client);
+	if (blob == nullptr) {
+		return nullptr;
+	}
+	auto block = DecompressBlob(context.client, *blob);
 
-    return make_unique<LocalState>(std::move(block));
+	return make_unique<LocalState>(std::move(block));
 }
 
 static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
-    if(input.local_state == nullptr) {
-        return;
-    }
-    
+	if (input.local_state == nullptr) {
+		return;
+	}
+
 	auto &bind_data = (BindData &)*input.bind_data;
 	auto &global_state = (GlobalState &)*input.global_state;
 	auto &local_state = (LocalState &)*input.local_state;
 
-	idx_t i = 0;
+	idx_t row_id = 0;
+	idx_t capacity = STANDARD_VECTOR_SIZE;
 
-    bool done = false;
-    while (!done && i < STANDARD_VECTOR_SIZE) {
-        local_state.TryRead(output, i);
-    
-		auto next = global_state.GetNextBlob(context);
-        if(next.get() == nullptr) {
-            done = true;
-            break;
-        }
-        auto next_block = DecompressBlob(context, *next);
-        local_state.SetBlock(std::move(next_block));
-		i++;
+	while (row_id < capacity) {
+		bool done = local_state.TryRead(output, row_id, capacity);
+		if (done) {
+			auto next = global_state.GetNextBlob(context);
+			if (next.get() == nullptr) {
+				break;
+			}
+			auto next_block = DecompressBlob(context, *next);
+			local_state.SetBlock(std::move(next_block));
+		}
 	}
-	output.SetCardinality(i);
+	output.SetCardinality(row_id);
 }
 
 static double Progress(ClientContext &context, const FunctionData *bind_data,
-                     const GlobalTableFunctionState *global_state) {
-    auto &state = (GlobalState &)*global_state;
-    return state.GetProgress();
+                       const GlobalTableFunctionState *global_state) {
+	auto &state = (GlobalState &)*global_state;
+	return state.GetProgress();
 }
 
 static idx_t GetBatchIndex(ClientContext &context, const FunctionData *bind_data_p,
                            LocalTableFunctionState *local_state, GlobalTableFunctionState *global_state) {
-    auto &state = (LocalState &)*local_state;
-    return state.block->block_idx;
+	auto &state = (LocalState &)*local_state;
+	return state.block->block_idx;
 }
 //------------------------------------------------------------------------------
 //  Register
@@ -480,9 +712,8 @@ static idx_t GetBatchIndex(ClientContext &context, const FunctionData *bind_data
 void CoreTableFunctions::RegisterOsmTableFunction(ClientContext &context) {
 	TableFunction read("ST_ReadOSM", {LogicalType::VARCHAR}, Execute, Bind, InitGlobal, InitLocal);
 
-    read.get_batch_index = GetBatchIndex;
-    read.table_scan_progress = Progress;
-
+	read.get_batch_index = GetBatchIndex;
+	read.table_scan_progress = Progress;
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateTableFunctionInfo info(read);
 	catalog.CreateTableFunction(context, &info);
