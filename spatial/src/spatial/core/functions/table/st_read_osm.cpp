@@ -57,6 +57,12 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	return_types.push_back(LogicalType::LIST(LogicalType::BIGINT));
 	names.push_back("refs");
 
+	return_types.push_back(LogicalType::DOUBLE);
+	names.push_back("lat");
+
+	return_types.push_back(LogicalType::DOUBLE);
+	names.push_back("lon");
+
 	// Create bind data
 	auto &config = DBConfig::GetConfig(context);
 	if (!config.options.enable_external_access) {
@@ -238,6 +244,9 @@ struct LocalState : LocalTableFunctionState {
 
 	unique_ptr<FileBlock> block;
 	vector<string> string_table;
+	int32_t granularity;
+	int64_t lat_offset;
+	int64_t lon_offset;
 
 	explicit LocalState(unique_ptr<FileBlock> block) : block(std::move(block)) {
 		InitializeReader();
@@ -251,6 +260,9 @@ struct LocalState : LocalTableFunctionState {
 	void InitializeReader() {
 		// Reset
 		string_table.clear();
+		granularity = 100;
+		lat_offset = 0;
+		lon_offset = 0;
 
 		block_reader = pz::pbf_reader((const char *)block->data.get(), block->size);
 		block_reader.next(1); // String table
@@ -266,11 +278,11 @@ struct LocalState : LocalTableFunctionState {
 	pz::pbf_reader group_reader;
 
 	idx_t dense_node_index;
-	vector<idx_t> dense_node_ids;
+	vector<int64_t> dense_node_ids;
 	vector<uint32_t> dense_node_tags;
 	vector<list_entry_t> dense_node_tag_entries;
-	vector<idx_t> dense_node_lats;
-	vector<idx_t> dense_node_lons;
+	vector<int64_t> dense_node_lats;
+	vector<int64_t> dense_node_lons;
 
 	enum class ParseState { Block, Group, DenseNodes, End };
 
@@ -284,6 +296,18 @@ struct LocalState : LocalTableFunctionState {
 			case ParseState::Block:
 				if (block_reader.next(2)) {
 					group_reader = block_reader.get_message();
+
+					// Read the granularity and optional offsets
+					if (block_reader.next(17)) {
+						granularity = block_reader.get_int32();
+					}
+					if (block_reader.next(19)) {
+						lat_offset = block_reader.get_int64();
+					}
+					if (block_reader.next(20)) {
+						lon_offset = block_reader.get_int64();
+					}
+
 					state = ParseState::Group;
 				} else {
 					state = ParseState::End;
@@ -302,6 +326,9 @@ struct LocalState : LocalTableFunctionState {
 						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
 						FlatVector::SetNull(output.data[2], index, true);
 
+						FlatVector::SetNull(output.data[4], index, true);
+						FlatVector::SetNull(output.data[5], index, true);
+
 						index++;
 					} break;
 					// Dense nodes
@@ -317,10 +344,28 @@ struct LocalState : LocalTableFunctionState {
 						dense_nodes.next(1);
 
 						auto ids = dense_nodes.get_packed_sint64();
-						auto last_id = 0;
+						int64_t last_id = 0;
 						for (auto id : ids) {
 							last_id += id;
 							dense_node_ids.push_back(last_id);
+						}
+
+						if(dense_nodes.next(8)) {
+							auto lats = dense_nodes.get_packed_sint64();
+							int64_t last_lat = 0;
+							for (auto lat : lats) {
+								last_lat += lat;
+								dense_node_lats.push_back(last_lat);
+							}
+						}
+
+						if(dense_nodes.next(9)) {
+							auto lons = dense_nodes.get_packed_sint64();
+							int64_t last_lon = 0;
+							for (auto lon : lons) {
+								last_lon += lon;
+								dense_node_lons.push_back(last_lon);
+							}
 						}
 
 						if(dense_nodes.next(10)) {
@@ -350,6 +395,9 @@ struct LocalState : LocalTableFunctionState {
 
 						FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
 						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+
+						FlatVector::SetNull(output.data[4], index, true);
+						FlatVector::SetNull(output.data[5], index, true);
 
 						// Read tags
 						if (way.next(2)) {
@@ -419,6 +467,9 @@ struct LocalState : LocalTableFunctionState {
 
 						FlatVector::GetData<uint8_t>(output.data[0])[index] = 3;
 						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+
+						FlatVector::SetNull(output.data[4], index, true);
+						FlatVector::SetNull(output.data[5], index, true);
 						
 						// Read tags
 						if (relation.next(2)) {
@@ -499,12 +550,17 @@ struct LocalState : LocalTableFunctionState {
 
 				auto kind_data = FlatVector::GetData<uint8_t>(output.data[0]);
 				auto id_data = FlatVector::GetData<int64_t>(output.data[1]);
+				auto lat_data = FlatVector::GetData<double>(output.data[4]);
+				auto lon_data = FlatVector::GetData<double>(output.data[5]);
+
 				for (idx_t i = 0; i < nodes_to_read; i++) {
 					auto id = dense_node_ids[dense_node_index];
 
 					id_data[index] = id;
 					kind_data[index] = 1;
-					
+					lat_data[index] = 0.000000001 * (lat_offset + (granularity * dense_node_lats[dense_node_index]));
+					lon_data[index] = 0.000000001 * (lon_offset + (granularity * dense_node_lons[dense_node_index]));
+
 					FlatVector::SetNull(output.data[2], index, true);
 					FlatVector::SetNull(output.data[3], index, true);
 
