@@ -240,8 +240,6 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 }
 
 struct LocalState : LocalTableFunctionState {
-	// The index of the current blob
-
 	unique_ptr<FileBlock> block;
 	vector<string> string_table;
 	int32_t granularity;
@@ -249,16 +247,15 @@ struct LocalState : LocalTableFunctionState {
 	int64_t lon_offset;
 
 	explicit LocalState(unique_ptr<FileBlock> block) : block(std::move(block)) {
-		InitializeReader();
+		Reset();
 	}
 
 	void SetBlock(unique_ptr<FileBlock> block) {
 		this->block = std::move(block);
-		InitializeReader();
+		Reset();
 	}
 
-	void InitializeReader() {
-		// Reset
+	void Reset() {
 		string_table.clear();
 		granularity = 100;
 		lat_offset = 0;
@@ -289,8 +286,9 @@ struct LocalState : LocalTableFunctionState {
 	ParseState state = ParseState::Block;
 
 	// Returns false if there is data left to read but we've reached the capacity
-	// Returns true if block is empty
+	// Returns true if block is empty and we are done
 	bool TryRead(DataChunk &output, idx_t &index, idx_t capacity) {
+		// Main finite state machine
 		while (index < capacity) {
 			switch (state) {
 			case ParseState::Block:
@@ -307,7 +305,6 @@ struct LocalState : LocalTableFunctionState {
 					if (block_reader.next(20)) {
 						lon_offset = block_reader.get_int64();
 					}
-
 					state = ParseState::Group;
 				} else {
 					state = ParseState::End;
@@ -318,221 +315,24 @@ struct LocalState : LocalTableFunctionState {
 					switch (group_reader.tag()) {
 					// Nodes
 					case 1: {
-						auto node = group_reader.get_message();
-						node.next(1);
-						auto id = node.get_int64();
-
-						FlatVector::GetData<uint8_t>(output.data[0])[index] = 0;
-						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
-						FlatVector::SetNull(output.data[2], index, true);
-
-						FlatVector::SetNull(output.data[4], index, true);
-						FlatVector::SetNull(output.data[5], index, true);
-
-						index++;
+						ScanNodes(output, index, capacity);
 					} break;
 					// Dense nodes
 					case 2: {
-						dense_node_index = 0;
-						dense_node_ids.clear();
-						dense_node_tags.clear();
-						dense_node_tag_entries.clear();
-						dense_node_lats.clear();
-						dense_node_lons.clear();
-
-						auto dense_nodes = group_reader.get_message();
-						dense_nodes.next(1);
-
-						auto ids = dense_nodes.get_packed_sint64();
-						int64_t last_id = 0;
-						for (auto id : ids) {
-							last_id += id;
-							dense_node_ids.push_back(last_id);
-						}
-
-						if(dense_nodes.next(8)) {
-							auto lats = dense_nodes.get_packed_sint64();
-							int64_t last_lat = 0;
-							for (auto lat : lats) {
-								last_lat += lat;
-								dense_node_lats.push_back(last_lat);
-							}
-						}
-
-						if(dense_nodes.next(9)) {
-							auto lons = dense_nodes.get_packed_sint64();
-							int64_t last_lon = 0;
-							for (auto lon : lons) {
-								last_lon += lon;
-								dense_node_lons.push_back(last_lon);
-							}
-						}
-
-						if(dense_nodes.next(10)) {
-							auto tags = dense_nodes.get_packed_uint32();
-							auto current_entry = list_entry_t(0, 0);
-							idx_t idx = 0;
-							for (auto tag : tags) {
-								// 0 are used as delimiters
-								if(tag == 0) {
-									current_entry.length = idx - current_entry.offset;
-									dense_node_tag_entries.push_back(current_entry);
-									current_entry.offset = idx;
-								} else {
-									dense_node_tags.push_back(tag);
-								}
-								idx++;
-							}
-						}
-
+						PrepareDenseNodes(output, index, capacity);
 						state = ParseState::DenseNodes;
 					} break;
 					// Way
 					case 3: {
-						auto way = group_reader.get_message();
-						way.next(1);
-						auto id = way.get_int64();
-
-						FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
-						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
-
-						FlatVector::SetNull(output.data[4], index, true);
-						FlatVector::SetNull(output.data[5], index, true);
-
-						// Read tags
-						if (way.next(2)) {
-
-							auto key_iter = way.get_packed_uint32();
-							//vector<uint32_t> keys(key_iter.begin(), key_iter.end());
-
-							way.next(3);
-							auto val_iter = way.get_packed_uint32();
-							//vector<uint32_t> vals(val_iter.begin(), val_iter.end());
-
-							auto tag_count = key_iter.size();
-
-							auto total_tags = ListVector::GetListSize(output.data[2]);
-							ListVector::Reserve(output.data[2], total_tags + tag_count);
-							ListVector::SetListSize(output.data[2], total_tags + tag_count);
-							auto &tag_entry = ListVector::GetData(output.data[2])[index];
-
-							tag_entry.offset = total_tags;
-							tag_entry.length = tag_count;
-
-							auto &key_vector = MapVector::GetKeys(output.data[2]);
-							auto &value_vector = MapVector::GetValues(output.data[2]);
-
-							auto keys = key_iter.begin();
-							auto vals = val_iter.begin();
-							for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
-								FlatVector::GetData<string_t>(key_vector)[i] =
-								    StringVector::AddString(key_vector, string_table[*keys++]);
-								FlatVector::GetData<string_t>(value_vector)[i] =
-								    StringVector::AddString(value_vector, string_table[*vals++]);
-							}
-						} else {
-							FlatVector::SetNull(output.data[2], index, true);
-						}
-
-						// Refs
-						if(way.next(8)) {
-	                        auto ref_iter = way.get_packed_sint64();
-							auto ref_count = ref_iter.size();
-
-							auto total_refs = ListVector::GetListSize(output.data[3]);
-							ListVector::Reserve(output.data[3], total_refs + ref_count);
-							ListVector::SetListSize(output.data[3], total_refs + ref_count);
-							auto &ref_entry = ListVector::GetData(output.data[3])[index];
-							auto &ref_vector = ListVector::GetEntry(output.data[3]);
-							ref_entry.offset = total_refs;
-							ref_entry.length = ref_count;
-
-							auto ref_data = FlatVector::GetData<int64_t>(ref_vector);
-
-	                        int64_t last_ref = 0;
-	                        for (auto ref : ref_iter) {
-	                            last_ref += ref;
-	                            ref_data[total_refs++] = last_ref;
-	                        }
-						} else {
-							FlatVector::SetNull(output.data[3], index, true);
-						}
-						index++;
+						ScanWay(output, index, capacity);
 					} break;
 					// Relation
 					case 4: {
-						auto relation = group_reader.get_message();
-						relation.next(1);
-						auto id = relation.get_int64();
-
-						FlatVector::GetData<uint8_t>(output.data[0])[index] = 3;
-						FlatVector::GetData<int64_t>(output.data[1])[index] = id;
-
-						FlatVector::SetNull(output.data[4], index, true);
-						FlatVector::SetNull(output.data[5], index, true);
-						
-						// Read tags
-						if (relation.next(2)) {
-
-							auto key_iter = relation.get_packed_uint32();
-
-							relation.next(3);
-							auto val_iter = relation.get_packed_uint32();
-
-							auto tag_count = key_iter.size();
-
-							auto total_tags = ListVector::GetListSize(output.data[2]);
-							ListVector::Reserve(output.data[2], total_tags + tag_count);
-							ListVector::SetListSize(output.data[2], total_tags + tag_count);
-							auto &tag_entry = ListVector::GetData(output.data[2])[index];
-
-							tag_entry.offset = total_tags;
-							tag_entry.length = tag_count;
-
-							auto &key_vector = MapVector::GetKeys(output.data[2]);
-							auto &value_vector = MapVector::GetValues(output.data[2]);
-
-							auto keys = key_iter.begin();
-							auto vals = val_iter.begin();
-							for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
-								FlatVector::GetData<string_t>(key_vector)[i] =
-								    StringVector::AddString(key_vector, string_table[*keys++]);
-								FlatVector::GetData<string_t>(value_vector)[i] =
-								    StringVector::AddString(value_vector, string_table[*vals++]);
-							}
-						} else {
-							FlatVector::SetNull(output.data[2], index, true);
-						}
-
-						// Refs
-						if(relation.next(9)) {
-	                        auto ref_iter = relation.get_packed_sint64();
-							auto ref_count = ref_iter.size();
-
-							auto total_refs = ListVector::GetListSize(output.data[3]);
-							ListVector::Reserve(output.data[3], total_refs + ref_count);
-							ListVector::SetListSize(output.data[3], total_refs + ref_count);
-							auto &ref_entry = ListVector::GetData(output.data[3])[index];
-							auto &ref_vector = ListVector::GetEntry(output.data[3]);
-							ref_entry.offset = total_refs;
-							ref_entry.length = ref_count;
-
-							auto ref_data = FlatVector::GetData<int64_t>(ref_vector);
-
-	                        int64_t last_ref = 0;
-	                        for (auto ref : ref_iter) {
-	                            last_ref += ref;
-	                            ref_data[total_refs++] = last_ref;
-	                        }
-						} else {
-							FlatVector::SetNull(output.data[3], index, true);
-						}
-
-						index++;
-
+						ScanRelation(output, index, capacity);
 					} break;
 					// Changeset
 					case 5: {
+						// Skip for now.
 						group_reader.skip();
 					} break;
 					default: {
@@ -544,30 +344,8 @@ struct LocalState : LocalTableFunctionState {
 				}
 				break;
 			case ParseState::DenseNodes: {
-				// TODO: Write multiple nodes at once as long as we have capacity
-				auto nodes_to_write = capacity - index;
-				auto nodes_to_read = std::min(nodes_to_write, dense_node_ids.size() - dense_node_index);
-
-				auto kind_data = FlatVector::GetData<uint8_t>(output.data[0]);
-				auto id_data = FlatVector::GetData<int64_t>(output.data[1]);
-				auto lat_data = FlatVector::GetData<double>(output.data[4]);
-				auto lon_data = FlatVector::GetData<double>(output.data[5]);
-
-				for (idx_t i = 0; i < nodes_to_read; i++) {
-					auto id = dense_node_ids[dense_node_index];
-
-					id_data[index] = id;
-					kind_data[index] = 1;
-					lat_data[index] = 0.000000001 * (lat_offset + (granularity * dense_node_lats[dense_node_index]));
-					lon_data[index] = 0.000000001 * (lon_offset + (granularity * dense_node_lons[dense_node_index]));
-
-					FlatVector::SetNull(output.data[2], index, true);
-					FlatVector::SetNull(output.data[3], index, true);
-
-					dense_node_index++;
-					index++;
-				}
-				if(dense_node_index >= dense_node_ids.size()) {
+				auto done = ScanDenseNodes(output, index, capacity);
+				if (done) {
 					state = ParseState::Group;
 				}
 			} break;
@@ -578,137 +356,285 @@ struct LocalState : LocalTableFunctionState {
 		}
 		return false;
 	}
-	/*
-	bool TryRead(DataChunk &output, idx_t index) {
-	    // TODO: Manage state machine here
 
-	    //output.data[0].SetValue(index, Value::CreateValue(block->type == FileBlockType::Data ? "Data" : "Header"));
-	    //output.data[1].SetValue(index, Value::CreateValue(block->size));
+	void ScanNodes(DataChunk &output, idx_t &index, idx_t capacity) {
+		// TODO: Implement this properly
+		auto node = group_reader.get_message();
+		node.next(1);
+		auto id = node.get_int64();
 
-	    while(block_reader.next(2)) {
-	        group_reader = block_reader.get_message();
+		FlatVector::GetData<uint8_t>(output.data[0])[index] = 0;
+		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+		FlatVector::SetNull(output.data[2], index, true);
 
-	        while(group_reader.next()) {
-	            switch(group_reader.tag()) {
-	                case 1: {
-	                    // Nodes
-	                    auto node = group_reader.get_message();
+		FlatVector::SetNull(output.data[4], index, true);
+		FlatVector::SetNull(output.data[5], index, true);
 
-	                    output.data[0].SetValue(index, Value::CreateValue("Node"));
-	                    FlatVector::SetNull(output.data[1], index, true);
-	                    FlatVector::SetNull(output.data[2], index, true);
-	                    FlatVector::SetNull(output.data[3], index, true);
-	                } break;
-	                case 2: {
-	                    // Dense nodes
-	                    auto dense_node = group_reader.get_message();
-	                    output.data[0].SetValue(index, Value::CreateValue("Dense Node"));
-	                    FlatVector::SetNull(output.data[1], index, true);
-	                    FlatVector::SetNull(output.data[2], index, true);
-	                    FlatVector::SetNull(output.data[3], index, true);
-
-	                } break;
-	                case 3: {
-	                    // Ways
-	                    output.data[0].SetValue(index, Value::CreateValue("Way"));
-	                    auto way = group_reader.get_message();
-	                    way.next(1);
-	                    auto id = way.get_int64();
-	                    output.data[1].SetValue(index, id);
-
-
-	                    vector<Value> pairs;
-	                    if(way.next(2)) {
-	                        vector<string> keys;
-	                        vector<string> vals;
-	                        auto key_iter = way.get_packed_uint32();
-	                        for (auto it = key_iter.begin(); it != key_iter.end(); ++it) {
-	                            auto idx = *it;
-	                            keys.push_back(string_table[idx]);
-	                        }
-	                        way.next(3);
-	                        auto val_iter = way.get_packed_uint32();
-	                        for (auto val_idx : val_iter) {
-	                            vals.push_back(string_table[val_idx]);
-	                        }
-
-	                        for(idx_t i = 0; i < keys.size(); i++) {
-	                            pairs.push_back(Value::STRUCT({{ "key", keys[i] }, {"value", vals[i]}}));
-	                        }
-	                    }
-	                    output.data[2].SetValue(index, Value::MAP(LogicalType::STRUCT({{"key", LogicalType::VARCHAR},
-	{"value", LogicalType::VARCHAR}}), pairs));
-
-
-	                    vector<Value> refs;
-	                    if(way.next(8)) {
-	                        auto ref_iter = way.get_packed_sint64();
-	                        int64_t last_ref = 0;
-	                        for (auto ref : ref_iter) {
-	                            last_ref += ref;
-	                            refs.push_back(Value::BIGINT(last_ref));
-	                        }
-	                    }
-	                    output.data[3].SetValue(index, Value::LIST(LogicalType::BIGINT, refs));
-	                } break;
-	                case 4: {
-	                    // Relations
-	                    output.data[0].SetValue(index, Value::CreateValue("Relation"));
-	                    auto relation = group_reader.get_message();
-	                    relation.next(1);
-	                    auto id = relation.get_int64();
-	                    output.data[1].SetValue(index, id);
-
-
-	                    vector<Value> pairs;
-	                    if(relation.next(2)) {
-
-	                        vector<string> keys;
-	                        vector<string> vals;
-	                        auto key_iter = relation.get_packed_uint32();
-	                        for (auto it = key_iter.begin(); it != key_iter.end(); ++it) {
-	                            auto idx = *it;
-	                            keys.push_back(string_table[idx]);
-	                        }
-	                        relation.next(3);
-	                        auto val_iter = relation.get_packed_uint32();
-	                        for (auto val_idx : val_iter) {
-	                            vals.push_back(string_table[val_idx]);
-	                        }
-	                        for(idx_t i = 0; i < keys.size(); i++) {
-	                            pairs.push_back(Value::STRUCT({{ "key", keys[i] }, {"value", vals[i]}}));
-	                        }
-	                    }
-
-	                    output.data[2].SetValue(index, Value::MAP(LogicalType::STRUCT({{"key", LogicalType::VARCHAR},
-	{"value", LogicalType::VARCHAR}}), pairs)); FlatVector::SetNull(output.data[3], index, true);
-
-	                } break;
-	                case 5: {
-	                    // Changesets
-	                    output.data[0].SetValue(index, Value::CreateValue("Changeset"));
-	                    group_reader.skip();
-	                    FlatVector::SetNull(output.data[1], index, true);
-	                    FlatVector::SetNull(output.data[2], index, true);
-	                    FlatVector::SetNull(output.data[3], index, true);
-
-
-	                } break;
-	                default: {
-	                    output.data[0].SetValue(index, Value::CreateValue("Unknown"));
-	                    group_reader.skip();
-	                    FlatVector::SetNull(output.data[1], index, true);
-	                    FlatVector::SetNull(output.data[2], index, true);
-	                    FlatVector::SetNull(output.data[3], index, true);
-
-
-	                } break;
-	            }
-	        }
-	    }
-	    return true;
+		index++;
 	}
-	*/
+	
+	void PrepareDenseNodes(DataChunk &output, idx_t &index, idx_t capacity) {
+		dense_node_index = 0;
+		dense_node_ids.clear();
+		dense_node_tags.clear();
+		dense_node_tag_entries.clear();
+		dense_node_lats.clear();
+		dense_node_lons.clear();
+
+		auto dense_nodes = group_reader.get_message();
+		dense_nodes.next(1);
+
+		auto ids = dense_nodes.get_packed_sint64();
+		int64_t last_id = 0;
+		for (auto id : ids) {
+			last_id += id;
+			dense_node_ids.push_back(last_id);
+		}
+
+		if(dense_nodes.next(8)) {
+			auto lats = dense_nodes.get_packed_sint64();
+			int64_t last_lat = 0;
+			for (auto lat : lats) {
+				last_lat += lat;
+				dense_node_lats.push_back(last_lat);
+			}
+		}
+
+		if(dense_nodes.next(9)) {
+			auto lons = dense_nodes.get_packed_sint64();
+			int64_t last_lon = 0;
+			for (auto lon : lons) {
+				last_lon += lon;
+				dense_node_lons.push_back(last_lon);
+			}
+		}
+
+		if(dense_nodes.next(10)) {
+			auto tags = dense_nodes.get_packed_uint32();
+
+			idx_t entry_offset = 0;
+
+			for (auto tag : tags) {
+				if(tag == 0) {
+					auto len = dense_node_tags.size() - entry_offset;
+					dense_node_tag_entries.push_back(list_entry_t{entry_offset, len});
+					entry_offset = dense_node_tags.size();
+				} else {
+					dense_node_tags.push_back(tag);
+				}
+			}
+		}
+	}
+
+	void ScanWay(DataChunk &output, idx_t &index, idx_t capacity) {
+		auto way = group_reader.get_message();
+		way.next(1);
+		auto id = way.get_int64();
+
+		FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
+		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+
+		FlatVector::SetNull(output.data[4], index, true);
+		FlatVector::SetNull(output.data[5], index, true);
+
+		// Read tags
+		if (way.next(2)) {
+
+			auto key_iter = way.get_packed_uint32();
+			//vector<uint32_t> keys(key_iter.begin(), key_iter.end());
+
+			way.next(3);
+			auto val_iter = way.get_packed_uint32();
+			//vector<uint32_t> vals(val_iter.begin(), val_iter.end());
+
+			auto tag_count = key_iter.size();
+
+			auto total_tags = ListVector::GetListSize(output.data[2]);
+			ListVector::Reserve(output.data[2], total_tags + tag_count);
+			ListVector::SetListSize(output.data[2], total_tags + tag_count);
+			auto &tag_entry = ListVector::GetData(output.data[2])[index];
+
+			tag_entry.offset = total_tags;
+			tag_entry.length = tag_count;
+
+			auto &key_vector = MapVector::GetKeys(output.data[2]);
+			auto &value_vector = MapVector::GetValues(output.data[2]);
+
+			auto keys = key_iter.begin();
+			auto vals = val_iter.begin();
+			for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
+				FlatVector::GetData<string_t>(key_vector)[i] =
+					StringVector::AddString(key_vector, string_table[*keys++]);
+				FlatVector::GetData<string_t>(value_vector)[i] =
+					StringVector::AddString(value_vector, string_table[*vals++]);
+			}
+		} else {
+			FlatVector::SetNull(output.data[2], index, true);
+		}
+
+		// Refs
+		if(way.next(8)) {
+			auto ref_iter = way.get_packed_sint64();
+			auto ref_count = ref_iter.size();
+
+			auto total_refs = ListVector::GetListSize(output.data[3]);
+			ListVector::Reserve(output.data[3], total_refs + ref_count);
+			ListVector::SetListSize(output.data[3], total_refs + ref_count);
+			auto &ref_entry = ListVector::GetData(output.data[3])[index];
+			auto &ref_vector = ListVector::GetEntry(output.data[3]);
+			ref_entry.offset = total_refs;
+			ref_entry.length = ref_count;
+
+			auto ref_data = FlatVector::GetData<int64_t>(ref_vector);
+
+			int64_t last_ref = 0;
+			for (auto ref : ref_iter) {
+				last_ref += ref;
+				ref_data[total_refs++] = last_ref;
+			}
+		} else {
+			FlatVector::SetNull(output.data[3], index, true);
+		}
+		index++;
+	}
+
+	void ScanRelation(DataChunk &output, idx_t &index, idx_t capacity) {
+		auto relation = group_reader.get_message();
+		relation.next(1);
+		auto id = relation.get_int64();
+
+		FlatVector::GetData<uint8_t>(output.data[0])[index] = 3;
+		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+
+		FlatVector::SetNull(output.data[4], index, true);
+		FlatVector::SetNull(output.data[5], index, true);
+		
+		// Read tags
+		if (relation.next(2)) {
+
+			auto key_iter = relation.get_packed_uint32();
+
+			relation.next(3);
+			auto val_iter = relation.get_packed_uint32();
+
+			auto tag_count = key_iter.size();
+
+			auto total_tags = ListVector::GetListSize(output.data[2]);
+			ListVector::Reserve(output.data[2], total_tags + tag_count);
+			ListVector::SetListSize(output.data[2], total_tags + tag_count);
+			auto &tag_entry = ListVector::GetData(output.data[2])[index];
+
+			tag_entry.offset = total_tags;
+			tag_entry.length = tag_count;
+
+			auto &key_vector = MapVector::GetKeys(output.data[2]);
+			auto &value_vector = MapVector::GetValues(output.data[2]);
+
+			auto keys = key_iter.begin();
+			auto vals = val_iter.begin();
+			for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
+				FlatVector::GetData<string_t>(key_vector)[i] =
+					StringVector::AddString(key_vector, string_table[*keys++]);
+				FlatVector::GetData<string_t>(value_vector)[i] =
+					StringVector::AddString(value_vector, string_table[*vals++]);
+			}
+		} else {
+			FlatVector::SetNull(output.data[2], index, true);
+		}
+
+		// Refs
+		if(relation.next(9)) {
+			auto ref_iter = relation.get_packed_sint64();
+			auto ref_count = ref_iter.size();
+
+			auto total_refs = ListVector::GetListSize(output.data[3]);
+			ListVector::Reserve(output.data[3], total_refs + ref_count);
+			ListVector::SetListSize(output.data[3], total_refs + ref_count);
+			auto &ref_entry = ListVector::GetData(output.data[3])[index];
+			auto &ref_vector = ListVector::GetEntry(output.data[3]);
+			ref_entry.offset = total_refs;
+			ref_entry.length = ref_count;
+
+			auto ref_data = FlatVector::GetData<int64_t>(ref_vector);
+
+			int64_t last_ref = 0;
+			for (auto ref : ref_iter) {
+				last_ref += ref;
+				ref_data[total_refs++] = last_ref;
+			}
+		} else {
+			FlatVector::SetNull(output.data[3], index, true);
+		}
+		index++;
+	}
+
+	// Returns true if done (all dense nodes have been read)
+	bool ScanDenseNodes(DataChunk &output, idx_t &index, idx_t capacity) {
+		// Write multiple nodes at once as long as we have capacity
+		auto nodes_to_write = capacity - index;
+		auto nodes_to_read = std::min(nodes_to_write, dense_node_ids.size() - dense_node_index);
+
+		auto kind_data = FlatVector::GetData<uint8_t>(output.data[0]);
+		auto id_data = FlatVector::GetData<int64_t>(output.data[1]);
+		auto lat_data = FlatVector::GetData<double>(output.data[4]);
+		auto lon_data = FlatVector::GetData<double>(output.data[5]);
+
+		for (idx_t i = 0; i < nodes_to_read; i++) {
+			auto id = dense_node_ids[dense_node_index];
+
+			id_data[index] = id;
+			kind_data[index] = 1;
+			lat_data[index] = 0.000000001 * (lat_offset + (granularity * dense_node_lats[dense_node_index]));
+			lon_data[index] = 0.000000001 * (lon_offset + (granularity * dense_node_lons[dense_node_index]));
+
+			// Do we have tags in this block?
+			if(!dense_node_tags.empty()) {
+				auto entry = dense_node_tag_entries[dense_node_index];
+				if(entry.length != 0) {
+					// Dense nodes tags are stored as a list of key/value pairs,
+					// therefore we need to divide the length by 2 to get the number of tags
+					auto tag_count = entry.length / 2;
+
+					auto total_tags = ListVector::GetListSize(output.data[2]);
+					ListVector::Reserve(output.data[2], total_tags + tag_count);
+					ListVector::SetListSize(output.data[2], total_tags + tag_count);
+					auto &tag_entry = ListVector::GetData(output.data[2])[index];
+
+					tag_entry.offset = total_tags;
+					tag_entry.length = tag_count;
+
+					auto &key_vector = MapVector::GetKeys(output.data[2]);
+					auto &value_vector = MapVector::GetValues(output.data[2]);
+
+					idx_t t = entry.offset;
+					idx_t r = tag_entry.offset;
+					for (idx_t i = 0; i < tag_count; i++) {
+
+						auto key_id = dense_node_tags[t];
+						auto val_id = dense_node_tags[t + 1];
+
+						FlatVector::GetData<string_t>(key_vector)[r] = StringVector::AddString(key_vector, string_table[key_id]);
+						FlatVector::GetData<string_t>(value_vector)[r] = StringVector::AddString(value_vector, string_table[val_id]);
+
+						t += 2;
+						r += 1;
+					}
+				} else {
+					FlatVector::SetNull(output.data[2], index, true);
+				}
+			} else {
+				FlatVector::SetNull(output.data[2], index, true);
+			}
+			FlatVector::SetNull(output.data[3], index, true);
+
+			dense_node_index++;
+			index++;
+		}
+		if(dense_node_index >= dense_node_ids.size()) {
+			return true;
+		}
+		return false;
+	}
 };
 
 static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, TableFunctionInitInput &input,
