@@ -4,9 +4,10 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
+
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
-
 
 namespace spatial {
 
@@ -155,7 +156,6 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
-	auto poly_entries = ListVector::GetData(result);
 	auto &ring_vec = ListVector::GetEntry(result);
 
 	idx_t total_rings = 0;
@@ -262,7 +262,6 @@ void CoreCastFunctions::RegisterGeometryCasts(ClientContext &context) {
 								BoundCastInfo(GeometryToPolygon2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Polygon2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
-
 
 	casts.RegisterCastFunction(GeoTypes::BOX_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Box2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
