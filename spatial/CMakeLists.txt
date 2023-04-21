@@ -8,6 +8,11 @@ set(CMAKE_CXX_STANDARD 11)
 
 project(${TARGET_NAME})
 
+# Options
+
+# Enable network functionality (OpenSSL and GDAL's CURL based fs/drivers)
+option(SPATIAL_USE_NETWORK "Enable network functionality" ON)
+
 include_directories(include)
 add_subdirectory(src)
 
@@ -26,6 +31,7 @@ execute_process(
     -G ${CMAKE_GENERATOR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DOSX_BUILD_UNIVERSAL=${OSX_BUILD_UNIVERSAL}
+    -DSPATIAL_USE_NETWORK=${SPATIAL_USE_NETWORK}
     -S ${CMAKE_CURRENT_SOURCE_DIR}/dependencies 
     -B ${CMAKE_BINARY_DIR}/dependencies
     RESULT_VARIABLE DEPENDENCIES_GENERATE_RESULT
@@ -54,9 +60,7 @@ find_package(PROJ REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(GEOS REQUIRED)
 find_package(GDAL REQUIRED)
-find_package(CURL REQUIRED)
 find_package(EXPAT REQUIRED)
-find_package(OpenSSL REQUIRED)
 
 # Important: The link order matters, its the reverse order of dependency
 target_link_libraries(
@@ -65,13 +69,23 @@ target_link_libraries(
   GDAL::GDAL
   GEOS::geos_c
   PROJ::proj
-  CURL::libcurl
   EXPAT::EXPAT
-  OpenSSL::SSL
-  OpenSSL::Crypto
   SQLite::SQLite3 
   ZLIB::ZLIB
   ${SQLITE3_MEMVFS})
+
+if(SPATIAL_USE_NETWORK)
+  find_package(CURL REQUIRED)
+  find_package(OpenSSL REQUIRED)
+
+  target_link_libraries(
+    ${EXTENSION_NAME}
+    PUBLIC
+    CURL::libcurl
+    OpenSSL::SSL
+    OpenSSL::Crypto)
+endif()
+
 
 if(WIN32)
   target_link_libraries(${EXTENSION_NAME} PUBLIC wbemuuid.lib)
