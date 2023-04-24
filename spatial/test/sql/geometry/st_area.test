@@ -106,3 +106,9 @@ SELECT ST_Area(l) FROM (VALUES
 0
 0
 
+
+# Test precision for very small area
+query I
+SELECT ST_AREA(ST_GeomFromText('POLYGON ((-82.03623 29.60482, -82.0357 29.605, -82.03526 29.60513, -82.03623 29.60482))'))
+----
+5.150000001635108e-09

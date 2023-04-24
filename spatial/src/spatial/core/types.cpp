@@ -78,21 +78,8 @@ static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, 
 	catalog.CreateType(context, &type_info);
 }
 
-// Casts
-static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		return lstate.factory.Serialize(result, geometry);
-	});
-	return true;
-}
-
 void GeoTypes::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
 
 	// POINT_2D
 	AddType(catalog, context, GeoTypes::POINT_2D(), "POINT_2D");
@@ -117,11 +104,6 @@ void GeoTypes::Register(ClientContext &context) {
 
 	// WKB_BLOB
 	AddType(catalog, context, GeoTypes::WKB_BLOB(), "WKB_BLOB");
-
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast);
-
-	// TODO: remove this implicit cast once we have more functions for the geometry type itself
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(), BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

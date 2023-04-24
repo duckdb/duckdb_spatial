@@ -12,6 +12,7 @@ public:
 		RegisterStArea(context);
 		RegisterStAsText(context);
 		RegisterStAsWKB(context);
+		RegisterStAsHEXWKB(context);
 		RegisterStCentroid(context);
 		RegisterStCollect(context);
 		RegisterStContains(context);
@@ -33,6 +34,9 @@ private:
 
 	// ST_AsText
 	static void RegisterStAsText(ClientContext &context);
+
+	// ST_AsHextWKB
+	static void RegisterStAsHEXWKB(ClientContext &context);
 
 	// ST_AsWKB
 	static void RegisterStAsWKB(ClientContext &context);

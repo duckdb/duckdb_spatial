@@ -33,7 +33,6 @@ static bool ToPoint2DCast(Vector &source, Vector &result, idx_t count, CastParam
 //  Register functions
 //------------------------------------------------------------------------------
 void CoreCastFunctions::RegisterDimensionalCasts(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 

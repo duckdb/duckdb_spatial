@@ -188,20 +188,31 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 # How do I get it?
 
 ## Pre-built binaries
-In the future we'd like to provide pre-built binaries downloadable from the DuckDB CLI like we do for our other extensions, but for now you can grab binaries for Windows (x64), Linux (x64 and ARM) and MacOS (universal) for DuckDB `v0.7.1` from the CI runs or the release page here on GitHub. You can also build the extension yourself following the instructions below.
+In the future we'd like to provide pre-built binaries downloadable from the DuckDB CLI like we do for our other extensions, but for now you can grab binaries for Windows (x64), Linux (x64 and ARM) and MacOS (universal) for DuckDB `v0.7.1` from the CI runs or the release page here on GitHub. 
+
+Once you have downloaded the extension for your platform, you need to:
+- Unzip the archive
+- Start duckdb with the `-unsigned` flag to allow loading unsigned extensions. (This won't be neccessary in the future)
+- Run `INSTALL 'absolute/or/relative/path/to/the/unzipped/extension';`
+- The extension is now installed, you can now load it with `LOAD spatial;` whenever you want to use it.
+
+You can also build the extension yourself following the instructions below.
 
 ## Building from source
 This extension is based on the [DuckDB extension template](https://github.com/duckdb/extension-template).
+
+**Dependencies**
+
 You need a recent version of CMake (3.20) and a C++11 compatible compiler.
 If you're cross-compiling, you need a host sqlite3 executable in your path, otherwise the build should create and use its own sqlite3 executable. (This is required for creating the PROJ database).
-You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`.
+You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`. Note that brew installs openssl in a non-standard location, so you may need to set a `OPENSSL_ROOT_DIR=$(brew --prefix openssl)` environment variable when building.
 
 We bundle all the other required dependencies in the `third_party` directory, which should be automatically built and statically linked into the extension. This may take some time the first time you build, but subsequent builds should be much faster.
 
 We also highly recommend that you install [Ninja](https://ninja-build.org) which you can select when building by setting the `GEN=ninja` environment variable.
 
 ```
-git clone --recurse-submodules https://github.com/duckdblabs/duckdb_spatial.git
+git clone --recurse-submodules https://github.com/duckdblabs/duckdb_spatial
 cd duckdb_spatial
 make debug
 ```
@@ -239,8 +250,67 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 [PROJ](https://proj.org/#) is a generic coordinate transformation library that transforms geospatial coordinates from one projected coordinate reference system (CRS) to another. This extension experiments with including an embedded version of the PROJ database inside the extension binary itself so that you don't have to worry about installing the PROJ library separately. This also opens up the possibility to use this functionality in WASM.
 
 ## Embedded GDAL based Input/Output Functions
-[GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `COPY ... TO ... WITH (FORMAT GDAL)` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats - check for yourself by running `SELECT * FROM st_list_drivers();`!
+[GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `COPY ... TO ... WITH (FORMAT GDAL)` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats - check for yourself by running 
+<details>
+<summary>
+`SELECT * FROM st_drivers();`!
+</summary>
 
+|   short_name   |                      long_name                       | can_create | can_copy | can_open |                      help_url                      |
+|----------------|------------------------------------------------------|------------|----------|----------|----------------------------------------------------|
+| ESRI Shapefile | ESRI Shapefile                                       | true       | false    | true     | https://gdal.org/drivers/vector/shapefile.html     |
+| MapInfo File   | MapInfo File                                         | true       | false    | true     | https://gdal.org/drivers/vector/mitab.html         |
+| UK .NTF        | UK .NTF                                              | false      | false    | true     | https://gdal.org/drivers/vector/ntf.html           |
+| LVBAG          | Kadaster LV BAG Extract 2.0                          | false      | false    | true     | https://gdal.org/drivers/vector/lvbag.html         |
+| S57            | IHO S-57 (ENC)                                       | true       | false    | true     | https://gdal.org/drivers/vector/s57.html           |
+| DGN            | Microstation DGN                                     | true       | false    | true     | https://gdal.org/drivers/vector/dgn.html           |
+| OGR_VRT        | VRT - Virtual Datasource                             | false      | false    | true     | https://gdal.org/drivers/vector/vrt.html           |
+| Memory         | Memory                                               | true       | false    | true     |                                                    |
+| CSV            | Comma Separated Value (.csv)                         | true       | false    | true     | https://gdal.org/drivers/vector/csv.html           |
+| GML            | Geography Markup Language (GML)                      | true       | false    | true     | https://gdal.org/drivers/vector/gml.html           |
+| GPX            | GPX                                                  | true       | false    | true     | https://gdal.org/drivers/vector/gpx.html           |
+| KML            | Keyhole Markup Language (KML)                        | true       | false    | true     | https://gdal.org/drivers/vector/kml.html           |
+| GeoJSON        | GeoJSON                                              | true       | false    | true     | https://gdal.org/drivers/vector/geojson.html       |
+| GeoJSONSeq     | GeoJSON Sequence                                     | true       | false    | true     | https://gdal.org/drivers/vector/geojsonseq.html    |
+| ESRIJSON       | ESRIJSON                                             | false      | false    | true     | https://gdal.org/drivers/vector/esrijson.html      |
+| TopoJSON       | TopoJSON                                             | false      | false    | true     | https://gdal.org/drivers/vector/topojson.html      |
+| OGR_GMT        | GMT ASCII Vectors (.gmt)                             | true       | false    | true     | https://gdal.org/drivers/vector/gmt.html           |
+| GPKG           | GeoPackage                                           | true       | true     | true     | https://gdal.org/drivers/vector/gpkg.html          |
+| SQLite         | SQLite / Spatialite                                  | true       | false    | true     | https://gdal.org/drivers/vector/sqlite.html        |
+| WAsP           | WAsP .map format                                     | true       | false    | true     | https://gdal.org/drivers/vector/wasp.html          |
+| OpenFileGDB    | ESRI FileGDB                                         | true       | false    | true     | https://gdal.org/drivers/vector/openfilegdb.html   |
+| DXF            | AutoCAD DXF                                          | true       | false    | true     | https://gdal.org/drivers/vector/dxf.html           |
+| CAD            | AutoCAD Driver                                       | false      | false    | true     | https://gdal.org/drivers/vector/cad.html           |
+| FlatGeobuf     | FlatGeobuf                                           | true       | false    | true     | https://gdal.org/drivers/vector/flatgeobuf.html    |
+| Geoconcept     | Geoconcept                                           | true       | false    | true     |                                                    |
+| GeoRSS         | GeoRSS                                               | true       | false    | true     | https://gdal.org/drivers/vector/georss.html        |
+| VFK            | Czech Cadastral Exchange Data Format                 | false      | false    | true     | https://gdal.org/drivers/vector/vfk.html           |
+| PGDUMP         | PostgreSQL SQL dump                                  | true       | false    | false    | https://gdal.org/drivers/vector/pgdump.html        |
+| OSM            | OpenStreetMap XML and PBF                            | false      | false    | true     | https://gdal.org/drivers/vector/osm.html           |
+| GPSBabel       | GPSBabel                                             | true       | false    | true     | https://gdal.org/drivers/vector/gpsbabel.html      |
+| WFS            | OGC WFS (Web Feature Service)                        | false      | false    | true     | https://gdal.org/drivers/vector/wfs.html           |
+| OAPIF          | OGC API - Features                                   | false      | false    | true     | https://gdal.org/drivers/vector/oapif.html         |
+| EDIGEO         | French EDIGEO exchange format                        | false      | false    | true     | https://gdal.org/drivers/vector/edigeo.html        |
+| SVG            | Scalable Vector Graphics                             | false      | false    | true     | https://gdal.org/drivers/vector/svg.html           |
+| ODS            | Open Document/ LibreOffice / OpenOffice Spreadsheet  | true       | false    | true     | https://gdal.org/drivers/vector/ods.html           |
+| XLSX           | MS Office Open XML spreadsheet                       | true       | false    | true     | https://gdal.org/drivers/vector/xlsx.html          |
+| Elasticsearch  | Elastic Search                                       | true       | false    | true     | https://gdal.org/drivers/vector/elasticsearch.html |
+| Carto          | Carto                                                | true       | false    | true     | https://gdal.org/drivers/vector/carto.html         |
+| AmigoCloud     | AmigoCloud                                           | true       | false    | true     | https://gdal.org/drivers/vector/amigocloud.html    |
+| SXF            | Storage and eXchange Format                          | false      | false    | true     | https://gdal.org/drivers/vector/sxf.html           |
+| Selafin        | Selafin                                              | true       | false    | true     | https://gdal.org/drivers/vector/selafin.html       |
+| JML            | OpenJUMP JML                                         | true       | false    | true     | https://gdal.org/drivers/vector/jml.html           |
+| PLSCENES       | Planet Labs Scenes API                               | false      | false    | true     | https://gdal.org/drivers/vector/plscenes.html      |
+| CSW            | OGC CSW (Catalog  Service for the Web)               | false      | false    | true     | https://gdal.org/drivers/vector/csw.html           |
+| VDV            | VDV-451/VDV-452/INTREST Data Format                  | true       | false    | true     | https://gdal.org/drivers/vector/vdv.html           |
+| MVT            | Mapbox Vector Tiles                                  | true       | false    | true     | https://gdal.org/drivers/vector/mvt.html           |
+| NGW            | NextGIS Web                                          | true       | true     | true     | https://gdal.org/drivers/vector/ngw.html           |
+| MapML          | MapML                                                | true       | false    | true     | https://gdal.org/drivers/vector/mapml.html         |
+| TIGER          | U.S. Census TIGER/Line                               | false      | false    | true     | https://gdal.org/drivers/vector/tiger.html         |
+| AVCBin         | Arc/Info Binary Coverage                             | false      | false    | true     | https://gdal.org/drivers/vector/avcbin.html        |
+| AVCE00         | Arc/Info E00 (ASCII) Coverage                        | false      | false    | true     | https://gdal.org/drivers/vector/avce00.html        |
+
+</details>
 Note that far from all of these formats have been tested properly, if you run into any issues please first [consult the GDAL docs](https://gdal.org/drivers/vector/index.html), or open an issue here on GitHub.
 
 
@@ -252,7 +322,7 @@ Note that far from all of these formats have been tested properly, if you run in
 
 # Supported Functions
 
-🧭 - GEOS - functions that are implemented using the [GEOS](https://trac.osgeo.org/geos/) library
+🧭 - GEOS - functions that are implemented using the [GEOS](https://libgeos.org/) library
 
 🦆 - DuckDB - functions that are implemented natively in this extension that are capable of operating directly on the DuckDB types
 
@@ -266,6 +336,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | --------------------------- | -------- | ---------- | ------------- | ---------- | --------------- |
 | ST_Point                    | 🦆        | 🦆        |               |            |                 |
 | ST_Area                     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
+| ST_AsHEXWKB                 | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_AsText                   | 🧭        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_AsWKB                    | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Boundary                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
@@ -305,3 +376,6 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Within                   | 🧭        | 🦆 or 🔄  | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_X                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Y                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+
+
+```
