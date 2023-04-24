@@ -336,6 +336,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | --------------------------- | -------- | ---------- | ------------- | ---------- | --------------- |
 | ST_Point                    | 🦆        | 🦆        |               |            |                 |
 | ST_Area                     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
+| ST_AsHEXWKB                 | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_AsText                   | 🧭        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_AsWKB                    | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Boundary                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |

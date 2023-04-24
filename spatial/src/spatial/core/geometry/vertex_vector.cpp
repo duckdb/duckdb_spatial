@@ -39,13 +39,21 @@ double VertexVector::SignedArea() const {
 	if (count < 3) {
 		return 0;
 	}
+	
+	// Subtract the x coordinate of the first vertex from all other vertices
+	// to normalize the range and avoid floating point errors
+	// We don't need to do this for the y coordinate because we already
+	// subtract them between consecutive vertices
 	double area = 0;
-	for (uint32_t i = 0; i < count - 1; i++) {
-		auto &p1 = data[i];
-		auto &p2 = data[i + 1];
-		area += p1.x * p2.y - p2.x * p1.y;
+	auto x0 = data[0].x;
+	for(uint32_t i = 1; i < count - 1; ++i) {
+		auto x1 = data[i].x;
+        auto y1 = data[i + 1].y;
+        auto y2 = data[i - 1].y;
+		area += (x1 - x0) * (y2 - y1);
 	}
-	return area * 0.5;
+	
+    return area * 0.5;
 }
 
 double ColumnarArea(vector<double> xs, vector<double> ys) {
