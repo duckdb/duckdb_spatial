@@ -1,9 +1,15 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/storage/buffer_manager.hpp"
-#include "protozero/pbf_reader.hpp"
+#include "duckdb/function/replacement_scan.hpp"
+#include "duckdb/parser/expression/constant_expression.hpp"
+#include "duckdb/parser/expression/function_expression.hpp"
+#include "duckdb/parser/tableref/table_function_ref.hpp"
+
 #include "spatial/common.hpp"
 #include "spatial/core/functions/table.hpp"
 #include "spatial/core/types.hpp"
+
+#include "protozero/pbf_reader.hpp"
 #include "zlib.h"
 
 namespace spatial {
@@ -134,24 +140,20 @@ static unique_ptr<FileBlock> DecompressBlob(ClientContext &context, OsmBlob &blo
 class GlobalState : public GlobalTableFunctionState {
 	mutex lock;
 	unique_ptr<FileHandle> handle;
-	idx_t offset;
-	idx_t blob_index;
-	bool done;
 	idx_t file_size;
+	idx_t offset;
+	bool done;
+	idx_t blob_index;
+	atomic<idx_t> bytes_read;
 	idx_t max_threads;
 
 public:
 	GlobalState(unique_ptr<FileHandle> handle, idx_t file_size, idx_t max_threads)
-	    : handle(std::move(handle)), file_size(file_size), done(false), offset(0) {
-	}
-
-	bool IsDone() {
-		lock_guard<mutex> glock(lock);
-		return done;
+	    : handle(std::move(handle)), file_size(file_size), offset(0), done(false), blob_index(0), bytes_read(0), max_threads(max_threads) {
 	}
 
 	double GetProgress() {
-		return (double)offset / (double)file_size;
+		return 100 * ((double)bytes_read / (double)file_size);
 	}
 
 	idx_t MaxThreads() const override {
@@ -210,6 +212,7 @@ public:
 		handle->Read(blob_buffer.get(), blob_length, offset);
 
 		offset += blob_length;
+		bytes_read = offset;
 
 		return make_unique<OsmBlob>(type, std::move(blob_buffer), blob_length, blob_index++);
 	}
@@ -656,7 +659,7 @@ static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk
 		return;
 	}
 
-	auto &bind_data = (BindData &)*input.bind_data;
+	//auto &bind_data = (BindData &)*input.bind_data;
 	auto &global_state = (GlobalState &)*input.global_state;
 	auto &local_state = (LocalState &)*input.local_state;
 
@@ -688,6 +691,21 @@ static idx_t GetBatchIndex(ClientContext &context, const FunctionData *bind_data
 	auto &state = (LocalState &)*local_state;
 	return state.block->block_idx;
 }
+
+
+static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, const string &table_name, ReplacementScanData *data){
+	// Check if the table name ends with .osm.pbf
+	if(!StringUtil::EndsWith(StringUtil::Lower(table_name), ".osm.pbf")) {
+		return nullptr;
+	}
+
+	auto table_function = make_unique<TableFunctionRef>();
+	vector<unique_ptr<ParsedExpression>> children;
+	children.push_back(make_unique<ConstantExpression>(Value(table_name)));
+	table_function->function = make_unique<FunctionExpression>("ST_ReadOSM", std::move(children));
+	return std::move(table_function);
+}
+
 //------------------------------------------------------------------------------
 //  Register
 //------------------------------------------------------------------------------
@@ -696,9 +714,15 @@ void CoreTableFunctions::RegisterOsmTableFunction(ClientContext &context) {
 
 	read.get_batch_index = GetBatchIndex;
 	read.table_scan_progress = Progress;
+	
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateTableFunctionInfo info(read);
 	catalog.CreateTableFunction(context, &info);
+
+	// Replacement scan
+	auto &config = DBConfig::GetConfig(*context.db);
+	config.replacement_scans.emplace_back(ReadOsmPBFReplacementScan);
+
 }
 
 } // namespace core
