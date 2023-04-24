@@ -184,7 +184,7 @@ struct WKTReader {
 		auto str = wkt.GetString();
 		auto geom = GEOSWKTReader_read_r(ctx, reader, str.c_str());
 		if (!geom) {
-			throw InvalidInputException("Could not read WKT");
+			return GeometryPtr(ctx, nullptr);
 		}
 		return GeometryPtr(ctx, geom);
 	}
