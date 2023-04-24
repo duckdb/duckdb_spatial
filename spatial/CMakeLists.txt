@@ -14,6 +14,8 @@ add_subdirectory(src)
 include_directories(third_party/ryu/include)
 add_subdirectory(third_party/ryu)
 
+include_directories(third_party/protozero/include)
+
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Build dependencies
