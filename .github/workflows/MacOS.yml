@@ -90,3 +90,29 @@ jobs:
           name: macos_universal-extensions
           path: |
             build/release/extension/spatial/spatial.duckdb_extension
+
+      - name: Deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_DEPLOY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_DEPLOY_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.S3_REGION }}
+          BUCKET_NAME: ${{ secrets.S3_BUCKET }}
+        run: |
+          cd duckdb
+          git fetch --tags
+          export DUCKDB_VERSION=`git tag --points-at HEAD`
+          echo $DUCKDB_VERSION
+          export DUCKDB_VERSION=${DUCKDB_VERSION:=`git log -1 --format=%h`}
+          echo $DUCKDB_VERSION
+          cd ..
+          if [[ "$AWS_ACCESS_KEY_ID" == "" ]] ; then
+            echo 'No key set, skipping'
+          elif [[ "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
+            python -m pip install awscli
+            ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION osx_amd64 $BUCKET_NAME true
+            ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION osx_arm64 $BUCKET_NAME true
+          elif [[ "$GITHUB_REF" =~ ^(refs/heads/main)$ ]] ; then
+            python -m pip install awscli
+            ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION osx_amd64 $BUCKET_NAME false
+            ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION osx_arm64 $BUCKET_NAME false
+          fi

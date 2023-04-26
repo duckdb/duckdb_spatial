@@ -110,3 +110,26 @@ jobs:
         name: ${{matrix.arch}}-extensions
         path: |
           build/release/extension/spatial/spatial.duckdb_extension
+
+    - name: Deploy
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.S3_DEPLOY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_DEPLOY_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.S3_REGION }}
+        BUCKET_NAME: ${{ secrets.S3_BUCKET }}
+      run: |
+        git config --global --add safe.directory '*'
+        cd duckdb
+        git fetch --tags
+        export DUCKDB_VERSION=`git tag --points-at HEAD`
+        export DUCKDB_VERSION=${DUCKDB_VERSION:=`git log -1 --format=%h`}
+        cd ..
+        if [[ "$AWS_ACCESS_KEY_ID" == "" ]] ; then
+          echo 'No key set, skipping'
+        elif [[ "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
+          python3 -m pip install pip awscli
+          ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION ${{matrix.arch}} $BUCKET_NAME true
+        elif [[ "$GITHUB_REF" =~ ^(refs/heads/main)$ ]] ; then
+          python3 -m pip install pip awscli
+          ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION ${{matrix.arch}} $BUCKET_NAME false
+        fi
