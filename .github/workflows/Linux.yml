@@ -24,12 +24,14 @@ jobs:
       matrix:
         # Add commits/tags to build against other DuckDB versions
         duckdb_version: [ 'v0.7.1' ]
-        arch: ['linux_amd64', 'linux_arm64']
+        arch: ['linux_amd64', 'linux_arm64', 'linux_amd64_gcc4']
         include:
           - arch: 'linux_amd64'
-            container: 'ubuntu:18.04'
+            container: 'ubuntu:16.04'
           - arch: 'linux_arm64'
             container: 'ubuntu:18.04'
+          - arch: 'linux_amd64_gcc4'
+            container: 'quay.io/pypa/manylinux2014_x86_64'
     env:
       GEN: ninja
 
@@ -42,6 +44,7 @@ jobs:
         add-apt-repository ppa:git-core/ppa
         apt-get update -y -qq
         apt-get install -y -qq lsb-release sqlite3 ninja-build make gcc-multilib g++-multilib libssl-dev wget openjdk-8-jdk zip maven unixodbc-dev libc6-dev-i386 lib32readline6-dev libssl-dev libcurl4-gnutls-dev libexpat1-dev gettext unzip build-essential checkinstall libffi-dev curl libz-dev openssh-client
+    
     - name: Install Git 2.18.5
       if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
       run: |
@@ -51,6 +54,7 @@ jobs:
         make
         make prefix=/usr install
         git --version
+    
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -61,12 +65,17 @@ jobs:
       run: |
         cd duckdb
         git checkout ${{ matrix.duckdb_version }}
-
+    
     # Setup ccache
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
+
+    - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      uses: ./duckdb/.github/actions/centos_7_setup
+      with:
+        openssl: 1
     
     - if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
       uses: ./duckdb/.github/actions/ubuntu_16_setup
@@ -79,7 +88,7 @@ jobs:
       run: |
           export OPENSSL_ROOT_DIR=`pwd`/build/openssl/build
           echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
-    
+
       # Build extension
     - name: Build extension
       env:
@@ -90,10 +99,12 @@ jobs:
       run: |
         export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         make release
+
     - name: Build extension
       if: ${{ matrix.arch != 'linux_arm64'}}
       run: |
         make test_release
+
     - uses: actions/upload-artifact@v2
       with:
         name: ${{matrix.arch}}-extensions
