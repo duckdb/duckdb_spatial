@@ -19,6 +19,10 @@ add_subdirectory(src)
 include_directories(third_party/ryu/include)
 add_subdirectory(third_party/ryu)
 
+include_directories(third_party/yyjson/include)
+add_subdirectory(third_party/yyjson)
+
+
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
 # Build dependencies
