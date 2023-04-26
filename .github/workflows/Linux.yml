@@ -66,8 +66,9 @@ jobs:
         cd duckdb
         git checkout ${{ matrix.duckdb_version }}
     
-    # Setup ccache
+    # Setup ccache (not on _gcc4)
     - name: ccache
+      if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
