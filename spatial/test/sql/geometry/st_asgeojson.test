@@ -21,20 +21,20 @@ INSERT INTO types VALUES
     (ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')),
     (ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1))'));
 
-quer I
+query I
 SELECT ST_AsGeoJSON(geom) FROM types;
 ----
-{"type":"Point","coordinates":[]}                                                                                                                    
-{"type":"Point","coordinates":[0.0,0.0]}                                                                                                           
-{"type":"LineString","coordinates":[]}                                                                                                             
-{"type":"LineString","coordinates":[[0.0,0.0],[1.0,1.0]]}                                                                                          
-{"type":"Polygon","coordinates":[]}                                                                                                                
-{"type":"Polygon","coordinates":[[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]]]}                                                             
-{"type":"MultiPoint","coordinates":[]}                                                                                                             
-{"type":"MultiPoint","coordinates":[[0.0,0.0],[1.0,1.0]]}                                                                                          
-{"type":"MultiLineString","coordinates":[]}                                                                                                        
-{"type":"MultiLineString","coordinates":[[[0.0,0.0],[1.0,1.0]],[[2.0,2.0],[3.0,3.0]]]}                                                             
-{"type":"MultiPolygon","coordinates":[]}                                                                                                           
+{"type":"Point","coordinates":[]}
+{"type":"Point","coordinates":[0.0,0.0]}
+{"type":"LineString","coordinates":[]}
+{"type":"LineString","coordinates":[[0.0,0.0],[1.0,1.0]]}
+{"type":"Polygon","coordinates":[]}
+{"type":"Polygon","coordinates":[[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]]]}
+{"type":"MultiPoint","coordinates":[]}
+{"type":"MultiPoint","coordinates":[[0.0,0.0],[1.0,1.0]]}
+{"type":"MultiLineString","coordinates":[]}
+{"type":"MultiLineString","coordinates":[[[0.0,0.0],[1.0,1.0]],[[2.0,2.0],[3.0,3.0]]]}
+{"type":"MultiPolygon","coordinates":[]}
 {"type":"MultiPolygon","coordinates":[[[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]]],[[[2.0,2.0],[3.0,2.0],[3.0,3.0],[2.0,3.0],[2.0,2.0]]]]}
-{"type":"GeometryCollection","geometries":[]}                                                                                                      
+{"type":"GeometryCollection","geometries":[]}
 {"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[0.0,0.0]},{"type":"LineString","coordinates":[[0.0,0.0],[1.0,1.0]]}]}
