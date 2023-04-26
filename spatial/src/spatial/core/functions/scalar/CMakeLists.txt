@@ -1,6 +1,7 @@
 set(EXTENSION_SOURCES
     ${EXTENSION_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/st_area.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_asgeojson.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_ashexwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_astext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_aswkb.cpp
