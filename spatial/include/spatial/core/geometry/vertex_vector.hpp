@@ -133,6 +133,15 @@ public:
 		return data + count;
 	}
 
+	const Vertex* begin() const {
+		return data;
+	}
+
+	const Vertex* end() const {
+		return data + count;
+	}
+
+
 	inline uint32_t Count() const {
 		return count;
 	}

@@ -41,7 +41,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (point.IsEmpty()) {
 				continue;
 			}
-			line_geom.points.Add(point.GetVertex());
+			line_geom.Vertices().Add(point.GetVertex());
 		}
 
 		if (line_geom.Count() == 1) {
@@ -71,10 +71,10 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    // TODO: we should add proper abstractions to append/concat VertexVectors
 		    auto line_geom = lstate.factory.CreateLineString(2);
 		    if (!point_left.IsEmpty()) {
-			    line_geom.points.Add(point_left.GetVertex());
+			    line_geom.Vertices().Add(point_left.GetVertex());
 		    }
 		    if (!point_right.IsEmpty()) {
-			    line_geom.points.Add(point_right.GetVertex());
+			    line_geom.Vertices().Add(point_right.GetVertex());
 		    }
 
 		    if (line_geom.Count() == 1) {

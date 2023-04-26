@@ -141,49 +141,46 @@ static void TransformGeometry(PJ *crs, core::Point &point) {
 }
 
 static void TransformGeometry(PJ *crs, core::LineString &line) {
-	for (idx_t i = 0; i < line.Count(); i++) {
-		auto &vertex = line.points[i];
-		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-		vertex.x = transformed.x;
-		vertex.y = transformed.y;
+	for (auto &vert : line.Vertices()) {
+		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
+		vert.x = transformed.x;
+		vert.y = transformed.y;
 	}
 }
 
 static void TransformGeometry(PJ *crs, core::Polygon &poly) {
-	for (idx_t i = 0; i < poly.Count(); i++) {
-		auto &ring = poly.rings[i];
-		for (idx_t j = 0; j < ring.Count(); j++) {
-			auto &vertex = ring.data[j];
-			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-			vertex.x = transformed.x;
-			vertex.y = transformed.y;
+	for (auto &ring : poly.Rings()) {
+		for (auto &vert : ring) {
+			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
+			vert.x = transformed.x;
+			vert.y = transformed.y;
 		}
 	}
 }
 
 static void TransformGeometry(PJ *crs, core::MultiPoint &multi_point) {
-	for (idx_t i = 0; i < multi_point.Count(); i++) {
-		TransformGeometry(crs, multi_point.points[i]);
+	for (auto &point : multi_point) {
+		TransformGeometry(crs, point);
 	}
 }
 
 static void TransformGeometry(PJ *crs, core::MultiLineString &multi_line) {
-	for (idx_t i = 0; i < multi_line.Count(); i++) {
-		TransformGeometry(crs, multi_line.linestrings[i]);
+	for (auto &line : multi_line) {
+		TransformGeometry(crs, line);
 	}
 }
 
 static void TransformGeometry(PJ *crs, core::MultiPolygon &multi_poly) {
-	for (idx_t i = 0; i < multi_poly.Count(); i++) {
-		TransformGeometry(crs, multi_poly.polygons[i]);
+	for (auto &poly : multi_poly) {
+		TransformGeometry(crs, poly);
 	}
 }
 
 static void TransformGeometry(PJ *crs, core::Geometry &geom);
 
 static void TransformGeometry(PJ *crs, core::GeometryCollection &geom) {
-	for (idx_t i = 0; i < geom.Count(); i++) {
-		TransformGeometry(crs, geom.geometries[i]);
+	for (auto &child : geom) {
+		TransformGeometry(crs, child);
 	}
 }
 

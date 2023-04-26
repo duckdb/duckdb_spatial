@@ -150,7 +150,7 @@ GeometryPtr GeosContextWrapper::FromPoint(const core::Point &point) const {
 	if (point.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyPoint_r(ctx));
 	}
-	auto seq = FromVertexVector(point.data);
+	auto seq = FromVertexVector(point.Vertices());
 	auto ptr = GEOSGeom_createPoint_r(ctx, seq);
 	return GeometryPtr(ctx, ptr);
 }
@@ -159,7 +159,7 @@ GeometryPtr GeosContextWrapper::FromLineString(const core::LineString &line) con
 	if (line.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyLineString_r(ctx));
 	}
-	auto seq = FromVertexVector(line.points);
+	auto seq = FromVertexVector(line.Vertices());
 	auto ptr = GEOSGeom_createLineString_r(ctx, seq);
 	return GeometryPtr(ctx, ptr);
 }
@@ -169,13 +169,13 @@ GeometryPtr GeosContextWrapper::FromPolygon(const core::Polygon &poly) const {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyPolygon_r(ctx));
 	}
 
-	auto shell_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[0]));
-	auto poly_ptr = malloc(sizeof(GEOSGeometry *) * poly.num_rings - 1);
-	for (size_t i = 1; i < poly.num_rings; i++) {
-		auto ring_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.rings[i]));
+	auto shell_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.Shell()));
+	auto poly_ptr = malloc(sizeof(GEOSGeometry *) * poly.Count() - 1);
+	for (size_t i = 1; i < poly.Count(); i++) {
+		auto ring_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.Ring(i)));
 		((GEOSGeometry **)poly_ptr)[i - 1] = ring_ptr;
 	}
-	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, (GEOSGeometry **)poly_ptr, poly.num_rings - 1);
+	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, (GEOSGeometry **)poly_ptr, poly.Count() - 1);
 	return GeometryPtr(ctx, ptr);
 }
 
@@ -183,12 +183,12 @@ GeometryPtr GeosContextWrapper::FromMultiPoint(const core::MultiPoint &mpoint) c
 	if (mpoint.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOINT));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * mpoint.num_points);
-	for (size_t i = 0; i < mpoint.num_points; i++) {
-		auto point_ptr = FromPoint(mpoint.points[i]);
+	auto ptr = malloc(sizeof(GEOSGeometry *) * mpoint.Count());
+	for (size_t i = 0; i < mpoint.Count(); i++) {
+		auto point_ptr = FromPoint(mpoint[i]);
 		((GEOSGeometry **)ptr)[i] = point_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOINT, (GEOSGeometry **)ptr, mpoint.num_points);
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOINT, (GEOSGeometry **)ptr, mpoint.Count());
 	return GeometryPtr(ctx, result);
 }
 
@@ -196,12 +196,12 @@ GeometryPtr GeosContextWrapper::FromMultiLineString(const core::MultiLineString 
 	if (mline.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTILINESTRING));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * mline.num_linestrings);
-	for (size_t i = 0; i < mline.num_linestrings; i++) {
-		auto line_ptr = FromLineString(mline.linestrings[i]);
+	auto ptr = malloc(sizeof(GEOSGeometry *) * mline.Count());
+	for (size_t i = 0; i < mline.Count(); i++) {
+		auto line_ptr = FromLineString(mline[i]);
 		((GEOSGeometry **)ptr)[i] = line_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTILINESTRING, (GEOSGeometry **)ptr, mline.num_linestrings);
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTILINESTRING, (GEOSGeometry **)ptr, mline.Count());
 	return GeometryPtr(ctx, result);
 }
 
@@ -209,12 +209,12 @@ GeometryPtr GeosContextWrapper::FromMultiPolygon(const core::MultiPolygon &mpoly
 	if (mpoly.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOLYGON));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * mpoly.num_polygons);
-	for (size_t i = 0; i < mpoly.num_polygons; i++) {
-		auto poly_ptr = FromPolygon(mpoly.polygons[i]);
+	auto ptr = malloc(sizeof(GEOSGeometry *) * mpoly.Count());
+	for (size_t i = 0; i < mpoly.Count(); i++) {
+		auto poly_ptr = FromPolygon(mpoly[i]);
 		((GEOSGeometry **)ptr)[i] = poly_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOLYGON, (GEOSGeometry **)ptr, mpoly.num_polygons);
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOLYGON, (GEOSGeometry **)ptr, mpoly.Count());
 	return GeometryPtr(ctx, result);
 }
 
@@ -222,17 +222,17 @@ GeometryPtr GeosContextWrapper::FromGeometryCollection(const core::GeometryColle
 	if (collection.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_GEOMETRYCOLLECTION));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * collection.num_geometries);
-	for (size_t i = 0; i < collection.num_geometries; i++) {
-		auto geom_ptr = FromGeometry(collection.geometries[i]);
+	auto ptr = malloc(sizeof(GEOSGeometry *) * collection.Count());
+	for (size_t i = 0; i < collection.Count(); i++) {
+		auto geom_ptr = FromGeometry(collection[i]);
 		((GEOSGeometry **)ptr)[i] = geom_ptr.release();
 	}
 	auto result =
-	    GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, (GEOSGeometry **)ptr, collection.num_geometries);
+	    GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, (GEOSGeometry **)ptr, collection.Count());
 	return GeometryPtr(ctx, result);
 }
 
-GeometryPtr GeosContextWrapper::FromGeometry(core::Geometry &geom) const {
+GeometryPtr GeosContextWrapper::FromGeometry(const core::Geometry &geom) const {
 	switch (geom.Type()) {
 	case core::GeometryType::POINT: {
 		return FromPoint(geom.GetPoint());
@@ -304,13 +304,13 @@ core::Polygon GeosContextWrapper::ToPolygon(core::GeometryFactory &factory, cons
 	auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
 	auto poly = factory.CreatePolygon(num_holes + 1);
 
-	poly.rings[0] = shell_vec;
+	poly.Shell() = shell_vec;
 
 	for (int i = 0; i < num_holes; i++) {
 		auto hole_ptr = GEOSGetInteriorRingN_r(ctx, geom, i);
 		auto hole_seq = GEOSGeom_getCoordSeq_r(ctx, hole_ptr);
 		auto hole_vec = ToVertexVector(factory, hole_seq);
-		poly.rings[1 + i] = hole_vec;
+		poly.Ring(1 + i) = hole_vec;
 	}
 
 	return poly;
@@ -323,7 +323,7 @@ core::MultiPoint GeosContextWrapper::ToMultiPoint(core::GeometryFactory &factory
 	for (int i = 0; i < num_points; i++) {
 		auto point_ptr = GEOSGetGeometryN_r(ctx, geom, i);
 		auto point = ToPoint(factory, point_ptr);
-		mpoint.points[i] = point;
+		mpoint[i] = point;
 	}
 	return mpoint;
 }
@@ -336,7 +336,7 @@ core::MultiLineString GeosContextWrapper::ToMultiLineString(core::GeometryFactor
 	for (int i = 0; i < num_lines; i++) {
 		auto line_ptr = GEOSGetGeometryN_r(ctx, geom, i);
 		auto line = ToLineString(factory, line_ptr);
-		mline.linestrings[i] = line;
+		mline[i] = line;
 	}
 	return mline;
 }
@@ -348,7 +348,7 @@ core::MultiPolygon GeosContextWrapper::ToMultiPolygon(core::GeometryFactory &fac
 	for (int i = 0; i < num_polys; i++) {
 		auto poly_ptr = GEOSGetGeometryN_r(ctx, geom, i);
 		auto poly = ToPolygon(factory, poly_ptr);
-		mpoly.polygons[i] = poly;
+		mpoly[i] = poly;
 	}
 	return mpoly;
 }
@@ -361,7 +361,7 @@ core::GeometryCollection GeosContextWrapper::ToGeometryCollection(core::Geometry
 	for (int i = 0; i < num_geoms; i++) {
 		auto geom_ptr = GEOSGetGeometryN_r(ctx, geom, i);
 		auto item = ToGeometry(factory, geom_ptr);
-		collection.geometries[i] = item;
+		collection[i] = item;
 	}
 	return collection;
 }

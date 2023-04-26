@@ -71,8 +71,8 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.points[i].x = x;
-			geom.points[i].y = y;
+			geom.Vertices()[i].x = x;
+			geom.Vertices()[i].y = y;
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
@@ -106,8 +106,8 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 		ListVector::Reserve(result, total_coords);
 
 		for (idx_t i = 0; i < line_size; i++) {
-			x_data[entry.offset + i] = line.points[i].x;
-			y_data[entry.offset + i] = line.points[i].y;
+			x_data[entry.offset + i] = line.Vertices()[i].x;
+			y_data[entry.offset + i] = line.Vertices()[i].y;
 		}
 		return entry;
 	});
@@ -140,7 +140,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 				ring_array[j].x = x;
 				ring_array[j].y = y;
 			}
-			geom.rings[i] = ring_array;
+			geom.Ring(i) = ring_array;
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
@@ -165,13 +165,13 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 		}
 
 		auto &poly = geometry.GetPolygon();
-		auto poly_size = poly.num_rings;
+		auto poly_size = poly.Count();
 		auto poly_entry = list_entry_t(total_rings, poly_size);
 
 		ListVector::Reserve(result, total_rings + poly_size);
 
 		for (idx_t ring_idx = 0; ring_idx < poly_size; ring_idx++) {
-			auto ring = poly.rings[ring_idx];
+			auto ring = poly.Ring(ring_idx);
 			auto ring_size = ring.Count();
 			auto ring_entry = list_entry_t(total_coords, ring_size);
 
@@ -220,17 +220,18 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto maxy = box.d_val;
 
 		auto geom = lstate.factory.CreatePolygon(1, &capacity);
-		geom.rings[0].data[0].x = minx;
-		geom.rings[0].data[0].y = miny;
-		geom.rings[0].data[1].x = maxx;
-		geom.rings[0].data[1].y = miny;
-		geom.rings[0].data[2].x = maxx;
-		geom.rings[0].data[2].y = maxy;
-		geom.rings[0].data[3].x = minx;
-		geom.rings[0].data[3].y = maxy;
-		geom.rings[0].data[4].x = minx;
-		geom.rings[0].data[4].y = miny;
-		geom.rings[0].count = 5;
+		auto &shell = geom.Ring(0);
+		shell.data[0].x = minx;
+		shell.data[0].y = miny;
+		shell.data[1].x = maxx;
+		shell.data[1].y = miny;
+		shell.data[2].x = maxx;
+		shell.data[2].y = maxy;
+		shell.data[3].x = minx;
+		shell.data[3].y = maxy;
+		shell.data[4].x = minx;
+		shell.data[4].y = miny;
+		shell.count = 5;
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
 	return true;

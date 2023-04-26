@@ -13,14 +13,26 @@ string Point::ToString() const {
 	if (IsEmpty()) {
 		return "POINT EMPTY";
 	}
-	auto &vert = data[0];
+	auto &vert = vertices[0];
 	if (std::isnan(vert.x) && std::isnan(vert.y)) {
 		// This is a special case for WKB. WKB does not support empty points,
 		// and instead writes a point with NaN coordinates. We therefore need to
 		// check for this case and return POINT EMPTY instead to round-trip safely
 		return "POINT EMPTY";
 	}
-	return "POINT (" + std::to_string(data[0].x) + " " + std::to_string(data[0].y) + ")";
+	return "POINT (" + std::to_string(vertices[0].x) + " " + std::to_string(vertices[0].y) + ")";
+}
+
+bool Point::IsEmpty() const {
+	return vertices.Count() == 0;
+}
+
+Vertex &Point::GetVertex() {
+	return vertices[0];
+}
+
+const Vertex &Point::GetVertex() const {
+	return vertices[0];
 }
 
 //------------------------------------------------------------------------------
@@ -28,11 +40,11 @@ string Point::ToString() const {
 //------------------------------------------------------------------------------
 
 double LineString::Length() const {
-	return points.Length();
+	return vertices.Length();
 }
 
 bool LineString::IsEmpty() const {
-	return points.Count() == 0;
+	return vertices.Count() == 0;
 }
 
 Geometry LineString::Centroid() const {
@@ -40,15 +52,15 @@ Geometry LineString::Centroid() const {
 }
 
 string LineString::ToString() const {
-	auto count = points.Count();
+	auto count = vertices.Count();
 	if (count == 0) {
 		return "LINESTRING EMPTY";
 	}
 
 	string result = "LINESTRING (";
-	for (uint32_t i = 0; i < points.Count(); i++) {
-		result += std::to_string(points[i].x) + " " + std::to_string(points[i].y);
-		if (i < points.Count() - 1) {
+	for (uint32_t i = 0; i < vertices.Count(); i++) {
+		result += std::to_string(vertices[i].x) + " " + std::to_string(vertices[i].y);
+		if (i < vertices.Count() - 1) {
 			result += ", ";
 		}
 	}
@@ -57,8 +69,9 @@ string LineString::ToString() const {
 }
 
 uint32_t LineString::Count() const {
-	return points.Count();
+	return vertices.Count();
 }
+
 
 //------------------------------------------------------------------------------
 // Polygon
@@ -155,93 +168,178 @@ uint32_t MultiPoint::Count() const {
 	return num_points;
 }
 
+Point& MultiPoint::operator[](uint32_t index) {
+	return points[index];
+}
+
+const Point& MultiPoint::operator[](uint32_t index) const {
+	return points[index];
+}
+
+const Point* MultiPoint::begin() const {
+	return points;
+}
+const Point* MultiPoint::end() const {
+	return points + num_points;
+}
+Point* MultiPoint::begin() {
+	return points;
+}
+Point* MultiPoint::end() {
+	return points + num_points;
+}
+
 //------------------------------------------------------------------------------
 // MultiLineString
 //------------------------------------------------------------------------------
 
 string MultiLineString::ToString() const {
-	if (num_linestrings == 0) {
+	if (count == 0) {
 		return "MULTILINESTRING EMPTY";
 	}
 	string str = "MULTILINESTRING (";
-	for (uint32_t i = 0; i < num_linestrings; i++) {
+
+	bool first = true;
+	for (auto &line : *this) {
 		str += "(";
-		for (uint32_t j = 0; j < linestrings[i].points.count; j++) {
-			str += std::to_string(linestrings[i].points[j].x) + " " + std::to_string(linestrings[i].points[j].y);
-			if (j < linestrings[i].points.count - 1) {
-				str += ", ";
-			}
-		}
-		str += ")";
-		if (i < num_linestrings - 1) {
+
+		if(first) {
+			first = false;
+		} else {
 			str += ", ";
 		}
+		first = true;
+		for (auto &vert : line.Vertices()) {
+			if (first) {
+				first = false;
+			} else {
+				str += ", ";
+			}
+			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+		}
+		str += ")";
 	}
 	return str + ")";
 }
 
 double MultiLineString::Length() const {
 	double length = 0;
-	for (uint32_t i = 0; i < num_linestrings; i++) {
-		length += linestrings[i].Length();
+	for (uint32_t i = 0; i < count; i++) {
+		length += lines[i].Length();
 	}
 	return length;
 }
 
 bool MultiLineString::IsEmpty() const {
-	return num_linestrings == 0;
+	return count == 0;
 }
 
 uint32_t MultiLineString::Count() const {
-	return num_linestrings;
+	return count;
 }
+
+LineString& MultiLineString::operator[](uint32_t index) {
+	return lines[index];
+}
+
+const LineString& MultiLineString::operator[](uint32_t index) const {
+	return lines[index];
+}
+
+const LineString* MultiLineString::begin() const {
+	return lines;
+}
+const LineString* MultiLineString::end() const {
+	return lines + count;
+}
+LineString* MultiLineString::begin() {
+	return lines;
+}
+LineString* MultiLineString::end() {
+	return lines + count;
+}
+
 
 //------------------------------------------------------------------------------
 // MultiPolygon
 //------------------------------------------------------------------------------
 
 string MultiPolygon::ToString() const {
-	if (num_polygons == 0) {
+	if (count == 0) {
 		return "MULTIPOLYGON EMPTY";
 	}
 	string str = "MULTIPOLYGON (";
-	for (uint32_t i = 0; i < num_polygons; i++) {
+	
+	bool first = true;
+	for (auto &poly : *this) {
 		str += "(";
-		for (uint32_t j = 0; j < polygons[i].num_rings; j++) {
-			str += "(";
-			for (uint32_t k = 0; k < polygons[i].rings[j].count; k++) {
-				str += std::to_string(polygons[i].rings[j][k].x) + " " + std::to_string(polygons[i].rings[j][k].y);
-				if (k < polygons[i].rings[j].count - 1) {
-					str += ", ";
-				}
-			}
-			str += ")";
-			if (j < polygons[i].num_rings - 1) {
-				str += ", ";
-			}
-		}
-		str += ")";
-		if (i < num_polygons - 1) {
+		if (first) {
+			first = false;
+		} else {
 			str += ", ";
 		}
+		first = true;
+		for (auto &ring : poly.Rings()) {
+			str += "(";
+			if (first) {
+				first = false;
+			} else {
+				str += ", ";
+			}
+			first = true;
+			for (auto &vert : ring) {
+				if (first) {
+					first = false;
+				} else {
+					str += ", ";
+				}
+				str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+			}
+			str += ")";
+		}
+		str += ")";
 	}
+
 	return str + ")";
 }
-
-bool MultiPolygon::IsEmpty() const {
-	return num_polygons == 0;
-}
-
 double MultiPolygon::Area() const {
 	double area = 0;
-	for (uint32_t i = 0; i < num_polygons; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		area += polygons[i].Area();
 	}
 	return area;
 }
 
+bool MultiPolygon::IsEmpty() const {
+	return count == 0;
+}
+
 uint32_t MultiPolygon::Count() const {
-	return num_polygons;
+	return count;
+}
+
+Polygon& MultiPolygon::operator[](uint32_t index) {
+	return polygons[index];
+}
+
+const Polygon& MultiPolygon::operator[](uint32_t index) const {
+	return polygons[index];
+}
+
+const Polygon* MultiPolygon::begin() const {
+	return polygons;
+}
+
+const Polygon* MultiPolygon::end() const {
+	return polygons + count;
+}
+
+Polygon* MultiPolygon::begin() {
+	return polygons;
+}
+
+Polygon* MultiPolygon::end() {
+	return polygons + count;
 }
 
 //------------------------------------------------------------------------------
@@ -249,13 +347,13 @@ uint32_t MultiPolygon::Count() const {
 //------------------------------------------------------------------------------
 
 string GeometryCollection::ToString() const {
-	if (num_geometries == 0) {
+	if (count == 0) {
 		return "GEOMETRYCOLLECTION EMPTY";
 	}
 	string str = "GEOMETRYCOLLECTION (";
-	for (uint32_t i = 0; i < num_geometries; i++) {
+	for (uint32_t i = 0; i < count; i++) {
 		str += geometries[i].ToString();
-		if (i < num_geometries - 1) {
+		if (i < count - 1) {
 			str += ", ";
 		}
 	}
@@ -263,11 +361,37 @@ string GeometryCollection::ToString() const {
 }
 
 bool GeometryCollection::IsEmpty() const {
-	return num_geometries == 0;
+	return count == 0;
 }
 
 uint32_t GeometryCollection::Count() const {
-	return num_geometries;
+	return count;
+}
+
+Geometry& GeometryCollection::operator[](uint32_t index) {
+	D_ASSERT(index < count);
+	return geometries[index];
+}
+
+const Geometry& GeometryCollection::operator[](uint32_t index) const {
+	D_ASSERT(index < count);
+	return geometries[index];
+}
+
+const Geometry* GeometryCollection::begin() const {
+	return geometries;
+}
+
+const Geometry* GeometryCollection::end() const {
+	return geometries + count;
+}
+
+Geometry* GeometryCollection::begin() {
+	return geometries;
+}
+
+Geometry* GeometryCollection::end() {
+	return geometries + count;
 }
 
 //------------------------------------------------------------------------------

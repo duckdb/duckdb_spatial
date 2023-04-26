@@ -7,6 +7,40 @@ namespace spatial {
 
 namespace core {
 
+template<class T>
+class IteratorPair {
+	T *begin_ptr;
+	T *end_ptr;
+public:
+	IteratorPair(T *begin_ptr, T *end_ptr) : begin_ptr(begin_ptr), end_ptr(end_ptr) {
+	}
+
+	T *begin() {
+		return begin_ptr;
+	}
+
+	T *end() {
+		return end_ptr;
+	}
+};
+
+template<class T>
+class ConstIteratorPair { 
+	const T *begin_ptr;
+	const T *end_ptr;
+public:
+	ConstIteratorPair(const T *begin_ptr, const T *end_ptr) : begin_ptr(begin_ptr), end_ptr(end_ptr) {
+	}
+	
+	const T *begin() {
+		return begin_ptr;
+	}
+
+	const T *end() {
+		return end_ptr;
+	}
+};
+
 struct Geometry;
 struct GeometryFactory;
 
@@ -20,30 +54,36 @@ enum class GeometryType : uint8_t {
 	GEOMETRYCOLLECTION
 };
 
-struct Point {
+class Point {
 	friend GeometryFactory;
-
+	VertexVector vertices;
 public:
-	VertexVector data;
-	explicit Point(VertexVector data) : data(data) {
+	explicit Point(VertexVector vertices) : vertices(vertices) {
 	}
 	string ToString() const;
+	bool IsEmpty() const;
+	Vertex &GetVertex();
+	const Vertex &GetVertex() const;
 
-	bool IsEmpty() const {
-		return data.Count() == 0;
+	const VertexVector& Vertices() const {
+		return vertices;
 	}
-	inline Vertex &GetVertex() {
-		return data[0];
-	}
-	inline const Vertex &GetVertex() const {
-		return data[0];
+	VertexVector& Vertices() {
+		return vertices;
 	}
 };
 
-struct LineString {
+class LineString {
 	friend GeometryFactory;
-	VertexVector points;
-	explicit LineString(VertexVector data) : points(data) {
+	VertexVector vertices;
+public:
+	explicit LineString(VertexVector vertices) : vertices(vertices) {
+	}
+	VertexVector& Vertices() {
+		return vertices;
+	}
+	const VertexVector& Vertices() const {
+		return vertices;
 	}
 	// Common Methods
 	string ToString() const;
@@ -54,12 +94,37 @@ struct LineString {
 	uint32_t Count() const;
 };
 
-struct Polygon {
+class Polygon {
 	friend GeometryFactory;
 	VertexVector *rings;
 	uint32_t num_rings;
+public:
 	explicit Polygon(VertexVector *rings, uint32_t num_rings) : rings(rings), num_rings(num_rings) {
 	}
+
+	VertexVector& Ring(uint32_t index) {
+		D_ASSERT(index < num_rings);
+		return rings[index];
+	}
+	const VertexVector& Ring(uint32_t index) const {
+		D_ASSERT(index < num_rings);
+		return rings[index];
+	}
+	const VertexVector& Shell() const {
+		return rings[0];
+	}
+	VertexVector& Shell() {
+		return rings[0];
+	}
+
+	IteratorPair<VertexVector> Rings() {
+		return IteratorPair<VertexVector>(rings, rings + num_rings);
+	}
+
+	ConstIteratorPair<VertexVector> Rings() const {
+		return ConstIteratorPair<VertexVector>(rings, rings + num_rings);
+	}
+
 	// Common Methods
 	string ToString() const;
 	// Geometry Methods
@@ -70,53 +135,98 @@ struct Polygon {
 	uint32_t Count() const;
 };
 
-struct MultiPoint {
+class MultiPoint {
 	friend GeometryFactory;
 	Point *points;
 	uint32_t num_points;
+public:
 	explicit MultiPoint(Point *points, uint32_t num_points) : points(points), num_points(num_points) {
 	}
 	string ToString() const;
-	bool IsEmpty() const;
+
+	// Collection Methods
 	uint32_t Count() const;
+	bool IsEmpty() const;
+	Point& operator[](uint32_t index);
+	const Point& operator[](uint32_t index) const;
+
+	// Iterator Methods
+	const Point* begin() const;
+	const Point* end() const;
+	Point* begin();
+	Point* end();
 };
 
-struct MultiLineString {
+class MultiLineString {
 	friend GeometryFactory;
-	LineString *linestrings;
-	uint32_t num_linestrings;
-	explicit MultiLineString(LineString *linestrings, uint32_t num_linestrings)
-	    : linestrings(linestrings), num_linestrings(num_linestrings) {
+	LineString *lines;
+	uint32_t count;
+public:
+	explicit MultiLineString(LineString *lines, uint32_t count)
+	    : lines(lines), count(count) {
 	}
 	string ToString() const;
+
 	// Geometry Methods
-	bool IsEmpty() const;
 	double Length() const;
+
+	// Collection Methods
 	uint32_t Count() const;
+	bool IsEmpty() const;
+	LineString& operator[](uint32_t index);
+	const LineString& operator[](uint32_t index) const;
+
+	// Iterator Methods
+	const LineString* begin() const;
+	const LineString* end() const;
+	LineString* begin();
+	LineString* end();
 };
 
-struct MultiPolygon {
+class MultiPolygon {
 	friend GeometryFactory;
 	Polygon *polygons;
-	uint32_t num_polygons;
-	explicit MultiPolygon(Polygon *polygons, uint32_t num_polygons) : polygons(polygons), num_polygons(num_polygons) {
+	uint32_t count;
+public:
+	explicit MultiPolygon(Polygon *polygons, uint32_t count) : polygons(polygons), count(count) {
 	}
-	bool IsEmpty() const;
 	double Area() const;
 	string ToString() const;
+
+	// Collection Methods
 	uint32_t Count() const;
+	bool IsEmpty() const;
+	Polygon& operator[](uint32_t index);
+	const Polygon& operator[](uint32_t index) const;
+
+	// Iterator Methods
+	const Polygon* begin() const;
+	const Polygon* end() const;
+	Polygon* begin();
+	Polygon* end();
 };
 
-struct GeometryCollection {
+class GeometryCollection {
 	friend GeometryFactory;
 	Geometry *geometries;
-	uint32_t num_geometries;
-	explicit GeometryCollection(Geometry *geometries, uint32_t num_geometries)
-	    : geometries(geometries), num_geometries(num_geometries) {
+	uint32_t count;
+public:
+	explicit GeometryCollection(Geometry *geometries, uint32_t count)
+	    : geometries(geometries), count(count) {
 	}
 	string ToString() const;
-	bool IsEmpty() const;
+	
+	// Collection Methods
 	uint32_t Count() const;
+	bool IsEmpty() const;
+	Geometry& operator[](uint32_t index);
+	const Geometry& operator[](uint32_t index) const;
+
+	// Iterator Methods
+	const Geometry* begin() const;
+	const Geometry* end() const;
+	Geometry* begin();
+	Geometry* end();
 
 	template <class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
@@ -236,7 +346,7 @@ public:
 template <class AGG, class RESULT_TYPE>
 RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
 	RESULT_TYPE result = zero;
-	for (idx_t i = 0; i < num_geometries; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		auto &geometry = geometries[i];
 		if (geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
 			result = geometry.GetGeometryCollection().Aggregate(agg, result);

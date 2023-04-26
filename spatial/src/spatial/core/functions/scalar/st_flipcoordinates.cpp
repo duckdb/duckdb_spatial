@@ -159,43 +159,41 @@ static void FlipVertexVector(VertexVector &vertices) {
 	}
 }
 static void FlipGeometry(Point &point) {
-	FlipVertexVector(point.data);
+	FlipVertexVector(point.Vertices());
 }
 
 static void FlipGeometry(LineString &line) {
-	FlipVertexVector(line.points);
+	FlipVertexVector(line.Vertices());
 }
 
 static void FlipGeometry(Polygon &poly) {
-	for (idx_t i = 0; i < poly.Count(); i++) {
-		auto &ring = poly.rings[i];
+	for (auto &ring : poly.Rings()) {
 		FlipVertexVector(ring);
 	}
 }
 
 static void FlipGeometry(MultiPoint &multi_point) {
-	for (idx_t i = 0; i < multi_point.Count(); i++) {
-		FlipGeometry(multi_point.points[i]);
+	for (auto &point : multi_point) {
+		FlipGeometry(point);
 	}
 }
 
 static void FlipGeometry(MultiLineString &multi_line) {
-	for (idx_t i = 0; i < multi_line.Count(); i++) {
-		FlipGeometry(multi_line.linestrings[i]);
+	for (auto &line : multi_line) {
+		FlipGeometry(line);
 	}
 }
 
 static void FlipGeometry(MultiPolygon &multi_poly) {
-	for (idx_t i = 0; i < multi_poly.Count(); i++) {
-		FlipGeometry(multi_poly.polygons[i]);
+	for (auto &poly : multi_poly) {
+		FlipGeometry(poly);
 	}
 }
 
 static void FlipGeometry(Geometry &geom);
-
 static void FlipGeometry(GeometryCollection &geom) {
-	for (idx_t i = 0; i < geom.Count(); i++) {
-		FlipGeometry(geom.geometries[i]);
+	for (auto &child : geom) {
+		FlipGeometry(child);
 	}
 }
 

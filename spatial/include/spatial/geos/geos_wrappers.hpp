@@ -271,7 +271,7 @@ public:
 	GeometryPtr FromMultiLineString(const core::MultiLineString &mline) const;
 	GeometryPtr FromMultiPolygon(const core::MultiPolygon &mpoly) const;
 	GeometryPtr FromGeometryCollection(const core::GeometryCollection &gc) const;
-	GeometryPtr FromGeometry(core::Geometry &geom) const;
+	GeometryPtr FromGeometry(const core::Geometry &geom) const;
 
 	core::VertexVector ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
 	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry *geom) const;

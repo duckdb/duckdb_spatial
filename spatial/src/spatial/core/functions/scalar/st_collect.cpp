@@ -58,25 +58,25 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		if (all_points) {
 			auto collection = lstate.factory.CreateMultiPoint(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection.points[i] = geometries[i].GetPoint();
+				collection[i] = geometries[i].GetPoint();
 			}
 			return lstate.factory.Serialize(result, Geometry(collection));
 		} else if (all_lines) {
 			auto collection = lstate.factory.CreateMultiLineString(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection.linestrings[i] = geometries[i].GetLineString();
+				collection[i] = geometries[i].GetLineString();
 			}
 			return lstate.factory.Serialize(result, Geometry(collection));
 		} else if (all_polygons) {
 			auto collection = lstate.factory.CreateMultiPolygon(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection.polygons[i] = geometries[i].GetPolygon();
+				collection[i] = geometries[i].GetPolygon();
 			}
 			return lstate.factory.Serialize(result, Geometry(collection));
 		} else {
 			auto collection = lstate.factory.CreateGeometryCollection(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection.geometries[i] = geometries[i];
+				collection[i] = geometries[i];
 			}
 			return lstate.factory.Serialize(result, Geometry(collection));
 		}
