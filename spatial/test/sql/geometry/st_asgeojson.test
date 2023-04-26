@@ -1,0 +1,40 @@
+require spatial
+
+# Geometry
+statement ok
+CREATE TABLE types (geom GEOMETRY);
+
+statement ok
+INSERT INTO types VALUES
+    (ST_GeomFromText('POINT EMPTY')),
+    (ST_GeomFromText('POINT(0 0)')),
+    (ST_GeomFromText('LINESTRING EMPTY')),
+    (ST_GeomFromText('LINESTRING(0 0, 1 1)')),
+    (ST_GeomFromText('POLYGON EMPTY')),
+    (ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')),
+    (ST_GeomFromText('MULTIPOINT EMPTY')),
+    (ST_GeomFromText('MULTIPOINT(0 0, 1 1)')),
+    (ST_GeomFromText('MULTILINESTRING EMPTY')),
+    (ST_GeomFromText('MULTILINESTRING((0 0, 1 1), (2 2, 3 3))')),
+    (ST_GeomFromText('MULTIPOLYGON EMPTY')),
+    (ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1))'));
+
+quer I
+SELECT ST_AsGeoJSON(geom) FROM types;
+----
+{"type":"Point","coordinates":[]}                                                                                                                    
+{"type":"Point","coordinates":[0.0,0.0]}                                                                                                           
+{"type":"LineString","coordinates":[]}                                                                                                             
+{"type":"LineString","coordinates":[[0.0,0.0],[1.0,1.0]]}                                                                                          
+{"type":"Polygon","coordinates":[]}                                                                                                                
+{"type":"Polygon","coordinates":[[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]]]}                                                             
+{"type":"MultiPoint","coordinates":[]}                                                                                                             
+{"type":"MultiPoint","coordinates":[[0.0,0.0],[1.0,1.0]]}                                                                                          
+{"type":"MultiLineString","coordinates":[]}                                                                                                        
+{"type":"MultiLineString","coordinates":[[[0.0,0.0],[1.0,1.0]],[[2.0,2.0],[3.0,3.0]]]}                                                             
+{"type":"MultiPolygon","coordinates":[]}                                                                                                           
+{"type":"MultiPolygon","coordinates":[[[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]]],[[[2.0,2.0],[3.0,2.0],[3.0,3.0],[2.0,3.0],[2.0,2.0]]]]}
+{"type":"GeometryCollection","geometries":[]}                                                                                                      
+{"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[0.0,0.0]},{"type":"LineString","coordinates":[[0.0,0.0],[1.0,1.0]]}]}
