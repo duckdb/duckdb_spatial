@@ -27,7 +27,7 @@ jobs:
         arch: ['linux_amd64', 'linux_arm64', 'linux_amd64_gcc4']
         include:
           - arch: 'linux_amd64'
-            container: 'ubuntu:16.04'
+            container: 'ubuntu:18.04'
           - arch: 'linux_arm64'
             container: 'ubuntu:18.04'
           - arch: 'linux_amd64_gcc4'
