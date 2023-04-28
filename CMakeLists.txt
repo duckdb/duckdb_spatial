@@ -19,8 +19,8 @@ add_subdirectory(spatial/src)
 include_directories(spatial/third_party/ryu/include)
 add_subdirectory(spatial/third_party/ryu)
 
-include_directories(third_party/yyjson/include)
-add_subdirectory(third_party/yyjson)
+include_directories(spatial/third_party/yyjson/include)
+add_subdirectory(spatial/third_party/yyjson)
 
 
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})

@@ -48,7 +48,7 @@ static void ToGeoJSON(const LineString &line, yyjson_mut_doc* doc, yyjson_mut_va
 
     auto coords = yyjson_mut_arr(doc);
     yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-    VerticesToGeoJSON(line.points, doc, coords);
+    VerticesToGeoJSON(line.Vertices(), doc, coords);
 }
 
 static void ToGeoJSON(const Polygon &poly, yyjson_mut_doc* doc, yyjson_mut_val* obj) {
@@ -56,9 +56,8 @@ static void ToGeoJSON(const Polygon &poly, yyjson_mut_doc* doc, yyjson_mut_val* 
 
     auto coords = yyjson_mut_arr(doc);
     yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-    for (uint32_t i = 0; i < poly.num_rings; i++) {
-        auto &ring = poly.rings[i];
-        auto ring_coords = yyjson_mut_arr(doc);
+    for (auto &ring : poly.Rings()) {
+          auto ring_coords = yyjson_mut_arr(doc);
         VerticesToGeoJSON(ring, doc, ring_coords);
         yyjson_mut_arr_append(coords, ring_coords);
     }
@@ -69,9 +68,8 @@ static void ToGeoJSON(const MultiPoint &mpoint, yyjson_mut_doc* doc, yyjson_mut_
 
     auto coords = yyjson_mut_arr(doc);
     yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-    for (uint32_t i = 0; i < mpoint.Count(); i++) {
-        auto &point = mpoint.points[i];
-        VerticesToGeoJSON(point.data, doc, coords);
+    for (auto &point : mpoint) {
+        VerticesToGeoJSON(point.Vertices(), doc, coords);
     }
 }
 
@@ -81,10 +79,9 @@ static void ToGeoJSON(const MultiLineString &mline, yyjson_mut_doc* doc, yyjson_
     auto coords = yyjson_mut_arr(doc);
     yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-    for (uint32_t i = 0; i < mline.Count(); i++) {
-        auto &line = mline.linestrings[i];
+    for (auto &line : mline) {
         auto line_coords = yyjson_mut_arr(doc);
-        VerticesToGeoJSON(line.points, doc, line_coords);
+        VerticesToGeoJSON(line.Vertices(), doc, line_coords);
         yyjson_mut_arr_append(coords, line_coords);
     }
 }
@@ -95,11 +92,9 @@ static void ToGeoJSON(const MultiPolygon &mpoly, yyjson_mut_doc* doc, yyjson_mut
     auto coords = yyjson_mut_arr(doc);
     yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-    for (uint32_t i = 0; i < mpoly.Count(); i++) {
-        auto &poly = mpoly.polygons[i];
+    for (auto &poly : mpoly) {
         auto poly_coords = yyjson_mut_arr(doc);
-        for (uint32_t j = 0; j < poly.num_rings; j++) {
-            auto &ring = poly.rings[j];
+        for (auto &ring : poly.Rings()) {
             auto ring_coords = yyjson_mut_arr(doc);
             VerticesToGeoJSON(ring, doc, ring_coords);
             yyjson_mut_arr_append(poly_coords, ring_coords);
@@ -114,8 +109,7 @@ static void ToGeoJSON(const GeometryCollection &collection, yyjson_mut_doc* doc,
     auto arr = yyjson_mut_arr(doc);
     yyjson_mut_obj_add_val(doc, obj, "geometries", arr);
 
-    for (idx_t i = 0; i < collection.num_geometries; i++) {
-        auto &geom = collection.geometries[i];
+    for (auto &geom : collection) {
         auto geom_obj = yyjson_mut_obj(doc);
         ToGeoJSON(geom, doc, geom_obj);
         yyjson_mut_arr_append(arr, geom_obj);
@@ -213,7 +207,7 @@ void CoreScalarFunctions::RegisterStAsGeoJSON(ClientContext &context) {
         
 	CreateScalarFunctionInfo info(geojson);
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.AddFunction(context, info);
 }
 
 } // namespace core
