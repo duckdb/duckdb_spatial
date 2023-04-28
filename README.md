@@ -187,8 +187,11 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 
 # How do I get it?
 
-## Pre-built binaries
-In the future we'd like to provide pre-built binaries downloadable from the DuckDB CLI like we do for our other extensions, but for now you can grab binaries for Windows (x64), Linux (x64 and ARM) and MacOS (universal) for DuckDB `v0.7.1` from the CI runs or the release page here on GitHub. 
+## Through the DuckDB CLI
+You can install the extension for DuckDB v0.7.1 through the DuckDB CLI like you would do for other first party extensions. Simply execute: ```sql INSTALL spatial; LOAD spatial```!
+
+## Development builds
+You can also grab the lastest builds directly from the CI runs or the release page here on GitHub and install manually.
 
 Once you have downloaded the extension for your platform, you need to:
 - Unzip the archive
@@ -336,6 +339,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | --------------------------- | -------- | ---------- | ------------- | ---------- | --------------- |
 | ST_Point                    | 🦆        | 🦆        |               |            |                 |
 | ST_Area                     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
+| ST_AsGeoJSON                | 🦆        | 🦆        | 🦆            | 🦆.        | 🦆              |
 | ST_AsHEXWKB                 | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_AsText                   | 🧭        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_AsWKB                    | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
