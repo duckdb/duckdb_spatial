@@ -27,7 +27,7 @@ jobs:
         arch: ['linux_amd64', 'linux_arm64', 'linux_amd64_gcc4']
         include:
           - arch: 'linux_amd64'
-            container: 'ubuntu:18.04'
+            container: 'ubuntu:16.04'
           - arch: 'linux_arm64'
             container: 'ubuntu:18.04'
           - arch: 'linux_amd64_gcc4'
@@ -82,13 +82,34 @@ jobs:
       uses: ./duckdb/.github/actions/ubuntu_16_setup
       with:
         aarch64_cross_compile: ${{ matrix.arch == 'linux_arm64' && 1 }}
-        openssl: 1
+        openssl: 0
     
-    - name: Configure OpenSSL path
+    # Openssl install dir was weirdly configured in main duckdb?
+    - name: Install OpenSSL 1.1.1
+      if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64'}}
       shell: bash
       run: |
-          export OPENSSL_ROOT_DIR=`pwd`/build/openssl/build
-          echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
+        wget https://github.com/openssl/openssl/archive/refs/tags/OpenSSL_1_1_1s.tar.gz
+        tar -xzvf OpenSSL_1_1_1s.tar.gz
+        mv openssl-OpenSSL_1_1_1s openssl-1.1.1s
+        cd openssl-1.1.1s
+        find ./ -type f -exec sed -i -e 's/\#\ define\ OPENSSL\_VERSION\_NUMBER/\#define\ OPENSSL\_VERSION\_NUMBER/g' {} \;
+        ./config --libdir=lib no-shared zlib-dynamic
+        make
+        make install
+
+    - name: Configure OpenSSL path for ARM64
+      if: ${{ matrix.arch == 'linux_arm64' }}
+      shell: bash
+      run: |
+        export OPENSSL_ROOT_DIR=`pwd`/build/openssl/build
+        echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
+
+    - name: Configure OpenSSL path for AMD64
+      if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_amd64_gcc4'}}
+      shell: bash
+      run: |
+        echo "OPENSSL_ROOT_DIR=/usr/local/ssl" >> $GITHUB_ENV
 
       # Build extension
     - name: Build extension
