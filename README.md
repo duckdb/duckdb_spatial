@@ -188,7 +188,7 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 # How do I get it?
 
 ## Through the DuckDB CLI
-You can install the extension for DuckDB v0.7.1 through the DuckDB CLI like you would do for other first party extensions. Simply execute: ```sql INSTALL spatial; LOAD spatial```!
+You can install the extension for DuckDB v0.7.1 through the DuckDB CLI like you would do for other first party extensions. Simply execute: ```INSTALL spatial; LOAD spatial```!
 
 ## Development builds
 You can also grab the lastest builds directly from the CI runs or the release page here on GitHub and install manually.
