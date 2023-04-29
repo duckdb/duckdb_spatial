@@ -135,44 +135,8 @@ void GeometryPtr::Normalize() const {
 }
 
 // Predicates
-bool GeometryPtr::Covers(const GeometryPtr &other) const {
-	return GEOSCovers_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::CoveredBy(const spatial::geos::GeometryPtr &other) const {
-	return GEOSCoveredBy_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Crosses(const GeometryPtr &other) const {
-	return GEOSCrosses_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Disjoint(const GeometryPtr &other) const {
-	return GEOSDisjoint_r(ctx, ptr, other.ptr);
-}
-
 bool GeometryPtr::Equals(const GeometryPtr &other) const {
 	return GEOSEquals_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Intersects(const GeometryPtr &other) const {
-	return GEOSIntersects_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Overlaps(const GeometryPtr &other) const {
-	return GEOSOverlaps_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Touches(const GeometryPtr &other) const {
-	return GEOSTouches_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Within(const GeometryPtr &other) const {
-	return GEOSWithin_r(ctx, ptr, other.ptr);
-}
-
-bool GeometryPtr::Contains(const GeometryPtr &other) const {
-	return GEOSContains_r(ctx, ptr, other.ptr);
 }
 
 
