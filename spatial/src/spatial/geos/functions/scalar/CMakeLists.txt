@@ -5,6 +5,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_centroid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_contains.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_containsproperly.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_convex_hull.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_covered_by.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_covers.cpp

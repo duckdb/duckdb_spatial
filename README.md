@@ -7,7 +7,8 @@
 - [What is this?](#what-is-this)
 - [Example Usage](#example-usage)
 - [How do I get it?](#how-do-i-get-it)
-  - [Pre-built binaries](#pre-built-binaries)
+  - [Through the DuckDB CLI](#through-the-duckdb-cli)
+  - [Development builds](#development-builds)
   - [Building from source](#building-from-source)
 - [Limitations and Roadmap](#limitations-and-roadmap)
 - [Internals and technical details](#internals-and-technical-details)
@@ -348,6 +349,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Centroid                 | 🧭        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Collect                  | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Contains                 | 🧭        | 🔄        | 🔄            | 🦆 or 🔄   | 🔄 (as POLYGON) |
+| ST_ContainsProperly         | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_ConvexHull               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_CoveredBy                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Covers                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |

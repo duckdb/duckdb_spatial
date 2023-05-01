@@ -13,6 +13,7 @@ public:
 		RegisterStBuffer(context);
 		RegisterStCentroid(context);
 		RegisterStContains(context);
+		RegisterStContainsProperly(context);
 		RegisterStConvexHull(context);
 		RegisterStCoveredBy(context);
 		RegisterStCovers(context);
@@ -44,6 +45,7 @@ private:
 	static void RegisterStBuffer(ClientContext &context);
 	static void RegisterStCentroid(ClientContext &context);
 	static void RegisterStContains(ClientContext &context);
+	static void RegisterStContainsProperly(ClientContext &context);
 	static void RegisterStConvexHull(ClientContext &context);
 	static void RegisterStCoveredBy(ClientContext &context);
 	static void RegisterStCovers(ClientContext &context);
