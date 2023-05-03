@@ -10,7 +10,9 @@ namespace core {
 
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
-	D_ASSERT(cursor + sizeof(uint32_t) <= length);
+	if(cursor + sizeof(uint32_t) > length) {
+		throw SerializationException("WKBReader: ReadInt: not enough data");
+	}
 	// Read uint32_t in little endian
 	uint32_t result = 0;
 	result |= (uint32_t)data[cursor + 0] << 0 & 0x000000FF;
@@ -23,7 +25,9 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
 
 template <>
 double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
-	D_ASSERT(cursor + sizeof(double) <= length);
+	if (cursor + sizeof(double) > length) {
+		throw SerializationException("WKBReader: ReadDouble: not enough data");
+	}
 	// Read double in little endian
 	uint64_t result = 0;
 	result |= (uint64_t)data[cursor + 0] << 0 & 0x00000000000000FF;
@@ -40,7 +44,9 @@ double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
 
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
-	D_ASSERT(cursor + sizeof(uint32_t) <= length);
+	if(cursor + sizeof(uint32_t) > length) {
+		throw SerializationException("WKBReader: ReadInt: not enough data");
+	}
 	// Read uint32_t in big endian
 	uint32_t result = 0;
 	result |= (uint32_t)data[cursor + 0] << 24 & 0xFF000000;
@@ -53,7 +59,9 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
 
 template <>
 double WKBReader::ReadDouble<WKBByteOrder::XDR>() {
-	D_ASSERT(cursor + sizeof(double) <= length);
+	if(cursor + sizeof(double) > length) {
+		throw SerializationException("WKBReader: ReadDouble: not enough data");
+	}
 	// Read double in big endian
 	uint64_t result = 0;
 	result |= (uint64_t)data[cursor + 0] << 56 & 0xFF00000000000000;
@@ -187,7 +195,7 @@ Geometry WKBReader::ReadGeometryImpl() {
 	case WKBGeometryType::GEOMETRYCOLLECTION:
 		return Geometry(ReadGeometryCollectionImpl<ORDER>());
 	default:
-		throw NotImplementedException("Geometry type not implemented");
+		throw NotImplementedException("Geometry type not supported");
 	}
 }
 

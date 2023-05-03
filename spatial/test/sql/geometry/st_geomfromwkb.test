@@ -1,0 +1,60 @@
+# Test wkb blob roundtrip for geometry types
+require spatial
+
+statement ok
+CREATE TABLE types (geom GEOMETRY);
+
+statement ok
+INSERT INTO types VALUES
+    (ST_GeomFromText('POINT EMPTY')),
+    (ST_GeomFromText('POINT(0 0)')),
+    (ST_GeomFromText('LINESTRING EMPTY')),
+    (ST_GeomFromText('LINESTRING(0 0, 1 1)')),
+    (ST_GeomFromText('POLYGON EMPTY')),
+    (ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')),
+    (ST_GeomFromText('MULTIPOINT EMPTY')),
+    (ST_GeomFromText('MULTIPOINT(0 0, 1 1)')),
+    (ST_GeomFromText('MULTILINESTRING EMPTY')),
+    (ST_GeomFromText('MULTILINESTRING((0 0, 1 1), (2 2, 3 3))')),
+    (ST_GeomFromText('MULTIPOLYGON EMPTY')),
+    (ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1))'));
+
+# Convert to WKB_BLOB and back
+query I
+SELECT ST_AsText(ST_GeomFromWKB(ST_AsWKB(geom))) FROM types
+----
+POINT EMPTY
+POINT (0 0)
+LINESTRING EMPTY
+LINESTRING (0 0, 1 1)
+POLYGON EMPTY
+POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))
+MULTIPOINT EMPTY
+MULTIPOINT (0 0, 1 1)
+MULTILINESTRING EMPTY
+MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))
+MULTIPOLYGON EMPTY
+MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))
+GEOMETRYCOLLECTION EMPTY
+GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))
+
+# Convert to BLOB and back
+query I
+SELECT ST_AsText(ST_GeomFromWKB(ST_AsWKB(geom)::BLOB)) FROM types
+----
+POINT EMPTY
+POINT (0 0)
+LINESTRING EMPTY
+LINESTRING (0 0, 1 1)
+POLYGON EMPTY
+POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))
+MULTIPOINT EMPTY
+MULTIPOINT (0 0, 1 1)
+MULTILINESTRING EMPTY
+MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))
+MULTIPOLYGON EMPTY
+MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))
+GEOMETRYCOLLECTION EMPTY
+GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))
