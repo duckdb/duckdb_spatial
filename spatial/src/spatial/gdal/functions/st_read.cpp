@@ -88,11 +88,11 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 	return StringUtil::Join(filters, " AND ");
 }
 
-static const char* LAYER_CREATION_OPTIONS[2] = { "INCLUDE_FID=NO", nullptr };
 
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
 	bool sequential_layer_scan;
+	vector<string> layer_creation_options;
 	unique_ptr<SpatialFilter> spatial_filter;
 	GDALDatasetUniquePtr dataset;
 	unordered_map<idx_t, unique_ptr<ArrowConvertData>> arrow_convert_data;
@@ -174,6 +174,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	// Now we can bind the additonal options
 	auto result = make_unique<GdalScanFunctionData>();
 	result->sequential_layer_scan = false;
+	bool max_batch_size_set = false;
 	for (auto &kv : input.named_parameters) {
 		auto loption = StringUtil::Lower(kv.first);
 		if (loption == "layer") {
@@ -239,6 +240,15 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		if (loption == "sequential_layer_scan") {
 			result->sequential_layer_scan = BooleanValue::Get(kv.second);
 		}
+
+		if (loption == "max_batch_size") {
+			auto max_batch_size = IntegerValue::Get(kv.second);
+			if (max_batch_size <= 0) {
+				throw BinderException("'max_batch_size' parameter must be positive");
+			}
+			result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", max_batch_size));
+			max_batch_size_set = true;
+		}
 	}
 
 	// set default max_threads
@@ -246,13 +256,28 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		result->max_threads = context.db->NumberOfThreads();
 	}
 
+	// Defaults
+	result->layer_creation_options.push_back("INCLUDE_FID=NO");
+	if(max_batch_size_set == false) {
+		// Set default max batch size to standard vector size
+		result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", STANDARD_VECTOR_SIZE));
+	}
+
+	// set layer options
+	char** lco = nullptr;
+	for (auto &option : result->layer_creation_options) {
+		lco = CSLAddString(lco, option.c_str());
+	}
+
 	// Get the schema for the selected layer
 	auto layer = dataset->GetLayer(result->layer_idx);
 	struct ArrowArrayStream stream;
-	if (!layer->GetArrowStream(&stream, LAYER_CREATION_OPTIONS)) {
+	if (!layer->GetArrowStream(&stream, lco)) {
 		// layer is owned by GDAL, we do not need to destory it
+		CSLDestroy(lco);
 		throw IOException("Could not get arrow stream from layer");
 	}
+	CSLDestroy(lco);
 
 	struct ArrowSchema schema;
 	if (stream.get_schema(&stream, &schema) != 0) {
@@ -374,9 +399,16 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	global_state->stream = make_unique<ArrowArrayStreamWrapper>();
 
 
-	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, LAYER_CREATION_OPTIONS)) {
+	// set layer options
+	char** lco = nullptr;
+	for (auto &option : data.layer_creation_options) {
+		lco = CSLAddString(lco, option.c_str());
+	}
+	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, lco)) {
+		CSLDestroy(lco);
 		throw IOException("Could not get arrow stream");
 	}
+	CSLDestroy(lco);
 
 	global_state->max_threads = GdalTableFunction::MaxThreads(context, input.bind_data);
 
@@ -446,6 +478,7 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["spatial_filter"] = core::GeoTypes::WKB_BLOB();
 	scan.named_parameters["layer"] = LogicalType::VARCHAR;
 	scan.named_parameters["sequential_layer_scan"] = LogicalType::BOOLEAN;
+	scan.named_parameters["max_batch_size"] = LogicalType::INTEGER;
 	set.AddFunction(scan);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
