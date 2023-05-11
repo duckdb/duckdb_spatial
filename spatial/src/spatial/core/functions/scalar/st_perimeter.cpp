@@ -55,6 +55,22 @@ static void Polygon2DPerimeterFunction(DataChunk &args, ExpressionState &state, 
 }
 
 //------------------------------------------------------------------------------
+// BOX_2D
+//------------------------------------------------------------------------------
+static void Box2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
+	using PERIMETER_TYPE = PrimitiveType<double>;
+
+	GenericExecutor::ExecuteUnary<BOX_TYPE, PERIMETER_TYPE>(args.data[0], result, args.size(), [&](BOX_TYPE &box) {
+		auto minx = box.a_val;
+		auto miny = box.b_val;
+		auto maxx = box.c_val;
+		auto maxy = box.d_val;
+        return 2 * (maxx - minx + maxy - miny);
+	});
+}
+
+//------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
 static double PolygonPerimeter(const Polygon &poly) {
@@ -122,6 +138,7 @@ void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
 
     // Perimiter
 	ScalarFunctionSet set("st_perimeter");
+    set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DPerimeterFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DPerimeterFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
