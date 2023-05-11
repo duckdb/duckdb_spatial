@@ -6,23 +6,17 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
-#include "spatial/geographiclib/functions.hpp"
-#include "spatial/geographiclib/module.hpp"
+#include "spatial/core/functions/scalar.hpp"
 
-#include "spatial/geographiclib/functions.hpp"
-#include "spatial/geographiclib/module.hpp"
-
-#include "GeographicLib/Geodesic.hpp"
-#include "GeographicLib/PolygonArea.hpp"
 
 namespace spatial {
 
-namespace geographiclib {
+namespace core {
 
 //------------------------------------------------------------------------------
 // POLYGON_2D
 //------------------------------------------------------------------------------
-static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Polygon2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 
 	auto &input = args.data[0];
@@ -35,9 +29,6 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 	auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
-    const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
-    auto polygon_area = GeographicLib::PolygonArea(geod, false);
-
 	UnaryExecutor::Execute<list_entry_t, double>(input, result, count, [&](list_entry_t polygon) {
 		auto polygon_offset = polygon.offset;
 		auto polygon_length = polygon.length;
@@ -47,16 +38,13 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 			auto ring_offset = ring.offset;
 			auto ring_length = ring.length;
 
-            polygon_area.Clear();
-			// Note: the last point is the same as the first point, but geographiclib doesn't know that,
-			// so skip it.
             for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
-                polygon_area.AddPoint(x_data[coord_idx], y_data[coord_idx]);
+                auto x1 = x_data[coord_idx];
+                auto y1 = y_data[coord_idx];
+                auto x2 = x_data[coord_idx + 1];
+                auto y2 = y_data[coord_idx + 1];
+                perimeter += std::sqrt(std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2));
             }
-            double _ring_area;
-            double ring_perimeter;
-            polygon_area.Compute(false, true, ring_perimeter, _ring_area);
-			perimeter += ring_perimeter;
 		}
 		return perimeter;
 	});
@@ -69,43 +57,31 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static double PolygonPerimeter(const core::Polygon &poly, GeographicLib::PolygonArea &comp) {
-	
-	double total_perimeter = 0;	
+static double PolygonPerimeter(const Polygon &poly) {
+	double perimeter = 0;	
 	for(uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
-		comp.Clear();
 		auto &ring = poly.rings[ring_idx];
-		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
 		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
-			auto &coord = ring[coord_idx];
-			comp.AddPoint(coord.x, coord.y);
-		}
-		double _ring_area;
-		double perimeter;
-		comp.Compute(false, true, perimeter, _ring_area);
-		if (ring_idx == 0) {
-			// Add outer ring
-			total_perimeter = perimeter;
-		} else {
-			// Subtract holes
-			total_perimeter -= perimeter;
+			auto &p1 = ring[coord_idx];
+            auto &p2 = ring[coord_idx + 1];
+            perimeter += std::sqrt(std::pow(p1.x - p2.x, 2) + std::pow(p1.y - p2.y, 2));
 		}
 	}
-	return total_perimeter;
+	return perimeter;
 }
 
-static double GeometryPerimeter(const core::Geometry &geom, GeographicLib::PolygonArea &comp) {
+static double GeometryPerimeter(const Geometry &geom) {
 	switch (geom.Type()) {
 		case core::GeometryType::POLYGON: {
 			auto &poly = geom.GetPolygon();
-			return PolygonPerimeter(poly, comp);
+			return PolygonPerimeter(poly);
 		}
 		case core::GeometryType::MULTIPOLYGON: {
 			auto &mpoly = geom.GetMultiPolygon();
 			double total_perimeter = 0;
 			for (uint32_t poly_idx = 0; poly_idx < mpoly.Count(); poly_idx++) {
 				auto &poly = mpoly.polygons[poly_idx];
-				total_perimeter += PolygonPerimeter(poly, comp);
+				total_perimeter += PolygonPerimeter(poly);
 			}
 			return total_perimeter;
 		}
@@ -114,7 +90,7 @@ static double GeometryPerimeter(const core::Geometry &geom, GeographicLib::Polyg
 			double total_perimeter = 0;
 			for (uint32_t geom_idx = 0; geom_idx < coll.Count(); geom_idx++) {
 				auto &subgeom = coll.geometries[geom_idx];
-				total_perimeter += GeometryPerimeter(subgeom, comp);
+				total_perimeter += GeometryPerimeter(subgeom);
 			}
 			return total_perimeter;
 		}
@@ -124,18 +100,15 @@ static double GeometryPerimeter(const core::Geometry &geom, GeographicLib::Polyg
 	}
 }
 
-static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = core::GeometryFunctionLocalState::ResetAndGet(state);
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
-	auto comp = GeographicLib::PolygonArea(geod, false);
-
 	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
-		return GeometryPerimeter(geometry, comp);
+		return GeometryPerimeter(geometry);
 	});
 
 	if (count == 1) {
@@ -144,13 +117,13 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 }
 
 
-void GeographicLibFunctions::RegisterPerimeter(ClientContext &context) {
+void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
     auto &catalog = Catalog::GetSystemCatalog(context);
 
     // Perimiter
-	ScalarFunctionSet set("st_perimeter_spheroid");
-	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, GeodesicPolygon2DFunction));
-	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction, nullptr, nullptr, nullptr, spatial::core::GeometryFunctionLocalState::Init));
+	ScalarFunctionSet set("st_perimeter");
+	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DPerimeterFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
