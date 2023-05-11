@@ -11,6 +11,7 @@
 #include "spatial/gdal/module.hpp"
 #include "spatial/geos/module.hpp"
 #include "spatial/proj/module.hpp"
+#include "spatial/geographiclib/module.hpp"
 
 namespace duckdb {
 
@@ -24,6 +25,7 @@ static void LoadInternal(DatabaseInstance &instance) {
 	spatial::proj::ProjModule::Register(context);
 	spatial::gdal::GdalModule::Register(context);
 	spatial::geos::GeosModule::Register(context);
+	spatial::geographiclib::GeographicLibModule::Register(context);
 
 	con.Commit();
 }

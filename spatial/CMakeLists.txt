@@ -65,6 +65,7 @@ find_package(SQLite3 REQUIRED)
 find_package(GEOS REQUIRED)
 find_package(GDAL REQUIRED)
 find_package(EXPAT REQUIRED)
+find_package(GeographicLib REQUIRED)
 
 # Important: The link order matters, its the reverse order of dependency
 target_link_libraries(
@@ -77,6 +78,10 @@ target_link_libraries(
   SQLite::SQLite3 
   ZLIB::ZLIB
   ${SQLITE3_MEMVFS})
+
+# Geographiclib is special
+include_directories(${GeographicLib_INCLUDE_DIRS})
+target_link_libraries(${EXTENSION_NAME} PUBLIC GeographicLib::GeographicLib)
 
 if(SPATIAL_USE_NETWORK)
   find_package(CURL REQUIRED)
