@@ -3,7 +3,10 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/functions/common.hpp"
+
 #include "spatial/geographiclib/functions.hpp"
 #include "spatial/geographiclib/module.hpp"
 
@@ -71,12 +74,91 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 	}
 }
 
+//------------------------------------------------------------------------------
+// GEOMETRY 
+//------------------------------------------------------------------------------
+static double PolygonArea(const core::Polygon &poly, GeographicLib::PolygonArea &comp) {
+	
+	double total_area = 0;	
+	for(uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
+		comp.Clear();
+		auto &ring = poly.rings[ring_idx];
+		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
+		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
+			auto &coord = ring[coord_idx];
+			comp.AddPoint(coord.x, coord.y);
+		}
+		double ring_area;
+		double _perimeter;
+		comp.Compute(false, true, _perimeter, ring_area);
+		if (ring_idx == 0) {
+			// Add outer ring
+			total_area = ring_area;
+		} else {
+			// Subtract holes
+			total_area -= ring_area;
+		}
+	}
+	return total_area;
+}
+
+static double GeometryArea(const core::Geometry &geom, GeographicLib::PolygonArea &comp) {
+	switch (geom.Type()) {
+		case core::GeometryType::POLYGON: {
+			auto &poly = geom.GetPolygon();
+			return PolygonArea(poly, comp);
+		}
+		case core::GeometryType::MULTIPOLYGON: {
+			auto &mpoly = geom.GetMultiPolygon();
+			double total_area = 0;
+			for (uint32_t poly_idx = 0; poly_idx < mpoly.Count(); poly_idx++) {
+				auto &poly = mpoly.polygons[poly_idx];
+				total_area += PolygonArea(poly, comp);
+			}
+			return total_area;
+		}
+		case core::GeometryType::GEOMETRYCOLLECTION: {
+			auto &coll = geom.GetGeometryCollection();
+			double total_area = 0;
+			for (uint32_t geom_idx = 0; geom_idx < coll.Count(); geom_idx++) {
+				auto &subgeom = coll.geometries[geom_idx];
+				total_area += GeometryArea(subgeom, comp);
+			}
+			return total_area;
+		}
+		default: {
+			return 0.0;
+		}
+	}
+}
+
+static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &lstate = core::GeometryFunctionLocalState::ResetAndGet(state);
+
+	auto &input = args.data[0];
+	auto count = args.size();
+
+	const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
+	auto comp = GeographicLib::PolygonArea(geod, false);
+
+	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
+		auto geometry = lstate.factory.Deserialize(input);
+		return GeometryArea(geometry, comp);
+	});
+
+	if (count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
+}
+
 void GeographicLibFunctions::RegisterArea(ClientContext &context) {
     auto &catalog = Catalog::GetSystemCatalog(context);
 
     // Area
-	ScalarFunctionSet set("st_spheroid_area");
+	ScalarFunctionSet set("st_area_spheroid");
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, GeodesicPolygon2DFunction));
+	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction, nullptr, nullptr, nullptr, spatial::core::GeometryFunctionLocalState::Init));
+
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, &info);
