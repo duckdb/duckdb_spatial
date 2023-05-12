@@ -217,7 +217,8 @@ struct ProjCRSDelete {
 		proj_destroy(crs);
 	}
 };
-using ProjCRS = unique_ptr<PJ, ProjCRSDelete>;
+// TODO: duckdbs safe unique_ptr does not support custom deleters yet
+using ProjCRS = std::unique_ptr<PJ, ProjCRSDelete>;
 
 static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();

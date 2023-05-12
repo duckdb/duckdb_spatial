@@ -47,8 +47,8 @@ struct GeosDeleter<const GEOSPreparedGeometry> {
 };
 
 template <class T>
-unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
-	return unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
+std::unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
+	return std::unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
 }
 
 struct GeometryPtr {
@@ -88,8 +88,8 @@ public:
 		return ptr;
 	}
 
-	unique_ptr<const GEOSPreparedGeometry, GeosDeleter<const GEOSPreparedGeometry>> Prepare() {
-		return make_unique_geos(ctx, GEOSPrepare_r(ctx, ptr));
+	std::unique_ptr<const GEOSPreparedGeometry, GeosDeleter<const GEOSPreparedGeometry>> Prepare() {
+		return make_uniq_geos(ctx, GEOSPrepare_r(ctx, ptr));
 	}
 
 	// Accessors

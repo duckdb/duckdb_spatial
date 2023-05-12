@@ -135,7 +135,7 @@ ExternalProject_Add(
 # GeographicLib
 ExternalProject_Add(
     GEOGRAPHICLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/GeographicLib-2.2.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/GeographicLib-2.2.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}

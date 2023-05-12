@@ -82,7 +82,7 @@ static double PolygonArea(const core::Polygon &poly, GeographicLib::PolygonArea 
 	double total_area = 0;	
 	for(uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
 		comp.Clear();
-		auto &ring = poly.rings[ring_idx];
+		auto &ring = poly.Ring(ring_idx);
 		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
 		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
 			auto &coord = ring[coord_idx];
@@ -111,8 +111,7 @@ static double GeometryArea(const core::Geometry &geom, GeographicLib::PolygonAre
 		case core::GeometryType::MULTIPOLYGON: {
 			auto &mpoly = geom.GetMultiPolygon();
 			double total_area = 0;
-			for (uint32_t poly_idx = 0; poly_idx < mpoly.Count(); poly_idx++) {
-				auto &poly = mpoly.polygons[poly_idx];
+			for (auto &poly : mpoly) {
 				total_area += PolygonArea(poly, comp);
 			}
 			return total_area;
@@ -120,9 +119,8 @@ static double GeometryArea(const core::Geometry &geom, GeographicLib::PolygonAre
 		case core::GeometryType::GEOMETRYCOLLECTION: {
 			auto &coll = geom.GetGeometryCollection();
 			double total_area = 0;
-			for (uint32_t geom_idx = 0; geom_idx < coll.Count(); geom_idx++) {
-				auto &subgeom = coll.geometries[geom_idx];
-				total_area += GeometryArea(subgeom, comp);
+			for (auto &item : coll) {
+				total_area += GeometryArea(item, comp);
 			}
 			return total_area;
 		}
@@ -161,7 +159,7 @@ void GeographicLibFunctions::RegisterArea(ClientContext &context) {
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace geographiclib

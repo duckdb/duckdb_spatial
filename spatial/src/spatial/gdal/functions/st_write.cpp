@@ -410,13 +410,6 @@ static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunc
 	global_state.dataset->FlushCache();
 }
 
-//===--------------------------------------------------------------------===//
-// Parallel
-//===--------------------------------------------------------------------===//
-bool IsParallel(ClientContext &context, FunctionData &bind_data) {
-	return false; // always in order?
-}
-
 void GdalCopyFunction::Register(ClientContext &context) {
 	// register the copy function
 	CopyFunction info("GDAL");
@@ -424,14 +417,7 @@ void GdalCopyFunction::Register(ClientContext &context) {
 	info.copy_to_initialize_local = InitLocal;
 	info.copy_to_initialize_global = InitGlobal;
 	info.copy_to_sink = Sink;
-	// info.copy_to_combine = WriteCSVCombine;
 	info.copy_to_finalize = Finalize;
-	info.parallel = IsParallel;
-
-	// info.copy_from_bind = ReadCSVBind;
-	// info.copy_from_function = ReadCSVTableFunction::GetFunction();
-
-	// info.extension = "csv";
 
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateCopyFunctionInfo create(std::move(info));
