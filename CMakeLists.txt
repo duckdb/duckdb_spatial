@@ -13,11 +13,11 @@ project(${TARGET_NAME})
 # Enable network functionality (OpenSSL and GDAL's CURL based fs/drivers)
 option(SPATIAL_USE_NETWORK "Enable network functionality" ON)
 
-include_directories(include)
-add_subdirectory(src)
+include_directories(spatial/include)
+add_subdirectory(spatial/src)
 
-include_directories(third_party/ryu/include)
-add_subdirectory(third_party/ryu)
+include_directories(spatial/third_party/ryu/include)
+add_subdirectory(spatial/third_party/ryu)
 
 include_directories(third_party/yyjson/include)
 add_subdirectory(third_party/yyjson)
@@ -36,14 +36,14 @@ execute_process(
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DOSX_BUILD_UNIVERSAL=${OSX_BUILD_UNIVERSAL}
     -DSPATIAL_USE_NETWORK=${SPATIAL_USE_NETWORK} -S
-    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies -B ${CMAKE_BINARY_DIR}/dependencies
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps -B ${CMAKE_BINARY_DIR}/deps
   RESULT_VARIABLE DEPENDENCIES_GENERATE_RESULT)
 if(NOT DEPENDENCIES_GENERATE_RESULT EQUAL 0)
   message(FATAL_ERROR "Could not generate dependencies project")
 endif()
 execute_process(
   # Build project
-  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/dependencies --config
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/deps --config
           ${CMAKE_BUILD_TYPE} RESULT_VARIABLE DEPENDENCIES_BUILD_RESULT)
 if(NOT DEPENDENCIES_BUILD_RESULT EQUAL 0)
   message(FATAL_ERROR "Could not build dependencies project")
@@ -51,7 +51,7 @@ endif()
 
 # Add dependencies
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}
-                      ${CMAKE_BINARY_DIR}/dependencies/local)
+                      ${CMAKE_BINARY_DIR}/deps/local)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} MD.lib
 )# annoyingly for expat on windows
 set(ZLIB_USE_STATIC_LIBS ON)

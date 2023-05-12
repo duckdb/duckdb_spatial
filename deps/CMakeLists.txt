@@ -5,7 +5,7 @@ project(dependecies-build)
 # Install and build dependencies locally
 include(ExternalProject)
 set(LOCAL_INSTALL_DIR ${CMAKE_BINARY_DIR}/local)
-set_directory_properties(PROPERTIES EP_BASE ${CMAKE_BINARY_DIR}/base)
+set_directory_properties(PROPERTIES EP_BASE ${CMAKE_BINARY_DIR}/projects)
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
@@ -21,7 +21,7 @@ string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_PACKED "${CMAKE_OSX_AR
 # ZLIB
 ExternalProject_Add(
     ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib1213.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/zlib1213.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -36,7 +36,7 @@ ExternalProject_Add(
 ExternalProject_Add(
     SQLITE3
     DEPENDS ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sqlite3
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -50,7 +50,7 @@ if(SPATIAL_USE_NETWORK)
 ExternalProject_Add(
     CURL
     DEPENDS ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/curl-7.87.0.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/curl-7.87.0.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -74,7 +74,7 @@ find_program(EXE_SQLITE3 sqlite3)
 ExternalProject_Add(
     PROJ
     DEPENDS SQLITE3 ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/proj-9.1.1.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/proj-9.1.1.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS
     # CMake options
@@ -95,7 +95,7 @@ ExternalProject_Add(
 # EXPAT
 ExternalProject_Add(
     EXPAT
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/expat-2.5.0.tar.bz2
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/expat-2.5.0.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     # CMake options
@@ -116,7 +116,7 @@ ExternalProject_Add(
 # GEOS
 ExternalProject_Add(
     GEOS
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/geos-3.11.2.tar.bz2
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.11.2.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     # CMake options
@@ -151,7 +151,7 @@ ExternalProject_Add(
 ExternalProject_Add(
     GDAL
     DEPENDS PROJ GEOS EXPAT SQLITE3 ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gdal363.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal363.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     # CMake options
