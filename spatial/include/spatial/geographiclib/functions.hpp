@@ -10,6 +10,7 @@ struct GeographicLibFunctions {
 public:
 	static void Register(ClientContext &context) {
         RegisterDistance(context);
+        RegisterDistanceWithin(context);
         RegisterLength(context);
         RegisterArea(context);
         RegisterPerimeter(context);
