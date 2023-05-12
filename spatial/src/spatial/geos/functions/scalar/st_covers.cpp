@@ -28,13 +28,14 @@ void GEOSScalarFunctions::RegisterStCovers(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_Covers");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, CoversFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, CoversFunction,
+	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

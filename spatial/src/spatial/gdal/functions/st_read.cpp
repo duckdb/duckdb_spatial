@@ -127,7 +127,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_open_options.push_back(StringValue::Get(param).c_str());
 		}
 	}
-	if(!gdal_open_options.empty()) {
+	if (!gdal_open_options.empty()) {
 		gdal_open_options.push_back(nullptr);
 	}
 
@@ -138,7 +138,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_allowed_drivers.push_back(StringValue::Get(param).c_str());
 		}
 	}
-	if(!gdal_allowed_drivers.empty()) {
+	if (!gdal_allowed_drivers.empty()) {
 		gdal_allowed_drivers.push_back(nullptr);
 	}
 
@@ -149,7 +149,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_sibling_files.push_back(StringValue::Get(param).c_str());
 		}
 	}
-	if(!gdal_sibling_files.empty()) {
+	if (!gdal_sibling_files.empty()) {
 		gdal_sibling_files.push_back(nullptr);
 	}
 
@@ -355,17 +355,17 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	// Get selected layer
 	OGRLayer *layer;
-	if(data.sequential_layer_scan) {
+	if (data.sequential_layer_scan) {
 		// Get the layer from the dataset by scanning through the layers
-		for(idx_t i = 0; i < data.dataset->GetLayerCount(); i++) {
+		for (idx_t i = 0; i < data.dataset->GetLayerCount(); i++) {
 			layer = data.dataset->GetLayer(i);
-			if(i == data.layer_idx) {
+			if (i == data.layer_idx) {
 				// desired layer found
 				break;
 			}
 			// else scan through and empty the layer
 			OGRFeature *feature;
-			while( (feature = layer->GetNextFeature()) != nullptr) {
+			while ((feature = layer->GetNextFeature()) != nullptr) {
 				OGRFeature::DestroyFeature(feature);
 			}
 		}

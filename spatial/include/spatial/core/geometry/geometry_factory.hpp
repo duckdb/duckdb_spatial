@@ -35,7 +35,6 @@ public:
 	string_t Serialize(Vector &result, const Geometry &geometry);
 	Geometry Deserialize(const string_t &data);
 
-
 	// Deep Copy
 	VertexVector CopyVertexVector(const VertexVector &vector);
 	Point CopyPoint(const Point &point);
@@ -46,6 +45,7 @@ public:
 	MultiPolygon CopyMultiPolygon(const MultiPolygon &multipolygon);
 	GeometryCollection CopyGeometryCollection(const GeometryCollection &collection);
 	Geometry CopyGeometry(const Geometry &geometry);
+
 private:
 	// Serialize
 	void SerializePoint(data_ptr_t &ptr, const Point &point);

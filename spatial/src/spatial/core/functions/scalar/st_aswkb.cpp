@@ -39,7 +39,8 @@ void CoreScalarFunctions::RegisterStAsWKB(ClientContext &context) {
 
 	ScalarFunctionSet as_wkb_function_set("ST_AsWKB");
 
-	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction,
+	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_wkb_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

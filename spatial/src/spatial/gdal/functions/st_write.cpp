@@ -36,9 +36,7 @@ struct BindData : public TableFunctionData {
 
 struct LocalState : public LocalFunctionData {
 	core::GeometryFactory factory;
-	explicit LocalState(ClientContext &context)
-	: factory(BufferAllocator::Get(context)) {
-		
+	explicit LocalState(ClientContext &context) : factory(BufferAllocator::Get(context)) {
 	}
 };
 
@@ -126,7 +124,8 @@ static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, Functi
 // Init Global
 //===--------------------------------------------------------------------===//
 static bool IsGeometryType(const LogicalType &type) {
-	return type == core::GeoTypes::WKB_BLOB() || type == core::GeoTypes::POINT_2D() || type == core::GeoTypes::GEOMETRY();
+	return type == core::GeoTypes::WKB_BLOB() || type == core::GeoTypes::POINT_2D() ||
+	       type == core::GeoTypes::GEOMETRY();
 }
 static unique_ptr<OGRGeomFieldDefn> OGRGeometryFieldTypeFromLogicalType(const string &name, const LogicalType &type) {
 	// TODO: Support more geometry types
@@ -134,7 +133,7 @@ static unique_ptr<OGRGeomFieldDefn> OGRGeometryFieldTypeFromLogicalType(const st
 		return make_uniq<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
 	} else if (type == core::GeoTypes::POINT_2D()) {
 		return make_uniq<OGRGeomFieldDefn>(name.c_str(), wkbPoint);
-	} else if(type == core::GeoTypes::GEOMETRY()) {
+	} else if (type == core::GeoTypes::GEOMETRY()) {
 		return make_uniq<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
 	} else {
 		throw NotImplementedException("Unsupported geometry type");
@@ -284,7 +283,8 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 // Sink
 //===--------------------------------------------------------------------===//
 
-static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value, core::GeometryFactory &factory) {
+static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value,
+                                                 core::GeometryFactory &factory) {
 	if (type == core::GeoTypes::WKB_BLOB()) {
 		auto str = value.GetValueUnsafe<string_t>();
 
@@ -303,15 +303,14 @@ static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const 
 
 		uint32_t size;
 		auto wkb = factory.ToWKB(geom, &size);
-		
+
 		OGRGeometry *ptr;
 		auto ok = OGRGeometryFactory::createFromWkb(wkb, nullptr, &ptr, size, wkbVariantIso);
 		if (ok != OGRERR_NONE) {
 			throw IOException("Could not parse WKB");
 		}
 		return OGRGeometryUniquePtr(ptr);
-	}
-	else if (type == core::GeoTypes::POINT_2D()) {
+	} else if (type == core::GeoTypes::POINT_2D()) {
 		auto children = StructValue::GetChildren(value);
 		auto x = children[0].GetValue<double>();
 		auto y = children[1].GetValue<double>();

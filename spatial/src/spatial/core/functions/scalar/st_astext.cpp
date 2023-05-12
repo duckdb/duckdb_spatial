@@ -111,7 +111,8 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 
 	ScalarFunctionSet as_text_function_set("ST_AsText");
 
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::VARCHAR, Point2DAsTextFunction));
+	as_text_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::VARCHAR, Point2DAsTextFunction));
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::VARCHAR, LineString2DAsTextFunction));
 	as_text_function_set.AddFunction(

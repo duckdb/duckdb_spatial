@@ -143,13 +143,12 @@ void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	ScalarFunctionSet distance_function_set("ST_Distance");
 
-	distance_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointToPointDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE,
-	                                                 PointToLineStringDistanceFunction));
-	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE,
-	                                                 LineStringToPointDistanceFunction));
-
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE,
+	                                                 PointToPointDistanceFunction));
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::LINESTRING_2D()},
+	                                                 LogicalType::DOUBLE, PointToLineStringDistanceFunction));
+	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), GeoTypes::POINT_2D()},
+	                                                 LogicalType::DOUBLE, LineStringToPointDistanceFunction));
 
 	CreateScalarFunctionInfo info(std::move(distance_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

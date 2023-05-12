@@ -22,6 +22,7 @@ enum class GeometryType : uint8_t {
 
 struct Point {
 	friend GeometryFactory;
+
 public:
 	VertexVector data;
 	explicit Point(VertexVector data) : data(data) {
@@ -117,7 +118,7 @@ struct GeometryCollection {
 	bool IsEmpty() const;
 	uint32_t Count() const;
 
-	template<class AGG, class RESULT_TYPE>
+	template <class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
 };
 
@@ -232,12 +233,12 @@ public:
 	string ToString() const;
 };
 
-template<class AGG, class RESULT_TYPE>
+template <class AGG, class RESULT_TYPE>
 RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
 	RESULT_TYPE result = zero;
 	for (idx_t i = 0; i < num_geometries; i++) {
 		auto &geometry = geometries[i];
-		if(geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
+		if (geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
 			result = geometry.GetGeometryCollection().Aggregate(agg, result);
 		} else {
 			result = agg(geometry, result);

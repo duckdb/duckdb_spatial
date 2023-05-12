@@ -7,9 +7,8 @@ namespace spatial {
 namespace geos {
 
 void GeosAggregateFunctions::Register(ClientContext &context) {
-
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

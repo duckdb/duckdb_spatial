@@ -62,15 +62,17 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 		case GeometryType::MULTILINESTRING:
 			return geometry.GetMultiLineString().Length();
 		case GeometryType::GEOMETRYCOLLECTION:
-			return geometry.GetGeometryCollection().Aggregate([](Geometry &geom, double state){
-				if(geom.Type() == GeometryType::LINESTRING) {
-					return state + geom.GetLineString().Length();
-				} else if(geom.Type() == GeometryType::MULTILINESTRING) {
-					return state + geom.GetMultiLineString().Length();
-				} else {
-					return state;
-				}
-			}, 0.0);
+			return geometry.GetGeometryCollection().Aggregate(
+			    [](Geometry &geom, double state) {
+				    if (geom.Type() == GeometryType::LINESTRING) {
+					    return state + geom.GetLineString().Length();
+				    } else if (geom.Type() == GeometryType::MULTILINESTRING) {
+					    return state + geom.GetMultiLineString().Length();
+				    } else {
+					    return state;
+				    }
+			    },
+			    0.0);
 		default:
 			return 0.0;
 		}
@@ -89,8 +91,10 @@ void CoreScalarFunctions::RegisterStLength(ClientContext &context) {
 
 	ScalarFunctionSet length_function_set("ST_Length");
 
-	length_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineLengthFunction));
-	length_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryLengthFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	length_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineLengthFunction));
+	length_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryLengthFunction,
+	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(length_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

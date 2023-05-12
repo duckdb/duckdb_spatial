@@ -45,15 +45,14 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 			throw CastException("Cannot cast non-point GEOMETRY to POINT_2D");
 		}
 		auto &point = geom.GetPoint();
-		if(point.IsEmpty()) {
+		if (point.IsEmpty()) {
 			throw CastException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
 		auto &vertex = point.GetVertex();
-		return POINT_TYPE { vertex.x, vertex.y };
+		return POINT_TYPE {vertex.x, vertex.y};
 	});
 	return true;
 }
-
 
 //------------------------------------------------------------------------------
 // LineString2D -> Geometry
@@ -87,7 +86,6 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
-
 	auto &coord_vec = ListVector::GetEntry(result);
 	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
 	auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
@@ -116,7 +114,6 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 	ListVector::SetListSize(result, total_coords);
 	return true;
 }
-
 
 //------------------------------------------------------------------------------
 // Polygon2D -> Geometry
@@ -205,14 +202,12 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 	return true;
 }
 
-
 //------------------------------------------------------------------------------
 // BOX_2D -> Geometry
 //------------------------------------------------------------------------------
 // Since BOX is a non-standard geometry type, we serialize it as a polygon
 static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using GEOMETRY_TYPE = PrimitiveType<string_t>;
@@ -249,19 +244,23 @@ void CoreCastFunctions::RegisterGeometryCasts(ClientContext &context) {
 	auto &casts = config.GetCastFunctions();
 
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::LINESTRING_2D(),
-	                           BoundCastInfo(GeometryToLineString2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(GeometryToLineString2DCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), GeoTypes::GEOMETRY(),
-	                           BoundCastInfo(LineString2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(LineString2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::POINT_2D(),
-								BoundCastInfo(GeometryToPoint2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(GeometryToPoint2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 	casts.RegisterCastFunction(GeoTypes::POINT_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Point2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::POLYGON_2D(),
-								BoundCastInfo(GeometryToPolygon2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(GeometryToPolygon2DCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), GeoTypes::GEOMETRY(),
-	                           BoundCastInfo(Polygon2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(Polygon2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 
 	casts.RegisterCastFunction(GeoTypes::BOX_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Box2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);

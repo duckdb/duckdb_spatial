@@ -8,7 +8,6 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
-
 namespace spatial {
 
 namespace geos {
@@ -29,13 +28,14 @@ void GEOSScalarFunctions::RegisterStIsValid(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_IsValid");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, IsValidFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, IsValidFunction, nullptr, nullptr,
+	                               nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

@@ -8,7 +8,6 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
-
 namespace spatial {
 
 namespace geos {
@@ -71,13 +70,14 @@ void GEOSScalarFunctions::RegisterStDistance(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_Distance");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, DistanceFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, DistanceFunction,
+	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

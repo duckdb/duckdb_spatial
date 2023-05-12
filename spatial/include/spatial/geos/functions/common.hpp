@@ -6,7 +6,6 @@ namespace spatial {
 
 namespace geos {
 
-
 struct GEOSFunctionLocalState : FunctionLocalState {
 public:
 	GeosContextWrapper ctx;
@@ -21,6 +20,6 @@ public:
 	static GEOSFunctionLocalState &ResetAndGet(CastParameters &parameters);
 };
 
-} // namespace core
+} // namespace geos
 
 } // namespace spatial

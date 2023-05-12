@@ -8,7 +8,6 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
-
 namespace spatial {
 
 namespace geos {
@@ -19,19 +18,20 @@ static void BoundaryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(), [&](string_t &geometry_blob, ValidityMask& mask, idx_t i) {
-		auto geometry = lstate.factory.Deserialize(geometry_blob);
-		if(geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
-			mask.SetInvalid(i);
-			return string_t();
-		}
+	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+	    args.data[0], result, args.size(), [&](string_t &geometry_blob, ValidityMask &mask, idx_t i) {
+		    auto geometry = lstate.factory.Deserialize(geometry_blob);
+		    if (geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
+			    mask.SetInvalid(i);
+			    return string_t();
+		    }
 
-		auto geos = lstate.ctx.FromGeometry(geometry);
-		auto boundary = geos.Boundary();
-		auto boundary_geometry = lstate.ctx.ToGeometry(lstate.factory, boundary.get());
+		    auto geos = lstate.ctx.FromGeometry(geometry);
+		    auto boundary = geos.Boundary();
+		    auto boundary_geometry = lstate.ctx.ToGeometry(lstate.factory, boundary.get());
 
-		return lstate.factory.Serialize(result, boundary_geometry);
-	});
+		    return lstate.factory.Serialize(result, boundary_geometry);
+	    });
 }
 
 void GEOSScalarFunctions::RegisterStBoundary(ClientContext &context) {
@@ -39,13 +39,14 @@ void GEOSScalarFunctions::RegisterStBoundary(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_Boundary");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), BoundaryFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), BoundaryFunction, nullptr, nullptr,
+	                               nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

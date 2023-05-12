@@ -6,7 +6,6 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
 
-
 namespace spatial {
 
 namespace core {
@@ -36,12 +35,12 @@ static void LineStringCentroidFunction(DataChunk &args, ExpressionState &state, 
 	auto line_y_vec = FlatVector::GetData<double>(*line_vertex_vec_children[1]);
 
 	auto &point_vertex_children = StructVector::GetEntries(result);
-	auto point_x_data  = FlatVector::GetData<double>(*point_vertex_children[0]);
-	auto point_y_data  = FlatVector::GetData<double>(*point_vertex_children[1]);
-	for(idx_t out_row_idx = 0; out_row_idx < count; out_row_idx++) {
+	auto point_x_data = FlatVector::GetData<double>(*point_vertex_children[0]);
+	auto point_y_data = FlatVector::GetData<double>(*point_vertex_children[1]);
+	for (idx_t out_row_idx = 0; out_row_idx < count; out_row_idx++) {
 
 		auto in_row_idx = format.sel->get_index(out_row_idx);
-		if(format.validity.RowIsValid(in_row_idx)) {
+		if (format.validity.RowIsValid(in_row_idx)) {
 			auto line = line_vertex_entries[in_row_idx];
 			auto line_offset = line.offset;
 			auto line_length = line.length;
@@ -49,7 +48,7 @@ static void LineStringCentroidFunction(DataChunk &args, ExpressionState &state, 
 			double total_x = 0;
 			double total_y = 0;
 			double total_length = 0;
-			
+
 			// To calculate the centroid of a line, we calculate the centroid of each segment
 			// and then weight the segment centroids by the length of the segment.
 			// The final centroid is the sum of the weighted segment centroids divided by the total length.
@@ -58,21 +57,21 @@ static void LineStringCentroidFunction(DataChunk &args, ExpressionState &state, 
 				auto y1 = line_y_vec[coord_idx];
 				auto x2 = line_x_data[coord_idx + 1];
 				auto y2 = line_y_vec[coord_idx + 1];
-				
+
 				auto segment_length = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 				total_length += segment_length;
 				total_x += (x1 + x2) * 0.5 * segment_length;
 				total_y += (y1 + y2) * 0.5 * segment_length;
 			}
 
-			point_x_data[out_row_idx] = total_x / total_length; 
+			point_x_data[out_row_idx] = total_x / total_length;
 			point_y_data[out_row_idx] = total_y / total_length;
 
 		} else {
 			FlatVector::SetNull(result, out_row_idx, true);
 		}
 	}
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -98,8 +97,8 @@ static void PolygonCentroidFunction(DataChunk &args, ExpressionState &state, Vec
 	auto centroid_x_data = FlatVector::GetData<double>(*centroid_children[0]);
 	auto centroid_y_data = FlatVector::GetData<double>(*centroid_children[1]);
 
-	for(idx_t in_row_idx = 0; in_row_idx < count; in_row_idx++) {
-		if(format.validity.RowIsValid(in_row_idx)) {
+	for (idx_t in_row_idx = 0; in_row_idx < count; in_row_idx++) {
+		if (format.validity.RowIsValid(in_row_idx)) {
 			auto poly = poly_entries[in_row_idx];
 			auto poly_offset = poly.offset;
 			auto poly_length = poly.length;
@@ -139,7 +138,7 @@ static void PolygonCentroidFunction(DataChunk &args, ExpressionState &state, Vec
 				ring_centroid_x /= (ring_area * 6);
 				ring_centroid_y /= (ring_area * 6);
 
-				if(ring_idx == poly_offset) {
+				if (ring_idx == poly_offset) {
 					// The first ring is the outer ring, and the remaining rings are holes.
 					// For the outer ring, we add the area and centroid to the total area and centroid.
 					poly_area += ring_area;
@@ -158,7 +157,7 @@ static void PolygonCentroidFunction(DataChunk &args, ExpressionState &state, Vec
 			FlatVector::SetNull(result, in_row_idx, true);
 		}
 	}
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -167,8 +166,8 @@ static void PolygonCentroidFunction(DataChunk &args, ExpressionState &state, Vec
 // BOX_2D
 //------------------------------------------------------------------------------
 static void BoxCentroidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	//using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
-	//using POINT_TYPE = StructTypeBinary<double, double>;
+	// using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
+	// using POINT_TYPE = StructTypeBinary<double, double>;
 
 	auto input = args.data[0];
 	auto count = args.size();
@@ -184,23 +183,22 @@ static void BoxCentroidFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto centroid_x_data = FlatVector::GetData<double>(*centroid_children[0]);
 	auto centroid_y_data = FlatVector::GetData<double>(*centroid_children[1]);
 
-	for(idx_t out_row_idx = 0; out_row_idx < count; out_row_idx++) {
+	for (idx_t out_row_idx = 0; out_row_idx < count; out_row_idx++) {
 		auto in_row_idx = format.sel->get_index(out_row_idx);
-		if(format.validity.RowIsValid(in_row_idx)) {
+		if (format.validity.RowIsValid(in_row_idx)) {
 			centroid_x_data[out_row_idx] = (minx_data[in_row_idx] + maxx_data[in_row_idx]) * 0.5;
 			centroid_y_data[out_row_idx] = (miny_data[in_row_idx] + maxy_data[in_row_idx]) * 0.5;
 		} else {
 			FlatVector::SetNull(result, out_row_idx, true);
 		}
 	}
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
 
-
 static unique_ptr<FunctionData> BoxCentroidBind(ClientContext &context, ScalarFunction &bound_function,
-												  vector<unique_ptr<Expression>> &arguments) {
+                                                vector<unique_ptr<Expression>> &arguments) {
 
 	bound_function.return_type = GeoTypes::POINT_2D();
 	return nullptr;
@@ -214,9 +212,12 @@ void CoreScalarFunctions::RegisterStCentroid(ClientContext &context) {
 
 	ScalarFunctionSet area_function_set("ST_Centroid");
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointCentroidFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringCentroidFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction, BoxCentroidBind));
+	area_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringCentroidFunction));
+	area_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
+	area_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction, BoxCentroidBind));
 
 	CreateScalarFunctionInfo info(std::move(area_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

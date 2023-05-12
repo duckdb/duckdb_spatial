@@ -27,7 +27,7 @@ PJ_CONTEXT *ProjModule::GetThreadProjContext() {
 	// We set the default context proj.db path to the one in the binary here
 	// Otherwise GDAL will try to load the proj.db from the system
 	// Any PJ_CONTEXT we create after this will inherit these settings
-	auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void*)proj_db, proj_db_len, proj_db_len);
+	auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void *)proj_db, proj_db_len, proj_db_len);
 
 	proj_context_set_sqlite3_vfs_name(ctx, "memvfs");
 	auto ok = proj_context_set_database_path(ctx, path.c_str(), nullptr, nullptr);
@@ -58,7 +58,7 @@ void ProjModule::Register(ClientContext &context) {
 	// We set the default context proj.db path to the one in the binary here
 	// Otherwise GDAL will try to load the proj.db from the system
 	// Any PJ_CONTEXT we create after this will inherit these settings (on this thread?)
-	auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void*)proj_db, proj_db_len, proj_db_len);
+	auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void *)proj_db, proj_db_len, proj_db_len);
 
 	proj_context_set_sqlite3_vfs_name(nullptr, "memvfs");
 

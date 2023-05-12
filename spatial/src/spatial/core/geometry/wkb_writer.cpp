@@ -19,15 +19,22 @@ enum class WKBGeometryType : uint32_t {
 
 uint32_t WKBWriter::GetRequiredSize(const Geometry &geom) {
 	switch (geom.Type()) {
-	case GeometryType::POINT: return GetRequiredSize(geom.GetPoint());
-		case GeometryType::LINESTRING: return GetRequiredSize(geom.GetLineString());
-		case GeometryType::POLYGON: return GetRequiredSize(geom.GetPolygon());
-		case GeometryType::MULTIPOINT: return GetRequiredSize(geom.GetMultiPoint());
-		case GeometryType::MULTILINESTRING: return GetRequiredSize(geom.GetMultiLineString());
-		case GeometryType::MULTIPOLYGON: return GetRequiredSize(geom.GetMultiPolygon());
-		case GeometryType::GEOMETRYCOLLECTION: return GetRequiredSize(geom.GetGeometryCollection());
-		default:
-			throw NotImplementedException("Geometry type not supported");
+	case GeometryType::POINT:
+		return GetRequiredSize(geom.GetPoint());
+	case GeometryType::LINESTRING:
+		return GetRequiredSize(geom.GetLineString());
+	case GeometryType::POLYGON:
+		return GetRequiredSize(geom.GetPolygon());
+	case GeometryType::MULTIPOINT:
+		return GetRequiredSize(geom.GetMultiPoint());
+	case GeometryType::MULTILINESTRING:
+		return GetRequiredSize(geom.GetMultiLineString());
+	case GeometryType::MULTIPOLYGON:
+		return GetRequiredSize(geom.GetMultiPolygon());
+	case GeometryType::GEOMETRYCOLLECTION:
+		return GetRequiredSize(geom.GetGeometryCollection());
+	default:
+		throw NotImplementedException("Geometry type not supported");
 	}
 }
 
@@ -100,23 +107,37 @@ static void WriteDouble(double value, data_ptr_t &ptr) {
 // Public API
 void WKBWriter::Write(const Geometry &geom, data_ptr_t &ptr) {
 	switch (geom.Type()) {
-	case GeometryType::POINT: Write(geom.GetPoint(), ptr); break;
-		case GeometryType::LINESTRING: Write(geom.GetLineString(), ptr); break;
-		case GeometryType::POLYGON: Write(geom.GetPolygon(), ptr); break;
-		case GeometryType::MULTIPOINT: Write(geom.GetMultiPoint(), ptr); break;
-		case GeometryType::MULTILINESTRING: Write(geom.GetMultiLineString(), ptr); break;
-		case GeometryType::MULTIPOLYGON: Write(geom.GetMultiPolygon(), ptr); break;
-		case GeometryType::GEOMETRYCOLLECTION: Write(geom.GetGeometryCollection(), ptr); break;
-		default:
-			throw NotImplementedException("Geometry type not supported");
+	case GeometryType::POINT:
+		Write(geom.GetPoint(), ptr);
+		break;
+	case GeometryType::LINESTRING:
+		Write(geom.GetLineString(), ptr);
+		break;
+	case GeometryType::POLYGON:
+		Write(geom.GetPolygon(), ptr);
+		break;
+	case GeometryType::MULTIPOINT:
+		Write(geom.GetMultiPoint(), ptr);
+		break;
+	case GeometryType::MULTILINESTRING:
+		Write(geom.GetMultiLineString(), ptr);
+		break;
+	case GeometryType::MULTIPOLYGON:
+		Write(geom.GetMultiPolygon(), ptr);
+		break;
+	case GeometryType::GEOMETRYCOLLECTION:
+		Write(geom.GetGeometryCollection(), ptr);
+		break;
+	default:
+		throw NotImplementedException("Geometry type not supported");
 	}
 }
 
 void WKBWriter::Write(const Point &point, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                            // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::POINT), ptr); // geometry type
 
-	if(point.IsEmpty()) {
+	if (point.IsEmpty()) {
 		auto x = std::numeric_limits<double>::quiet_NaN();
 		auto y = std::numeric_limits<double>::quiet_NaN();
 		WriteDouble(x, ptr);
@@ -129,12 +150,12 @@ void WKBWriter::Write(const Point &point, data_ptr_t &ptr) {
 }
 
 void WKBWriter::Write(const LineString &line, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                                 // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::LINESTRING), ptr); // geometry type
 
 	auto num_points = line.Count();
 	WriteInt(num_points, ptr);
-	for(uint32_t i = 0; i < num_points; i++) {
+	for (uint32_t i = 0; i < num_points; i++) {
 		auto &vertex = line.points[i];
 		WriteDouble(vertex.x, ptr);
 		WriteDouble(vertex.y, ptr);
@@ -142,16 +163,16 @@ void WKBWriter::Write(const LineString &line, data_ptr_t &ptr) {
 }
 
 void WKBWriter::Write(const Polygon &polygon, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                              // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::POLYGON), ptr); // geometry type
 
 	auto num_rings = polygon.Count();
 	WriteInt(num_rings, ptr);
-	for(uint32_t i = 0; i < num_rings; i++) {
+	for (uint32_t i = 0; i < num_rings; i++) {
 		auto &ring = polygon.rings[i];
 		auto num_points = ring.Count();
 		WriteInt(num_points, ptr);
-		for(uint32_t j = 0; j < num_points; j++) {
+		for (uint32_t j = 0; j < num_points; j++) {
 			auto &vertex = ring.data[j];
 			WriteDouble(vertex.x, ptr);
 			WriteDouble(vertex.y, ptr);
@@ -160,48 +181,48 @@ void WKBWriter::Write(const Polygon &polygon, data_ptr_t &ptr) {
 }
 
 void WKBWriter::Write(const MultiPoint &multi_point, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                                 // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::MULTIPOINT), ptr); // geometry type
 
 	auto num_points = multi_point.Count();
 	WriteInt(num_points, ptr);
-	for(uint32_t i = 0; i < num_points; i++) {
+	for (uint32_t i = 0; i < num_points; i++) {
 		auto &point = multi_point.points[i];
 		Write(point, ptr);
 	}
 }
 
 void WKBWriter::Write(const MultiLineString &multi_line, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                                      // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::MULTILINESTRING), ptr); // geometry type
 
 	auto num_lines = multi_line.Count();
 	WriteInt(num_lines, ptr);
-	for(uint32_t i = 0; i < num_lines; i++) {
+	for (uint32_t i = 0; i < num_lines; i++) {
 		auto &line = multi_line.linestrings[i];
 		Write(line, ptr);
 	}
 }
 
 void WKBWriter::Write(const MultiPolygon &multi_polygon, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                                   // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::MULTIPOLYGON), ptr); // geometry type
 
 	auto num_polygons = multi_polygon.Count();
 	WriteInt(num_polygons, ptr);
-	for(uint32_t i = 0; i < num_polygons; i++) {
+	for (uint32_t i = 0; i < num_polygons; i++) {
 		auto &polygon = multi_polygon.polygons[i];
 		Write(polygon, ptr);
 	}
 }
 
 void WKBWriter::Write(const GeometryCollection &collection, data_ptr_t &ptr) {
-	WriteByte(1, ptr); // byte order
+	WriteByte(1, ptr);                                                         // byte order
 	WriteInt(static_cast<uint32_t>(WKBGeometryType::GEOMETRYCOLLECTION), ptr); // geometry type
 
 	auto num_geometries = collection.Count();
 	WriteInt(num_geometries, ptr);
-	for(uint32_t i = 0; i < num_geometries; i++) {
+	for (uint32_t i = 0; i < num_geometries; i++) {
 		auto &geom = collection.geometries[i];
 		Write(geom, ptr);
 	}
@@ -210,6 +231,3 @@ void WKBWriter::Write(const GeometryCollection &collection, data_ptr_t &ptr) {
 } // namespace core
 
 } // namespace spatial
-
-
-

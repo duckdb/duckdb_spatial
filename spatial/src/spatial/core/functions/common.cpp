@@ -6,12 +6,11 @@ namespace spatial {
 namespace core {
 
 GeometryFunctionLocalState::GeometryFunctionLocalState(ClientContext &context)
-	: factory(BufferAllocator::Get(context)) {
-
+    : factory(BufferAllocator::Get(context)) {
 }
 
-unique_ptr<FunctionLocalState> GeometryFunctionLocalState::Init(
-    ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
+unique_ptr<FunctionLocalState>
+GeometryFunctionLocalState::Init(ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
 	return make_uniq<GeometryFunctionLocalState>(state.GetContext());
 }
 

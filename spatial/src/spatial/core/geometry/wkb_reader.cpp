@@ -203,7 +203,7 @@ template <WKBByteOrder ORDER>
 Point WKBReader::ReadPointImpl() {
 	auto x = ReadDouble<ORDER>();
 	auto y = ReadDouble<ORDER>();
-	if(std::isnan(x) && std::isnan(y)) {
+	if (std::isnan(x) && std::isnan(y)) {
 		auto point_data = factory.AllocateVertexVector(0);
 		return Point(point_data);
 	}

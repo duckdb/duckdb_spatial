@@ -8,7 +8,6 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
-
 namespace spatial {
 
 namespace geos {
@@ -36,12 +35,13 @@ static void GeometryToTextFunction(DataChunk &args, ExpressionState &state, Vect
 
 void GEOSScalarFunctions::RegisterStAsText(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateScalarFunctionInfo info(
-	    ScalarFunction("ST_AsText", {core::GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryToTextFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	CreateScalarFunctionInfo info(ScalarFunction("ST_AsText", {core::GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
+	                                             GeometryToTextFunction, nullptr, nullptr, nullptr,
+	                                             GEOSFunctionLocalState::Init));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.AddFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

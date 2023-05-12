@@ -44,9 +44,10 @@ void GeosCastFunctions::Register(ClientContext &context) {
 	auto &casts = config.GetCastFunctions();
 
 	casts.RegisterCastFunction(core::GeoTypes::WKB_BLOB(), LogicalType::VARCHAR, WKBToWKTCast);
-	casts.RegisterCastFunction(core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR, BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
+	casts.RegisterCastFunction(core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+	                           BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
 };
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

@@ -151,10 +151,10 @@ void CoreScalarFunctions::RegisterStContains(ClientContext &context) {
 	ScalarFunctionSet within_function_set("st_within");
 
 	// POLYGON_2D - POINT_2D
-	contains_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::POLYGON_2D(), GeoTypes::POINT_2D()}, LogicalType::BOOLEAN, PolygonContainsPointFunction));
-	within_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN, PointWithinPolygonFunction));
+	contains_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D(), GeoTypes::POINT_2D()},
+	                                                 LogicalType::BOOLEAN, PolygonContainsPointFunction));
+	within_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN,
+	                                               PointWithinPolygonFunction));
 
 	CreateScalarFunctionInfo contains_info(std::move(contains_function_set));
 	contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

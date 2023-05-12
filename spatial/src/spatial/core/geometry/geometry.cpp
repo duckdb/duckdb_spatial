@@ -10,9 +10,9 @@ namespace core {
 //------------------------------------------------------------------------------
 
 string Point::ToString() const {
-	if(IsEmpty()) {
-        return "POINT EMPTY";
-    }
+	if (IsEmpty()) {
+		return "POINT EMPTY";
+	}
 	auto &vert = data[0];
 	if (std::isnan(vert.x) && std::isnan(vert.y)) {
 		// This is a special case for WKB. WKB does not support empty points,
@@ -20,7 +20,7 @@ string Point::ToString() const {
 		// check for this case and return POINT EMPTY instead to round-trip safely
 		return "POINT EMPTY";
 	}
-    return "POINT (" + std::to_string(data[0].x) + " " + std::to_string(data[0].y) + ")";
+	return "POINT (" + std::to_string(data[0].x) + " " + std::to_string(data[0].y) + ")";
 }
 
 //------------------------------------------------------------------------------
@@ -41,9 +41,9 @@ Geometry LineString::Centroid() const {
 
 string LineString::ToString() const {
 	auto count = points.Count();
-	if(count == 0) {
-        return "LINESTRING EMPTY";
-    }
+	if (count == 0) {
+		return "LINESTRING EMPTY";
+	}
 
 	string result = "LINESTRING (";
 	for (uint32_t i = 0; i < points.Count(); i++) {
@@ -67,7 +67,7 @@ uint32_t LineString::Count() const {
 double Polygon::Area() const {
 	double area = 0;
 	for (uint32_t i = 0; i < num_rings; i++) {
-		if(i == 0) {
+		if (i == 0) {
 			area += rings[i].SignedArea();
 		} else {
 			area -= rings[i].SignedArea();
@@ -81,9 +81,9 @@ bool Polygon::IsEmpty() const {
 }
 
 double Polygon::Perimiter() const {
-	if(IsEmpty()) {
-        return 0;
-    }
+	if (IsEmpty()) {
+		return 0;
+	}
 	return rings[0].Length();
 }
 
@@ -96,11 +96,11 @@ string Polygon::ToString() const {
 	// check if the polygon is empty
 	uint32_t total_verts = 0;
 	for (uint32_t i = 0; i < num_rings; i++) {
-        total_verts += rings[i].Count();
-    }
-	if(total_verts == 0) {
-        return "POLYGON EMPTY";
-    }
+		total_verts += rings[i].Count();
+	}
+	if (total_verts == 0) {
+		return "POLYGON EMPTY";
+	}
 
 	string result = "POLYGON (";
 	for (uint32_t i = 0; i < num_rings; i++) {
@@ -121,7 +121,7 @@ string Polygon::ToString() const {
 }
 
 uint32_t Polygon::Count() const {
-    return num_rings;
+	return num_rings;
 }
 
 //------------------------------------------------------------------------------
@@ -129,30 +129,30 @@ uint32_t Polygon::Count() const {
 //------------------------------------------------------------------------------
 
 string MultiPoint::ToString() const {
-	if(num_points == 0) {
-        return "MULTIPOINT EMPTY";
-    }
+	if (num_points == 0) {
+		return "MULTIPOINT EMPTY";
+	}
 	string str = "MULTIPOINT (";
 	for (uint32_t i = 0; i < num_points; i++) {
-		if(points[i].IsEmpty()) {
+		if (points[i].IsEmpty()) {
 			str += "EMPTY";
-        } else {
+		} else {
 			auto &vert = points[i].GetVertex();
 			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
 		}
-        if (i < num_points - 1) {
-            str += ", ";
-        }
+		if (i < num_points - 1) {
+			str += ", ";
+		}
 	}
 	return str + ")";
 }
 
 bool MultiPoint::IsEmpty() const {
-    return num_points == 0;
+	return num_points == 0;
 }
 
 uint32_t MultiPoint::Count() const {
-    return num_points;
+	return num_points;
 }
 
 //------------------------------------------------------------------------------
@@ -160,9 +160,9 @@ uint32_t MultiPoint::Count() const {
 //------------------------------------------------------------------------------
 
 string MultiLineString::ToString() const {
-	if(num_linestrings == 0) {
-        return "MULTILINESTRING EMPTY";
-    }
+	if (num_linestrings == 0) {
+		return "MULTILINESTRING EMPTY";
+	}
 	string str = "MULTILINESTRING (";
 	for (uint32_t i = 0; i < num_linestrings; i++) {
 		str += "(";
@@ -180,21 +180,20 @@ string MultiLineString::ToString() const {
 	return str + ")";
 }
 
-
 double MultiLineString::Length() const {
-    double length = 0;
-    for (uint32_t i = 0; i < num_linestrings; i++) {
-        length += linestrings[i].Length();
-    }
-    return length;
+	double length = 0;
+	for (uint32_t i = 0; i < num_linestrings; i++) {
+		length += linestrings[i].Length();
+	}
+	return length;
 }
 
 bool MultiLineString::IsEmpty() const {
-    return num_linestrings == 0;
+	return num_linestrings == 0;
 }
 
 uint32_t MultiLineString::Count() const {
-    return num_linestrings;
+	return num_linestrings;
 }
 
 //------------------------------------------------------------------------------
@@ -202,9 +201,9 @@ uint32_t MultiLineString::Count() const {
 //------------------------------------------------------------------------------
 
 string MultiPolygon::ToString() const {
-	if(num_polygons == 0) {
-        return "MULTIPOLYGON EMPTY";
-    }
+	if (num_polygons == 0) {
+		return "MULTIPOLYGON EMPTY";
+	}
 	string str = "MULTIPOLYGON (";
 	for (uint32_t i = 0; i < num_polygons; i++) {
 		str += "(";
@@ -230,7 +229,7 @@ string MultiPolygon::ToString() const {
 }
 
 bool MultiPolygon::IsEmpty() const {
-    return num_polygons == 0;
+	return num_polygons == 0;
 }
 
 double MultiPolygon::Area() const {
@@ -242,7 +241,7 @@ double MultiPolygon::Area() const {
 }
 
 uint32_t MultiPolygon::Count() const {
-    return num_polygons;
+	return num_polygons;
 }
 
 //------------------------------------------------------------------------------
@@ -250,9 +249,9 @@ uint32_t MultiPolygon::Count() const {
 //------------------------------------------------------------------------------
 
 string GeometryCollection::ToString() const {
-	if(num_geometries == 0) {
-        return "GEOMETRYCOLLECTION EMPTY";
-    }
+	if (num_geometries == 0) {
+		return "GEOMETRYCOLLECTION EMPTY";
+	}
 	string str = "GEOMETRYCOLLECTION (";
 	for (uint32_t i = 0; i < num_geometries; i++) {
 		str += geometries[i].ToString();
@@ -264,11 +263,11 @@ string GeometryCollection::ToString() const {
 }
 
 bool GeometryCollection::IsEmpty() const {
-    return num_geometries == 0;
+	return num_geometries == 0;
 }
 
 uint32_t GeometryCollection::Count() const {
-    return num_geometries;
+	return num_geometries;
 }
 
 //------------------------------------------------------------------------------
@@ -280,21 +279,20 @@ string Geometry::ToString() const {
 		return point.ToString();
 	case GeometryType::LINESTRING:
 		return linestring.ToString();
-    case GeometryType::POLYGON:
-        return polygon.ToString();
-    case GeometryType::MULTIPOINT:
-        return multipoint.ToString();
-    case GeometryType::MULTILINESTRING:
-        return multilinestring.ToString();
-    case GeometryType::MULTIPOLYGON:
-        return multipolygon.ToString();
-    case GeometryType::GEOMETRYCOLLECTION:
-        return geometrycollection.ToString();
+	case GeometryType::POLYGON:
+		return polygon.ToString();
+	case GeometryType::MULTIPOINT:
+		return multipoint.ToString();
+	case GeometryType::MULTILINESTRING:
+		return multilinestring.ToString();
+	case GeometryType::MULTIPOLYGON:
+		return multipolygon.ToString();
+	case GeometryType::GEOMETRYCOLLECTION:
+		return geometrycollection.ToString();
 	default:
 		throw NotImplementedException("Geometry::ToString()");
 	}
 }
-
 
 } // namespace core
 

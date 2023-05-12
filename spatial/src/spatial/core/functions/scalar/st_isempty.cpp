@@ -19,9 +19,8 @@ static void LineIsEmptyFunction(DataChunk &args, ExpressionState &state, Vector 
 	auto &line_vec = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<list_entry_t, bool>(line_vec, result, count, [&](list_entry_t line) {
-		return line.length == 0;
-	});
+	UnaryExecutor::Execute<list_entry_t, bool>(line_vec, result, count,
+	                                           [&](list_entry_t line) { return line.length == 0; });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -37,9 +36,8 @@ static void PolygonIsEmptyFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &polygon_vec = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<list_entry_t, bool>(polygon_vec, result, count, [&](list_entry_t poly) {
-		return poly.length == 0;
-	});
+	UnaryExecutor::Execute<list_entry_t, bool>(polygon_vec, result, count,
+	                                           [&](list_entry_t poly) { return poly.length == 0; });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -90,9 +88,13 @@ void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
 
 	ScalarFunctionSet is_empty_function_set("ST_IsEmpty");
 
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::BOOLEAN, LineIsEmptyFunction));
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN, PolygonIsEmptyFunction));
-	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, GeometryIsEmptyFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	is_empty_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::BOOLEAN, LineIsEmptyFunction));
+	is_empty_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN, PolygonIsEmptyFunction));
+	is_empty_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
+	                                                 GeometryIsEmptyFunction, nullptr, nullptr, nullptr,
+	                                                 GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(is_empty_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

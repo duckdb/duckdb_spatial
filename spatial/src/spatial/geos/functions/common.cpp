@@ -7,13 +7,11 @@ namespace geos {
 
 using namespace spatial::core;
 
-GEOSFunctionLocalState::GEOSFunctionLocalState(ClientContext &context)
-    :  ctx(), factory(BufferAllocator::Get(context)) {
-
+GEOSFunctionLocalState::GEOSFunctionLocalState(ClientContext &context) : ctx(), factory(BufferAllocator::Get(context)) {
 }
 
-unique_ptr<FunctionLocalState> GEOSFunctionLocalState::Init(
-    ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
+unique_ptr<FunctionLocalState> GEOSFunctionLocalState::Init(ExpressionState &state, const BoundFunctionExpression &expr,
+                                                            FunctionData *bind_data) {
 	return make_uniq<GEOSFunctionLocalState>(state.GetContext());
 }
 
@@ -33,6 +31,6 @@ GEOSFunctionLocalState &GEOSFunctionLocalState::ResetAndGet(ExpressionState &sta
 	return local_state;
 }
 
-} // namespace core
+} // namespace geos
 
 } // namespace spatial

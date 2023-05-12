@@ -8,12 +8,11 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
-
 namespace spatial {
 
 namespace geos {
 
-using namespace spatial::core;
+using namespace core;
 
 static void ExecutePreparedDistanceWithin(GEOSFunctionLocalState &lstate, Vector &left, Vector &right, Vector &distance_vec, idx_t count, Vector &result) {
 	auto &ctx = lstate.ctx.GetCtx();
@@ -62,7 +61,6 @@ static void DistanceWithinFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &distance_vec = args.data[2];
 	auto count = args.size();
 	ExecutePreparedDistanceWithin(lstate, left, right, distance_vec, count, result);
-
 }
 
 void GEOSScalarFunctions::RegisterStDistanceWithin(ClientContext &context) {
@@ -70,13 +68,15 @@ void GEOSScalarFunctions::RegisterStDistanceWithin(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_DWithin");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, DistanceWithinFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY(), LogicalType::DOUBLE},
+	                               LogicalType::BOOLEAN, DistanceWithinFunction, nullptr, nullptr, nullptr,
+	                               GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

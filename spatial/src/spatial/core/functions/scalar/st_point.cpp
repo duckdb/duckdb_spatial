@@ -119,13 +119,14 @@ static void PointFunction(DataChunk &args, ExpressionState &state, Vector &resul
 void CoreScalarFunctions::RegisterStPoint(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	CreateScalarFunctionInfo st_point_info(
-	    ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY(), PointFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	CreateScalarFunctionInfo st_point_info(ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE},
+	                                                      GeoTypes::GEOMETRY(), PointFunction, nullptr, nullptr,
+	                                                      nullptr, GeometryFunctionLocalState::Init));
 	catalog.CreateFunction(context, st_point_info);
 
 	// Non-standard
-	CreateScalarFunctionInfo st_point_2d_info(
-	    ScalarFunction("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::POINT_2D(), Point2DFunction));
+	CreateScalarFunctionInfo st_point_2d_info(ScalarFunction("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE},
+	                                                         GeoTypes::POINT_2D(), Point2DFunction));
 	catalog.CreateFunction(context, st_point_2d_info);
 
 	CreateScalarFunctionInfo st_point_3d_info(
