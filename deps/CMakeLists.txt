@@ -69,7 +69,7 @@ ExternalProject_Add(
 )
 endif()
 
-find_program(EXE_SQLITE3 sqlite3)
+
 # PROJ
 ExternalProject_Add(
     PROJ
@@ -89,7 +89,6 @@ ExternalProject_Add(
     -DBUILD_TESTING=OFF
     -DENABLE_CURL=OFF
     -DENABLE_TIFF=OFF
-    -DEXE_SQLITE3=${EXE_SQLITE3} # use the sqlite3 executable from the system
 )
 
 # EXPAT
