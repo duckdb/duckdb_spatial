@@ -59,7 +59,7 @@ struct GlobalState : public GlobalFunctionData {
 static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vector<string> &names,
                                      vector<LogicalType> &sql_types) {
 
-	auto bind_data = make_unique<BindData>(info.file_path, sql_types, names);
+	auto bind_data = make_uniq<BindData>(info.file_path, sql_types, names);
 
 	// check all the options in the copy info
 	// and set
@@ -118,7 +118,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, FunctionData &bind_data) {
 	auto &gdal_data = (BindData &)bind_data;
 
-	auto local_data = make_unique<LocalState>(context.client);
+	auto local_data = make_uniq<LocalState>(context.client);
 	return std::move(local_data);
 }
 
@@ -131,11 +131,11 @@ static bool IsGeometryType(const LogicalType &type) {
 static unique_ptr<OGRGeomFieldDefn> OGRGeometryFieldTypeFromLogicalType(const string &name, const LogicalType &type) {
 	// TODO: Support more geometry types
 	if (type == core::GeoTypes::WKB_BLOB()) {
-		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
+		return make_uniq<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
 	} else if (type == core::GeoTypes::POINT_2D()) {
-		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbPoint);
+		return make_uniq<OGRGeomFieldDefn>(name.c_str(), wkbPoint);
 	} else if(type == core::GeoTypes::GEOMETRY()) {
-		return make_unique<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
+		return make_uniq<OGRGeomFieldDefn>(name.c_str(), wkbUnknown);
 	} else {
 		throw NotImplementedException("Unsupported geometry type");
 	}
@@ -146,71 +146,71 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 
 	switch (type.id()) {
 	case LogicalTypeId::BOOLEAN: {
-		auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+		auto field = make_uniq<OGRFieldDefn>(name.c_str(), OFTInteger);
 		field->SetSubType(OFSTBoolean);
 		return field;
 	}
 	case LogicalTypeId::TINYINT: {
 		// There is no subtype for byte?
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTInteger);
 	}
 	case LogicalTypeId::SMALLINT: {
-		auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+		auto field = make_uniq<OGRFieldDefn>(name.c_str(), OFTInteger);
 		field->SetSubType(OFSTInt16);
 		return field;
 	}
 	case LogicalTypeId::INTEGER: {
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTInteger);
 	}
 	case LogicalTypeId::BIGINT:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger64);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTInteger64);
 	case LogicalTypeId::FLOAT: {
-		auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTReal);
+		auto field = make_uniq<OGRFieldDefn>(name.c_str(), OFTReal);
 		field->SetSubType(OFSTFloat32);
 		return field;
 	}
 	case LogicalTypeId::DOUBLE:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTReal);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTReal);
 	case LogicalTypeId::VARCHAR:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTString);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTString);
 	case LogicalTypeId::BLOB:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTBinary);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTBinary);
 	case LogicalTypeId::DATE:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTDate);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTDate);
 	case LogicalTypeId::TIME:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTTime);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTTime);
 	case LogicalTypeId::TIMESTAMP:
-		return make_unique<OGRFieldDefn>(name.c_str(), OFTDateTime);
+		return make_uniq<OGRFieldDefn>(name.c_str(), OFTDateTime);
 	case LogicalTypeId::LIST: {
 		auto child_type = ListType::GetChildType(type);
 		switch (child_type.id()) {
 		case LogicalTypeId::BOOLEAN: {
-			auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+			auto field = make_uniq<OGRFieldDefn>(name.c_str(), OFTIntegerList);
 			field->SetSubType(OFSTBoolean);
 			return field;
 		}
 		case LogicalTypeId::TINYINT: {
 			// There is no subtype for byte?
-			return make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+			return make_uniq<OGRFieldDefn>(name.c_str(), OFTIntegerList);
 		}
 		case LogicalTypeId::SMALLINT: {
-			auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+			auto field = make_uniq<OGRFieldDefn>(name.c_str(), OFTIntegerList);
 			field->SetSubType(OFSTInt16);
 			return field;
 		}
 		case LogicalTypeId::INTEGER:
-			return make_unique<OGRFieldDefn>(name.c_str(), OFTIntegerList);
+			return make_uniq<OGRFieldDefn>(name.c_str(), OFTIntegerList);
 		case LogicalTypeId::BIGINT:
-			return make_unique<OGRFieldDefn>(name.c_str(), OFTInteger64List);
+			return make_uniq<OGRFieldDefn>(name.c_str(), OFTInteger64List);
 		case LogicalTypeId::FLOAT: {
-			auto field = make_unique<OGRFieldDefn>(name.c_str(), OFTRealList);
+			auto field = make_uniq<OGRFieldDefn>(name.c_str(), OFTRealList);
 			field->SetSubType(OFSTFloat32);
 			return field;
 		}
 		case LogicalTypeId::DOUBLE:
-			return make_unique<OGRFieldDefn>(name.c_str(), OFTRealList);
+			return make_uniq<OGRFieldDefn>(name.c_str(), OFTRealList);
 		case LogicalTypeId::VARCHAR:
-			return make_unique<OGRFieldDefn>(name.c_str(), OFTStringList);
+			return make_uniq<OGRFieldDefn>(name.c_str(), OFTStringList);
 		default:
 			throw NotImplementedException("Unsupported type for OGR: %s", type.ToString());
 		}
@@ -222,7 +222,7 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, FunctionData &bind_data,
                                                  const string &file_path) {
 	// auto gdal_data = (BindData&)bind_data;
-	// auto global_data = make_unique<GlobalState>(file_path, "FlatGeobuf");
+	// auto global_data = make_uniq<GlobalState>(file_path, "FlatGeobuf");
 	// return std::move(global_data);
 
 	auto &gdal_data = (BindData &)bind_data;
@@ -275,7 +275,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 			field_defs.push_back(std::move(field));
 		}
 	}
-	auto global_data = make_unique<GlobalState>(std::move(dataset), layer, std::move(field_defs));
+	auto global_data = make_uniq<GlobalState>(std::move(dataset), layer, std::move(field_defs));
 
 	return std::move(global_data);
 }
@@ -437,7 +437,7 @@ void GdalCopyFunction::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateCopyFunctionInfo create(std::move(info));
 	create.internal = true;
-	catalog.CreateCopyFunction(context, &create);
+	catalog.CreateCopyFunction(context, create);
 }
 
 } // namespace gdal

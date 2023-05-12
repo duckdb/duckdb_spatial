@@ -16,7 +16,7 @@ public:
 	explicit GEOSFunctionLocalState(ClientContext &context);
 	static unique_ptr<FunctionLocalState> Init(ExpressionState &state, const BoundFunctionExpression &expr,
 	                                           FunctionData *bind_data);
-	static unique_ptr<FunctionLocalState> InitCast(ClientContext &context);
+	static unique_ptr<FunctionLocalState> InitCast(CastLocalStateParameters &parameters);
 	static GEOSFunctionLocalState &ResetAndGet(ExpressionState &state);
 	static GEOSFunctionLocalState &ResetAndGet(CastParameters &parameters);
 };

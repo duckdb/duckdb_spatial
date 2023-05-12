@@ -30,7 +30,7 @@ ProjFunctionLocalState(ClientContext &context)
 
 static unique_ptr<FunctionLocalState> Init(
     ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
-	return make_unique<ProjFunctionLocalState>(state.GetContext());
+	return make_uniq<ProjFunctionLocalState>(state.GetContext());
 }
 
 static ProjFunctionLocalState& ResetAndGet(ExpressionState &state) {
@@ -331,7 +331,7 @@ unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context
 
 unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientContext &context,
                                                                       TableFunctionInitInput &input) {
-	return make_unique<State>();
+	return make_uniq<State>();
 }
 
 void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
@@ -372,7 +372,7 @@ void GenerateSpatialRefSysTable::Register(ClientContext &context) {
 
 	// Also create a view
 	/*
-	auto view = make_unique<CreateViewInfo>();
+	auto view = make_uniq<CreateViewInfo>();
 	view->schema = DEFAULT_SCHEMA;
 	view->view_name = "SPATIAL_REF_SYS";
 	view->sql = "SELECT * FROM st_list_proj_crs()"; // TODO: this is not SQL/MM compliant
@@ -398,7 +398,7 @@ void ProjFunctions::Register(ClientContext &context) {
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 
 	GenerateSpatialRefSysTable::Register(context);
 }

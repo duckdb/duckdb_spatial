@@ -26,7 +26,7 @@ struct GeometryFromWKTBindData : public FunctionData {
 
 public:
 	unique_ptr<FunctionData> Copy() const override {
-		return make_unique<GeometryFromWKTBindData>(ignore_invalid);
+		return make_uniq<GeometryFromWKTBindData>(ignore_invalid);
 	}
 	bool Equals(const FunctionData &other_p) const override {
 		return true;
@@ -91,7 +91,7 @@ static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, Scal
 			ignore_invalid = BooleanValue::Get(ExpressionExecutor::EvaluateScalar(context, *arg));
 		}
 	}
-	return make_unique<GeometryFromWKTBindData>(ignore_invalid);
+	return make_uniq<GeometryFromWKTBindData>(ignore_invalid);
 }
 
 void GEOSScalarFunctions::RegisterStGeomFromText(ClientContext &context) {
@@ -102,7 +102,7 @@ void GEOSScalarFunctions::RegisterStGeomFromText(ClientContext &context) {
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR, LogicalType::BOOLEAN}, core::GeoTypes::GEOMETRY(), GeometryFromWKTFunction, GeometryFromWKTBind, nullptr, nullptr, GEOSFunctionLocalState::Init));
 	CreateScalarFunctionInfo info(set);
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, &info);
+	catalog.AddFunction(context, info);
 
 }
 

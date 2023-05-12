@@ -27,12 +27,12 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
 	names.emplace_back("help_url");
 
 	auto driver_count = GDALGetDriverCount();
-	return make_unique<BindData>(driver_count);
+	return make_uniq<BindData>(driver_count);
 }
 
 unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context,
                                                                     TableFunctionInitInput &input) {
-	return make_unique<State>();
+	return make_uniq<State>();
 }
 
 void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {

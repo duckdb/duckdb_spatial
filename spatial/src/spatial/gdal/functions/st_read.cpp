@@ -172,7 +172,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Now we can bind the additonal options
-	auto result = make_unique<GdalScanFunctionData>();
+	auto result = make_uniq<GdalScanFunctionData>();
 	result->sequential_layer_scan = false;
 	bool max_batch_size_set = false;
 	for (auto &kv : input.named_parameters) {
@@ -218,7 +218,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			auto miny = DoubleValue::Get(children[1]);
 			auto maxx = DoubleValue::Get(children[2]);
 			auto maxy = DoubleValue::Get(children[3]);
-			result->spatial_filter = make_unique<RectangleSpatialFilter>(minx, miny, maxx, maxy);
+			result->spatial_filter = make_uniq<RectangleSpatialFilter>(minx, miny, maxx, maxy);
 		}
 
 		if (loption == "spatial_filter" && kv.second.type() == core::GeoTypes::WKB_BLOB()) {
@@ -226,7 +226,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				throw BinderException("Only one spatial filter can be specified");
 			}
 			auto wkb = StringValue::Get(kv.second);
-			result->spatial_filter = make_unique<WKBSpatialFilter>(wkb);
+			result->spatial_filter = make_uniq<WKBSpatialFilter>(wkb);
 		}
 
 		if (loption == "max_threads") {
@@ -311,7 +311,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			return_types.emplace_back(core::GeoTypes::WKB_BLOB());
 		} else if (attribute.dictionary) {
 			result->arrow_convert_data[col_idx] =
-			    make_unique<ArrowConvertData>(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
+			    make_uniq<ArrowConvertData>(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
 			return_types.emplace_back(GetArrowLogicalType(*attribute.dictionary, result->arrow_convert_data, col_idx));
 		} else {
 			return_types.emplace_back(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
@@ -351,7 +351,7 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
                                                                    TableFunctionInitInput &input) {
 	auto &data = (GdalScanFunctionData &)*input.bind_data;
 
-	auto global_state = make_unique<GdalScanGlobalState>();
+	auto global_state = make_uniq<GdalScanGlobalState>();
 
 	// Get selected layer
 	OGRLayer *layer;
@@ -396,7 +396,7 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	// Create arrow stream from layer
 
-	global_state->stream = make_unique<ArrowArrayStreamWrapper>();
+	global_state->stream = make_uniq<ArrowArrayStreamWrapper>();
 
 
 	// set layer options
@@ -410,7 +410,7 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	}
 	CSLDestroy(lco);
 
-	global_state->max_threads = GdalTableFunction::MaxThreads(context, input.bind_data);
+	global_state->max_threads = GdalTableFunction::MaxThreads(context, input.bind_data.get());
 
 	if (input.CanRemoveFilterColumns()) {
 		global_state->projection_ids = input.projection_ids;
@@ -437,7 +437,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 
 	//! Out of tuples in this chunk
 	if (state.chunk_offset >= (idx_t)state.chunk->arrow_array.length) {
-		if (!ArrowScanParallelStateNext(context, input.bind_data, state, global_state)) {
+		if (!ArrowScanParallelStateNext(context, input.bind_data.get(), state, global_state)) {
 			return;
 		}
 	}

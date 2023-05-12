@@ -96,7 +96,7 @@ void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
 
 	CreateScalarFunctionInfo info(std::move(geometry_type_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace core

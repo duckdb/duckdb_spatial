@@ -158,11 +158,11 @@ void CoreScalarFunctions::RegisterStContains(ClientContext &context) {
 
 	CreateScalarFunctionInfo contains_info(std::move(contains_function_set));
 	contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &contains_info);
+	catalog.CreateFunction(context, contains_info);
 
 	CreateScalarFunctionInfo within_info(std::move(within_function_set));
 	within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &within_info);
+	catalog.CreateFunction(context, within_info);
 }
 
 } // namespace core

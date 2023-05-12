@@ -60,7 +60,7 @@ void CoreScalarFunctions::RegisterStAsHEXWKB(ClientContext &context) {
 
 	CreateScalarFunctionInfo info(ScalarFunction("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsHEXWKBFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace core

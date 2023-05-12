@@ -14,11 +14,11 @@ GEOSFunctionLocalState::GEOSFunctionLocalState(ClientContext &context)
 
 unique_ptr<FunctionLocalState> GEOSFunctionLocalState::Init(
     ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
-	return make_unique<GEOSFunctionLocalState>(state.GetContext());
+	return make_uniq<GEOSFunctionLocalState>(state.GetContext());
 }
 
-unique_ptr<FunctionLocalState> GEOSFunctionLocalState::InitCast(ClientContext &context) {
-	return make_unique<GEOSFunctionLocalState>(context);
+unique_ptr<FunctionLocalState> GEOSFunctionLocalState::InitCast(CastLocalStateParameters &parameters) {
+	return make_uniq<GEOSFunctionLocalState>(*parameters.context.get());
 }
 
 GEOSFunctionLocalState &GEOSFunctionLocalState::ResetAndGet(CastParameters &parameters) {

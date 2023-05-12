@@ -277,15 +277,15 @@ void CoreScalarFunctions::RegisterStGeomFromWKB(ClientContext &context) {
 
 	CreateScalarFunctionInfo point2d_from_wkb_info(
 	    ScalarFunction("ST_Point2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POINT_2D(), Point2DFromWKBFunction));
-	catalog.CreateFunction(context, &point2d_from_wkb_info);
+	catalog.CreateFunction(context, point2d_from_wkb_info);
 
 	CreateScalarFunctionInfo linestring2d_from_wkb_info(ScalarFunction(
 	    "ST_LineString2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::LINESTRING_2D(), LineString2DFromWKBFunction));
-	catalog.CreateFunction(context, &linestring2d_from_wkb_info);
+	catalog.CreateFunction(context, linestring2d_from_wkb_info);
 
 	CreateScalarFunctionInfo polygon2d_from_wkb_info(
 	    ScalarFunction("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POLYGON_2D(), Polygon2DFromWKBFunction));
-	catalog.CreateFunction(context, &polygon2d_from_wkb_info);
+	catalog.CreateFunction(context, polygon2d_from_wkb_info);
 
 	ScalarFunctionSet st_geom_from_wkb("ST_GeomFromWKB");
 	st_geom_from_wkb.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, GeoTypes::GEOMETRY(), GeometryFromWKBFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));

@@ -64,7 +64,7 @@ void CoreScalarFunctions::RegisterStX(ClientContext &context) {
 	st_x.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(st_x));
-	catalog.AddFunction(context, &info);
+	catalog.AddFunction(context, info);
 }
 
 } // namespace core

@@ -75,7 +75,7 @@ static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, 
 	CreateTypeInfo type_info(name, std::move(type));
 	type_info.temporary = true;
 	type_info.internal = true;
-	catalog.CreateType(context, &type_info);
+	catalog.CreateType(context, type_info);
 }
 
 void GeoTypes::Register(ClientContext &context) {

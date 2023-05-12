@@ -39,7 +39,7 @@ void GEOSScalarFunctions::RegisterStAsText(ClientContext &context) {
 	CreateScalarFunctionInfo info(
 	    ScalarFunction("ST_AsText", {core::GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryToTextFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, &info);
+	catalog.AddFunction(context, info);
 }
 
 } // namespace spatials

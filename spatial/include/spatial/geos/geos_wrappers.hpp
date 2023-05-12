@@ -47,7 +47,7 @@ struct GeosDeleter<const GEOSPreparedGeometry> {
 };
 
 template <class T>
-unique_ptr<T, GeosDeleter<T>> make_unique_geos(GEOSContextHandle_t ctx, T *ptr) {
+unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
 	return unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
 }
 
