@@ -20,25 +20,24 @@ struct ProjFunctionLocalState : public FunctionLocalState {
 	PJ_CONTEXT *proj_ctx;
 	core::GeometryFactory factory;
 
-ProjFunctionLocalState(ClientContext &context)
-    	: proj_ctx(ProjModule::GetThreadProjContext()), factory(BufferAllocator::Get(context)) {
-}
+	ProjFunctionLocalState(ClientContext &context)
+	    : proj_ctx(ProjModule::GetThreadProjContext()), factory(BufferAllocator::Get(context)) {
+	}
 
-~ProjFunctionLocalState() override {
-	proj_context_destroy(proj_ctx);
-}
+	~ProjFunctionLocalState() override {
+		proj_context_destroy(proj_ctx);
+	}
 
-static unique_ptr<FunctionLocalState> Init(
-    ExpressionState &state, const BoundFunctionExpression &expr, FunctionData *bind_data) {
-	return make_unique<ProjFunctionLocalState>(state.GetContext());
-}
+	static unique_ptr<FunctionLocalState> Init(ExpressionState &state, const BoundFunctionExpression &expr,
+	                                           FunctionData *bind_data) {
+		return make_uniq<ProjFunctionLocalState>(state.GetContext());
+	}
 
-static ProjFunctionLocalState& ResetAndGet(ExpressionState &state) {
-	auto &local_state = (ProjFunctionLocalState &)*ExecuteFunctionState::GetFunctionState(state);
-	local_state.factory.allocator.Reset();
-	return local_state;
-}
-
+	static ProjFunctionLocalState &ResetAndGet(ExpressionState &state) {
+		auto &local_state = (ProjFunctionLocalState &)*ExecuteFunctionState::GetFunctionState(state);
+		local_state.factory.allocator.Reset();
+		return local_state;
+	}
 };
 
 static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -52,7 +51,7 @@ static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vect
 
 	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
 	auto &proj_ctx = local_state.proj_ctx;
-	
+
 	GenericExecutor::ExecuteTernary<BOX_TYPE, PROJ_TYPE, PROJ_TYPE, BOX_TYPE>(
 	    box, proj_from, proj_to, result, count, [&](BOX_TYPE box_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
 		    auto from_str = proj_from.val.GetString();
@@ -87,9 +86,9 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
 	auto &proj_ctx = local_state.proj_ctx;
 
-	if(proj_from.GetVectorType() == VectorType::CONSTANT_VECTOR && 
-		proj_to.GetVectorType() == VectorType::CONSTANT_VECTOR &&
-		!ConstantVector::IsNull(proj_from) && !ConstantVector::IsNull(proj_to)) {
+	if (proj_from.GetVectorType() == VectorType::CONSTANT_VECTOR &&
+	    proj_to.GetVectorType() == VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(proj_from) &&
+	    !ConstantVector::IsNull(proj_to)) {
 		// Special case: both projections are constant, so we can create the projection once and reuse it
 		auto from_str = ConstantVector::GetData<PROJ_TYPE>(proj_from)[0].val.GetString();
 		auto to_str = ConstantVector::GetData<PROJ_TYPE>(proj_to)[0].val.GetString();
@@ -99,42 +98,40 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 			throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
 		}
 
-		GenericExecutor::ExecuteUnary<POINT_TYPE, POINT_TYPE>(
-			point, result, count, [&](POINT_TYPE point_in) {
-				POINT_TYPE point_out;
-				auto transformed = proj_trans(crs, PJ_FWD, proj_coord(point_in.a_val, point_in.b_val, 0, 0)).xy;
-				point_out.a_val = transformed.x;
-				point_out.b_val = transformed.y;
-				return point_out;
-			}
-		);
+		GenericExecutor::ExecuteUnary<POINT_TYPE, POINT_TYPE>(point, result, count, [&](POINT_TYPE point_in) {
+			POINT_TYPE point_out;
+			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(point_in.a_val, point_in.b_val, 0, 0)).xy;
+			point_out.a_val = transformed.x;
+			point_out.b_val = transformed.y;
+			return point_out;
+		});
 		proj_destroy(crs);
 
 	} else {
 		GenericExecutor::ExecuteTernary<POINT_TYPE, PROJ_TYPE, PROJ_TYPE, POINT_TYPE>(
-			point, proj_from, proj_to, result, count, [&](POINT_TYPE point_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
-				auto from_str = proj_from.val.GetString();
-				auto to_str = proj_to.val.GetString();
+		    point, proj_from, proj_to, result, count, [&](POINT_TYPE point_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
+			    auto from_str = proj_from.val.GetString();
+			    auto to_str = proj_to.val.GetString();
 
-				auto crs = proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr);
-				if (!crs) {
-					throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
-				}
+			    auto crs = proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr);
+			    if (!crs) {
+				    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+			    }
 
-				POINT_TYPE point_out;
-				auto transformed = proj_trans(crs, PJ_FWD, proj_coord(point_in.a_val, point_in.b_val, 0, 0)).xy;
-				point_out.a_val = transformed.x;
-				point_out.b_val = transformed.y;
+			    POINT_TYPE point_out;
+			    auto transformed = proj_trans(crs, PJ_FWD, proj_coord(point_in.a_val, point_in.b_val, 0, 0)).xy;
+			    point_out.a_val = transformed.x;
+			    point_out.b_val = transformed.y;
 
-				proj_destroy(crs);
+			    proj_destroy(crs);
 
-				return point_out;
-			});
+			    return point_out;
+		    });
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::Point &point) {
-	if(point.IsEmpty()) {
+static void TransformGeometry(PJ *crs, core::Point &point) {
+	if (point.IsEmpty()) {
 		return;
 	}
 	auto &vertex = point.GetVertex();
@@ -143,87 +140,85 @@ static void TransformGeometry(PJ* crs, core::Point &point) {
 	vertex.y = transformed.y;
 }
 
-static void TransformGeometry(PJ* crs, core::LineString &line) {
-	for(idx_t i = 0; i < line.Count(); i++) {
-		auto &vertex = line.points[i];
-		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-		vertex.x = transformed.x;
-		vertex.y = transformed.y;
+static void TransformGeometry(PJ *crs, core::LineString &line) {
+	for (auto &vert : line.Vertices()) {
+		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
+		vert.x = transformed.x;
+		vert.y = transformed.y;
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::Polygon &poly) {
-	for(idx_t i = 0; i < poly.Count(); i++) {
-		auto &ring = poly.rings[i];
-		for (idx_t j = 0; j < ring.Count(); j++) {
-			auto &vertex = ring.data[j];
-			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-			vertex.x = transformed.x;
-			vertex.y = transformed.y;
+static void TransformGeometry(PJ *crs, core::Polygon &poly) {
+	for (auto &ring : poly.Rings()) {
+		for (auto &vert : ring) {
+			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
+			vert.x = transformed.x;
+			vert.y = transformed.y;
 		}
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::MultiPoint &multi_point) {
-	for (idx_t i = 0; i < multi_point.Count(); i++) {
-		TransformGeometry(crs, multi_point.points[i]);
+static void TransformGeometry(PJ *crs, core::MultiPoint &multi_point) {
+	for (auto &point : multi_point) {
+		TransformGeometry(crs, point);
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::MultiLineString &multi_line) {
-	for (idx_t i = 0; i < multi_line.Count(); i++) {
-		TransformGeometry(crs, multi_line.linestrings[i]);
+static void TransformGeometry(PJ *crs, core::MultiLineString &multi_line) {
+	for (auto &line : multi_line) {
+		TransformGeometry(crs, line);
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::MultiPolygon &multi_poly) {
-	for (idx_t i = 0; i < multi_poly.Count(); i++) {
-		TransformGeometry(crs, multi_poly.polygons[i]);
+static void TransformGeometry(PJ *crs, core::MultiPolygon &multi_poly) {
+	for (auto &poly : multi_poly) {
+		TransformGeometry(crs, poly);
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::Geometry &geom);
+static void TransformGeometry(PJ *crs, core::Geometry &geom);
 
-static void TransformGeometry(PJ* crs, core::GeometryCollection &geom) {
-	for (idx_t i = 0; i < geom.Count(); i++) {
-		TransformGeometry(crs, geom.geometries[i]);
+static void TransformGeometry(PJ *crs, core::GeometryCollection &geom) {
+	for (auto &child : geom) {
+		TransformGeometry(crs, child);
 	}
 }
 
-static void TransformGeometry(PJ* crs, core::Geometry &geom) {
-	switch(geom.Type()) {
-		case core::GeometryType::POINT:
-			TransformGeometry(crs, geom.GetPoint());
-			break;
-		case core::GeometryType::LINESTRING:
-			TransformGeometry(crs, geom.GetLineString());
-			break;
-		case core::GeometryType::POLYGON:
-			TransformGeometry(crs, geom.GetPolygon());
-			break;
-		case core::GeometryType::MULTIPOINT:
-			TransformGeometry(crs, geom.GetMultiPoint());
-			break;
-		case core::GeometryType::MULTILINESTRING:
-			TransformGeometry(crs, geom.GetMultiLineString());
-			break;
-		case core::GeometryType::MULTIPOLYGON:
-			TransformGeometry(crs, geom.GetMultiPolygon());
-			break;
-		case core::GeometryType::GEOMETRYCOLLECTION:
-			TransformGeometry(crs, geom.GetGeometryCollection());
-			break;
-		default:
-			throw NotImplementedException("Unimplemented geometry type!");
+static void TransformGeometry(PJ *crs, core::Geometry &geom) {
+	switch (geom.Type()) {
+	case core::GeometryType::POINT:
+		TransformGeometry(crs, geom.GetPoint());
+		break;
+	case core::GeometryType::LINESTRING:
+		TransformGeometry(crs, geom.GetLineString());
+		break;
+	case core::GeometryType::POLYGON:
+		TransformGeometry(crs, geom.GetPolygon());
+		break;
+	case core::GeometryType::MULTIPOINT:
+		TransformGeometry(crs, geom.GetMultiPoint());
+		break;
+	case core::GeometryType::MULTILINESTRING:
+		TransformGeometry(crs, geom.GetMultiLineString());
+		break;
+	case core::GeometryType::MULTIPOLYGON:
+		TransformGeometry(crs, geom.GetMultiPolygon());
+		break;
+	case core::GeometryType::GEOMETRYCOLLECTION:
+		TransformGeometry(crs, geom.GetGeometryCollection());
+		break;
+	default:
+		throw NotImplementedException("Unimplemented geometry type!");
 	}
 }
 
 struct ProjCRSDelete {
-	void operator()(PJ* crs) {
+	void operator()(PJ *crs) {
 		proj_destroy(crs);
 	}
 };
-using ProjCRS = unique_ptr<PJ, ProjCRSDelete>;
+// TODO: duckdbs safe unique_ptr does not support custom deleters yet
+using ProjCRS = std::unique_ptr<PJ, ProjCRSDelete>;
 
 static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();
@@ -235,14 +230,14 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 	auto &proj_ctx = local_state.proj_ctx;
 	auto &factory = local_state.factory;
 
-	if(proj_from_vec.GetVectorType() == VectorType::CONSTANT_VECTOR && 
-		proj_to_vec.GetVectorType() == VectorType::CONSTANT_VECTOR && 
-		!ConstantVector::IsNull(proj_from_vec) && !ConstantVector::IsNull(proj_to_vec)) {
+	if (proj_from_vec.GetVectorType() == VectorType::CONSTANT_VECTOR &&
+	    proj_to_vec.GetVectorType() == VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(proj_from_vec) &&
+	    !ConstantVector::IsNull(proj_to_vec)) {
 		// Special case: both projections are constant (very common)
 		// we can create the projection once and reuse it for all geometries
 
 		// TODO: In the future we can cache the projections in the state instead.
-		
+
 		auto from_str = ConstantVector::GetData<string_t>(proj_from_vec)[0].GetString();
 		auto to_str = ConstantVector::GetData<string_t>(proj_to_vec)[0].GetString();
 		auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));
@@ -250,8 +245,7 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
 		}
 
-		UnaryExecutor::Execute<string_t, string_t>(geom_vec, result, count, 
-			[&](string_t input_geom) {
+		UnaryExecutor::Execute<string_t, string_t>(geom_vec, result, count, [&](string_t input_geom) {
 			auto geom = factory.Deserialize(input_geom);
 			auto copy = factory.CopyGeometry(geom);
 			TransformGeometry(crs.get(), copy);
@@ -260,27 +254,24 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 	} else {
 		// General case: projections are not constant
 		// we need to create a projection for each geometry
-		TernaryExecutor::Execute<string_t, string_t, string_t, string_t>(geom_vec, proj_from_vec, proj_to_vec, result, count, 
-			[&](string_t input_geom, string_t proj_from, string_t proj_to) {
+		TernaryExecutor::Execute<string_t, string_t, string_t, string_t>(
+		    geom_vec, proj_from_vec, proj_to_vec, result, count,
+		    [&](string_t input_geom, string_t proj_from, string_t proj_to) {
+			    auto from_str = proj_from.GetString();
+			    auto to_str = proj_to.GetString();
+			    auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));
 
-			auto from_str = proj_from.GetString();
-			auto to_str = proj_to.GetString();
-			auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));
-			
-			if (!crs.get()) {
-				throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
-			}
+			    if (!crs.get()) {
+				    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+			    }
 
-			auto geom = factory.Deserialize(input_geom);
-			auto copy = factory.CopyGeometry(geom);
-			TransformGeometry(crs.get(), copy);
-			return factory.Serialize(result, copy);
-		});
+			    auto geom = factory.Deserialize(input_geom);
+			    auto copy = factory.CopyGeometry(geom);
+			    TransformGeometry(crs.get(), copy);
+			    return factory.Serialize(result, copy);
+		    });
 	}
 }
-
-
-
 
 // SPATIAL_REF_SYS table function
 struct GenerateSpatialRefSysTable {
@@ -331,7 +322,7 @@ unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context
 
 unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientContext &context,
                                                                       TableFunctionInitInput &input) {
-	return make_unique<State>();
+	return make_uniq<State>();
 }
 
 void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
@@ -359,7 +350,7 @@ void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionIn
 	}
 
 	proj_crs_info_list_destroy(crs_list);
-	
+
 	state.current_idx += count;
 	output.SetCardinality(count);
 }
@@ -372,7 +363,7 @@ void GenerateSpatialRefSysTable::Register(ClientContext &context) {
 
 	// Also create a view
 	/*
-	auto view = make_unique<CreateViewInfo>();
+	auto view = make_uniq<CreateViewInfo>();
 	view->schema = DEFAULT_SCHEMA;
 	view->view_name = "SPATIAL_REF_SYS";
 	view->sql = "SELECT * FROM st_list_proj_crs()"; // TODO: this is not SQL/MM compliant
@@ -389,16 +380,19 @@ void ProjFunctions::Register(ClientContext &context) {
 	ScalarFunctionSet set("st_transform");
 
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::BOX_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               spatial::core::GeoTypes::BOX_2D(), Box2DTransformFunction, nullptr, nullptr, nullptr, ProjFunctionLocalState::Init));
+	                               spatial::core::GeoTypes::BOX_2D(), Box2DTransformFunction, nullptr, nullptr, nullptr,
+	                               ProjFunctionLocalState::Init));
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::POINT_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               spatial::core::GeoTypes::POINT_2D(), Point2DTransformFunction, nullptr, nullptr, nullptr, ProjFunctionLocalState::Init));
+	                               spatial::core::GeoTypes::POINT_2D(), Point2DTransformFunction, nullptr, nullptr,
+	                               nullptr, ProjFunctionLocalState::Init));
 
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               spatial::core::GeoTypes::GEOMETRY(), GeometryTransformFunction, nullptr, nullptr, nullptr, ProjFunctionLocalState::Init));
+	                               spatial::core::GeoTypes::GEOMETRY(), GeometryTransformFunction, nullptr, nullptr,
+	                               nullptr, ProjFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 
 	GenerateSpatialRefSysTable::Register(context);
 }

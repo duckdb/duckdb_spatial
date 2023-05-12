@@ -28,13 +28,14 @@ void GEOSScalarFunctions::RegisterStCoveredBy(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_CoveredBy");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, CoveredByFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
+	                               CoveredByFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

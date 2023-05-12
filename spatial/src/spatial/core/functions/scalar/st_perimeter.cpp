@@ -74,13 +74,12 @@ static void Box2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vect
 // GEOMETRY
 //------------------------------------------------------------------------------
 static double PolygonPerimeter(const Polygon &poly) {
-	double perimeter = 0;	
-	for(uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
-		auto &ring = poly.rings[ring_idx];
-		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
-			auto &p1 = ring[coord_idx];
-            auto &p2 = ring[coord_idx + 1];
-            perimeter += std::sqrt(std::pow(p1.x - p2.x, 2) + std::pow(p1.y - p2.y, 2));
+	double perimeter = 0;
+	for (auto &ring : poly.Rings()) {
+		for (uint32_t i = 0; i < ring.Count() - 1; i++) {
+			auto &v1 = ring[i];
+			auto &v2 = ring[i + 1];
+			perimeter += std::sqrt(std::pow(v1.x - v2.x, 2) + std::pow(v1.y - v2.y, 2));
 		}
 	}
 	return perimeter;
@@ -95,8 +94,7 @@ static double GeometryPerimeter(const Geometry &geom) {
 		case core::GeometryType::MULTIPOLYGON: {
 			auto &mpoly = geom.GetMultiPolygon();
 			double total_perimeter = 0;
-			for (uint32_t poly_idx = 0; poly_idx < mpoly.Count(); poly_idx++) {
-				auto &poly = mpoly.polygons[poly_idx];
+			for (auto &poly : mpoly) {
 				total_perimeter += PolygonPerimeter(poly);
 			}
 			return total_perimeter;
@@ -104,8 +102,7 @@ static double GeometryPerimeter(const Geometry &geom) {
 		case core::GeometryType::GEOMETRYCOLLECTION: {
 			auto &coll = geom.GetGeometryCollection();
 			double total_perimeter = 0;
-			for (uint32_t geom_idx = 0; geom_idx < coll.Count(); geom_idx++) {
-				auto &subgeom = coll.geometries[geom_idx];
+			for (auto &subgeom : coll) {
 				total_perimeter += GeometryPerimeter(subgeom);
 			}
 			return total_perimeter;
@@ -144,7 +141,7 @@ void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace geographiclib

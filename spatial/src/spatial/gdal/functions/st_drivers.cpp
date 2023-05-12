@@ -27,12 +27,12 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
 	names.emplace_back("help_url");
 
 	auto driver_count = GDALGetDriverCount();
-	return make_unique<BindData>(driver_count);
+	return make_uniq<BindData>(driver_count);
 }
 
 unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context,
                                                                     TableFunctionInitInput &input) {
-	return make_unique<State>();
+	return make_uniq<State>();
 }
 
 void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
@@ -60,9 +60,11 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 		auto copy_value = Value::CreateValue(copy_flag != nullptr);
 		const char *open_flag = GDALGetMetadataItem(driver, GDAL_DCAP_OPEN, nullptr);
 		auto open_value = Value::CreateValue(open_flag != nullptr);
-		
+
 		auto help_topic_flag = GDALGetDriverHelpTopic(driver);
-		auto help_topic_value = help_topic_flag == nullptr ? Value(LogicalType::VARCHAR) : Value(StringUtil::Format("https://gdal.org/%s", help_topic_flag));
+		auto help_topic_value = help_topic_flag == nullptr
+		                            ? Value(LogicalType::VARCHAR)
+		                            : Value(StringUtil::Format("https://gdal.org/%s", help_topic_flag));
 
 		output.data[0].SetValue(count, short_name);
 		output.data[1].SetValue(count, long_name);

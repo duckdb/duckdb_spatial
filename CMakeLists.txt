@@ -13,49 +13,47 @@ project(${TARGET_NAME})
 # Enable network functionality (OpenSSL and GDAL's CURL based fs/drivers)
 option(SPATIAL_USE_NETWORK "Enable network functionality" ON)
 
-include_directories(include)
-add_subdirectory(src)
+include_directories(spatial/include)
+add_subdirectory(spatial/src)
 
-include_directories(third_party/ryu/include)
-add_subdirectory(third_party/ryu)
+include_directories(spatial/third_party/ryu/include)
+add_subdirectory(spatial/third_party/ryu)
 
-include_directories(third_party/yyjson/include)
-add_subdirectory(third_party/yyjson)
+include_directories(spatial/third_party/yyjson/include)
+add_subdirectory(spatial/third_party/yyjson)
 
 
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
-# Build dependencies
-# TODO: in the future we should allow users to dynamically link to their own dependencies
-# if they are building locally. If they have a local (compatible) GDAL installation, 
-# we should use that instead of building our own. (unless a static build is requested)
+# Build dependencies TODO: in the future we should allow users to dynamically
+# link to their own dependencies if they are building locally. If they have a
+# local (compatible) GDAL installation, we should use that instead of building
+# our own. (unless a static build is requested)
 execute_process(
-    # Generate project
-    COMMAND ${CMAKE_COMMAND}
-    -G ${CMAKE_GENERATOR}
+  # Generate project
+  COMMAND
+    ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DOSX_BUILD_UNIVERSAL=${OSX_BUILD_UNIVERSAL}
-    -DSPATIAL_USE_NETWORK=${SPATIAL_USE_NETWORK}
-    -S ${CMAKE_CURRENT_SOURCE_DIR}/dependencies 
-    -B ${CMAKE_BINARY_DIR}/dependencies
-    RESULT_VARIABLE DEPENDENCIES_GENERATE_RESULT
-)
+    -DSPATIAL_USE_NETWORK=${SPATIAL_USE_NETWORK} -S
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps -B ${CMAKE_BINARY_DIR}/deps
+  RESULT_VARIABLE DEPENDENCIES_GENERATE_RESULT)
 if(NOT DEPENDENCIES_GENERATE_RESULT EQUAL 0)
-    message(FATAL_ERROR "Could not generate dependencies project")
+  message(FATAL_ERROR "Could not generate dependencies project")
 endif()
 execute_process(
-    # Build project
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/dependencies --config ${CMAKE_BUILD_TYPE}
-    RESULT_VARIABLE DEPENDENCIES_BUILD_RESULT
-)
+  # Build project
+  COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/deps --config
+          ${CMAKE_BUILD_TYPE} RESULT_VARIABLE DEPENDENCIES_BUILD_RESULT)
 if(NOT DEPENDENCIES_BUILD_RESULT EQUAL 0)
-    message(FATAL_ERROR "Could not build dependencies project")
+  message(FATAL_ERROR "Could not build dependencies project")
 endif()
 
-
 # Add dependencies
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_BINARY_DIR}/dependencies/local)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} MD.lib) # annoyingly for expat on windows
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}
+                      ${CMAKE_BINARY_DIR}/deps/local)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} MD.lib
+)# annoyingly for expat on windows
 set(ZLIB_USE_STATIC_LIBS ON)
 set(OPENSSL_USE_STATIC_LIBS ON)
 find_library(SQLITE3_MEMVFS memvfs)
@@ -70,14 +68,13 @@ find_package(GeographicLib REQUIRED)
 # Important: The link order matters, its the reverse order of dependency
 target_link_libraries(
   ${EXTENSION_NAME}
-  PUBLIC
-  GDAL::GDAL
-  GEOS::geos_c
-  PROJ::proj
-  EXPAT::EXPAT
-  SQLite::SQLite3 
-  ZLIB::ZLIB
-  ${SQLITE3_MEMVFS})
+  PUBLIC GDAL::GDAL
+         GEOS::geos_c
+         PROJ::proj
+         EXPAT::EXPAT
+         SQLite::SQLite3
+         ZLIB::ZLIB
+         ${SQLITE3_MEMVFS})
 
 # Geographiclib is special
 include_directories(${GeographicLib_INCLUDE_DIRS})
@@ -87,14 +84,9 @@ if(SPATIAL_USE_NETWORK)
   find_package(CURL REQUIRED)
   find_package(OpenSSL REQUIRED)
 
-  target_link_libraries(
-    ${EXTENSION_NAME}
-    PUBLIC
-    CURL::libcurl
-    OpenSSL::SSL
-    OpenSSL::Crypto)
+  target_link_libraries(${EXTENSION_NAME} PUBLIC CURL::libcurl OpenSSL::SSL
+                                                 OpenSSL::Crypto)
 endif()
-
 
 if(WIN32)
   target_link_libraries(${EXTENSION_NAME} PUBLIC wbemuuid.lib)
@@ -106,7 +98,6 @@ if(APPLE)
   target_link_libraries(${EXTENSION_NAME} PUBLIC ${CoreFoundation_Library}
                                                  ${SystemConfiguration_Library})
 endif()
-
 
 # Build extensions
 set(PARAMETERS "-warnings")

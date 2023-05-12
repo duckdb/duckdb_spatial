@@ -11,20 +11,13 @@ namespace spatial {
 namespace core {
 
 static unique_ptr<FunctionData> GeometryTypeFunctionBind(ClientContext &context, ScalarFunction &bound_function,
-                                     vector<unique_ptr<Expression>> &arguments) {
+                                                         vector<unique_ptr<Expression>> &arguments) {
 	// Create an enum type for all geometry types
 	// Ensure that these are in the same order as the GeometryType enum
-	vector<string_t> enum_values = {
-	    "POINT",
-	    "LINESTRING",
-	    "POLYGON",
-	    "MULTIPOINT",
-	    "MULTILINESTRING",
-	    "MULTIPOLYGON",
-	    "GEOMETRYCOLLECTION",
-	    // or...
-	    "UNKNOWN"
-	};
+	vector<string_t> enum_values = {"POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
+	                                "GEOMETRYCOLLECTION",
+	                                // or...
+	                                "UNKNOWN"};
 
 	auto varchar_vector = Vector(LogicalType::VARCHAR, enum_values.size());
 	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
@@ -85,18 +78,19 @@ void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	ScalarFunctionSet geometry_type_set("ST_GeometryType");
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::ANY,
-	                                             Point2DTypeFunction, GeometryTypeFunctionBind));
+	geometry_type_set.AddFunction(
+	    ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::ANY, Point2DTypeFunction, GeometryTypeFunctionBind));
 	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::ANY,
 	                                             Linestring2DTypeFunction, GeometryTypeFunctionBind));
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::ANY,
-	                                             Polygon2DTypeFunction, GeometryTypeFunctionBind));
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::ANY,
-	                                             GeometryTypeFunction, GeometryTypeFunctionBind, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	geometry_type_set.AddFunction(
+	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::ANY, Polygon2DTypeFunction, GeometryTypeFunctionBind));
+	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::ANY, GeometryTypeFunction,
+	                                             GeometryTypeFunctionBind, nullptr, nullptr,
+	                                             GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(geometry_type_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace core

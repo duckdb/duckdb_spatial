@@ -72,10 +72,10 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 static double PolygonPerimeter(const core::Polygon &poly, GeographicLib::PolygonArea &comp) {
 	
 	double total_perimeter = 0;	
-	for(uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
+	for (auto &ring : poly.Rings()) {
 		comp.Clear();
-		auto &ring = poly.rings[ring_idx];
 		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
+		// so skip it.
 		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
 			auto &coord = ring[coord_idx];
 			comp.AddPoint(coord.x, coord.y);
@@ -83,13 +83,7 @@ static double PolygonPerimeter(const core::Polygon &poly, GeographicLib::Polygon
 		double _ring_area;
 		double perimeter;
 		comp.Compute(false, true, perimeter, _ring_area);
-		if (ring_idx == 0) {
-			// Add outer ring
-			total_perimeter = perimeter;
-		} else {
-			// Subtract holes
-			total_perimeter -= perimeter;
-		}
+		total_perimeter += perimeter;
 	}
 	return total_perimeter;
 }
@@ -103,8 +97,7 @@ static double GeometryPerimeter(const core::Geometry &geom, GeographicLib::Polyg
 		case core::GeometryType::MULTIPOLYGON: {
 			auto &mpoly = geom.GetMultiPolygon();
 			double total_perimeter = 0;
-			for (uint32_t poly_idx = 0; poly_idx < mpoly.Count(); poly_idx++) {
-				auto &poly = mpoly.polygons[poly_idx];
+			for (auto &poly : mpoly) {
 				total_perimeter += PolygonPerimeter(poly, comp);
 			}
 			return total_perimeter;
@@ -112,9 +105,8 @@ static double GeometryPerimeter(const core::Geometry &geom, GeographicLib::Polyg
 		case core::GeometryType::GEOMETRYCOLLECTION: {
 			auto &coll = geom.GetGeometryCollection();
 			double total_perimeter = 0;
-			for (uint32_t geom_idx = 0; geom_idx < coll.Count(); geom_idx++) {
-				auto &subgeom = coll.geometries[geom_idx];
-				total_perimeter += GeometryPerimeter(subgeom, comp);
+			for (auto &item : coll) {
+				total_perimeter += GeometryPerimeter(item, comp);
 			}
 			return total_perimeter;
 		}
@@ -154,7 +146,7 @@ void GeographicLibFunctions::RegisterPerimeter(ClientContext &context) {
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace geographiclib

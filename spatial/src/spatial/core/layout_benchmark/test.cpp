@@ -1167,21 +1167,21 @@ void LayoutBenchmark::Register(ClientContext &context) {
 	// Create
 	CreateScalarFunctionInfo create_point_2d_c_info(ScalarFunction(
 	    "geo_create_point2d_c", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GEO_POINT_2D_C, CreatePoint2D_C));
-	catalog.CreateFunction(context, &create_point_2d_c_info);
+	catalog.CreateFunction(context, create_point_2d_c_info);
 
 	CreateScalarFunctionInfo create_point_3d_c_info(
 	    ScalarFunction("geo_create_point3d_c", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
 	                   GEO_POINT_3D_C, CreatePoint3D_C));
-	catalog.CreateFunction(context, &create_point_3d_c_info);
+	catalog.CreateFunction(context, create_point_3d_c_info);
 
 	CreateScalarFunctionInfo create_point_4d_c_info(ScalarFunction(
 	    "geo_create_point4d_c", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
 	    GEO_POINT_4D_C, CreatePoint4D_C));
-	catalog.CreateFunction(context, &create_point_4d_c_info);
+	catalog.CreateFunction(context, create_point_4d_c_info);
 
 	CreateScalarFunctionInfo create_polygon_2d_c_info(
 	    ScalarFunction("geo_create_polygon2d_c", {GeoTypes::WKB_BLOB}, GEO_POLYGON_2D_C, CreatePolygon_2D_C));
-	catalog.CreateFunction(context, &create_polygon_2d_c_info);
+	catalog.CreateFunction(context, create_polygon_2d_c_info);
 
 	// this is the nice thing about columnar data, we can cast effortlessly
 	casts.RegisterCastFunction(GEO_POINT_3D_C, GEO_POINT_2D_C, CastPointTo2D_C, 0);
@@ -1190,79 +1190,79 @@ void LayoutBenchmark::Register(ClientContext &context) {
 	// Distance 2D
 	CreateScalarFunctionInfo distance_2d_c_info(ScalarFunction("geo_distance2d_c", {GEO_POINT_2D_C, GEO_POINT_2D_C},
 	                                                           LogicalType::DOUBLE, Distance2DFunction_C));
-	catalog.CreateFunction(context, &distance_2d_c_info);
+	catalog.CreateFunction(context, distance_2d_c_info);
 
 	CreateScalarFunctionInfo line_point_distance_2d_c_info(ScalarFunction(
 	    "geo_line_point_distance2d_c", {GEO_POINT_2D_C, GEO_LINE_2D_C}, LogicalType::DOUBLE, LinePointDistance_2D_C));
-	catalog.CreateFunction(context, &line_point_distance_2d_c_info);
+	catalog.CreateFunction(context, line_point_distance_2d_c_info);
 
 	CreateScalarFunctionInfo polygon_area_2d_c_info(
 	    ScalarFunction("geo_polygon_area2d_c", {GEO_POLYGON_2D_C}, LogicalType::DOUBLE, AreaFunction_2D_C));
-	catalog.CreateFunction(context, &polygon_area_2d_c_info);
+	catalog.CreateFunction(context, polygon_area_2d_c_info);
 
 	CreateScalarFunctionInfo point_in_polygon_2d_c_info(ScalarFunction(
 	    "geo_point_in_polygon2d_c", {GEO_POINT_2D_C, GEO_POLYGON_2D_C}, LogicalType::BOOLEAN, PointInPolygon_C));
-	catalog.CreateFunction(context, &point_in_polygon_2d_c_info);
+	catalog.CreateFunction(context, point_in_polygon_2d_c_info);
 
 	/// LINES (COLUMNS)
 	CreateScalarFunctionInfo create_line_2d_c_info(
 	    ScalarFunction("geo_create_line2d_c", {GeoTypes::WKB_BLOB}, GEO_LINE_2D_C, CreateLine_2D_C));
-	catalog.CreateFunction(context, &create_line_2d_c_info);
+	catalog.CreateFunction(context, create_line_2d_c_info);
 
 	/// Length2d
 	CreateScalarFunctionInfo length_2d_c_info(
 	    ScalarFunction("geo_length2d_c", {LogicalType::ANY}, LogicalType::DOUBLE, LengthFunction_2D_C));
-	catalog.CreateFunction(context, &length_2d_c_info);
+	catalog.CreateFunction(context, length_2d_c_info);
 
 	/// POINT (ROWS)
 
 	// Create
 	CreateScalarFunctionInfo create_point_2d_r_info(ScalarFunction(
 	    "geo_create_point2d_r", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GEO_POINT_2D_R, CreatePoint2D_R));
-	catalog.CreateFunction(context, &create_point_2d_r_info);
+	catalog.CreateFunction(context, create_point_2d_r_info);
 
 	CreateScalarFunctionInfo create_point_3d_r_info(
 	    ScalarFunction("geo_create_point3d_r", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
 	                   GEO_POINT_3D_R, CreatePoint3D_R));
-	catalog.CreateFunction(context, &create_point_3d_r_info);
+	catalog.CreateFunction(context, create_point_3d_r_info);
 
 	CreateScalarFunctionInfo create_point_4d_r_info(ScalarFunction(
 	    "geo_create_point4d_r", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
 	    GEO_POINT_4D_R, CreatePoint4D_R));
-	catalog.CreateFunction(context, &create_point_4d_r_info);
+	catalog.CreateFunction(context, create_point_4d_r_info);
 
 	// Distance2d
 	CreateScalarFunctionInfo distance_2d_r_info(ScalarFunction("geo_distance2d_r", {LogicalType::ANY, LogicalType::ANY},
 	                                                           LogicalType::DOUBLE, Distance2DFunction_R,
 	                                                           BindDistance2D_R));
-	catalog.CreateFunction(context, &distance_2d_r_info);
+	catalog.CreateFunction(context, distance_2d_r_info);
 
 	CreateScalarFunctionInfo line_point_distance_2d_r_info(ScalarFunction(
 	    "geo_line_point_distance2d_r", {GEO_POINT_2D_R, GEO_LINE_2D_R}, LogicalType::DOUBLE, LinePointDistance_2D_R));
-	catalog.CreateFunction(context, &line_point_distance_2d_r_info);
+	catalog.CreateFunction(context, line_point_distance_2d_r_info);
 
 	CreateScalarFunctionInfo create_polygon_2d_r_info(
 	    ScalarFunction("geo_create_polygon2d_r", {GeoTypes::WKB_BLOB}, GEO_POLYGON_2D_R, CreatePolygon_2D_R));
-	catalog.CreateFunction(context, &create_polygon_2d_r_info);
+	catalog.CreateFunction(context, create_polygon_2d_r_info);
 
 	/// LINES (ROWS)
 	CreateScalarFunctionInfo create_line_2d_r_info(
 	    ScalarFunction("geo_create_line2d_r", {GeoTypes::WKB_BLOB}, GEO_LINE_2D_R, CreateLine_2D_R));
-	catalog.CreateFunction(context, &create_line_2d_r_info);
+	catalog.CreateFunction(context, create_line_2d_r_info);
 
 	/// Length2d
 	CreateScalarFunctionInfo length_2d_r_info(
 	    ScalarFunction("geo_length2d_r", {LogicalType::ANY}, LogicalType::DOUBLE, LengthFunction_2D_R));
-	catalog.CreateFunction(context, &length_2d_r_info);
+	catalog.CreateFunction(context, length_2d_r_info);
 
 	/// POLYGONS (ROWS)
 	CreateScalarFunctionInfo polygon_area_2d_r_info(
 	    ScalarFunction("geo_polygon_area2d_r", {GEO_POLYGON_2D_R}, LogicalType::DOUBLE, AreaFunction_2D_R));
-	catalog.CreateFunction(context, &polygon_area_2d_r_info);
+	catalog.CreateFunction(context, polygon_area_2d_r_info);
 
 	CreateScalarFunctionInfo point_in_polygon_2d_r_info(ScalarFunction(
 	    "geo_point_in_polygon2d_r", {GEO_POINT_2D_R, GEO_POLYGON_2D_R}, LogicalType::BOOLEAN, PointInPolygon_R));
-	catalog.CreateFunction(context, &point_in_polygon_2d_r_info);
+	catalog.CreateFunction(context, point_in_polygon_2d_r_info);
 
 	/*
 	    GeoTypes::WKB_BLOB.SetAlias("WKB_BLOB");

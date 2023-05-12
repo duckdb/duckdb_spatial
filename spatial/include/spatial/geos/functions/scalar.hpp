@@ -39,6 +39,7 @@ public:
 		RegisterStUnion(context);
 		RegisterStWithin(context);
 	}
+
 private:
 	static void RegisterStAsText(ClientContext &context);
 	static void RegisterStBoundary(ClientContext &context);
@@ -70,9 +71,8 @@ private:
 	static void RegisterStTouches(ClientContext &context);
 	static void RegisterStUnion(ClientContext &context);
 	static void RegisterStWithin(ClientContext &context);
-
 };
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

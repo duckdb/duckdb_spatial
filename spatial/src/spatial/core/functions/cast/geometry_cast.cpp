@@ -45,15 +45,14 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 			throw CastException("Cannot cast non-point GEOMETRY to POINT_2D");
 		}
 		auto &point = geom.GetPoint();
-		if(point.IsEmpty()) {
+		if (point.IsEmpty()) {
 			throw CastException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
 		auto &vertex = point.GetVertex();
-		return POINT_TYPE { vertex.x, vertex.y };
+		return POINT_TYPE {vertex.x, vertex.y};
 	});
 	return true;
 }
-
 
 //------------------------------------------------------------------------------
 // LineString2D -> Geometry
@@ -72,8 +71,8 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.points[i].x = x;
-			geom.points[i].y = y;
+			geom.Vertices()[i].x = x;
+			geom.Vertices()[i].y = y;
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
@@ -86,7 +85,6 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
 
 	auto &coord_vec = ListVector::GetEntry(result);
 	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
@@ -108,15 +106,14 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 		ListVector::Reserve(result, total_coords);
 
 		for (idx_t i = 0; i < line_size; i++) {
-			x_data[entry.offset + i] = line.points[i].x;
-			y_data[entry.offset + i] = line.points[i].y;
+			x_data[entry.offset + i] = line.Vertices()[i].x;
+			y_data[entry.offset + i] = line.Vertices()[i].y;
 		}
 		return entry;
 	});
 	ListVector::SetListSize(result, total_coords);
 	return true;
 }
-
 
 //------------------------------------------------------------------------------
 // Polygon2D -> Geometry
@@ -143,7 +140,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 				ring_array[j].x = x;
 				ring_array[j].y = y;
 			}
-			geom.rings[i] = ring_array;
+			geom.Ring(i) = ring_array;
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
@@ -168,13 +165,13 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 		}
 
 		auto &poly = geometry.GetPolygon();
-		auto poly_size = poly.num_rings;
+		auto poly_size = poly.Count();
 		auto poly_entry = list_entry_t(total_rings, poly_size);
 
 		ListVector::Reserve(result, total_rings + poly_size);
 
 		for (idx_t ring_idx = 0; ring_idx < poly_size; ring_idx++) {
-			auto ring = poly.rings[ring_idx];
+			auto ring = poly.Ring(ring_idx);
 			auto ring_size = ring.Count();
 			auto ring_entry = list_entry_t(total_coords, ring_size);
 
@@ -205,14 +202,12 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 	return true;
 }
 
-
 //------------------------------------------------------------------------------
 // BOX_2D -> Geometry
 //------------------------------------------------------------------------------
 // Since BOX is a non-standard geometry type, we serialize it as a polygon
 static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using GEOMETRY_TYPE = PrimitiveType<string_t>;
@@ -225,17 +220,18 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto maxy = box.d_val;
 
 		auto geom = lstate.factory.CreatePolygon(1, &capacity);
-		geom.rings[0].data[0].x = minx;
-		geom.rings[0].data[0].y = miny;
-		geom.rings[0].data[1].x = maxx;
-		geom.rings[0].data[1].y = miny;
-		geom.rings[0].data[2].x = maxx;
-		geom.rings[0].data[2].y = maxy;
-		geom.rings[0].data[3].x = minx;
-		geom.rings[0].data[3].y = maxy;
-		geom.rings[0].data[4].x = minx;
-		geom.rings[0].data[4].y = miny;
-		geom.rings[0].count = 5;
+		auto &shell = geom.Ring(0);
+		shell.data[0].x = minx;
+		shell.data[0].y = miny;
+		shell.data[1].x = maxx;
+		shell.data[1].y = miny;
+		shell.data[2].x = maxx;
+		shell.data[2].y = maxy;
+		shell.data[3].x = minx;
+		shell.data[3].y = maxy;
+		shell.data[4].x = minx;
+		shell.data[4].y = miny;
+		shell.count = 5;
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
 	return true;
@@ -249,19 +245,23 @@ void CoreCastFunctions::RegisterGeometryCasts(ClientContext &context) {
 	auto &casts = config.GetCastFunctions();
 
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::LINESTRING_2D(),
-	                           BoundCastInfo(GeometryToLineString2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(GeometryToLineString2DCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), GeoTypes::GEOMETRY(),
-	                           BoundCastInfo(LineString2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(LineString2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::POINT_2D(),
-								BoundCastInfo(GeometryToPoint2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(GeometryToPoint2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 	casts.RegisterCastFunction(GeoTypes::POINT_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Point2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 
 	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::POLYGON_2D(),
-								BoundCastInfo(GeometryToPolygon2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(GeometryToPolygon2DCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), GeoTypes::GEOMETRY(),
-	                           BoundCastInfo(Polygon2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(Polygon2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast),
+	                           1);
 
 	casts.RegisterCastFunction(GeoTypes::BOX_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Box2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);

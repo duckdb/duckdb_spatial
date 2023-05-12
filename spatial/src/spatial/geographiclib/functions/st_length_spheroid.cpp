@@ -59,9 +59,8 @@ static void GeodesicLineString2DFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 static double LineLength(const core::LineString &line, GeographicLib::PolygonArea &comp) {
 		comp.Clear();
-		for(uint32_t i = 0; i < line.Count(); i++) {
-			auto &point = line.points[i];
-			comp.AddPoint(point.x, point.y);
+		for (auto &vert : line.Vertices()) {
+			comp.AddPoint(vert.x, vert.y);
 		}
 		double _area;
 		double linestring_length;
@@ -77,16 +76,15 @@ static double GeometryLength(const core::Geometry &geom, GeographicLib::PolygonA
 		case core::GeometryType::MULTILINESTRING: {
 			auto &mline = geom.GetMultiLineString();
 			double mline_length = 0;
-			for(uint32_t i = 0; i < mline.Count(); i++) {
-				mline_length += LineLength(mline.linestrings[i], comp);
+			for (auto &line : mline) {
+				mline_length += LineLength(line, comp);
 			}
 			return mline_length;
 		}
 		case core::GeometryType::GEOMETRYCOLLECTION: {
 			auto &coll = geom.GetGeometryCollection();
 			auto sum = 0;
-			for(idx_t i = 0; i < coll.Count(); i++) {
-				auto &item = coll.geometries[i];
+			for (auto &item : coll) {
 				sum += GeometryLength(item, comp);
 			}
 			return sum;
@@ -126,7 +124,7 @@ void GeographicLibFunctions::RegisterLength(ClientContext &context) {
 
     CreateScalarFunctionInfo info(std::move(set));
     info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-    catalog.CreateFunction(context, &info);
+    catalog.CreateFunction(context, info);
 }
 
 } // namespace geographiclib

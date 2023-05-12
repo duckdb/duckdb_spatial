@@ -22,7 +22,7 @@ jobs:
     strategy:
       matrix:
         # Add commits/tags to build against other DuckDB versions
-        duckdb_version: [ 'v0.7.1' ]
+        duckdb_version: [ '<submodule_version>' ]
 
     steps:
       - uses: actions/checkout@v3

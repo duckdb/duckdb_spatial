@@ -47,8 +47,8 @@ struct GeosDeleter<const GEOSPreparedGeometry> {
 };
 
 template <class T>
-unique_ptr<T, GeosDeleter<T>> make_unique_geos(GEOSContextHandle_t ctx, T *ptr) {
-	return unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
+std::unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
+	return std::unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
 }
 
 struct GeometryPtr {
@@ -88,8 +88,8 @@ public:
 		return ptr;
 	}
 
-	unique_ptr<const GEOSPreparedGeometry, GeosDeleter<const GEOSPreparedGeometry>> Prepare() {
-		return make_unique_geos(ctx, GEOSPrepare_r(ctx, ptr));
+	std::unique_ptr<const GEOSPreparedGeometry, GeosDeleter<const GEOSPreparedGeometry>> Prepare() {
+		return make_uniq_geos(ctx, GEOSPrepare_r(ctx, ptr));
 	}
 
 	// Accessors
@@ -271,21 +271,19 @@ public:
 	GeometryPtr FromMultiLineString(const core::MultiLineString &mline) const;
 	GeometryPtr FromMultiPolygon(const core::MultiPolygon &mpoly) const;
 	GeometryPtr FromGeometryCollection(const core::GeometryCollection &gc) const;
-	GeometryPtr FromGeometry(core::Geometry &geom) const;
-
+	GeometryPtr FromGeometry(const core::Geometry &geom) const;
 
 	core::VertexVector ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
-	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-
+	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
 };
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial
