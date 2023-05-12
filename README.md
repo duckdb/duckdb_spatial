@@ -365,6 +365,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_GeomFromWKB              | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_GeometryType             | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_MakeLine                 | 🦆        |           | 🦆            |            |                 |
+| ST_Perimeter                | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Intersection             | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Intersects               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_IsClosed                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
