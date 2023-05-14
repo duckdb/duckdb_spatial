@@ -28,8 +28,8 @@ static void ExecutePreparedDistance(GEOSFunctionLocalState &lstate, Vector &left
 				auto right_geometry = lstate.factory.Deserialize(right_blob);
 				auto geos_right = lstate.ctx.FromGeometry(right_geometry);
 				double distance;
-				auto ok = GEOSPreparedDistance_r(ctx, left_prepared_geos.get(), geos_right.get(), &distance);
-				return ok == 1;
+				GEOSPreparedDistance_r(ctx, left_prepared_geos.get(), geos_right.get(), &distance);
+				return distance;
 			});
 		} else if(right.GetVectorType() == VectorType::CONSTANT_VECTOR && left.GetVectorType() != VectorType::CONSTANT_VECTOR) {
 			auto &right_blob = FlatVector::GetData<string_t>(right)[0];
@@ -41,8 +41,8 @@ static void ExecutePreparedDistance(GEOSFunctionLocalState &lstate, Vector &left
 				auto left_geometry = lstate.factory.Deserialize(left_blob);
 				auto geos_left = lstate.ctx.FromGeometry(left_geometry);
 				double distance;
-				auto ok = GEOSPreparedDistance_r(ctx, right_prepared_geos.get(), geos_left.get(), &distance);
-				return ok == 1;
+				GEOSPreparedDistance_r(ctx, right_prepared_geos.get(), geos_left.get(), &distance);
+				return distance;
 			});
 		} else {
 			BinaryExecutor::Execute<string_t, string_t, double>(left, right, result, count, [&](string_t &left_blob, string_t &right_blob) {
@@ -51,8 +51,8 @@ static void ExecutePreparedDistance(GEOSFunctionLocalState &lstate, Vector &left
 				auto geos_left = lstate.ctx.FromGeometry(left_geometry);
 				auto geos_right = lstate.ctx.FromGeometry(right_geometry);
 				double distance;
-				auto ok = GEOSDistance_r(ctx, geos_left.get(), geos_right.get(), &distance);
-				return ok == 1;
+				GEOSDistance_r(ctx, geos_left.get(), geos_right.get(), &distance);
+				return distance;
 			});
 		}
 	}
