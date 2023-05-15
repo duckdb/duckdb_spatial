@@ -66,27 +66,30 @@ find_package(EXPAT REQUIRED)
 find_package(GeographicLib REQUIRED)
 
 # Important: The link order matters, its the reverse order of dependency
-target_link_libraries(
-  ${EXTENSION_NAME}
-  PUBLIC GDAL::GDAL
-         GEOS::geos_c
-         PROJ::proj
-         EXPAT::EXPAT
-         SQLite::SQLite3
-         ZLIB::ZLIB
-         ${SQLITE3_MEMVFS})
-
-# Geographiclib is special
-include_directories(${GeographicLib_INCLUDE_DIRS})
-target_link_libraries(${EXTENSION_NAME} PUBLIC GeographicLib::GeographicLib)
+set(EXTENSION_DEPENDENCIES 
+  GDAL::GDAL
+  GEOS::geos_c
+  PROJ::proj
+  EXPAT::EXPAT
+  SQLite::SQLite3
+  ZLIB::ZLIB
+  ${SQLITE3_MEMVFS}
+  ${GeographicLib_LIBRARIES}
+)
 
 if(SPATIAL_USE_NETWORK)
   find_package(CURL REQUIRED)
   find_package(OpenSSL REQUIRED)
-
-  target_link_libraries(${EXTENSION_NAME} PUBLIC CURL::libcurl OpenSSL::SSL
-                                                 OpenSSL::Crypto)
+  list(APPEND EXTENSION_DEPENDENCIES CURL::libcurl OpenSSL::SSL OpenSSL::Crypto)
 endif()
+
+# Geographiclib is special
+include_directories(${GeographicLib_INCLUDE_DIRS})
+
+# Add dependencies to extension
+target_link_libraries(${EXTENSION_NAME} PUBLIC ${EXTENSION_DEPENDENCIES})
+
+
 
 if(WIN32)
   target_link_libraries(${EXTENSION_NAME} PUBLIC wbemuuid.lib)
@@ -102,6 +105,8 @@ endif()
 # Build extensions
 set(PARAMETERS "-warnings")
 build_loadable_extension(${TARGET_NAME} ${PARAMETERS} ${EXTENSION_SOURCES})
+
+target_link_libraries(${TARGET_NAME}_loadable_extension ${EXTENSION_DEPENDENCIES})
 
 install(
   TARGETS ${EXTENSION_NAME}
