@@ -354,12 +354,12 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	auto global_state = make_uniq<GdalScanGlobalState>();
 
 	// Get selected layer
-	OGRLayer *layer;
+	OGRLayer *layer = nullptr;
 	if (data.sequential_layer_scan) {
 		// Get the layer from the dataset by scanning through the layers
-		for (idx_t i = 0; i < data.dataset->GetLayerCount(); i++) {
+		for (int i = 0; i < data.dataset->GetLayerCount(); i++) {
 			layer = data.dataset->GetLayer(i);
-			if (i == data.layer_idx) {
+			if (i == (int)data.layer_idx) {
 				// desired layer found
 				break;
 			}

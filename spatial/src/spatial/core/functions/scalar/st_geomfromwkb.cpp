@@ -21,8 +21,10 @@ struct SimpleWKBReader {
 	vector<PointXY> ReadLine() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
+		(void)byte_order;
 		auto type = ReadInt();
 		D_ASSERT(type == 2); // LineString
+		(void)type;
 		auto num_points = ReadInt();
 		D_ASSERT(num_points > 0);
 		D_ASSERT(cursor + num_points * 2 * sizeof(double) <= length);
@@ -38,8 +40,10 @@ struct SimpleWKBReader {
 	PointXY ReadPoint() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
+		(void)byte_order;
 		auto type = ReadInt();
 		D_ASSERT(type == 1); // Point
+		(void)type;
 		auto x = ReadDouble();
 		auto y = ReadDouble();
 		return PointXY(x, y);
@@ -48,8 +52,10 @@ struct SimpleWKBReader {
 	vector<vector<PointXY>> ReadPolygon() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
+		(void)byte_order;
 		auto type = ReadInt();
 		D_ASSERT(type == 3); // Polygon
+		(void)type;
 		auto num_rings = ReadInt();
 		D_ASSERT(num_rings > 0);
 		vector<vector<PointXY>> result;
@@ -99,8 +105,10 @@ struct SimpleWKBReader {
 		result |= (uint64_t)data[cursor + 5] << 40 & 0x0000FF0000000000;
 		result |= (uint64_t)data[cursor + 6] << 48 & 0x00FF000000000000;
 		result |= (uint64_t)data[cursor + 7] << 56 & 0xFF00000000000000;
-		cursor += sizeof(double);
-		return *reinterpret_cast<double *>(&result);
+		cursor += sizeof(uint64_t);
+		double result_double;
+		memcpy(&result_double, &result, sizeof(double));
+		return result_double;
 	}
 };
 

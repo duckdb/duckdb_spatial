@@ -247,7 +247,7 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 	}
 
 	auto min_distance = std::numeric_limits<double>::max();
-	uint32_t min_index;
+	uint32_t min_index = 0;
 
 	auto &p1 = data[0];
 	auto &p2 = data[1];
