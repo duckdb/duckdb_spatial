@@ -107,8 +107,6 @@ set(PARAMETERS "-warnings")
 build_loadable_extension(${TARGET_NAME} ${PARAMETERS} ${EXTENSION_SOURCES})
 
 target_link_libraries(${TARGET_NAME}_loadable_extension ${EXTENSION_DEPENDENCIES})
-target_include_directories(${TARGET_NAME}_loadable_extension PRIVATE ${CMAKE_BINARY_DIR}/deps/local/include)
-target_include_directories(${TARGET_NAME}_loadable_extension PRIVATE ${GeographicLib_INCLUDE_DIRS})
 
 install(
   TARGETS ${EXTENSION_NAME}
