@@ -436,6 +436,7 @@ Point GeometryFactory::DeserializePoint(const_data_ptr_t &ptr) {
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::POINT);
+	(void)type;
 
 	// Points can be empty too, in which case the count is 0
 	auto count = Load<uint32_t>(ptr);
@@ -457,7 +458,7 @@ LineString GeometryFactory::DeserializeLineString(const_data_ptr_t &ptr) {
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::LINESTRING);
-
+	(void)type;
 	// 0 if the linestring is empty
 	auto length = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
@@ -474,7 +475,7 @@ Polygon GeometryFactory::DeserializePolygon(const_data_ptr_t &ptr) {
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::POLYGON);
-
+	(void)type;
 	// read num rings
 	auto num_rings = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
@@ -497,7 +498,7 @@ MultiPoint GeometryFactory::DeserializeMultiPoint(const_data_ptr_t &ptr) {
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::MULTIPOINT);
-
+	(void)type;
 	// read num points
 	auto num_points = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
@@ -513,7 +514,7 @@ MultiLineString GeometryFactory::DeserializeMultiLineString(const_data_ptr_t &pt
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::MULTILINESTRING);
-
+	(void)type;
 	// read num linestrings
 	auto num_linestrings = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
@@ -529,7 +530,7 @@ MultiPolygon GeometryFactory::DeserializeMultiPolygon(const_data_ptr_t &ptr) {
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::MULTIPOLYGON);
-
+	(void)type;
 	// read num polygons
 	auto num_polygons = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
@@ -545,7 +546,7 @@ GeometryCollection GeometryFactory::DeserializeGeometryCollection(const_data_ptr
 	auto type = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
 	D_ASSERT(type == (uint32_t)GeometryType::GEOMETRYCOLLECTION);
-
+	(void)type;
 	// read num geometries
 	auto num_geometries = Load<uint32_t>(ptr);
 	ptr += sizeof(uint32_t);
