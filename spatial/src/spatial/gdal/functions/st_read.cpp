@@ -2,7 +2,7 @@
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
-
+#include "duckdb/function/function.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
@@ -338,7 +338,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	result->dataset = std::move(dataset);
 	result->all_types = return_types;
 
-	return result;
+	return std::move(result);
 };
 
 idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *bind_data_p) {
