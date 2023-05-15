@@ -14,7 +14,9 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
 		throw SerializationException("WKBReader: ReadInt: not enough data");
 	}
 	// Read uint32_t in little endian
-	return Load<uint32_t>((const_data_ptr_t)data + cursor);
+	auto result = Load<uint32_t>((const_data_ptr_t)data + cursor);
+	cursor += sizeof(uint32_t);
+	return result;
 }
 
 template <>
@@ -23,7 +25,9 @@ double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
 		throw SerializationException("WKBReader: ReadDouble: not enough data");
 	}
 	// Read double in little endian
-	return Load<double>((const_data_ptr_t)data + cursor);
+	auto result = Load<double>((const_data_ptr_t)data + cursor);
+	cursor += sizeof(double);
+	return result;
 }
 
 template <>
