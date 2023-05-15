@@ -83,24 +83,22 @@ if(SPATIAL_USE_NETWORK)
   list(APPEND EXTENSION_DEPENDENCIES CURL::libcurl OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
-# Geographiclib is special
-include_directories(${GeographicLib_INCLUDE_DIRS})
-
-# Add dependencies to extension
-target_link_libraries(${EXTENSION_NAME} PUBLIC ${EXTENSION_DEPENDENCIES})
-
-
-
 if(WIN32)
-  target_link_libraries(${EXTENSION_NAME} PUBLIC wbemuuid.lib)
+  list(APPEND EXTENSION_DEPENDENCIES wbemuuid.lib)
 endif()
 
 if(APPLE)
   find_library(CoreFoundation_Library CoreFoundation)
   find_library(SystemConfiguration_Library SystemConfiguration)
-  target_link_libraries(${EXTENSION_NAME} PUBLIC ${CoreFoundation_Library}
-                                                 ${SystemConfiguration_Library})
+  list(APPEND EXTENSION_DEPENDENCIES ${CoreFoundation_Library}
+                                     ${SystemConfiguration_Library})
 endif()
+
+# Geographiclib is special
+include_directories(${GeographicLib_INCLUDE_DIRS})
+
+# Add dependencies to extension
+target_link_libraries(${EXTENSION_NAME} PUBLIC ${EXTENSION_DEPENDENCIES})
 
 # Build extensions
 set(PARAMETERS "-warnings")
