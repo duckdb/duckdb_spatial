@@ -68,6 +68,7 @@ ExternalProject_Add(
     -DCURL_USE_LIBPSL=OFF
     -DCURL_USE_LIBSSH=OFF
     -DOPENSSL_USE_STATIC_LIBS=ON # Propagate to FindOpenSSL.cmake
+    -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
 )
 set(GDAL_DEPENDENCIES ${GDAL_DEPENDENCIES} CURL)
 endif()
@@ -189,6 +190,7 @@ ExternalProject_Add(
     -DGDAL_USE_CURL=${SPATIAL_USE_NETWORK}
     -DGDAL_USE_OPENSSL=${SPATIAL_USE_NETWORK}
     -DOPENSSL_USE_STATIC_LIBS=ON # Propagate to FindOpenSSL.cmake
+    -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
     
     # This is not true, but a bug in gdal's cmake files
     -DACCEPT_MISSING_SQLITE3_RTREE:BOOL=ON
