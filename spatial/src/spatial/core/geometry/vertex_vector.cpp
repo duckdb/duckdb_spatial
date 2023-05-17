@@ -24,7 +24,7 @@ double Vertex::DistanceSquared(const Vertex &p1, const Vertex &p2) const {
 
 double VertexVector::Length() const {
 	double length = 0;
-	if(count < 2) {
+	if (count < 2) {
 		return 0.0;
 	}
 	for (uint32_t i = 0; i < count - 1; i++) {
@@ -39,21 +39,21 @@ double VertexVector::SignedArea() const {
 	if (count < 3) {
 		return 0;
 	}
-	
+
 	// Subtract the x coordinate of the first vertex from all other vertices
 	// to normalize the range and avoid floating point errors
 	// We don't need to do this for the y coordinate because we already
 	// subtract them between consecutive vertices
 	double area = 0;
 	auto x0 = data[0].x;
-	for(uint32_t i = 1; i < count - 1; ++i) {
+	for (uint32_t i = 1; i < count - 1; ++i) {
 		auto x1 = data[i].x;
-        auto y1 = data[i + 1].y;
-        auto y2 = data[i - 1].y;
+		auto y1 = data[i + 1].y;
+		auto y2 = data[i - 1].y;
 		area += (x1 - x0) * (y2 - y1);
 	}
-	
-    return area * 0.5;
+
+	return area * 0.5;
 }
 
 double ColumnarArea(vector<double> xs, vector<double> ys) {
@@ -247,7 +247,7 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 	}
 
 	auto min_distance = std::numeric_limits<double>::max();
-	uint32_t min_index;
+	uint32_t min_index = 0;
 
 	auto &p1 = data[0];
 	auto &p2 = data[1];

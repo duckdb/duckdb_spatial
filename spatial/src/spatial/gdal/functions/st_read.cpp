@@ -2,7 +2,7 @@
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
-
+#include "duckdb/function/function.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
@@ -88,11 +88,11 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 	return StringUtil::Join(filters, " AND ");
 }
 
-static const char* LAYER_CREATION_OPTIONS[2] = { "INCLUDE_FID=NO", nullptr };
 
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
 	bool sequential_layer_scan;
+	vector<string> layer_creation_options;
 	unique_ptr<SpatialFilter> spatial_filter;
 	GDALDatasetUniquePtr dataset;
 	unordered_map<idx_t, unique_ptr<ArrowConvertData>> arrow_convert_data;
@@ -127,7 +127,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_open_options.push_back(StringValue::Get(param).c_str());
 		}
 	}
-	if(!gdal_open_options.empty()) {
+	if (!gdal_open_options.empty()) {
 		gdal_open_options.push_back(nullptr);
 	}
 
@@ -138,7 +138,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_allowed_drivers.push_back(StringValue::Get(param).c_str());
 		}
 	}
-	if(!gdal_allowed_drivers.empty()) {
+	if (!gdal_allowed_drivers.empty()) {
 		gdal_allowed_drivers.push_back(nullptr);
 	}
 
@@ -149,7 +149,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			gdal_sibling_files.push_back(StringValue::Get(param).c_str());
 		}
 	}
-	if(!gdal_sibling_files.empty()) {
+	if (!gdal_sibling_files.empty()) {
 		gdal_sibling_files.push_back(nullptr);
 	}
 
@@ -172,8 +172,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Now we can bind the additonal options
-	auto result = make_unique<GdalScanFunctionData>();
+	auto result = make_uniq<GdalScanFunctionData>();
 	result->sequential_layer_scan = false;
+	bool max_batch_size_set = false;
 	for (auto &kv : input.named_parameters) {
 		auto loption = StringUtil::Lower(kv.first);
 		if (loption == "layer") {
@@ -217,7 +218,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			auto miny = DoubleValue::Get(children[1]);
 			auto maxx = DoubleValue::Get(children[2]);
 			auto maxy = DoubleValue::Get(children[3]);
-			result->spatial_filter = make_unique<RectangleSpatialFilter>(minx, miny, maxx, maxy);
+			result->spatial_filter = make_uniq<RectangleSpatialFilter>(minx, miny, maxx, maxy);
 		}
 
 		if (loption == "spatial_filter" && kv.second.type() == core::GeoTypes::WKB_BLOB()) {
@@ -225,7 +226,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				throw BinderException("Only one spatial filter can be specified");
 			}
 			auto wkb = StringValue::Get(kv.second);
-			result->spatial_filter = make_unique<WKBSpatialFilter>(wkb);
+			result->spatial_filter = make_uniq<WKBSpatialFilter>(wkb);
 		}
 
 		if (loption == "max_threads") {
@@ -239,6 +240,15 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		if (loption == "sequential_layer_scan") {
 			result->sequential_layer_scan = BooleanValue::Get(kv.second);
 		}
+
+		if (loption == "max_batch_size") {
+			auto max_batch_size = IntegerValue::Get(kv.second);
+			if (max_batch_size <= 0) {
+				throw BinderException("'max_batch_size' parameter must be positive");
+			}
+			result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", max_batch_size));
+			max_batch_size_set = true;
+		}
 	}
 
 	// set default max_threads
@@ -246,13 +256,28 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		result->max_threads = context.db->NumberOfThreads();
 	}
 
+	// Defaults
+	result->layer_creation_options.push_back("INCLUDE_FID=NO");
+	if(max_batch_size_set == false) {
+		// Set default max batch size to standard vector size
+		result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", STANDARD_VECTOR_SIZE));
+	}
+
+	// set layer options
+	char** lco = nullptr;
+	for (auto &option : result->layer_creation_options) {
+		lco = CSLAddString(lco, option.c_str());
+	}
+
 	// Get the schema for the selected layer
 	auto layer = dataset->GetLayer(result->layer_idx);
 	struct ArrowArrayStream stream;
-	if (!layer->GetArrowStream(&stream, LAYER_CREATION_OPTIONS)) {
+	if (!layer->GetArrowStream(&stream, lco)) {
 		// layer is owned by GDAL, we do not need to destory it
+		CSLDestroy(lco);
 		throw IOException("Could not get arrow stream from layer");
 	}
+	CSLDestroy(lco);
 
 	struct ArrowSchema schema;
 	if (stream.get_schema(&stream, &schema) != 0) {
@@ -286,7 +311,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			return_types.emplace_back(core::GeoTypes::WKB_BLOB());
 		} else if (attribute.dictionary) {
 			result->arrow_convert_data[col_idx] =
-			    make_unique<ArrowConvertData>(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
+			    make_uniq<ArrowConvertData>(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
 			return_types.emplace_back(GetArrowLogicalType(*attribute.dictionary, result->arrow_convert_data, col_idx));
 		} else {
 			return_types.emplace_back(GetArrowLogicalType(attribute, result->arrow_convert_data, col_idx));
@@ -313,7 +338,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	result->dataset = std::move(dataset);
 	result->all_types = return_types;
 
-	return result;
+	return std::move(result);
 };
 
 idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *bind_data_p) {
@@ -326,21 +351,21 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
                                                                    TableFunctionInitInput &input) {
 	auto &data = (GdalScanFunctionData &)*input.bind_data;
 
-	auto global_state = make_unique<GdalScanGlobalState>();
+	auto global_state = make_uniq<GdalScanGlobalState>();
 
 	// Get selected layer
-	OGRLayer *layer;
-	if(data.sequential_layer_scan) {
+	OGRLayer *layer = nullptr;
+	if (data.sequential_layer_scan) {
 		// Get the layer from the dataset by scanning through the layers
-		for(idx_t i = 0; i < data.dataset->GetLayerCount(); i++) {
+		for (int i = 0; i < data.dataset->GetLayerCount(); i++) {
 			layer = data.dataset->GetLayer(i);
-			if(i == data.layer_idx) {
+			if (i == (int)data.layer_idx) {
 				// desired layer found
 				break;
 			}
 			// else scan through and empty the layer
 			OGRFeature *feature;
-			while( (feature = layer->GetNextFeature()) != nullptr) {
+			while ((feature = layer->GetNextFeature()) != nullptr) {
 				OGRFeature::DestroyFeature(feature);
 			}
 		}
@@ -371,14 +396,21 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	// Create arrow stream from layer
 
-	global_state->stream = make_unique<ArrowArrayStreamWrapper>();
+	global_state->stream = make_uniq<ArrowArrayStreamWrapper>();
 
 
-	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, LAYER_CREATION_OPTIONS)) {
+	// set layer options
+	char** lco = nullptr;
+	for (auto &option : data.layer_creation_options) {
+		lco = CSLAddString(lco, option.c_str());
+	}
+	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, lco)) {
+		CSLDestroy(lco);
 		throw IOException("Could not get arrow stream");
 	}
+	CSLDestroy(lco);
 
-	global_state->max_threads = GdalTableFunction::MaxThreads(context, input.bind_data);
+	global_state->max_threads = GdalTableFunction::MaxThreads(context, input.bind_data.get());
 
 	if (input.CanRemoveFilterColumns()) {
 		global_state->projection_ids = input.projection_ids;
@@ -405,7 +437,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 
 	//! Out of tuples in this chunk
 	if (state.chunk_offset >= (idx_t)state.chunk->arrow_array.length) {
-		if (!ArrowScanParallelStateNext(context, input.bind_data, state, global_state)) {
+		if (!ArrowScanParallelStateNext(context, input.bind_data.get(), state, global_state)) {
 			return;
 		}
 	}
@@ -446,6 +478,7 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["spatial_filter"] = core::GeoTypes::WKB_BLOB();
 	scan.named_parameters["layer"] = LogicalType::VARCHAR;
 	scan.named_parameters["sequential_layer_scan"] = LogicalType::BOOLEAN;
+	scan.named_parameters["max_batch_size"] = LogicalType::INTEGER;
 	set.AddFunction(scan);
 
 	auto &catalog = Catalog::GetSystemCatalog(context);

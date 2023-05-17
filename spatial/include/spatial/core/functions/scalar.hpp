@@ -10,6 +10,7 @@ struct CoreScalarFunctions {
 public:
 	static void Register(ClientContext &context) {
 		RegisterStArea(context);
+		RegisterStAsGeoJSON(context);
 		RegisterStAsText(context);
 		RegisterStAsWKB(context);
 		RegisterStAsHEXWKB(context);
@@ -23,6 +24,7 @@ public:
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
 		RegisterStMakeLine(context);
+		RegisterStPerimeter(context);
 		RegisterStPoint(context);
 		RegisterStX(context);
 		RegisterStY(context);
@@ -31,6 +33,9 @@ public:
 private:
 	// ST_Area
 	static void RegisterStArea(ClientContext &context);
+
+	// ST_AsGeoJSON
+	static void RegisterStAsGeoJSON(ClientContext &context);
 
 	// ST_AsText
 	static void RegisterStAsText(ClientContext &context);
@@ -70,6 +75,9 @@ private:
 
 	// ST_MakeLine
 	static void RegisterStMakeLine(ClientContext &context);
+
+	// ST_Perimeter
+	static void RegisterStPerimeter(ClientContext &context);
 
 	// ST_Point
 	static void RegisterStPoint(ClientContext &context);

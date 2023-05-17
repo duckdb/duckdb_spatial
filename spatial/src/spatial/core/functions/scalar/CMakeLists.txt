@@ -1,6 +1,7 @@
 set(EXTENSION_SOURCES
     ${EXTENSION_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/st_area.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_asgeojson.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_ashexwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_astext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_aswkb.cpp
@@ -11,6 +12,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_flipcoordinates.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_makeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_perimeter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geometrytype.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp

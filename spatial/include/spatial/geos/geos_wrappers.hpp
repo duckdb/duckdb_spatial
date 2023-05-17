@@ -38,9 +38,17 @@ struct GeosDeleter<GEOSWKBReader_t> {
 	}
 };
 
+template <>
+struct GeosDeleter<const GEOSPreparedGeometry> {
+	GEOSContextHandle_t ctx;
+	void operator()(const GEOSPreparedGeometry *ptr) const {
+		GEOSPreparedGeom_destroy_r(ctx, ptr);
+	}
+};
+
 template <class T>
-unique_ptr<T, GeosDeleter<T>> make_unique_geos(GEOSContextHandle_t ctx, T *ptr) {
-	return unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
+std::unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
+	return std::unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
 }
 
 struct GeometryPtr {
@@ -80,6 +88,10 @@ public:
 		return ptr;
 	}
 
+	std::unique_ptr<const GEOSPreparedGeometry, GeosDeleter<const GEOSPreparedGeometry>> Prepare() {
+		return make_uniq_geos(ctx, GEOSPrepare_r(ctx, ptr));
+	}
+
 	// Accessors
 	double Area() const;
 	double Length() const;
@@ -106,16 +118,8 @@ public:
 	void Normalize() const;
 
 	// Predicates
-	bool Contains(const GeometryPtr &other) const;
-	bool Covers(const GeometryPtr &other) const;
-	bool CoveredBy(const GeometryPtr &other) const;
-	bool Crosses(const GeometryPtr &other) const;
-	bool Disjoint(const GeometryPtr &other) const;
 	bool Equals(const GeometryPtr &other) const;
-	bool Intersects(const GeometryPtr &other) const;
-	bool Overlaps(const GeometryPtr &other) const;
-	bool Touches(const GeometryPtr &other) const;
-	bool Within(const GeometryPtr &other) const;
+
 };
 
 struct WKBReader {
@@ -229,16 +233,14 @@ private:
 public:
 	GeosContextWrapper() {
 		ctx = GEOS_init_r();
-		// TODO: Set handlers
-		/*
-		GEOSContext_setNoticeHandler_r(ctx, NoticeHandler);
-		GEOSContext_setErrorHandler_r(ctx, ErrorHandler);
-		GEOSContext_setNoticeMessageHandler_r(ctx, ExceptionHandler, (void*)nullptr);
-		GEOSContext_setErrorMessageHandler_r(ctx, ExceptionHandler, (void*)nullptr);
-		 */
+		GEOSContext_setErrorMessageHandler_r(ctx, ErrorHandler, (void *)nullptr);
 	}
 	~GeosContextWrapper() {
 		GEOS_finish_r(ctx);
+	}
+
+	static void ErrorHandler(const char *message, void *userdata) {
+		throw InvalidInputException(message);
 	}
 
 	inline const GEOSContextHandle_t& GetCtx() {
@@ -269,21 +271,19 @@ public:
 	GeometryPtr FromMultiLineString(const core::MultiLineString &mline) const;
 	GeometryPtr FromMultiPolygon(const core::MultiPolygon &mpoly) const;
 	GeometryPtr FromGeometryCollection(const core::GeometryCollection &gc) const;
-	GeometryPtr FromGeometry(core::Geometry &geom) const;
-
+	GeometryPtr FromGeometry(const core::Geometry &geom) const;
 
 	core::VertexVector ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
-	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry* geom) const;
-
+	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
 };
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

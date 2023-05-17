@@ -17,7 +17,6 @@ struct WKBWriter {
 	static uint32_t GetRequiredSize(const MultiPolygon &multi_polygon);
 	static uint32_t GetRequiredSize(const GeometryCollection &collection);
 
-
 	static void Write(const Geometry &geom, data_ptr_t &ptr);
 	static void Write(const Point &point, data_ptr_t &ptr);
 	static void Write(const LineString &line, data_ptr_t &ptr);
@@ -28,6 +27,6 @@ struct WKBWriter {
 	static void Write(const GeometryCollection &collection, data_ptr_t &ptr);
 };
 
-}
+} // namespace core
 
-}
+} // namespace spatial

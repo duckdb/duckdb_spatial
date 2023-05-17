@@ -21,8 +21,10 @@ struct SimpleWKBReader {
 	vector<PointXY> ReadLine() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
+		(void)byte_order;
 		auto type = ReadInt();
 		D_ASSERT(type == 2); // LineString
+		(void)type;
 		auto num_points = ReadInt();
 		D_ASSERT(num_points > 0);
 		D_ASSERT(cursor + num_points * 2 * sizeof(double) <= length);
@@ -38,8 +40,10 @@ struct SimpleWKBReader {
 	PointXY ReadPoint() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
+		(void)byte_order;
 		auto type = ReadInt();
 		D_ASSERT(type == 1); // Point
+		(void)type;
 		auto x = ReadDouble();
 		auto y = ReadDouble();
 		return PointXY(x, y);
@@ -48,8 +52,10 @@ struct SimpleWKBReader {
 	vector<vector<PointXY>> ReadPolygon() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
+		(void)byte_order;
 		auto type = ReadInt();
 		D_ASSERT(type == 3); // Polygon
+		(void)type;
 		auto num_rings = ReadInt();
 		D_ASSERT(num_rings > 0);
 		vector<vector<PointXY>> result;
@@ -99,8 +105,10 @@ struct SimpleWKBReader {
 		result |= (uint64_t)data[cursor + 5] << 40 & 0x0000FF0000000000;
 		result |= (uint64_t)data[cursor + 6] << 48 & 0x00FF000000000000;
 		result |= (uint64_t)data[cursor + 7] << 56 & 0xFF00000000000000;
-		cursor += sizeof(double);
-		return *reinterpret_cast<double *>(&result);
+		cursor += sizeof(uint64_t);
+		double result_double;
+		memcpy(&result_double, &result, sizeof(double));
+		return result_double;
 	}
 };
 
@@ -277,19 +285,21 @@ void CoreScalarFunctions::RegisterStGeomFromWKB(ClientContext &context) {
 
 	CreateScalarFunctionInfo point2d_from_wkb_info(
 	    ScalarFunction("ST_Point2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POINT_2D(), Point2DFromWKBFunction));
-	catalog.CreateFunction(context, &point2d_from_wkb_info);
+	catalog.CreateFunction(context, point2d_from_wkb_info);
 
 	CreateScalarFunctionInfo linestring2d_from_wkb_info(ScalarFunction(
 	    "ST_LineString2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::LINESTRING_2D(), LineString2DFromWKBFunction));
-	catalog.CreateFunction(context, &linestring2d_from_wkb_info);
+	catalog.CreateFunction(context, linestring2d_from_wkb_info);
 
-	CreateScalarFunctionInfo polygon2d_from_wkb_info(
-	    ScalarFunction("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POLYGON_2D(), Polygon2DFromWKBFunction));
-	catalog.CreateFunction(context, &polygon2d_from_wkb_info);
+	CreateScalarFunctionInfo polygon2d_from_wkb_info(ScalarFunction("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB()},
+	                                                                GeoTypes::POLYGON_2D(), Polygon2DFromWKBFunction));
+	catalog.CreateFunction(context, polygon2d_from_wkb_info);
 
-	CreateScalarFunctionInfo geometry_from_wkb_info(
-	    ScalarFunction("ST_GeomFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::GEOMETRY(), GeometryFromWKBFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-	catalog.CreateFunction(context, &geometry_from_wkb_info);
+	ScalarFunctionSet st_geom_from_wkb("ST_GeomFromWKB");
+	st_geom_from_wkb.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, GeoTypes::GEOMETRY(), GeometryFromWKBFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	st_geom_from_wkb.AddFunction(ScalarFunction({LogicalType::BLOB}, GeoTypes::GEOMETRY(), GeometryFromWKBFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	CreateScalarFunctionInfo geometry_from_wkb_info(st_geom_from_wkb);
+	catalog.CreateFunction(context, geometry_from_wkb_info);
 }
 
 } // namespace core

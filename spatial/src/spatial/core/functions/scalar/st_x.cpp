@@ -32,21 +32,22 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::ExecuteWithNulls<string_t, double>(input, result, count, [&](string_t input,  ValidityMask &mask, idx_t idx) {
-		if(mask.RowIsValid(idx)) {
-			auto geometry = lstate.factory.Deserialize(input);
-			if (geometry.Type() != GeometryType::POINT) {
-				throw InvalidInputException("ST_X only implemented for POINT geometries");
-			}
-			auto &point = geometry.GetPoint();
-			if(point.IsEmpty()) {
-				mask.SetInvalid(idx);
-			} else {
-				return point.GetVertex().x;
-			}
-		}
-		return 0.0;
-	});
+	UnaryExecutor::ExecuteWithNulls<string_t, double>(
+	    input, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
+		    if (mask.RowIsValid(idx)) {
+			    auto geometry = lstate.factory.Deserialize(input);
+			    if (geometry.Type() != GeometryType::POINT) {
+				    throw InvalidInputException("ST_X only implemented for POINT geometries");
+			    }
+			    auto &point = geometry.GetPoint();
+			    if (point.IsEmpty()) {
+				    mask.SetInvalid(idx);
+			    } else {
+				    return point.GetVertex().x;
+			    }
+		    }
+		    return 0.0;
+	    });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -61,10 +62,11 @@ void CoreScalarFunctions::RegisterStX(ClientContext &context) {
 
 	ScalarFunctionSet st_x("st_x");
 	st_x.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction));
-	st_x.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	st_x.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction, nullptr, nullptr,
+	                                nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(st_x));
-	catalog.AddFunction(context, &info);
+	catalog.AddFunction(context, info);
 }
 
 } // namespace core

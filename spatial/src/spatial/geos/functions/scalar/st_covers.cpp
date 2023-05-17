@@ -3,6 +3,7 @@
 #include "spatial/geos/functions/scalar.hpp"
 #include "spatial/geos/functions/common.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
+#include "spatial/geos/geos_executor.hpp"
 
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
@@ -15,15 +16,11 @@ namespace geos {
 using namespace spatial::core;
 
 static void CoversFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &local_state = GEOSFunctionLocalState::ResetAndGet(state);
-
-	BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(), [&](string_t &left_blob, string_t &right_blob) {
-		auto left_geometry = local_state.factory.Deserialize(left_blob);
-		auto right_geometry = local_state.factory.Deserialize(right_blob);
-		auto geos_left = local_state.ctx.FromGeometry(left_geometry);
-		auto geos_right = local_state.ctx.FromGeometry(right_geometry);
-		return geos_left.Covers(geos_right);
-	});
+	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
+	auto &left = args.data[0];
+	auto &right = args.data[1];
+	auto count = args.size();
+	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSCovers_r, GEOSPreparedCovers_r);
 }
 
 void GEOSScalarFunctions::RegisterStCovers(ClientContext &context) {
@@ -31,13 +28,14 @@ void GEOSScalarFunctions::RegisterStCovers(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_Covers");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, CoversFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, CoversFunction,
+	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

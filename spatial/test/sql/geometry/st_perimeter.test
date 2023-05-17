@@ -1,0 +1,82 @@
+require spatial
+# Polygon and POLYGON_2D
+query II
+WITH poly(p) AS (SELECT ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'))
+SELECT ST_Perimeter(p), ST_Perimeter(p::POLYGON_2D) FROM poly;
+----
+4.0	4.0
+
+query II
+WITH poly(p) AS (SELECT ST_GeomFromText('POLYGON((-1 -1, -1 0, 0 0, 0 -1, -1 -1))'))
+SELECT ST_Perimeter(p), ST_Perimeter(p::POLYGON_2D) FROM poly;
+----
+4.0	4.0
+
+query II
+WITH poly(p) AS (SELECT ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.25 0.25, 0.25 0.75, 0.75 0.75, 0.75 0.25, 0.25 0.25))'))
+SELECT ST_Perimeter(p), ST_Perimeter(p::POLYGON_2D) FROM poly;
+----
+6.0	6.0
+
+query I
+SELECT ST_Perimeter(ST_GeomFromText('POLYGON EMPTY'));
+----
+0.0
+
+# MultiPolygons
+query I
+SELECT ST_Perimeter(ST_GeomFromText('MULTIPOLYGON(((0 0, 0 1, 1 1, 1 0, 0 0)), ((0.25 0.25, 0.25 0.75, 0.75 0.75, 0.75 0.25, 0.25 0.25)))'))
+----
+6.0
+
+query I
+SELECT ST_Perimeter(ST_GeomFromText('MULTIPOLYGON(((0 0, 0 1, 1 1, 1 0, 0 0)), ((0.25 0.25, 0.25 0.75, 0.75 0.75, 0.75 0.25, 0.25 0.25)), ((-1 -1, -1 0, 0 0, 0 -1, -1 -1)))'))
+----
+10.0
+
+query I
+SELECT ST_Perimeter(ST_GeomFromText('MULTIPOLYGON EMPTY'));
+----
+0.0
+
+query I 
+SELECT ST_Perimeter(ST_GeomFromText('MULTIPOLYGON(EMPTY, ((0 0, 0 1, 1 1, 1 0, 0 0)))'))
+----
+4.0
+
+# GeometryCollections
+query I
+SELECT ST_Perimeter(ST_GeomFromText('GEOMETRYCOLLECTION(POLYGON((0 0, 0 1, 1 1, 1 0, 0 0)), POLYGON((0.25 0.25, 0.25 0.75, 0.75 0.75, 0.75 0.25, 0.25 0.25)))'))
+----
+6.0
+
+query I
+SELECT ST_Perimeter(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY'))
+----
+0.0
+
+# BOX_2D
+query I
+SELECT ST_Perimeter({minx: 0, miny: 0, maxx: 1, maxy: 1}::BOX_2D);
+----
+4.0
+
+query I
+SELECT ST_Perimeter({minx: -1, miny: -1, maxx: 0, maxy: 0}::BOX_2D);
+----
+4.0
+
+query I
+SELECT ST_Perimeter({minx: 0, miny: 0, maxx: 1, maxy: 2}::BOX_2D);
+----
+6.0
+
+query I
+SELECT ST_Perimeter({minx: -1, miny: -2, maxx: 0, maxy: 0}::BOX_2D);
+----
+6.0
+
+query I
+SELECT ST_Perimeter({minx: 0, miny: 0, maxx: 0, maxy: 0}::BOX_2D);
+----
+0.0

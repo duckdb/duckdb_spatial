@@ -13,6 +13,7 @@ public:
 		RegisterStBuffer(context);
 		RegisterStCentroid(context);
 		RegisterStContains(context);
+		RegisterStContainsProperly(context);
 		RegisterStConvexHull(context);
 		RegisterStCoveredBy(context);
 		RegisterStCovers(context);
@@ -38,12 +39,14 @@ public:
 		RegisterStUnion(context);
 		RegisterStWithin(context);
 	}
+
 private:
 	static void RegisterStAsText(ClientContext &context);
 	static void RegisterStBoundary(ClientContext &context);
 	static void RegisterStBuffer(ClientContext &context);
 	static void RegisterStCentroid(ClientContext &context);
 	static void RegisterStContains(ClientContext &context);
+	static void RegisterStContainsProperly(ClientContext &context);
 	static void RegisterStConvexHull(ClientContext &context);
 	static void RegisterStCoveredBy(ClientContext &context);
 	static void RegisterStCovers(ClientContext &context);
@@ -68,9 +71,8 @@ private:
 	static void RegisterStTouches(ClientContext &context);
 	static void RegisterStUnion(ClientContext &context);
 	static void RegisterStWithin(ClientContext &context);
-
 };
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

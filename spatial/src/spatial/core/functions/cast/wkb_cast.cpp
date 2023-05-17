@@ -52,12 +52,14 @@ void CoreCastFunctions::RegisterWKBCasts(ClientContext &context) {
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 
-    // Geometry <-> WKB is explicitly castable
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(), BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
-    
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(), BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast));
-    
-    // WKB -> BLOB is implicitly castable
+	// Geometry <-> WKB is explicitly castable
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
+	                           BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
+
+	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),
+	                           BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast));
+
+	// WKB -> BLOB is implicitly castable
 	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
 }
 

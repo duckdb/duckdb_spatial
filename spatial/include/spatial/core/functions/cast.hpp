@@ -13,6 +13,7 @@ public:
 		RegisterGeometryCasts(context);
 		RegisterWKBCasts(context);
 	}
+
 private:
 	static void RegisterVarcharCasts(ClientContext &context);
 	static void RegisterDimensionalCasts(ClientContext &context);

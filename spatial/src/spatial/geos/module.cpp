@@ -15,6 +15,6 @@ void GeosModule::Register(ClientContext &context) {
 	GeosCastFunctions::Register(context);
 }
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

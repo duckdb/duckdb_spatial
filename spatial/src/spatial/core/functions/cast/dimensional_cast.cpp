@@ -4,7 +4,6 @@
 
 #include "duckdb/function/cast/cast_function_set.hpp"
 
-
 namespace spatial {
 
 namespace core {

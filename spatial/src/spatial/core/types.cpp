@@ -17,44 +17,39 @@ LogicalType GeoTypes::POINT_2D() {
 }
 
 LogicalType GeoTypes::POINT_3D() {
-	auto type = LogicalType::STRUCT({{"x", LogicalType::DOUBLE},
-	                                {"y", LogicalType::DOUBLE},
-	                                {"z", LogicalType::DOUBLE}});
+	auto type =
+	    LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}, {"z", LogicalType::DOUBLE}});
 	type.SetAlias("POINT_3D");
 	return type;
 }
 
 LogicalType GeoTypes::POINT_4D() {
 	auto type = LogicalType::STRUCT({{"x", LogicalType::DOUBLE},
-	                                {"y", LogicalType::DOUBLE},
-	                                {"z", LogicalType::DOUBLE},
-	                                {"m", LogicalType::DOUBLE}});
+	                                 {"y", LogicalType::DOUBLE},
+	                                 {"z", LogicalType::DOUBLE},
+	                                 {"m", LogicalType::DOUBLE}});
 	type.SetAlias("POINT_4D");
 	return type;
 }
 
-
 LogicalType GeoTypes::BOX_2D() {
 	auto type = LogicalType::STRUCT({{"min_x", LogicalType::DOUBLE},
-								{"min_y", LogicalType::DOUBLE},
-								{"max_x", LogicalType::DOUBLE},
-								{"max_y", LogicalType::DOUBLE}});
+	                                 {"min_y", LogicalType::DOUBLE},
+	                                 {"max_x", LogicalType::DOUBLE},
+	                                 {"max_y", LogicalType::DOUBLE}});
 	type.SetAlias("BOX_2D");
 	return type;
 }
 
 LogicalType GeoTypes::LINESTRING_2D() {
-	auto type = LogicalType::LIST(LogicalType::STRUCT({
-	    {"x", LogicalType::DOUBLE},
-	    {"y", LogicalType::DOUBLE}}));
+	auto type = LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}}));
 	type.SetAlias("LINESTRING_2D");
 	return type;
 }
 
 LogicalType GeoTypes::POLYGON_2D() {
-	auto type = LogicalType::LIST(LogicalType::LIST(LogicalType::STRUCT({
-	    {"x", LogicalType::DOUBLE},
-	    {"y", LogicalType::DOUBLE}})));
+	auto type = LogicalType::LIST(
+	    LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}})));
 	type.SetAlias("POLYGON_2D");
 	return type;
 }
@@ -71,11 +66,11 @@ LogicalType GeoTypes::WKB_BLOB() {
 	return blob_type;
 }
 
-static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, const char* name) {
+static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, const char *name) {
 	CreateTypeInfo type_info(name, std::move(type));
 	type_info.temporary = true;
 	type_info.internal = true;
-	catalog.CreateType(context, &type_info);
+	catalog.CreateType(context, type_info);
 }
 
 void GeoTypes::Register(ClientContext &context) {

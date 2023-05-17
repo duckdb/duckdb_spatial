@@ -6,7 +6,6 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
 
-
 namespace spatial {
 
 namespace core {
@@ -94,7 +93,7 @@ static void BoxAreaFunction(DataChunk &args, ExpressionState &state, Vector &res
 		auto miny = box.b_val;
 		auto maxx = box.c_val;
 		auto maxy = box.d_val;
-		return AREA_TYPE { (maxx - minx) * (maxy - miny) };
+		return AREA_TYPE {(maxx - minx) * (maxy - miny)};
 	});
 }
 
@@ -116,15 +115,17 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 		case GeometryType::MULTIPOLYGON:
 			return geometry.GetMultiPolygon().Area();
 		case GeometryType::GEOMETRYCOLLECTION:
-			return geometry.GetGeometryCollection().Aggregate([](Geometry &geom, double state){
-				if(geom.Type() == GeometryType::POLYGON) {
-					return state + geom.GetPolygon().Area();
-				} else if(geom.Type() == GeometryType::MULTIPOLYGON) {
-					return state + geom.GetMultiPolygon().Area();
-				} else {
-					return state;
-				}
-			}, 0.0);
+			return geometry.GetGeometryCollection().Aggregate(
+			    [](Geometry &geom, double state) {
+				    if (geom.Type() == GeometryType::POLYGON) {
+					    return state + geom.GetPolygon().Area();
+				    } else if (geom.Type() == GeometryType::MULTIPOLYGON) {
+					    return state + geom.GetMultiPolygon().Area();
+				    } else {
+					    return state;
+				    }
+			    },
+			    0.0);
 		default:
 			return 0.0;
 		}
@@ -139,14 +140,16 @@ void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
 
 	ScalarFunctionSet area_function_set("ST_Area");
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointAreaFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineStringAreaFunction));
+	area_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineStringAreaFunction));
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction,
+	                                             nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
-	
+
 	CreateScalarFunctionInfo info(std::move(area_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
 } // namespace core

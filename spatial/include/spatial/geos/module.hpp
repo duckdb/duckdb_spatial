@@ -10,6 +10,6 @@ public:
 	static void Register(ClientContext &context);
 };
 
-} // namespace spatials
+} // namespace geos
 
 } // namespace spatial

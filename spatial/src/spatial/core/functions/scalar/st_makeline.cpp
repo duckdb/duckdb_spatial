@@ -14,79 +14,75 @@ namespace core {
 
 static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto count = args.size();
-    auto &child_vec = ListVector::GetEntry(args.data[0]);
-    UnifiedVectorFormat format;
-    child_vec.ToUnifiedFormat(count, format);
-
+	auto count = args.size();
+	auto &child_vec = ListVector::GetEntry(args.data[0]);
+	UnifiedVectorFormat format;
+	child_vec.ToUnifiedFormat(count, format);
 
 	UnaryExecutor::Execute<list_entry_t, string_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
-        auto offset = geometry_list.offset;
-        auto length = geometry_list.length;
+		auto offset = geometry_list.offset;
+		auto length = geometry_list.length;
 
-        auto line_geom = lstate.factory.CreateLineString(length);
+		auto line_geom = lstate.factory.CreateLineString(length);
 
-        for(idx_t i = offset; i < offset + length; i++) {
-            
-            auto mapped_idx = format.sel->get_index(i);
-            if(!format.validity.RowIsValid(mapped_idx)) {
-                continue;
-            }
-            auto geometry_blob = ((string_t*)format.data)[mapped_idx];
-            auto geometry = lstate.factory.Deserialize(geometry_blob);
+		for (idx_t i = offset; i < offset + length; i++) {
 
-            if(geometry.Type() != GeometryType::POINT) {
-                throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
-            } 
-            auto &point = geometry.GetPoint();
-            if(point.IsEmpty()) {
-                continue;
-            }
-            line_geom.points.Add(point.GetVertex());
-        }
+			auto mapped_idx = format.sel->get_index(i);
+			if (!format.validity.RowIsValid(mapped_idx)) {
+				continue;
+			}
+			auto geometry_blob = ((string_t *)format.data)[mapped_idx];
+			auto geometry = lstate.factory.Deserialize(geometry_blob);
 
-        if(line_geom.Count() == 1) {
-            throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
-        }
+			if (geometry.Type() != GeometryType::POINT) {
+				throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+			}
+			auto &point = geometry.GetPoint();
+			if (point.IsEmpty()) {
+				continue;
+			}
+			line_geom.Vertices().Add(point.GetVertex());
+		}
 
-        return lstate.factory.Serialize(result, Geometry(line_geom));
+		if (line_geom.Count() == 1) {
+			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
+		}
+
+		return lstate.factory.Serialize(result, Geometry(line_geom));
 	});
 }
 
-
 static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto count = args.size();
+	auto count = args.size();
 
+	BinaryExecutor::Execute<string_t, string_t, string_t>(
+	    args.data[0], args.data[1], result, count, [&](string_t &geom_blob_left, string_t &geom_blob_right) {
+		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
+		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
 
-    BinaryExecutor::Execute<string_t, string_t, string_t>(args.data[0], args.data[1], result, count, 
-        [&](string_t &geom_blob_left, string_t &geom_blob_right) {
-        
-        auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
-        auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
+		    if (geometry_left.Type() != GeometryType::POINT || geometry_right.Type() != GeometryType::POINT) {
+			    throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+		    }
 
-        if(geometry_left.Type() != GeometryType::POINT || geometry_right.Type() != GeometryType::POINT) {
-            throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
-        } 
+		    auto &point_left = geometry_left.GetPoint();
+		    auto &point_right = geometry_right.GetPoint();
 
-        auto &point_left = geometry_left.GetPoint();
-        auto &point_right = geometry_right.GetPoint();
+		    // TODO: we should add proper abstractions to append/concat VertexVectors
+		    auto line_geom = lstate.factory.CreateLineString(2);
+		    if (!point_left.IsEmpty()) {
+			    line_geom.Vertices().Add(point_left.GetVertex());
+		    }
+		    if (!point_right.IsEmpty()) {
+			    line_geom.Vertices().Add(point_right.GetVertex());
+		    }
 
-        // TODO: we should add proper abstractions to append/concat VertexVectors 
-        auto line_geom = lstate.factory.CreateLineString(2);
-        if(!point_left.IsEmpty()) {
-            line_geom.points.Add(point_left.GetVertex());
-        }
-        if(!point_right.IsEmpty()) {
-            line_geom.points.Add(point_right.GetVertex());
-        }
+		    if (line_geom.Count() == 1) {
+			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
+		    }
 
-        if(line_geom.Count() == 1) {
-            throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
-        }
-
-        return lstate.factory.Serialize(result, Geometry(line_geom));
-    });
+		    return lstate.factory.Serialize(result, Geometry(line_geom));
+	    });
 }
 
 void CoreScalarFunctions::RegisterStMakeLine(ClientContext &context) {
@@ -94,13 +90,16 @@ void CoreScalarFunctions::RegisterStMakeLine(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_MakeLine");
 
-	set.AddFunction(ScalarFunction({LogicalType::LIST(GeoTypes::GEOMETRY())}, GeoTypes::GEOMETRY(), MakeLineListFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-    set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), MakeLineBinaryFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({LogicalType::LIST(GeoTypes::GEOMETRY())}, GeoTypes::GEOMETRY(),
+	                               MakeLineListFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(),
+	                               MakeLineBinaryFunction, nullptr, nullptr, nullptr,
+	                               GeometryFunctionLocalState::Init));
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, &info);
+	catalog.CreateFunction(context, info);
 }
 
-} // namespace spatials
+} // namespace core
 
 } // namespace spatial

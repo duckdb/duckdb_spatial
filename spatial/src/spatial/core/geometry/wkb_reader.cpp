@@ -10,37 +10,31 @@ namespace core {
 
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
-	D_ASSERT(cursor + sizeof(uint32_t) <= length);
+	if(cursor + sizeof(uint32_t) > length) {
+		throw SerializationException("WKBReader: ReadInt: not enough data");
+	}
 	// Read uint32_t in little endian
-	uint32_t result = 0;
-	result |= (uint32_t)data[cursor + 0] << 0 & 0x000000FF;
-	result |= (uint32_t)data[cursor + 1] << 8 & 0x0000FF00;
-	result |= (uint32_t)data[cursor + 2] << 16 & 0x00FF0000;
-	result |= (uint32_t)data[cursor + 3] << 24 & 0xFF000000;
+	auto result = Load<uint32_t>((const_data_ptr_t)data + cursor);
 	cursor += sizeof(uint32_t);
 	return result;
 }
 
 template <>
 double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
-	D_ASSERT(cursor + sizeof(double) <= length);
+	if (cursor + sizeof(double) > length) {
+		throw SerializationException("WKBReader: ReadDouble: not enough data");
+	}
 	// Read double in little endian
-	uint64_t result = 0;
-	result |= (uint64_t)data[cursor + 0] << 0 & 0x00000000000000FF;
-	result |= (uint64_t)data[cursor + 1] << 8 & 0x000000000000FF00;
-	result |= (uint64_t)data[cursor + 2] << 16 & 0x0000000000FF0000;
-	result |= (uint64_t)data[cursor + 3] << 24 & 0x00000000FF000000;
-	result |= (uint64_t)data[cursor + 4] << 32 & 0x000000FF00000000;
-	result |= (uint64_t)data[cursor + 5] << 40 & 0x0000FF0000000000;
-	result |= (uint64_t)data[cursor + 6] << 48 & 0x00FF000000000000;
-	result |= (uint64_t)data[cursor + 7] << 56 & 0xFF00000000000000;
+	auto result = Load<double>((const_data_ptr_t)data + cursor);
 	cursor += sizeof(double);
-	return *reinterpret_cast<double *>(&result);
+	return result;
 }
 
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
-	D_ASSERT(cursor + sizeof(uint32_t) <= length);
+	if(cursor + sizeof(uint32_t) > length) {
+		throw SerializationException("WKBReader: ReadInt: not enough data");
+	}
 	// Read uint32_t in big endian
 	uint32_t result = 0;
 	result |= (uint32_t)data[cursor + 0] << 24 & 0xFF000000;
@@ -53,7 +47,9 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
 
 template <>
 double WKBReader::ReadDouble<WKBByteOrder::XDR>() {
-	D_ASSERT(cursor + sizeof(double) <= length);
+	if(cursor + sizeof(double) > length) {
+		throw SerializationException("WKBReader: ReadDouble: not enough data");
+	}
 	// Read double in big endian
 	uint64_t result = 0;
 	result |= (uint64_t)data[cursor + 0] << 56 & 0xFF00000000000000;
@@ -64,8 +60,10 @@ double WKBReader::ReadDouble<WKBByteOrder::XDR>() {
 	result |= (uint64_t)data[cursor + 5] << 16 & 0x0000000000FF0000;
 	result |= (uint64_t)data[cursor + 6] << 8 & 0x000000000000FF00;
 	result |= (uint64_t)data[cursor + 7] << 0 & 0x00000000000000FF;
-	cursor += sizeof(double);
-	return *reinterpret_cast<double *>(&result);
+	cursor += sizeof(uint64_t);
+	double d;
+	memcpy(&d, &result, sizeof(double));
+	return d;
 }
 
 Geometry WKBReader::ReadGeometry() {
@@ -82,10 +80,12 @@ Point WKBReader::ReadPoint() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::POINT);
+		(void)type;
 		return ReadPointImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::POINT);
+		(void)type;
 		return ReadPointImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -95,10 +95,12 @@ LineString WKBReader::ReadLineString() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::LINESTRING);
+		(void)type;
 		return ReadLineStringImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::LINESTRING);
+		(void)type;
 		return ReadLineStringImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -108,10 +110,12 @@ Polygon WKBReader::ReadPolygon() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::POLYGON);
+		(void)type;
 		return ReadPolygonImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::POLYGON);
+		(void)type;
 		return ReadPolygonImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -121,10 +125,12 @@ MultiPoint WKBReader::ReadMultiPoint() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::MULTIPOINT);
+		(void)type;
 		return ReadMultiPointImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::MULTIPOINT);
+		(void)type;
 		return ReadMultiPointImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -134,10 +140,12 @@ MultiLineString WKBReader::ReadMultiLineString() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::MULTILINESTRING);
+		(void)type;
 		return ReadMultiLineStringImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::MULTILINESTRING);
+		(void)type;
 		return ReadMultiLineStringImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -147,10 +155,12 @@ MultiPolygon WKBReader::ReadMultiPolygon() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::MULTIPOLYGON);
+		(void)type;
 		return ReadMultiPolygonImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::MULTIPOLYGON);
+		(void)type;
 		return ReadMultiPolygonImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -160,10 +170,12 @@ GeometryCollection WKBReader::ReadGeometryCollection() {
 	if (order == WKBByteOrder::XDR) {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::XDR>();
 		D_ASSERT(type == WKBGeometryType::GEOMETRYCOLLECTION);
+		(void)type;
 		return ReadGeometryCollectionImpl<WKBByteOrder::XDR>();
 	} else {
 		auto type = (WKBGeometryType)ReadInt<WKBByteOrder::NDR>();
 		D_ASSERT(type == WKBGeometryType::GEOMETRYCOLLECTION);
+		(void)type;
 		return ReadGeometryCollectionImpl<WKBByteOrder::NDR>();
 	}
 }
@@ -187,7 +199,7 @@ Geometry WKBReader::ReadGeometryImpl() {
 	case WKBGeometryType::GEOMETRYCOLLECTION:
 		return Geometry(ReadGeometryCollectionImpl<ORDER>());
 	default:
-		throw NotImplementedException("Geometry type not implemented");
+		throw NotImplementedException("Geometry type not supported");
 	}
 }
 
@@ -195,7 +207,7 @@ template <WKBByteOrder ORDER>
 Point WKBReader::ReadPointImpl() {
 	auto x = ReadDouble<ORDER>();
 	auto y = ReadDouble<ORDER>();
-	if(std::isnan(x) && std::isnan(y)) {
+	if (std::isnan(x) && std::isnan(y)) {
 		auto point_data = factory.AllocateVertexVector(0);
 		return Point(point_data);
 	}
