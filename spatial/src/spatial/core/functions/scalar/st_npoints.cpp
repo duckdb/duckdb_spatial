@@ -114,8 +114,8 @@ static uint32_t GetVertexCount(const Geometry &geometry) {
         }
 		case GeometryType::GEOMETRYCOLLECTION: {
             uint32_t count = 0;
-            for (auto &geometry : geometry.GetGeometryCollection()) {
-                count += GetVertexCount(geometry);
+            for (auto &geom : geometry.GetGeometryCollection()) {
+                count += GetVertexCount(geom);
             }
             return count;
         }
