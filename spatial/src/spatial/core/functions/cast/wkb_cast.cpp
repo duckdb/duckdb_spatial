@@ -61,6 +61,9 @@ void CoreCastFunctions::RegisterWKBCasts(ClientContext &context) {
 
 	// WKB -> BLOB is implicitly castable
 	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
+
+	// Geometry -> BLOB is implicitly castable
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
 }
 
 } // namespace core
