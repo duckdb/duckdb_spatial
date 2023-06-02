@@ -1,6 +1,5 @@
 set(EXTENSION_SOURCES
     ${EXTENSION_SOURCES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/st_as_text.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_boundary.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_buffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_centroid.cpp

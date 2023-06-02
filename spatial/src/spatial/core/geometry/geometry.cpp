@@ -1,6 +1,9 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/vertex_vector.hpp"
+
+#include "fmt/format.h"
+
 namespace spatial {
 
 namespace core {
@@ -20,7 +23,9 @@ string Point::ToString() const {
 		// check for this case and return POINT EMPTY instead to round-trip safely
 		return "POINT EMPTY";
 	}
-	return "POINT (" + std::to_string(vertices[0].x) + " " + std::to_string(vertices[0].y) + ")";
+	auto x = vertices[0].x;
+	auto y = vertices[0].y;
+	return duckdb_fmt::format("POINT ({:.16g} {:.16g})", x, y);
 }
 
 bool Point::IsEmpty() const {
@@ -63,7 +68,9 @@ string LineString::ToString() const {
 
 	string result = "LINESTRING (";
 	for (uint32_t i = 0; i < vertices.Count(); i++) {
-		result += std::to_string(vertices[i].x) + " " + std::to_string(vertices[i].y);
+		auto x = vertices[i].x;
+		auto y = vertices[i].y;
+		result += duckdb_fmt::format("{:.16g} {:.16g}", x, y);
 		if (i < vertices.Count() - 1) {
 			result += ", ";
 		}
@@ -126,7 +133,9 @@ string Polygon::ToString() const {
 	for (uint32_t i = 0; i < num_rings; i++) {
 		result += "(";
 		for (uint32_t j = 0; j < rings[i].Count(); j++) {
-			result += std::to_string(rings[i][j].x) + " " + std::to_string(rings[i][j].y);
+			auto x = rings[i][j].x;
+			auto y = rings[i][j].y;
+			result += duckdb_fmt::format("{:.16g} {:.16g}", x, y);
 			if (j < rings[i].Count() - 1) {
 				result += ", ";
 			}
@@ -162,7 +171,7 @@ string MultiPoint::ToString() const {
 			str += "EMPTY";
 		} else {
 			auto &vert = points[i].GetVertex();
-			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+			str += duckdb_fmt::format("{:.16g} {:.16g}", vert.x, vert.y);
 		}
 		if (i < num_points - 1) {
 			str += ", ";
@@ -214,23 +223,22 @@ string MultiLineString::ToString() const {
 	}
 	string str = "MULTILINESTRING (";
 
-	bool first = true;
+	bool first_line = true;
 	for (auto &line : *this) {
-		str += "(";
-
-		if (first) {
-			first = false;
+		if (first_line) {
+			first_line = false;
 		} else {
 			str += ", ";
 		}
-		first = true;
+		str += "(";
+		bool first_vert = true;
 		for (auto &vert : line.Vertices()) {
-			if (first) {
-				first = false;
+			if (first_vert) {
+				first_vert = false;
 			} else {
 				str += ", ";
 			}
-			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+			str += duckdb_fmt::format("{:.16g} {:.16g}", vert.x, vert.y);
 		}
 		str += ")";
 	}
@@ -288,30 +296,30 @@ string MultiPolygon::ToString() const {
 	}
 	string str = "MULTIPOLYGON (";
 
-	bool first = true;
+	bool first_poly = true;
 	for (auto &poly : *this) {
-		str += "(";
-		if (first) {
-			first = false;
+		if (first_poly) {
+			first_poly = false;
 		} else {
 			str += ", ";
 		}
-		first = true;
+		str += "(";
+		bool first_ring = true;
 		for (auto &ring : poly.Rings()) {
 			str += "(";
-			if (first) {
-				first = false;
+			if (first_ring) {
+				first_ring = false;
 			} else {
 				str += ", ";
 			}
-			first = true;
+			bool first_vert = true;
 			for (auto &vert : ring) {
-				if (first) {
-					first = false;
+				if (first_vert) {
+					first_vert = false;
 				} else {
 					str += ", ";
 				}
-				str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+				str += duckdb_fmt::format("{:.16g} {:.16g}", vert.x, vert.y);
 			}
 			str += ")";
 		}
