@@ -71,6 +71,8 @@ public:
 	VertexVector& Vertices() {
 		return vertices;
 	}
+
+	operator Geometry() const;
 };
 
 class LineString {
@@ -92,6 +94,8 @@ public:
 	double Length() const;
 	Geometry Centroid() const;
 	uint32_t Count() const;
+
+	operator Geometry() const;
 };
 
 class Polygon {
@@ -133,6 +137,8 @@ public:
 	double Perimiter() const;
 	Geometry Centroid() const;
 	uint32_t Count() const;
+
+	operator Geometry() const;
 };
 
 class MultiPoint {
@@ -155,6 +161,8 @@ public:
 	const Point* end() const;
 	Point* begin();
 	Point* end();
+
+	operator Geometry() const;
 };
 
 class MultiLineString {
@@ -181,6 +189,8 @@ public:
 	const LineString* end() const;
 	LineString* begin();
 	LineString* end();
+
+	operator Geometry() const;
 };
 
 class MultiPolygon {
@@ -204,6 +214,8 @@ public:
 	const Polygon* end() const;
 	Polygon* begin();
 	Polygon* end();
+
+	operator Geometry() const;
 };
 
 class GeometryCollection {
@@ -230,6 +242,8 @@ public:
 
 	template <class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
+
+	operator Geometry() const;
 };
 
 struct Geometry {
@@ -341,6 +355,9 @@ public:
 	}
 
 	string ToString() const;
+	int32_t Dimension() const;
+	bool IsEmpty() const;
+	bool IsCollection() const;
 };
 
 template <class AGG, class RESULT_TYPE>
