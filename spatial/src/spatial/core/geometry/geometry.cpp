@@ -35,6 +35,10 @@ const Vertex &Point::GetVertex() const {
 	return vertices[0];
 }
 
+Point::operator Geometry() const {
+	return Geometry(*this);
+}
+
 //------------------------------------------------------------------------------
 // LineString
 //------------------------------------------------------------------------------
@@ -72,6 +76,9 @@ uint32_t LineString::Count() const {
 	return vertices.Count();
 }
 
+LineString::operator Geometry() const {
+	return Geometry(*this);
+}
 
 //------------------------------------------------------------------------------
 // Polygon
@@ -137,6 +144,10 @@ uint32_t Polygon::Count() const {
 	return num_rings;
 }
 
+Polygon::operator Geometry() const {
+	return Geometry(*this);
+}
+
 //------------------------------------------------------------------------------
 // MultiPoint
 //------------------------------------------------------------------------------
@@ -168,25 +179,29 @@ uint32_t MultiPoint::Count() const {
 	return num_points;
 }
 
-Point& MultiPoint::operator[](uint32_t index) {
+Point &MultiPoint::operator[](uint32_t index) {
 	return points[index];
 }
 
-const Point& MultiPoint::operator[](uint32_t index) const {
+const Point &MultiPoint::operator[](uint32_t index) const {
 	return points[index];
 }
 
-const Point* MultiPoint::begin() const {
+const Point *MultiPoint::begin() const {
 	return points;
 }
-const Point* MultiPoint::end() const {
+const Point *MultiPoint::end() const {
 	return points + num_points;
 }
-Point* MultiPoint::begin() {
+Point *MultiPoint::begin() {
 	return points;
 }
-Point* MultiPoint::end() {
+Point *MultiPoint::end() {
 	return points + num_points;
+}
+
+MultiPoint::operator Geometry() const {
+	return Geometry(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -203,7 +218,7 @@ string MultiLineString::ToString() const {
 	for (auto &line : *this) {
 		str += "(";
 
-		if(first) {
+		if (first) {
 			first = false;
 		} else {
 			str += ", ";
@@ -238,27 +253,30 @@ uint32_t MultiLineString::Count() const {
 	return count;
 }
 
-LineString& MultiLineString::operator[](uint32_t index) {
+LineString &MultiLineString::operator[](uint32_t index) {
 	return lines[index];
 }
 
-const LineString& MultiLineString::operator[](uint32_t index) const {
+const LineString &MultiLineString::operator[](uint32_t index) const {
 	return lines[index];
 }
 
-const LineString* MultiLineString::begin() const {
+const LineString *MultiLineString::begin() const {
 	return lines;
 }
-const LineString* MultiLineString::end() const {
+const LineString *MultiLineString::end() const {
 	return lines + count;
 }
-LineString* MultiLineString::begin() {
+LineString *MultiLineString::begin() {
 	return lines;
 }
-LineString* MultiLineString::end() {
+LineString *MultiLineString::end() {
 	return lines + count;
 }
 
+MultiLineString::operator Geometry() const {
+	return Geometry(*this);
+}
 
 //------------------------------------------------------------------------------
 // MultiPolygon
@@ -269,7 +287,7 @@ string MultiPolygon::ToString() const {
 		return "MULTIPOLYGON EMPTY";
 	}
 	string str = "MULTIPOLYGON (";
-	
+
 	bool first = true;
 	for (auto &poly : *this) {
 		str += "(";
@@ -318,28 +336,32 @@ uint32_t MultiPolygon::Count() const {
 	return count;
 }
 
-Polygon& MultiPolygon::operator[](uint32_t index) {
+Polygon &MultiPolygon::operator[](uint32_t index) {
 	return polygons[index];
 }
 
-const Polygon& MultiPolygon::operator[](uint32_t index) const {
+const Polygon &MultiPolygon::operator[](uint32_t index) const {
 	return polygons[index];
 }
 
-const Polygon* MultiPolygon::begin() const {
+const Polygon *MultiPolygon::begin() const {
 	return polygons;
 }
 
-const Polygon* MultiPolygon::end() const {
+const Polygon *MultiPolygon::end() const {
 	return polygons + count;
 }
 
-Polygon* MultiPolygon::begin() {
+Polygon *MultiPolygon::begin() {
 	return polygons;
 }
 
-Polygon* MultiPolygon::end() {
+Polygon *MultiPolygon::end() {
 	return polygons + count;
+}
+
+MultiPolygon::operator Geometry() const {
+	return Geometry(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -368,30 +390,34 @@ uint32_t GeometryCollection::Count() const {
 	return count;
 }
 
-Geometry& GeometryCollection::operator[](uint32_t index) {
+Geometry &GeometryCollection::operator[](uint32_t index) {
 	D_ASSERT(index < count);
 	return geometries[index];
 }
 
-const Geometry& GeometryCollection::operator[](uint32_t index) const {
+const Geometry &GeometryCollection::operator[](uint32_t index) const {
 	D_ASSERT(index < count);
 	return geometries[index];
 }
 
-const Geometry* GeometryCollection::begin() const {
+const Geometry *GeometryCollection::begin() const {
 	return geometries;
 }
 
-const Geometry* GeometryCollection::end() const {
+const Geometry *GeometryCollection::end() const {
 	return geometries + count;
 }
 
-Geometry* GeometryCollection::begin() {
+Geometry *GeometryCollection::begin() {
 	return geometries;
 }
 
-Geometry* GeometryCollection::end() {
+Geometry *GeometryCollection::end() {
 	return geometries + count;
+}
+
+GeometryCollection::operator Geometry() const {
+	return Geometry(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -415,6 +441,64 @@ string Geometry::ToString() const {
 		return geometrycollection.ToString();
 	default:
 		throw NotImplementedException("Geometry::ToString()");
+	}
+}
+
+int32_t Geometry::Dimension() const {
+	switch (type) {
+	case GeometryType::POINT:
+		return 0;
+	case GeometryType::LINESTRING:
+		return 1;
+	case GeometryType::POLYGON:
+		return 2;
+	case GeometryType::MULTIPOINT:
+		return 0;
+	case GeometryType::MULTILINESTRING:
+		return 1;
+	case GeometryType::MULTIPOLYGON:
+		return 2;
+	case GeometryType::GEOMETRYCOLLECTION:
+		return geometrycollection.Aggregate([](Geometry &geom, int32_t d) { return std::max(geom.Dimension(), d); }, 0);
+	default:
+		throw NotImplementedException("Geometry::Dimension()");
+	}
+}
+
+bool Geometry::IsEmpty() const {
+	switch (type) {
+	case GeometryType::POINT:
+		return point.IsEmpty();
+	case GeometryType::LINESTRING:
+		return linestring.IsEmpty();
+	case GeometryType::POLYGON:
+		return polygon.IsEmpty();
+	case GeometryType::MULTIPOINT:
+		return multipoint.IsEmpty();
+	case GeometryType::MULTILINESTRING:
+		return multilinestring.IsEmpty();
+	case GeometryType::MULTIPOLYGON:
+		return multipolygon.IsEmpty();
+	case GeometryType::GEOMETRYCOLLECTION:
+		return geometrycollection.IsEmpty();
+	default:
+		throw NotImplementedException("Geometry::IsEmpty()");
+	}
+}
+
+bool Geometry::IsCollection() const {
+	switch (type) {
+	case GeometryType::POINT:
+	case GeometryType::LINESTRING:
+	case GeometryType::POLYGON:
+		return false;
+	case GeometryType::MULTIPOINT:
+	case GeometryType::MULTILINESTRING:
+	case GeometryType::MULTIPOLYGON:
+	case GeometryType::GEOMETRYCOLLECTION:
+		return true;
+	default:
+		throw NotImplementedException("Geometry::IsCollection()");
 	}
 }
 

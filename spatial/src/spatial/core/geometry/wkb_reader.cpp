@@ -10,7 +10,7 @@ namespace core {
 
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
-	if(cursor + sizeof(uint32_t) > length) {
+	if (cursor + sizeof(uint32_t) > length) {
 		throw SerializationException("WKBReader: ReadInt: not enough data");
 	}
 	// Read uint32_t in little endian
@@ -32,7 +32,7 @@ double WKBReader::ReadDouble<WKBByteOrder::NDR>() {
 
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
-	if(cursor + sizeof(uint32_t) > length) {
+	if (cursor + sizeof(uint32_t) > length) {
 		throw SerializationException("WKBReader: ReadInt: not enough data");
 	}
 	// Read uint32_t in big endian
@@ -47,7 +47,7 @@ uint32_t WKBReader::ReadInt<WKBByteOrder::XDR>() {
 
 template <>
 double WKBReader::ReadDouble<WKBByteOrder::XDR>() {
-	if(cursor + sizeof(double) > length) {
+	if (cursor + sizeof(double) > length) {
 		throw SerializationException("WKBReader: ReadDouble: not enough data");
 	}
 	// Read double in big endian

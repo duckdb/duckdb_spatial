@@ -16,7 +16,9 @@ public:
 		RegisterStAsHEXWKB(context);
 		RegisterStCentroid(context);
 		RegisterStCollect(context);
+		RegisterStCollectionExtract(context);
 		RegisterStContains(context);
+		RegisterStDimension(context);
 		RegisterStDistance(context);
 		RegisterStFlipCoordinates(context);
 		RegisterStGeometryType(context);
@@ -52,8 +54,14 @@ private:
 	// ST_Collect
 	static void RegisterStCollect(ClientContext &context);
 
+	// ST_CollectionExtract
+	static void RegisterStCollectionExtract(ClientContext &context);
+
 	// ST_Contains
 	static void RegisterStContains(ClientContext &context);
+
+	// ST_Dimension
+	static void RegisterStDimension(ClientContext &context);
 
 	// ST_Distance
 	static void RegisterStDistance(ClientContext &context);

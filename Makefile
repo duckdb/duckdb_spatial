@@ -97,7 +97,7 @@ test_release_python: release_python
 format:
 	find spatial/src/ -iname *.hpp -o -iname *.cpp | xargs clang-format --sort-includes=0 -style=file -i
 	find spatial/include -iname *.hpp -o -iname *.cpp | xargs clang-format --sort-includes=0 -style=file -i
-	cmake-format -i spatial/CMakeLists.txt
+	cmake-format -i spatial/src/CMakeLists.txt
 
 update:
 	git submodule update --remote --merge

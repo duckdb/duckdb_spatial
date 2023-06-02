@@ -20,7 +20,8 @@ static void TouchesFunction(DataChunk &args, ExpressionState &state, Vector &res
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSTouches_r, GEOSPreparedTouches_r);
+	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSTouches_r,
+	                                             GEOSPreparedTouches_r);
 }
 
 void GEOSScalarFunctions::RegisterStTouches(ClientContext &context) {

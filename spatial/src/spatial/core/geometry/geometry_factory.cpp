@@ -78,6 +78,35 @@ GeometryCollection GeometryFactory::CreateGeometryCollection(uint32_t num_geomet
 	return GeometryCollection(geometries, num_geometries);
 }
 
+// Empty
+Point GeometryFactory::CreateEmptyPoint() {
+	return Point(AllocateVertexVector(0));
+}
+
+LineString GeometryFactory::CreateEmptyLineString() {
+	return LineString(AllocateVertexVector(0));
+}
+
+Polygon GeometryFactory::CreateEmptyPolygon() {
+	return Polygon(nullptr, 0);
+}
+
+MultiPoint GeometryFactory::CreateEmptyMultiPoint() {
+	return MultiPoint(nullptr, 0);
+}
+
+MultiLineString GeometryFactory::CreateEmptyMultiLineString() {
+	return MultiLineString(nullptr, 0);
+}
+
+MultiPolygon GeometryFactory::CreateEmptyMultiPolygon() {
+	return MultiPolygon(nullptr, 0);
+}
+
+GeometryCollection GeometryFactory::CreateEmptyGeometryCollection() {
+	return GeometryCollection(nullptr, 0);
+}
+
 //----------------------------------------------------------------------
 // Serialization
 //----------------------------------------------------------------------
