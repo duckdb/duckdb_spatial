@@ -1,0 +1,32 @@
+require spatial
+
+# We trust that GEOS knows what it's doing, so we're not interested in testing this too much,
+# just make sure that ST_IsValid doesnt crash for known corner cases
+
+# LineStrings with only one point are not valid, but can't be constructed in GEOS
+query I
+SELECT ST_IsValid([{'x': 10, 'y': 2}]::LINESTRING_2D)
+----
+false
+
+query I
+SELECT ST_IsValid([{'x': 1, 'y': 1}, {'x': 5, 'y': 5}]::LINESTRING_2D)
+----
+true
+
+# How about polygons with less than 4 points in a ring?
+query I
+SELECT ST_IsValid([[{'x': 2, 'y': 2}, {'x': 5, 'y': 5}]]::POLYGON_2D)
+----
+false
+
+query I
+SELECT ST_IsValid([[{'x': 2, 'y': 2}, {'x': 5, 'y': 5}, {'x': 2, 'y': 2}]]::POLYGON_2D)
+----
+false
+
+# Empty points
+query I
+SELECT ST_IsValid(ST_GeomFromText('POINT EMPTY'))
+----
+true

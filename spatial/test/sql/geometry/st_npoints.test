@@ -1,0 +1,65 @@
+require spatial
+
+
+# Test Point2D
+query I
+SELECT ST_NumPoints(ST_GeomFromText('POINT(0 0)')::POINT_2D)
+----
+1
+
+# Test LineString2D
+query III
+SELECT 
+	ST_NumPoints(ST_GeomFromText('LINESTRING(0 0, 1 1)')::LINESTRING_2D),
+	ST_NumPoints(ST_GeomFromText('LINESTRING(0 0, 1 1, 2 2)')::LINESTRING_2D),
+	ST_NumPoints(ST_GeomFromText('LINESTRING EMPTY')::LINESTRING_2D)
+----
+2	3	0
+
+# Test Polygon2D
+query III
+SELECT
+	ST_NumPoints(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')::POLYGON_2D),
+	ST_NumPoints(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0), (0.5 0.5, 0.5 0.75, 0.75 0.75, 0.75 0.5, 0.5 0.5))')::POLYGON_2D),
+	ST_NumPoints(ST_GeomFromText('POLYGON EMPTY')::POLYGON_2D)
+----
+5	10	0
+
+# Test Geometry
+statement ok
+CREATE TABLE types (geom GEOMETRY);
+INSERT INTO types VALUES
+    (ST_GeomFromText('POINT EMPTY')),
+    (ST_GeomFromText('POINT(0 0)')),
+    (ST_GeomFromText('LINESTRING EMPTY')),
+    (ST_GeomFromText('LINESTRING(0 0, 1 1)')),
+    (ST_GeomFromText('POLYGON EMPTY')),
+    (ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')),
+    (ST_GeomFromText('MULTIPOINT EMPTY')),
+    (ST_GeomFromText('MULTIPOINT(0 0, 1 1)')),
+    (ST_GeomFromText('MULTILINESTRING EMPTY')),
+    (ST_GeomFromText('MULTILINESTRING((0 0, 1 1), (2 2, 3 3))')),
+    (ST_GeomFromText('MULTIPOLYGON EMPTY')),
+    (ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1))')),
+	(ST_GeomFromText('GEOMETRYCOLLECTION(GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1)))'));
+
+query I
+SELECT ST_NumPoints(geom) FROM types
+----
+0
+1
+0
+2
+0
+5
+0
+2
+0
+4
+0
+10
+0
+3
+3

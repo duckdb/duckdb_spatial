@@ -71,8 +71,7 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.Vertices()[i].x = x;
-			geom.Vertices()[i].y = y;
+			geom.Vertices().Add(Vertex(x, y));
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
@@ -137,8 +136,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-				ring_array[j].x = x;
-				ring_array[j].y = y;
+				ring_array.Add(Vertex(x, y));
 			}
 			geom.Ring(i) = ring_array;
 		}
