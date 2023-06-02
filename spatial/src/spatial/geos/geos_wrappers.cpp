@@ -227,8 +227,7 @@ GeometryPtr GeosContextWrapper::FromGeometryCollection(const core::GeometryColle
 		auto geom_ptr = FromGeometry(collection[i]);
 		((GEOSGeometry **)ptr)[i] = geom_ptr.release();
 	}
-	auto result =
-	    GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, (GEOSGeometry **)ptr, collection.Count());
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, (GEOSGeometry **)ptr, collection.Count());
 	return GeometryPtr(ctx, result);
 }
 

@@ -8,7 +8,6 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 
-
 namespace spatial {
 
 namespace core {
@@ -38,13 +37,13 @@ static void Polygon2DPerimeterFunction(DataChunk &args, ExpressionState &state, 
 			auto ring_offset = ring.offset;
 			auto ring_length = ring.length;
 
-            for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
-                auto x1 = x_data[coord_idx];
-                auto y1 = y_data[coord_idx];
-                auto x2 = x_data[coord_idx + 1];
-                auto y2 = y_data[coord_idx + 1];
-                perimeter += std::sqrt(std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2));
-            }
+			for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
+				auto x1 = x_data[coord_idx];
+				auto y1 = y_data[coord_idx];
+				auto x2 = x_data[coord_idx + 1];
+				auto y2 = y_data[coord_idx + 1];
+				perimeter += std::sqrt(std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2));
+			}
 		}
 		return perimeter;
 	});
@@ -66,7 +65,7 @@ static void Box2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vect
 		auto miny = box.b_val;
 		auto maxx = box.c_val;
 		auto maxy = box.d_val;
-        return 2 * (maxx - minx + maxy - miny);
+		return 2 * (maxx - minx + maxy - miny);
 	});
 }
 
@@ -87,29 +86,29 @@ static double PolygonPerimeter(const Polygon &poly) {
 
 static double GeometryPerimeter(const Geometry &geom) {
 	switch (geom.Type()) {
-		case core::GeometryType::POLYGON: {
-			auto &poly = geom.GetPolygon();
-			return PolygonPerimeter(poly);
+	case core::GeometryType::POLYGON: {
+		auto &poly = geom.GetPolygon();
+		return PolygonPerimeter(poly);
+	}
+	case core::GeometryType::MULTIPOLYGON: {
+		auto &mpoly = geom.GetMultiPolygon();
+		double total_perimeter = 0;
+		for (auto &poly : mpoly) {
+			total_perimeter += PolygonPerimeter(poly);
 		}
-		case core::GeometryType::MULTIPOLYGON: {
-			auto &mpoly = geom.GetMultiPolygon();
-			double total_perimeter = 0;
-			for (auto &poly : mpoly) {
-				total_perimeter += PolygonPerimeter(poly);
-			}
-			return total_perimeter;
+		return total_perimeter;
+	}
+	case core::GeometryType::GEOMETRYCOLLECTION: {
+		auto &coll = geom.GetGeometryCollection();
+		double total_perimeter = 0;
+		for (auto &subgeom : coll) {
+			total_perimeter += GeometryPerimeter(subgeom);
 		}
-		case core::GeometryType::GEOMETRYCOLLECTION: {
-			auto &coll = geom.GetGeometryCollection();
-			double total_perimeter = 0;
-			for (auto &subgeom : coll) {
-				total_perimeter += GeometryPerimeter(subgeom);
-			}
-			return total_perimeter;
-		}
-		default: {
-			return 0.0;
-		}
+		return total_perimeter;
+	}
+	default: {
+		return 0.0;
+	}
 	}
 }
 
@@ -129,21 +128,21 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 	}
 }
 
-
 void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
-    auto &catalog = Catalog::GetSystemCatalog(context);
+	auto &catalog = Catalog::GetSystemCatalog(context);
 
-    // Perimiter
+	// Perimiter
 	ScalarFunctionSet set("st_perimeter");
-    set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DPerimeterFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DPerimeterFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DPerimeterFunction));
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr,
+	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
 }
 
-} // namespace geographiclib
+} // namespace core
 
 } // namespace spatial

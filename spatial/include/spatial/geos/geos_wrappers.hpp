@@ -119,7 +119,6 @@ public:
 
 	// Predicates
 	bool Equals(const GeometryPtr &other) const;
-
 };
 
 struct WKBReader {
@@ -243,7 +242,7 @@ public:
 		throw InvalidInputException(message);
 	}
 
-	inline const GEOSContextHandle_t& GetCtx() {
+	inline const GEOSContextHandle_t &GetCtx() {
 		return ctx;
 	}
 

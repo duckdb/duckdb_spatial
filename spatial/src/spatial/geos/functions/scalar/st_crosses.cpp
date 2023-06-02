@@ -20,7 +20,8 @@ static void CrossesFunction(DataChunk &args, ExpressionState &state, Vector &res
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSCrosses_r, GEOSPreparedCrosses_r);
+	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSCrosses_r,
+	                                             GEOSPreparedCrosses_r);
 }
 
 void GEOSScalarFunctions::RegisterStCrosses(ClientContext &context) {

@@ -20,7 +20,8 @@ static void WithinFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSWithin_r, GEOSPreparedWithin_r);
+	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSWithin_r,
+	                                                GEOSPreparedWithin_r);
 }
 
 void GEOSScalarFunctions::RegisterStWithin(ClientContext &context) {

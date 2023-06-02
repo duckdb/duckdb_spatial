@@ -348,6 +348,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Buffer                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Centroid                 | 🧭        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Collect                  | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
+| ST_CollectionExtract        | 🦆        |           |               |            |                 |
 | ST_Contains                 | 🧭        | 🔄        | 🔄            | 🦆 or 🔄   | 🔄 (as POLYGON) |
 | ST_ContainsProperly         | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_ConvexHull               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
@@ -355,6 +356,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Covers                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Crosses                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Difference               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Dimension                | 🦆        |           |               |            |                 |
 | ST_Disjoint                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Distance                 | 🧭        | 🦆 or 🔄  | 🦆 or 🔄      | 🔄         | 🔄 (as POLYGON) |
 | ST_DWithin                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |

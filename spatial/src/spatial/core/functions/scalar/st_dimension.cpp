@@ -8,7 +8,6 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
-
 namespace spatial {
 
 namespace core {
@@ -17,16 +16,15 @@ namespace core {
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void DimensionFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-    auto count = args.size();
-    auto &input = args.data[0];
+	auto count = args.size();
+	auto &input = args.data[0];
 
-    UnaryExecutor::Execute<string_t, int32_t>(input, result, count, [&](string_t input) {
-        auto geometry = lstate.factory.Deserialize(input);
-        return geometry.Dimension();
-    });
-
+	UnaryExecutor::Execute<string_t, int32_t>(input, result, count, [&](string_t input) {
+		auto geometry = lstate.factory.Deserialize(input);
+		return geometry.Dimension();
+	});
 }
 
 void CoreScalarFunctions::RegisterStDimension(ClientContext &context) {
@@ -34,8 +32,8 @@ void CoreScalarFunctions::RegisterStDimension(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_Dimension");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::INTEGER, DimensionFunction,
-	                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::INTEGER, DimensionFunction, nullptr, nullptr,
+	                               nullptr, GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

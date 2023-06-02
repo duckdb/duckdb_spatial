@@ -8,11 +8,11 @@ namespace spatial {
 namespace geographiclib {
 
 void GeographicLibModule::Register(ClientContext &context) {
-    
+
 	// Register functions
-    GeographicLibFunctions::Register(context);
+	GeographicLibFunctions::Register(context);
 }
 
-} // namespace gdal
+} // namespace geographiclib
 
 } // namespace spatial

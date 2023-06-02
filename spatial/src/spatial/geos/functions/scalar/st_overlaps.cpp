@@ -20,7 +20,8 @@ static void OverlapsFunction(DataChunk &args, ExpressionState &state, Vector &re
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSOverlaps_r, GEOSPreparedOverlaps_r);
+	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSOverlaps_r,
+	                                             GEOSPreparedOverlaps_r);
 }
 
 void GEOSScalarFunctions::RegisterStOverlaps(ClientContext &context) {
