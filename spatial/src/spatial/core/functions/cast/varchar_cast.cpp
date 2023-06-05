@@ -24,7 +24,7 @@ void CoreVectorOperations::Point2DToVarchar(Vector &source, Vector &result, idx_
 	GenericExecutor::ExecuteUnary<POINT_TYPE, VARCHAR_TYPE>(source, result, count, [&](POINT_TYPE &point) {
 		auto x = point.a_val;
 		auto y = point.b_val;
-		return StringVector::AddString(result, duckdb_fmt::format("POINT ({:.16g} {:.16g})", x, y));
+		return StringVector::AddString(result, duckdb_fmt::format("POINT ({:.17g} {:.17g})", x, y));
 	});
 }
 
@@ -43,7 +43,7 @@ void CoreVectorOperations::LineString2DToVarchar(Vector &source, Vector &result,
 
 		string result_str = "LINESTRING (";
 		for (idx_t i = offset; i < offset + length; i++) {
-			result_str += duckdb_fmt::format("{:.16g} {:.16g}", x_data[i], y_data[i]);
+			result_str += duckdb_fmt::format("{:.17g} {:.17g}", x_data[i], y_data[i]);
 			if (i < offset + length - 1) {
 				result_str += ", ";
 			}
@@ -76,7 +76,7 @@ void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, id
 			auto ring_length = ring_entry.length;
 			result_str += "(";
 			for (idx_t j = ring_offset; j < ring_offset + ring_length; j++) {
-				result_str += duckdb_fmt::format("{:.16g} {:.16g}", x_data[j], y_data[j]);
+				result_str += duckdb_fmt::format("{:.17g} {:.17g}", x_data[j], y_data[j]);
 				if (j < ring_offset + ring_length - 1) {
 					result_str += ", ";
 				}
@@ -98,7 +98,7 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
 	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &point) {
-		return StringVector::AddString(result, duckdb_fmt::format("BOX({:.16g} {:.16g}, {:.16g} {:.16g})", point.a_val, point.b_val, point.c_val, point.d_val));
+		return StringVector::AddString(result, duckdb_fmt::format("BOX({:.17g} {:.17g}, {:.17g} {:.17g})", point.a_val, point.b_val, point.c_val, point.d_val));
 	});
 }
 
