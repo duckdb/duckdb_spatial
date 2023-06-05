@@ -8,6 +8,32 @@ namespace spatial {
 
 namespace core {
 
+// Helpers to format coordinates
+string Utils::format_coord(double d) {
+	char buf[25];
+	auto res = duckdb_fmt::format_to_n(buf, 24, "{}", d);
+	if(*(res.out - 2) == '.' && *(res.out - 1) == '0') {
+		res.out -= 2;
+	}
+	*res.out = '\0';
+	return string(buf);
+}
+
+string Utils::format_coord(double x, double y) {
+	char buf[51];
+	auto res_x = duckdb_fmt::format_to_n(buf, 24, "{}", x);
+	if(*(res_x.out - 2) == '.' && *(res_x.out - 1) == '0') {
+		res_x.out -= 2;
+	}
+	*res_x.out++ = ' ';
+	auto res_y = duckdb_fmt::format_to_n(res_x.out, 24, "{}", y);
+	if(*(res_y.out - 2) == '.' && *(res_y.out - 1) == '0') {
+		res_y.out -= 2;
+	}
+	*res_y.out = '\0';
+	return string(buf);
+}
+
 //------------------------------------------------------------------------------
 // Point
 //------------------------------------------------------------------------------
@@ -25,7 +51,7 @@ string Point::ToString() const {
 	}
 	auto x = vertices[0].x;
 	auto y = vertices[0].y;
-	return duckdb_fmt::format("POINT ({:.16g} {:.16g})", x, y);
+	return StringUtil::Format("POINT (%s)", Utils::format_coord(x, y));
 }
 
 bool Point::IsEmpty() const {
@@ -70,7 +96,7 @@ string LineString::ToString() const {
 	for (uint32_t i = 0; i < vertices.Count(); i++) {
 		auto x = vertices[i].x;
 		auto y = vertices[i].y;
-		result += duckdb_fmt::format("{:.16g} {:.16g}", x, y);
+		result += Utils::format_coord(x, y);
 		if (i < vertices.Count() - 1) {
 			result += ", ";
 		}
@@ -135,7 +161,7 @@ string Polygon::ToString() const {
 		for (uint32_t j = 0; j < rings[i].Count(); j++) {
 			auto x = rings[i][j].x;
 			auto y = rings[i][j].y;
-			result += duckdb_fmt::format("{:.16g} {:.16g}", x, y);
+			result += Utils::format_coord(x, y);
 			if (j < rings[i].Count() - 1) {
 				result += ", ";
 			}
@@ -171,7 +197,7 @@ string MultiPoint::ToString() const {
 			str += "EMPTY";
 		} else {
 			auto &vert = points[i].GetVertex();
-			str += duckdb_fmt::format("{:.16g} {:.16g}", vert.x, vert.y);
+			str += Utils::format_coord(vert.x, vert.y);
 		}
 		if (i < num_points - 1) {
 			str += ", ";
@@ -238,7 +264,7 @@ string MultiLineString::ToString() const {
 			} else {
 				str += ", ";
 			}
-			str += duckdb_fmt::format("{:.16g} {:.16g}", vert.x, vert.y);
+			str += Utils::format_coord(vert.x, vert.y);
 		}
 		str += ")";
 	}
@@ -319,7 +345,7 @@ string MultiPolygon::ToString() const {
 				} else {
 					str += ", ";
 				}
-				str += duckdb_fmt::format("{:.16g} {:.16g}", vert.x, vert.y);
+				str += Utils::format_coord(vert.x, vert.y);
 			}
 			str += ")";
 		}
