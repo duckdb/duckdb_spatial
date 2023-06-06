@@ -39,9 +39,8 @@ struct BindData : TableFunctionData {
 static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
                                      vector<LogicalType> &return_types, vector<string> &names) {
 
-	// Create an enum type for all geometry types
-	// Ensure that these are in the same order as the GeometryType enum
-	vector<string_t> enum_values = {"Node", "DenseNode", "Way", "Relation", "ChangeSet"};
+	// Create an enum type for all osm kinds
+	vector<string_t> enum_values = {"Node", "Way", "Relation", "ChangeSet"};
 
 	auto varchar_vector = Vector(LogicalType::VARCHAR, enum_values.size());
 	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
@@ -473,7 +472,7 @@ struct LocalState : LocalTableFunctionState {
 		way.next(1);
 		auto id = way.get_int64();
 
-		FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
+		FlatVector::GetData<uint8_t>(output.data[0])[index] = 1;
 		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
 
 		FlatVector::SetNull(output.data[4], index, true);
@@ -544,7 +543,7 @@ struct LocalState : LocalTableFunctionState {
 		relation.next(1);
 		auto id = relation.get_int64();
 
-		FlatVector::GetData<uint8_t>(output.data[0])[index] = 3;
+		FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
 		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
 
 		FlatVector::SetNull(output.data[4], index, true);
@@ -624,7 +623,7 @@ struct LocalState : LocalTableFunctionState {
 			auto id = dense_node_ids[dense_node_index];
 
 			id_data[index] = id;
-			kind_data[index] = 1;
+			kind_data[index] = 0;
 			lat_data[index] = 0.000000001 * (lat_offset + (granularity * dense_node_lats[dense_node_index]));
 			lon_data[index] = 0.000000001 * (lon_offset + (granularity * dense_node_lons[dense_node_index]));
 
