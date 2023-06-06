@@ -14,6 +14,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_flipcoordinates.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_makeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_npoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_perimeter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geometrytype.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp

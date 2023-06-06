@@ -43,6 +43,11 @@ public:
 	}
 };
 
+struct Utils {
+	static string format_coord(double d);
+	static string format_coord(double x, double y);
+};
+
 struct Geometry;
 struct GeometryFactory;
 

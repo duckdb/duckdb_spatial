@@ -7,82 +7,156 @@
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 
-#include "ryu/ryu.h"
 
 namespace spatial {
 
 namespace core {
 
-// This is not finished
-// We need to hack into ryu to adapt it to our needs (e.g. we don't want to print trailing zeros)
-static string PrintPoint(double x, double y) {
-	char x_res[25];
-	char y_res[25];
-
-	// Doubles can safely round-trip through 15 decimal digits
-	auto nx = d2fixed_buffered_n(x, 15, x_res);
-	auto ny = d2fixed_buffered_n(y, 15, y_res);
-
-	// Trim trailing zeros
-	while (nx > 0 && x_res[nx - 1] == '0') {
-		nx--;
-	}
-	while (ny > 0 && y_res[ny - 1] == '0') {
-		ny--;
-	}
-	// Trim trailing decimal point
-	if (nx > 0 && x_res[nx - 1] == '.') {
-		nx--;
-	}
-	if (ny > 0 && y_res[ny - 1] == '.') {
-		ny--;
-	}
-	x_res[nx] = '\0';
-	y_res[ny] = '\0';
-	return StringUtil::Format("%s %s", x_res, y_res);
-}
-
 //------------------------------------------------------------------------------
 // POINT_2D -> VARCHAR
 //------------------------------------------------------------------------------
-static bool Point2DToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+void CoreVectorOperations::Point2DToVarchar(Vector &source, Vector &result, idx_t count) {
 	using POINT_TYPE = StructTypeBinary<double, double>;
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
 
 	GenericExecutor::ExecuteUnary<POINT_TYPE, VARCHAR_TYPE>(source, result, count, [&](POINT_TYPE &point) {
-		return StringVector::AddString(result, StringUtil::Format("POINT (%s)", PrintPoint(point.a_val, point.b_val)));
+		auto x = point.a_val;
+		auto y = point.b_val;
+		return StringVector::AddString(result, StringUtil::Format("POINT (%s)", Utils::format_coord(x, y)));
 	});
-	return true;
+}
+
+//------------------------------------------------------------------------------
+// LINESTRING_2D -> VARCHAR
+//------------------------------------------------------------------------------
+void CoreVectorOperations::LineString2DToVarchar(Vector &source, Vector &result, idx_t count) {
+	auto &inner = ListVector::GetEntry(source);
+	auto &children = StructVector::GetEntries(inner);
+	auto x_data = FlatVector::GetData<double>(*children[0]);
+	auto y_data = FlatVector::GetData<double>(*children[1]);
+
+	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &line) {
+		auto offset = line.offset;
+		auto length = line.length;
+
+		string result_str = "LINESTRING (";
+		for (idx_t i = offset; i < offset + length; i++) {
+			result_str += Utils::format_coord(x_data[i], y_data[i]);
+			if (i < offset + length - 1) {
+				result_str += ", ";
+			}
+		}
+		result_str += ")";
+		return StringVector::AddString(result, result_str);
+	});
+}
+
+//------------------------------------------------------------------------------
+// POLYGON_2D -> VARCHAR
+//------------------------------------------------------------------------------
+void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, idx_t count) {
+	auto &poly_vector = source;
+	auto &ring_vector = ListVector::GetEntry(poly_vector);
+	auto ring_entries = ListVector::GetData(ring_vector);
+	auto &point_vector = ListVector::GetEntry(ring_vector);
+	auto &point_children = StructVector::GetEntries(point_vector);
+	auto x_data = FlatVector::GetData<double>(*point_children[0]);
+	auto y_data = FlatVector::GetData<double>(*point_children[1]);
+
+	UnaryExecutor::Execute<list_entry_t, string_t>(poly_vector, result, count, [&](list_entry_t polygon_entry) {
+		auto offset = polygon_entry.offset;
+		auto length = polygon_entry.length;
+
+		string result_str = "POLYGON (";
+		for (idx_t i = offset; i < offset + length; i++) {
+			auto ring_entry = ring_entries[i];
+			auto ring_offset = ring_entry.offset;
+			auto ring_length = ring_entry.length;
+			result_str += "(";
+			for (idx_t j = ring_offset; j < ring_offset + ring_length; j++) {
+				result_str += Utils::format_coord(x_data[j], y_data[j]);
+				if (j < ring_offset + ring_length - 1) {
+					result_str += ", ";
+				}
+			}
+			result_str += ")";
+			if (i < offset + length - 1) {
+				result_str += ", ";
+			}
+		}
+		result_str += ")";
+		return StringVector::AddString(result, result_str);
+	});
 }
 
 //------------------------------------------------------------------------------
 // BOX_2D -> VARCHAR
 //------------------------------------------------------------------------------
-static bool Box2DToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t count) {
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
 	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &point) {
-		return StringVector::AddString(result, StringUtil::Format("BOX(%s, %s)", PrintPoint(point.a_val, point.b_val),
-		                                                          PrintPoint(point.c_val, point.d_val)));
+		return StringVector::AddString(result, StringUtil::Format("BOX(%s, %s)", 
+			Utils::format_coord(point.a_val, point.b_val), 
+			Utils::format_coord(point.c_val, point.d_val)));
 	});
-	return true;
 }
 
 //------------------------------------------------------------------------------
-//  Register functions
+// GEOMETRY -> VARCHAR
 //------------------------------------------------------------------------------
+void CoreVectorOperations::GeometryToVarchar(Vector &source, Vector &result, idx_t count, GeometryFactory &factory) {
+	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t &input) {
+		auto geometry = factory.Deserialize(input);
+		return StringVector::AddString(result, geometry.ToString());
+	});
+}
+
+//------------------------------------------------------------------------------
+// CASTS
+//------------------------------------------------------------------------------
+static bool Point2DToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	CoreVectorOperations::Point2DToVarchar(source, result, count);
+	return true;
+}
+
+static bool LineString2DToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	CoreVectorOperations::LineString2DToVarchar(source, result, count);
+	return true;
+}
+
+static bool Polygon2DToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	CoreVectorOperations::Polygon2DToVarchar(source, result, count);
+	return true;
+}
+
+static bool Box2DToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	CoreVectorOperations::Box2DToVarchar(source, result, count);
+	return true;
+}
+
+static bool GeometryToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+	CoreVectorOperations::GeometryToVarchar(source, result, count, lstate.factory);
+	return true;
+}
+
 void CoreCastFunctions::RegisterVarcharCasts(ClientContext &context) {
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 
 	casts.RegisterCastFunction(GeoTypes::POINT_2D(), LogicalType::VARCHAR,
-	                           BoundCastInfo(Point2DToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	                           BoundCastInfo(Point2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::BOX_2D(), LogicalType::VARCHAR,
-	                           BoundCastInfo(Box2DToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), LogicalType::VARCHAR,
+	                           BoundCastInfo(LineString2DToVarcharCast), 1);
 
-	// The others are implicitly cast to GEOMETRY and then to VARCHAR for now.
-	// we should port all to use ryu/trimming later.
+	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), LogicalType::VARCHAR, BoundCastInfo(Polygon2DToVarcharCast), 1);
+
+	casts.RegisterCastFunction(GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast), 1);
+
+	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+	                           BoundCastInfo(GeometryToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

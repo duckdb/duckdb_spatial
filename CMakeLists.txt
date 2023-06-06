@@ -16,9 +16,6 @@ option(SPATIAL_USE_NETWORK "Enable network functionality" ON)
 include_directories(spatial/include)
 add_subdirectory(spatial/src)
 
-include_directories(spatial/third_party/ryu/include)
-add_subdirectory(spatial/third_party/ryu)
-
 include_directories(spatial/third_party/yyjson/include)
 add_subdirectory(spatial/third_party/yyjson)
 

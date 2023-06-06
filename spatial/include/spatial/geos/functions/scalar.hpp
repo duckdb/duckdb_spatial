@@ -8,7 +8,6 @@ namespace geos {
 struct GEOSScalarFunctions {
 public:
 	static void Register(ClientContext &context) {
-		RegisterStAsText(context);
 		RegisterStBoundary(context);
 		RegisterStBuffer(context);
 		RegisterStCentroid(context);
@@ -43,7 +42,6 @@ public:
 	}
 
 private:
-	static void RegisterStAsText(ClientContext &context);
 	static void RegisterStBoundary(ClientContext &context);
 	static void RegisterStBuffer(ClientContext &context);
 	static void RegisterStCentroid(ClientContext &context);

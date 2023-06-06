@@ -26,6 +26,7 @@ public:
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
 		RegisterStMakeLine(context);
+		RegisterStNPoints(context);
 		RegisterStPerimeter(context);
 		RegisterStPoint(context);
 		RegisterStRemoveRepeatedPoints(context);
@@ -84,6 +85,9 @@ private:
 
 	// ST_MakeLine
 	static void RegisterStMakeLine(ClientContext &context);
+
+	// ST_NPoints
+	static void RegisterStNPoints(ClientContext &context);
 
 	// ST_Perimeter
 	static void RegisterStPerimeter(ClientContext &context);
