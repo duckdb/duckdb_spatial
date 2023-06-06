@@ -25,8 +25,10 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_valid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_normalize.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_overlaps.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/st_simplify.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_pointonsurface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_removerepeatedpoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_simplify_preserve_topology.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_simplify.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_touches.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_union.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_within.cpp

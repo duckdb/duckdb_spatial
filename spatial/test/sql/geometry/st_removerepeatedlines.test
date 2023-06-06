@@ -1,0 +1,6 @@
+require spatial
+
+query I
+SELECT ST_AsText(ST_RemoveRepeatedPoints([{'x': 1, 'y': 2}, {'x': 1, 'y': 2}, {'x': 3, 'y': 3} , {'x': 3, 'y': 4}]::LINESTRING_2D, 0));
+----
+
