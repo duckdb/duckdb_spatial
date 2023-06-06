@@ -76,7 +76,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	}
 
 	auto file_name = StringValue::Get(input.inputs[0]);
-	auto result = make_unique<BindData>(file_name);
+	auto result = make_uniq<BindData>(file_name);
 	return result;
 }
 
@@ -134,7 +134,7 @@ static unique_ptr<FileBlock> DecompressBlob(ClientContext &context, OsmBlob &blo
 	ok = inflateEnd(&zstream);
 	// Cool, we have the uncompressed data
 
-	return make_unique<FileBlock>(blob.type, std::move(uncompressed_handle), blob_uncompressed_size, blob.blob_idx);
+	return make_uniq<FileBlock>(blob.type, std::move(uncompressed_handle), blob_uncompressed_size, blob.blob_idx);
 };
 
 class GlobalState : public GlobalTableFunctionState {
@@ -214,7 +214,7 @@ public:
 		offset += blob_length;
 		bytes_read = offset;
 
-		return make_unique<OsmBlob>(type, std::move(blob_buffer), blob_length, blob_index++);
+		return make_uniq<OsmBlob>(type, std::move(blob_buffer), blob_length, blob_index++);
 	}
 };
 
@@ -222,16 +222,14 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 	auto &bind_data = (BindData &)*input.bind_data;
 
 	auto &fs = FileSystem::GetFileSystem(context);
-	auto opener = FileSystem::GetFileOpener(context);
 	auto file_name = bind_data.file_name;
 
-	auto handle = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ, FileLockType::READ_LOCK,
-	                          FileCompressionType::UNCOMPRESSED, opener);
+	auto handle = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ, FileLockType::READ_LOCK);
 	auto file_size = handle->GetFileSize();
 
 	auto max_threads = context.db->NumberOfThreads();
 
-	auto global_state = make_unique<GlobalState>(std::move(handle), file_size, max_threads);
+	auto global_state = make_uniq<GlobalState>(std::move(handle), file_size, max_threads);
 
 	// Read the first blob to get the header
 	auto blob = global_state->GetNextBlob(context);
@@ -318,7 +316,7 @@ struct LocalState : LocalTableFunctionState {
 					switch (group_reader.tag()) {
 					// Nodes
 					case 1: {
-						ScanNodes(output, index, capacity);
+						ScanNode(output, index, capacity);
 					} break;
 					// Dense nodes
 					case 2: {
@@ -360,18 +358,59 @@ struct LocalState : LocalTableFunctionState {
 		return false;
 	}
 
-	void ScanNodes(DataChunk &output, idx_t &index, idx_t capacity) {
+	void ScanNode(DataChunk &output, idx_t &index, idx_t capacity) {
 		// TODO: Implement this properly
 		auto node = group_reader.get_message();
 		node.next(1);
 		auto id = node.get_int64();
 
+		// Set kind
 		FlatVector::GetData<uint8_t>(output.data[0])[index] = 0;
+		// Set id
 		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
-		FlatVector::SetNull(output.data[2], index, true);
 
-		FlatVector::SetNull(output.data[4], index, true);
-		FlatVector::SetNull(output.data[5], index, true);
+		// Read tags
+		if (node.next(2)) {
+
+			auto key_iter = node.get_packed_uint32();
+
+			node.next(3);
+			
+			auto val_iter = node.get_packed_uint32();
+
+			auto tag_count = key_iter.size();
+
+			auto total_tags = ListVector::GetListSize(output.data[2]);
+			ListVector::Reserve(output.data[2], total_tags + tag_count);
+			ListVector::SetListSize(output.data[2], total_tags + tag_count);
+			auto &tag_entry = ListVector::GetData(output.data[2])[index];
+
+			tag_entry.offset = total_tags;
+			tag_entry.length = tag_count;
+
+			auto &key_vector = MapVector::GetKeys(output.data[2]);
+			auto &value_vector = MapVector::GetValues(output.data[2]);
+
+			auto keys = key_iter.begin();
+			auto vals = val_iter.begin();
+			for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
+				FlatVector::GetData<string_t>(key_vector)[i] =
+					StringVector::AddString(key_vector, string_table[*keys++]);
+				FlatVector::GetData<string_t>(value_vector)[i] =
+					StringVector::AddString(value_vector, string_table[*vals++]);
+			}
+		} else {
+			FlatVector::SetNull(output.data[2], index, true);
+		}
+
+		// Read lat/lon
+		node.next(8);
+		auto lat = node.get_sint64();
+		FlatVector::GetData<double>(output.data[4])[index] = 0.000000001 * (lat_offset + (granularity * lat));
+
+		node.next(9);
+		auto lon = node.get_sint64();
+		FlatVector::GetData<double>(output.data[5])[index] = 0.000000001 * (lon_offset + (granularity * lon));
 
 		index++;
 	}
@@ -444,11 +483,10 @@ struct LocalState : LocalTableFunctionState {
 		if (way.next(2)) {
 
 			auto key_iter = way.get_packed_uint32();
-			//vector<uint32_t> keys(key_iter.begin(), key_iter.end());
 
 			way.next(3);
+			
 			auto val_iter = way.get_packed_uint32();
-			//vector<uint32_t> vals(val_iter.begin(), val_iter.end());
 
 			auto tag_count = key_iter.size();
 
@@ -642,7 +680,7 @@ struct LocalState : LocalTableFunctionState {
 
 static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, TableFunctionInitInput &input,
                                                      GlobalTableFunctionState *global_state) {
-	auto &bind_data = (BindData &)*input.bind_data;
+	//auto &bind_data = (BindData &)*input.bind_data;
 	auto &global = (GlobalState &)*global_state;
 
 	auto blob = global.GetNextBlob(context.client);
@@ -651,7 +689,7 @@ static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, 
 	}
 	auto block = DecompressBlob(context.client, *blob);
 
-	return make_unique<LocalState>(std::move(block));
+	return make_uniq<LocalState>(std::move(block));
 }
 
 static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
@@ -699,10 +737,10 @@ static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, co
 		return nullptr;
 	}
 
-	auto table_function = make_unique<TableFunctionRef>();
+	auto table_function = make_uniq<TableFunctionRef>();
 	vector<unique_ptr<ParsedExpression>> children;
-	children.push_back(make_unique<ConstantExpression>(Value(table_name)));
-	table_function->function = make_unique<FunctionExpression>("ST_ReadOSM", std::move(children));
+	children.push_back(make_uniq<ConstantExpression>(Value(table_name)));
+	table_function->function = make_uniq<FunctionExpression>("ST_ReadOSM", std::move(children));
 	return std::move(table_function);
 }
 
