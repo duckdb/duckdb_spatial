@@ -170,12 +170,16 @@ GeometryPtr GeosContextWrapper::FromPolygon(const core::Polygon &poly) const {
 	}
 
 	auto shell_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.Shell()));
-	auto poly_ptr = malloc(sizeof(GEOSGeometry *) * poly.Count() - 1);
+	auto poly_ptr = new GEOSGeometry *[poly.Count() - 1];
 	for (size_t i = 1; i < poly.Count(); i++) {
 		auto ring_ptr = GEOSGeom_createLinearRing_r(ctx, FromVertexVector(poly.Ring(i)));
-		((GEOSGeometry **)poly_ptr)[i - 1] = ring_ptr;
+		poly_ptr[i - 1] = ring_ptr;
 	}
-	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, (GEOSGeometry **)poly_ptr, poly.Count() - 1);
+
+	// The caller retains ownership of the containing array, but the ownership of 
+	// the pointed-to objects is transferred to the returned GEOSGeometry.
+	auto ptr = GEOSGeom_createPolygon_r(ctx, shell_ptr, poly_ptr, poly.Count() - 1);
+	delete[] poly_ptr;
 	return GeometryPtr(ctx, ptr);
 }
 
@@ -183,12 +187,15 @@ GeometryPtr GeosContextWrapper::FromMultiPoint(const core::MultiPoint &mpoint) c
 	if (mpoint.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOINT));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * mpoint.Count());
+	auto ptr = new GEOSGeometry *[mpoint.Count()];
 	for (size_t i = 0; i < mpoint.Count(); i++) {
 		auto point_ptr = FromPoint(mpoint[i]);
-		((GEOSGeometry **)ptr)[i] = point_ptr.release();
+		ptr[i] = point_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOINT, (GEOSGeometry **)ptr, mpoint.Count());
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOINT, ptr, mpoint.Count());
+	// The caller retains ownership of the containing array, but the ownership of 
+	// the pointed-to objects is transferred to the returned GEOSGeometry.
+	delete[] ptr;
 	return GeometryPtr(ctx, result);
 }
 
@@ -196,12 +203,16 @@ GeometryPtr GeosContextWrapper::FromMultiLineString(const core::MultiLineString 
 	if (mline.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTILINESTRING));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * mline.Count());
+	auto ptr = new GEOSGeometry *[mline.Count()];
 	for (size_t i = 0; i < mline.Count(); i++) {
 		auto line_ptr = FromLineString(mline[i]);
-		((GEOSGeometry **)ptr)[i] = line_ptr.release();
+		(ptr)[i] = line_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTILINESTRING, (GEOSGeometry **)ptr, mline.Count());
+
+	// The caller retains ownership of the containing array, but the ownership of 
+	// the pointed-to objects is transferred to the returned GEOSGeometry.
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTILINESTRING, ptr, mline.Count());
+	delete[] ptr;
 	return GeometryPtr(ctx, result);
 }
 
@@ -209,12 +220,15 @@ GeometryPtr GeosContextWrapper::FromMultiPolygon(const core::MultiPolygon &mpoly
 	if (mpoly.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOLYGON));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * mpoly.Count());
+	auto ptr = new GEOSGeometry *[mpoly.Count()];
 	for (size_t i = 0; i < mpoly.Count(); i++) {
 		auto poly_ptr = FromPolygon(mpoly[i]);
-		((GEOSGeometry **)ptr)[i] = poly_ptr.release();
+		(ptr)[i] = poly_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOLYGON, (GEOSGeometry **)ptr, mpoly.Count());
+	// The caller retains ownership of the containing array, but the ownership of 
+	// the pointed-to objects is transferred to the returned GEOSGeometry.
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_MULTIPOLYGON, ptr, mpoly.Count());
+	delete[] ptr;
 	return GeometryPtr(ctx, result);
 }
 
@@ -222,12 +236,15 @@ GeometryPtr GeosContextWrapper::FromGeometryCollection(const core::GeometryColle
 	if (collection.IsEmpty()) {
 		return GeometryPtr(ctx, GEOSGeom_createEmptyCollection_r(ctx, GEOS_GEOMETRYCOLLECTION));
 	}
-	auto ptr = malloc(sizeof(GEOSGeometry *) * collection.Count());
+	auto ptr = new GEOSGeometry *[collection.Count()];
 	for (size_t i = 0; i < collection.Count(); i++) {
 		auto geom_ptr = FromGeometry(collection[i]);
-		((GEOSGeometry **)ptr)[i] = geom_ptr.release();
+		(ptr)[i] = geom_ptr.release();
 	}
-	auto result = GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, (GEOSGeometry **)ptr, collection.Count());
+	// The caller retains ownership of the containing array, but the ownership of 
+	// the pointed-to objects is transferred to the returned GEOSGeometry.
+	auto result = GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, ptr, collection.Count());
+	delete[] ptr;
 	return GeometryPtr(ctx, result);
 }
 
