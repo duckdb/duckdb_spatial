@@ -32,6 +32,8 @@ public:
 		RegisterStIsValid(context);
 		RegisterStNormalize(context);
 		RegisterStOverlaps(context);
+		RegisterStPointOnSurface(context);
+		RegisterStRemoveRepeatedPoints(context);
 		RegisterStSimplifyPreserveTopology(context);
 		RegisterStSimplify(context);
 		RegisterStTouches(context);
@@ -64,6 +66,8 @@ private:
 	static void RegisterStIsValid(ClientContext &context);
 	static void RegisterStNormalize(ClientContext &context);
 	static void RegisterStOverlaps(ClientContext &context);
+	static void RegisterStPointOnSurface(ClientContext &context);
+	static void RegisterStRemoveRepeatedPoints(ClientContext &context);
 	static void RegisterStSimplifyPreserveTopology(ClientContext &context);
 	static void RegisterStSimplify(ClientContext &context);
 	static void RegisterStTouches(ClientContext &context);

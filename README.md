@@ -378,6 +378,8 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Normalize                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_NumPoints/ST_NPoints     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Overlaps                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_PointOnSurface           | 🧭        | 🧭        | 🧭            | 🧭         | 🔄 (as POLYGON) |
+| ST_RemoveRepeatedPoints     | 🧭        |           | 🦆            | 🔄         |                 |
 | ST_SimplifyPreserveTopology | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Simplify                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Touches                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |

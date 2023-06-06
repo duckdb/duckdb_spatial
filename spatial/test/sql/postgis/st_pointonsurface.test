@@ -1,0 +1,25 @@
+# Example taken from the PostGIS manual @ http://postgis.net, licensed under the Creative Commons Attribution-Share Alike 3.0 License.
+
+require spatial
+
+query I
+SELECT ST_AsText(ST_PointOnSurface(ST_GeomFromText('POINT(0 5)')));
+----
+POINT (0 5)
+
+query I
+SELECT ST_AsText(ST_PointOnSurface(ST_GeomFromText('LINESTRING(0 5, 0 10)')));
+----
+POINT (0 5)
+
+query I
+SELECT ST_AsText(ST_PointOnSurface(ST_GeomFromText('POLYGON((0 0, 0 5, 5 5, 5 0, 0 0))')));
+----
+POINT (2.5 2.5)
+
+query II
+SELECT ST_AsText(ST_PointOnSurface(geom)) AS pt_on_surf,
+       ST_AsText(ST_Centroid(geom)) AS centroid
+FROM (SELECT ST_GeomFromText('POLYGON ((130 120, 120 190, 30 140, 50 20, 190 20, 170 100, 90 60, 90 130, 130 120))') AS geom);
+----
+POINT (62.5 110)	POINT (100.18264840182648 85.11415525114155)
