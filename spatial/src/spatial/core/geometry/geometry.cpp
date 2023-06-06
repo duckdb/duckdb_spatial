@@ -2,35 +2,29 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/vertex_vector.hpp"
 
-#include "fmt/format.h"
+//#include "fmt/format.h"
+#include "geos/io/WKTWriter.h"
 
 namespace spatial {
 
 namespace core {
 
-// Helpers to format coordinates
+// super illegal lol, we should try to get this exposed upstream.
+extern "C" int geos_d2sfixed_buffered_n(double f, uint32_t precision, char* result);
+
 string Utils::format_coord(double d) {
 	char buf[25];
-	auto res = duckdb_fmt::format_to_n(buf, 24, "{}", d);
-	if(*(res.out - 2) == '.' && *(res.out - 1) == '0') {
-		res.out -= 2;
-	}
-	*res.out = '\0';
+	auto len = geos_d2sfixed_buffered_n(d, 15, buf);
+	buf[len] = '\0';
 	return string(buf);
 }
 
 string Utils::format_coord(double x, double y) {
 	char buf[51];
-	auto res_x = duckdb_fmt::format_to_n(buf, 24, "{}", x);
-	if(*(res_x.out - 2) == '.' && *(res_x.out - 1) == '0') {
-		res_x.out -= 2;
-	}
-	*res_x.out++ = ' ';
-	auto res_y = duckdb_fmt::format_to_n(res_x.out, 24, "{}", y);
-	if(*(res_y.out - 2) == '.' && *(res_y.out - 1) == '0') {
-		res_y.out -= 2;
-	}
-	*res_y.out = '\0';
+	auto res_x = geos_d2sfixed_buffered_n(x, 15, buf);
+	buf[res_x++] = ' ';
+	auto res_y = geos_d2sfixed_buffered_n(y, 15, buf + res_x);
+	buf[res_x + res_y] = '\0';
 	return string(buf);
 }
 
