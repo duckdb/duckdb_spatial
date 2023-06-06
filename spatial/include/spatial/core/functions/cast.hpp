@@ -5,6 +5,17 @@ namespace spatial {
 
 namespace core {
 
+struct GeometryFactory;
+
+struct CoreVectorOperations {
+public:
+	static void Point2DToVarchar(Vector &source, Vector &result, idx_t count);
+	static void LineString2DToVarchar(Vector &source, Vector &result, idx_t count);
+	static void Polygon2DToVarchar(Vector &source, Vector &result, idx_t count);
+	static void Box2DToVarchar(Vector &source, Vector &result, idx_t count);
+	static void GeometryToVarchar(Vector &source, Vector &result, idx_t count, GeometryFactory &factory);
+};
+
 struct CoreCastFunctions {
 public:
 	static void Register(ClientContext &context) {

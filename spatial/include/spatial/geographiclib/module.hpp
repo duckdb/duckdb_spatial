@@ -10,6 +10,6 @@ public:
 	static void Register(ClientContext &context);
 };
 
-} // namespace gdal
+} // namespace geographiclib
 
 } // namespace spatial

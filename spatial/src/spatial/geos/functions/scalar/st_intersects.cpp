@@ -20,7 +20,8 @@ static void IntersectsFunction(DataChunk &args, ExpressionState &state, Vector &
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSIntersects_r, GEOSPreparedIntersects_r);
+	GEOSExecutor::ExecuteSymmetricPreparedBinary(lstate, left, right, count, result, GEOSIntersects_r,
+	                                             GEOSPreparedIntersects_r);
 }
 
 void GEOSScalarFunctions::RegisterStIntersects(ClientContext &context) {

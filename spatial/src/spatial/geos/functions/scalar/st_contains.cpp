@@ -20,7 +20,8 @@ static void ContainsFunction(DataChunk &args, ExpressionState &state, Vector &re
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSContains_r, GEOSPreparedContains_r);
+	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSContains_r,
+	                                                GEOSPreparedContains_r);
 }
 
 void GEOSScalarFunctions::RegisterStContains(ClientContext &context) {

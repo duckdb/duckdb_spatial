@@ -7,10 +7,11 @@ namespace spatial {
 
 namespace core {
 
-template<class T>
+template <class T>
 class IteratorPair {
 	T *begin_ptr;
 	T *end_ptr;
+
 public:
 	IteratorPair(T *begin_ptr, T *end_ptr) : begin_ptr(begin_ptr), end_ptr(end_ptr) {
 	}
@@ -24,14 +25,15 @@ public:
 	}
 };
 
-template<class T>
-class ConstIteratorPair { 
+template <class T>
+class ConstIteratorPair {
 	const T *begin_ptr;
 	const T *end_ptr;
+
 public:
 	ConstIteratorPair(const T *begin_ptr, const T *end_ptr) : begin_ptr(begin_ptr), end_ptr(end_ptr) {
 	}
-	
+
 	const T *begin() {
 		return begin_ptr;
 	}
@@ -39,6 +41,11 @@ public:
 	const T *end() {
 		return end_ptr;
 	}
+};
+
+struct Utils {
+	static string format_coord(double d);
+	static string format_coord(double x, double y);
 };
 
 struct Geometry;
@@ -57,6 +64,7 @@ enum class GeometryType : uint8_t {
 class Point {
 	friend GeometryFactory;
 	VertexVector vertices;
+
 public:
 	explicit Point(VertexVector vertices) : vertices(vertices) {
 	}
@@ -65,24 +73,27 @@ public:
 	Vertex &GetVertex();
 	const Vertex &GetVertex() const;
 
-	const VertexVector& Vertices() const {
+	const VertexVector &Vertices() const {
 		return vertices;
 	}
-	VertexVector& Vertices() {
+	VertexVector &Vertices() {
 		return vertices;
 	}
+
+	operator Geometry() const;
 };
 
 class LineString {
 	friend GeometryFactory;
 	VertexVector vertices;
+
 public:
 	explicit LineString(VertexVector vertices) : vertices(vertices) {
 	}
-	VertexVector& Vertices() {
+	VertexVector &Vertices() {
 		return vertices;
 	}
-	const VertexVector& Vertices() const {
+	const VertexVector &Vertices() const {
 		return vertices;
 	}
 	// Common Methods
@@ -92,28 +103,31 @@ public:
 	double Length() const;
 	Geometry Centroid() const;
 	uint32_t Count() const;
+
+	operator Geometry() const;
 };
 
 class Polygon {
 	friend GeometryFactory;
 	VertexVector *rings;
 	uint32_t num_rings;
+
 public:
 	explicit Polygon(VertexVector *rings, uint32_t num_rings) : rings(rings), num_rings(num_rings) {
 	}
 
-	VertexVector& Ring(uint32_t index) {
+	VertexVector &Ring(uint32_t index) {
 		D_ASSERT(index < num_rings);
 		return rings[index];
 	}
-	const VertexVector& Ring(uint32_t index) const {
+	const VertexVector &Ring(uint32_t index) const {
 		D_ASSERT(index < num_rings);
 		return rings[index];
 	}
-	const VertexVector& Shell() const {
+	const VertexVector &Shell() const {
 		return rings[0];
 	}
-	VertexVector& Shell() {
+	VertexVector &Shell() {
 		return rings[0];
 	}
 
@@ -133,12 +147,15 @@ public:
 	double Perimiter() const;
 	Geometry Centroid() const;
 	uint32_t Count() const;
+
+	operator Geometry() const;
 };
 
 class MultiPoint {
 	friend GeometryFactory;
 	Point *points;
 	uint32_t num_points;
+
 public:
 	explicit MultiPoint(Point *points, uint32_t num_points) : points(points), num_points(num_points) {
 	}
@@ -147,23 +164,25 @@ public:
 	// Collection Methods
 	uint32_t Count() const;
 	bool IsEmpty() const;
-	Point& operator[](uint32_t index);
-	const Point& operator[](uint32_t index) const;
+	Point &operator[](uint32_t index);
+	const Point &operator[](uint32_t index) const;
 
 	// Iterator Methods
-	const Point* begin() const;
-	const Point* end() const;
-	Point* begin();
-	Point* end();
+	const Point *begin() const;
+	const Point *end() const;
+	Point *begin();
+	Point *end();
+
+	operator Geometry() const;
 };
 
 class MultiLineString {
 	friend GeometryFactory;
 	LineString *lines;
 	uint32_t count;
+
 public:
-	explicit MultiLineString(LineString *lines, uint32_t count)
-	    : lines(lines), count(count) {
+	explicit MultiLineString(LineString *lines, uint32_t count) : lines(lines), count(count) {
 	}
 	string ToString() const;
 
@@ -173,20 +192,23 @@ public:
 	// Collection Methods
 	uint32_t Count() const;
 	bool IsEmpty() const;
-	LineString& operator[](uint32_t index);
-	const LineString& operator[](uint32_t index) const;
+	LineString &operator[](uint32_t index);
+	const LineString &operator[](uint32_t index) const;
 
 	// Iterator Methods
-	const LineString* begin() const;
-	const LineString* end() const;
-	LineString* begin();
-	LineString* end();
+	const LineString *begin() const;
+	const LineString *end() const;
+	LineString *begin();
+	LineString *end();
+
+	operator Geometry() const;
 };
 
 class MultiPolygon {
 	friend GeometryFactory;
 	Polygon *polygons;
 	uint32_t count;
+
 public:
 	explicit MultiPolygon(Polygon *polygons, uint32_t count) : polygons(polygons), count(count) {
 	}
@@ -196,40 +218,44 @@ public:
 	// Collection Methods
 	uint32_t Count() const;
 	bool IsEmpty() const;
-	Polygon& operator[](uint32_t index);
-	const Polygon& operator[](uint32_t index) const;
+	Polygon &operator[](uint32_t index);
+	const Polygon &operator[](uint32_t index) const;
 
 	// Iterator Methods
-	const Polygon* begin() const;
-	const Polygon* end() const;
-	Polygon* begin();
-	Polygon* end();
+	const Polygon *begin() const;
+	const Polygon *end() const;
+	Polygon *begin();
+	Polygon *end();
+
+	operator Geometry() const;
 };
 
 class GeometryCollection {
 	friend GeometryFactory;
 	Geometry *geometries;
 	uint32_t count;
+
 public:
-	explicit GeometryCollection(Geometry *geometries, uint32_t count)
-	    : geometries(geometries), count(count) {
+	explicit GeometryCollection(Geometry *geometries, uint32_t count) : geometries(geometries), count(count) {
 	}
 	string ToString() const;
-	
+
 	// Collection Methods
 	uint32_t Count() const;
 	bool IsEmpty() const;
-	Geometry& operator[](uint32_t index);
-	const Geometry& operator[](uint32_t index) const;
+	Geometry &operator[](uint32_t index);
+	const Geometry &operator[](uint32_t index) const;
 
 	// Iterator Methods
-	const Geometry* begin() const;
-	const Geometry* end() const;
-	Geometry* begin();
-	Geometry* end();
+	const Geometry *begin() const;
+	const Geometry *end() const;
+	Geometry *begin();
+	Geometry *end();
 
 	template <class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
+
+	operator Geometry() const;
 };
 
 struct Geometry {
@@ -341,6 +367,9 @@ public:
 	}
 
 	string ToString() const;
+	int32_t Dimension() const;
+	bool IsEmpty() const;
+	bool IsCollection() const;
 };
 
 template <class AGG, class RESULT_TYPE>

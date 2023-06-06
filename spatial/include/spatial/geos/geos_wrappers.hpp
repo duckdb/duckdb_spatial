@@ -119,7 +119,6 @@ public:
 
 	// Predicates
 	bool Equals(const GeometryPtr &other) const;
-
 };
 
 struct WKBReader {
@@ -184,6 +183,10 @@ struct WKTReader {
 		reader = GEOSWKTReader_create_r(ctx);
 	}
 
+	~WKTReader() {
+		GEOSWKTReader_destroy_r(ctx, reader);
+	}
+
 	GeometryPtr Read(string_t &wkt) const {
 		auto str = wkt.GetString();
 		auto geom = GEOSWKTReader_read_r(ctx, reader, str.c_str());
@@ -200,6 +203,10 @@ struct WKTWriter {
 
 	explicit WKTWriter(GEOSContextHandle_t ctx) : ctx(ctx) {
 		writer = GEOSWKTWriter_create_r(ctx);
+	}
+
+	~WKTWriter() {
+		GEOSWKTWriter_destroy_r(ctx, writer);
 	}
 
 	void SetTrim(bool trim) const {
@@ -243,7 +250,7 @@ public:
 		throw InvalidInputException(message);
 	}
 
-	inline const GEOSContextHandle_t& GetCtx() {
+	inline const GEOSContextHandle_t &GetCtx() {
 		return ctx;
 	}
 

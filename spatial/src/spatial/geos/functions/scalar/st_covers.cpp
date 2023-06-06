@@ -20,7 +20,8 @@ static void CoversFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 	auto count = args.size();
-	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSCovers_r, GEOSPreparedCovers_r);
+	GEOSExecutor::ExecuteNonSymmetricPreparedBinary(lstate, left, right, count, result, GEOSCovers_r,
+	                                                GEOSPreparedCovers_r);
 }
 
 void GEOSScalarFunctions::RegisterStCovers(ClientContext &context) {

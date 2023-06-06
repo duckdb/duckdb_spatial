@@ -88,7 +88,6 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 	return StringUtil::Join(filters, " AND ");
 }
 
-
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
 	bool sequential_layer_scan;
@@ -258,13 +257,13 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 	// Defaults
 	result->layer_creation_options.push_back("INCLUDE_FID=NO");
-	if(max_batch_size_set == false) {
+	if (max_batch_size_set == false) {
 		// Set default max batch size to standard vector size
 		result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", STANDARD_VECTOR_SIZE));
 	}
 
 	// set layer options
-	char** lco = nullptr;
+	char **lco = nullptr;
 	for (auto &option : result->layer_creation_options) {
 		lco = CSLAddString(lco, option.c_str());
 	}
@@ -398,9 +397,8 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	global_state->stream = make_uniq<ArrowArrayStreamWrapper>();
 
-
 	// set layer options
-	char** lco = nullptr;
+	char **lco = nullptr;
 	for (auto &option : data.layer_creation_options) {
 		lco = CSLAddString(lco, option.c_str());
 	}

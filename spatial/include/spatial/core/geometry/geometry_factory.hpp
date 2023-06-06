@@ -32,6 +32,15 @@ public:
 	MultiPolygon CreateMultiPolygon(uint32_t capacity);
 	GeometryCollection CreateGeometryCollection(uint32_t capacity);
 
+	// Empty
+	Point CreateEmptyPoint();
+	LineString CreateEmptyLineString();
+	Polygon CreateEmptyPolygon();
+	MultiPoint CreateEmptyMultiPoint();
+	MultiLineString CreateEmptyMultiLineString();
+	MultiPolygon CreateEmptyMultiPolygon();
+	GeometryCollection CreateEmptyGeometryCollection();
+
 	string_t Serialize(Vector &result, const Geometry &geometry);
 	Geometry Deserialize(const string_t &data);
 

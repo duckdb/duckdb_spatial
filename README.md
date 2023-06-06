@@ -189,7 +189,7 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 # How do I get it?
 
 ## Through the DuckDB CLI
-You can install the extension for DuckDB v0.7.1 through the DuckDB CLI like you would do for other first party extensions. Simply execute: ```INSTALL spatial; LOAD spatial```!
+You can install the extension for DuckDB through the DuckDB CLI like you would do for other first party extensions. Simply execute: ```INSTALL spatial; LOAD spatial```!
 
 ## Development builds
 You can also grab the lastest builds directly from the CI runs or the release page here on GitHub and install manually.
@@ -208,7 +208,6 @@ This extension is based on the [DuckDB extension template](https://github.com/du
 **Dependencies**
 
 You need a recent version of CMake (3.20) and a C++11 compatible compiler.
-If you're cross-compiling, you need a host sqlite3 executable in your path, otherwise the build should create and use its own sqlite3 executable. (This is required for creating the PROJ database).
 You also need OpenSSL on your system. On ubuntu you can install it with `sudo apt install libssl-dev`, on macOS you can install it with `brew install openssl`. Note that brew installs openssl in a non-standard location, so you may need to set a `OPENSSL_ROOT_DIR=$(brew --prefix openssl)` environment variable when building.
 
 We bundle all the other required dependencies in the `third_party` directory, which should be automatically built and statically linked into the extension. This may take some time the first time you build, but subsequent builds should be much faster.
@@ -342,12 +341,13 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Area                     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_AsGeoJSON                | 🦆        | 🦆        | 🦆            | 🦆.        | 🦆              |
 | ST_AsHEXWKB                 | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_AsText                   | 🧭        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_AsText                   | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              | 
 | ST_AsWKB                    | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Boundary                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Buffer                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Centroid                 | 🧭        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Collect                  | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
+| ST_CollectionExtract        | 🦆        |           |               |            |                 |
 | ST_Contains                 | 🧭        | 🔄        | 🔄            | 🦆 or 🔄   | 🔄 (as POLYGON) |
 | ST_ContainsProperly         | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_ConvexHull               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
@@ -355,6 +355,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Covers                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Crosses                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Difference               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Dimension                | 🦆        |           |               |            |                 |
 | ST_Disjoint                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Distance                 | 🧭        | 🦆 or 🔄  | 🦆 or 🔄      | 🔄         | 🔄 (as POLYGON) |
 | ST_DWithin                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
@@ -375,6 +376,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_IsValid                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Length                   | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
 | ST_Normalize                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_NumPoints/ST_NPoints     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Overlaps                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_SimplifyPreserveTopology | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Simplify                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
