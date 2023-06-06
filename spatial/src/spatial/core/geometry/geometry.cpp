@@ -2,9 +2,6 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/vertex_vector.hpp"
 
-//#include "fmt/format.h"
-#include "geos/io/WKTWriter.h"
-
 namespace spatial {
 
 namespace core {
