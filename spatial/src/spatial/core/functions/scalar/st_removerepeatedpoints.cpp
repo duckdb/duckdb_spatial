@@ -42,6 +42,7 @@ static void LineStringRemoveRepeatedPointsFunctions(DataChunk &args, ExpressionS
         auto in_offset = in.offset;
         auto in_length = in.length;
 
+        // Special case: if the line has less than 3 points, we can't remove any points
         if(in_length < 3) {
             
             ListVector::Reserve(result, out_offset + in_length);
@@ -61,17 +62,36 @@ static void LineStringRemoveRepeatedPointsFunctions(DataChunk &args, ExpressionS
 
         // First pass, calculate how many points we need to keep
         // We always keep the first and last point, so we start at 2
-        uint32_t points_to_keep = 2; 
-    
-        for (idx_t i = 1; i < in_length - 2; i++) {
-            auto x1 = in_x_data[in_offset + i];
-            auto y1 = in_y_data[in_offset + i];
-            auto x2 = in_x_data[in_offset + i + 1];
-            auto y2 = in_y_data[in_offset + i + 1];
+        uint32_t points_to_keep = 0; 
 
-            if (x1 != x2 || y1 != y2) {
+        auto last_x = in_x_data[in_offset];
+        auto last_y = in_y_data[in_offset];
+        points_to_keep++;
+
+        for (idx_t i = 1; i < in_length; i++) {
+            auto curr_x = in_x_data[in_offset + i];
+            auto curr_y = in_y_data[in_offset + i];
+
+            if (curr_x != last_x || curr_y != last_y) {
                 points_to_keep++;
+                last_x = curr_x;
+                last_y = curr_y;
             }
+        }
+
+        // Special case: there is only 1 unique point in the line, so just keep
+        // the start and end points
+        if(points_to_keep == 1) {
+            out_line_entries[out_row_idx] = list_entry_t{out_offset, 2};
+            ListVector::Reserve(result, out_offset + 2);
+            auto out_x_data = FlatVector::GetData<double>(*out_line_vertex_vec[0]);
+            auto out_y_data = FlatVector::GetData<double>(*out_line_vertex_vec[1]);
+            out_x_data[out_offset] = in_x_data[in_offset];
+            out_y_data[out_offset] = in_y_data[in_offset];
+            out_x_data[out_offset + 1] = in_x_data[in_offset + in_length - 1];
+            out_y_data[out_offset + 1] = in_y_data[in_offset + in_length - 1];
+            out_offset += 2;
+            continue;
         }
         
         // Set the list entry
@@ -87,24 +107,22 @@ static void LineStringRemoveRepeatedPointsFunctions(DataChunk &args, ExpressionS
         out_y_data[out_offset] = in_y_data[in_offset];
         out_offset++;
 
-        // Copy the points in the middle
-        for (idx_t i = 1; i < in_length - 2; i++) {
-            auto x1 = in_x_data[in_offset + i];
-            auto y1 = in_y_data[in_offset + i];
-            auto x2 = in_x_data[in_offset + i + 1];
-            auto y2 = in_y_data[in_offset + i + 1];
+        // Copy the middle points (skip the last one, we'll copy it at the end)
+        last_x = in_x_data[in_offset];
+        last_y = in_y_data[in_offset];
 
-            if (x1 != x2 || y1 != y2) {
-                out_x_data[out_offset] = x1;
-                out_y_data[out_offset] = y1;
+        for (idx_t i = 1; i < in_length; i++) {
+            auto curr_x = in_x_data[in_offset + i];
+            auto curr_y = in_y_data[in_offset + i];
+
+            if (curr_x != last_x || curr_y != last_y) {
+                out_x_data[out_offset] = curr_x;
+                out_y_data[out_offset] = curr_y;
+                last_x = curr_x;
+                last_y = curr_y;
                 out_offset++;
             }
         }
-
-        // Copy the last point
-        out_x_data[out_offset] = in_x_data[in_offset + in_length - 1];
-        out_y_data[out_offset] = in_y_data[in_offset + in_length - 1];
-        out_offset++;
 	}
     ListVector::SetListSize(result, out_offset);
 
@@ -167,19 +185,38 @@ static void LineStringRemoveRepeatedPointsFunctionsWithTolerance(DataChunk &args
         }
 
         // First pass, calculate how many points we need to keep
-        // We always keep the first and last point, so we start at 2
-        uint32_t points_to_keep = 2; 
-    
-        for (idx_t i = 1; i < in_length - 2; i++) {
-            auto x1 = in_x_data[in_offset + i];
-            auto y1 = in_y_data[in_offset + i];
-            auto x2 = in_x_data[in_offset + i + 1];
-            auto y2 = in_y_data[in_offset + i + 1];
+        uint32_t points_to_keep = 0; 
 
-            auto dist_squared = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-            if (dist_squared > tolerance_squared) {
+        auto last_x = in_x_data[in_offset];
+        auto last_y = in_y_data[in_offset];
+        points_to_keep++;
+
+        for (idx_t i = 1; i < in_length; i++) {
+            auto curr_x = in_x_data[in_offset + i];
+            auto curr_y = in_y_data[in_offset + i];
+
+            auto dist_squared = (curr_x - last_x) * (curr_x - last_x) + (curr_y - last_y) * (curr_y - last_y);
+
+             if (dist_squared > tolerance_squared) {
+                last_x = curr_x;
+                last_y = curr_y;
                 points_to_keep++;
             }
+        }
+
+        // Special case: there is only 1 unique point in the line, so just keep
+        // the start and end points
+        if(points_to_keep == 1) {
+            out_line_entries[out_row_idx] = list_entry_t{out_offset, 2};
+            ListVector::Reserve(result, out_offset + 2);
+            auto out_x_data = FlatVector::GetData<double>(*out_line_vertex_vec[0]);
+            auto out_y_data = FlatVector::GetData<double>(*out_line_vertex_vec[1]);
+            out_x_data[out_offset] = in_x_data[in_offset];
+            out_y_data[out_offset] = in_y_data[in_offset];
+            out_x_data[out_offset + 1] = in_x_data[in_offset + in_length - 1];
+            out_y_data[out_offset + 1] = in_y_data[in_offset + in_length - 1];
+            out_offset += 2;
+            continue;
         }
         
         // Set the list entry
@@ -195,25 +232,32 @@ static void LineStringRemoveRepeatedPointsFunctionsWithTolerance(DataChunk &args
         out_y_data[out_offset] = in_y_data[in_offset];
         out_offset++;
 
-        // Copy the points in the middle
-        for (idx_t i = 1; i < in_length - 2; i++) {
-            auto x1 = in_x_data[in_offset + i];
-            auto y1 = in_y_data[in_offset + i];
-            auto x2 = in_x_data[in_offset + i + 1];
-            auto y2 = in_y_data[in_offset + i + 1];
+        // With tolerance its different, we always keep the first and last point 
+        // regardless of distance to the previous point
+        // Copy the middle points
+        last_x = in_x_data[in_offset];
+        last_y = in_y_data[in_offset];
 
-            auto dist_squared = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+        for (idx_t i = 1; i < in_length - 1; i++) {
+
+            auto curr_x = in_x_data[in_offset + i];
+            auto curr_y = in_y_data[in_offset + i];
+
+            auto dist_squared = (curr_x - last_x) * (curr_x - last_x) + (curr_y - last_y) * (curr_y - last_y);
             if(dist_squared > tolerance_squared) {
-                out_x_data[out_offset] = x1;
-                out_y_data[out_offset] = y1;
+                out_x_data[out_offset] = curr_x;
+                out_y_data[out_offset] = curr_y;
+                last_x = curr_x;
+                last_y = curr_y;
                 out_offset++;
             }
         }
-        
+
         // Copy the last point
-        out_x_data[out_offset] = in_x_data[in_offset + in_length - 1];
-        out_y_data[out_offset] = in_y_data[in_offset + in_length - 1];
+        out_x_data[points_to_keep-1] = in_x_data[in_offset + in_length - 1];
+        out_y_data[points_to_keep-1] = in_y_data[in_offset + in_length - 1];
         out_offset++;
+
 	}
     ListVector::SetListSize(result, out_offset);
 
