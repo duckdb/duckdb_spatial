@@ -1,9 +1,29 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/vertex_vector.hpp"
+
 namespace spatial {
 
 namespace core {
+
+// super illegal lol, we should try to get this exposed upstream.
+extern "C" int geos_d2sfixed_buffered_n(double f, uint32_t precision, char* result);
+
+string Utils::format_coord(double d) {
+	char buf[25];
+	auto len = geos_d2sfixed_buffered_n(d, 15, buf);
+	buf[len] = '\0';
+	return string(buf);
+}
+
+string Utils::format_coord(double x, double y) {
+	char buf[51];
+	auto res_x = geos_d2sfixed_buffered_n(x, 15, buf);
+	buf[res_x++] = ' ';
+	auto res_y = geos_d2sfixed_buffered_n(y, 15, buf + res_x);
+	buf[res_x + res_y] = '\0';
+	return string(buf);
+}
 
 //------------------------------------------------------------------------------
 // Point
@@ -20,7 +40,9 @@ string Point::ToString() const {
 		// check for this case and return POINT EMPTY instead to round-trip safely
 		return "POINT EMPTY";
 	}
-	return "POINT (" + std::to_string(vertices[0].x) + " " + std::to_string(vertices[0].y) + ")";
+	auto x = vertices[0].x;
+	auto y = vertices[0].y;
+	return StringUtil::Format("POINT (%s)", Utils::format_coord(x, y));
 }
 
 bool Point::IsEmpty() const {
@@ -63,7 +85,9 @@ string LineString::ToString() const {
 
 	string result = "LINESTRING (";
 	for (uint32_t i = 0; i < vertices.Count(); i++) {
-		result += std::to_string(vertices[i].x) + " " + std::to_string(vertices[i].y);
+		auto x = vertices[i].x;
+		auto y = vertices[i].y;
+		result += Utils::format_coord(x, y);
 		if (i < vertices.Count() - 1) {
 			result += ", ";
 		}
@@ -126,7 +150,9 @@ string Polygon::ToString() const {
 	for (uint32_t i = 0; i < num_rings; i++) {
 		result += "(";
 		for (uint32_t j = 0; j < rings[i].Count(); j++) {
-			result += std::to_string(rings[i][j].x) + " " + std::to_string(rings[i][j].y);
+			auto x = rings[i][j].x;
+			auto y = rings[i][j].y;
+			result += Utils::format_coord(x, y);
 			if (j < rings[i].Count() - 1) {
 				result += ", ";
 			}
@@ -162,7 +188,7 @@ string MultiPoint::ToString() const {
 			str += "EMPTY";
 		} else {
 			auto &vert = points[i].GetVertex();
-			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+			str += Utils::format_coord(vert.x, vert.y);
 		}
 		if (i < num_points - 1) {
 			str += ", ";
@@ -214,23 +240,22 @@ string MultiLineString::ToString() const {
 	}
 	string str = "MULTILINESTRING (";
 
-	bool first = true;
+	bool first_line = true;
 	for (auto &line : *this) {
-		str += "(";
-
-		if (first) {
-			first = false;
+		if (first_line) {
+			first_line = false;
 		} else {
 			str += ", ";
 		}
-		first = true;
+		str += "(";
+		bool first_vert = true;
 		for (auto &vert : line.Vertices()) {
-			if (first) {
-				first = false;
+			if (first_vert) {
+				first_vert = false;
 			} else {
 				str += ", ";
 			}
-			str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+			str += Utils::format_coord(vert.x, vert.y);
 		}
 		str += ")";
 	}
@@ -288,30 +313,30 @@ string MultiPolygon::ToString() const {
 	}
 	string str = "MULTIPOLYGON (";
 
-	bool first = true;
+	bool first_poly = true;
 	for (auto &poly : *this) {
-		str += "(";
-		if (first) {
-			first = false;
+		if (first_poly) {
+			first_poly = false;
 		} else {
 			str += ", ";
 		}
-		first = true;
+		str += "(";
+		bool first_ring = true;
 		for (auto &ring : poly.Rings()) {
 			str += "(";
-			if (first) {
-				first = false;
+			if (first_ring) {
+				first_ring = false;
 			} else {
 				str += ", ";
 			}
-			first = true;
+			bool first_vert = true;
 			for (auto &vert : ring) {
-				if (first) {
-					first = false;
+				if (first_vert) {
+					first_vert = false;
 				} else {
 					str += ", ";
 				}
-				str += std::to_string(vert.x) + " " + std::to_string(vert.y);
+				str += Utils::format_coord(vert.x, vert.y);
 			}
 			str += ")";
 		}
