@@ -38,3 +38,22 @@ SELECT ST_AsGeoJSON(geom) FROM types;
 {"type":"MultiPolygon","coordinates":[[[[0.0,0.0],[1.0,0.0],[1.0,1.0],[0.0,1.0],[0.0,0.0]]],[[[2.0,2.0],[3.0,2.0],[3.0,3.0],[2.0,3.0],[2.0,2.0]]]]}
 {"type":"GeometryCollection","geometries":[]}
 {"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[0.0,0.0]},{"type":"LineString","coordinates":[[0.0,0.0],[1.0,1.0]]}]}
+
+query I
+SELECT ST_GeomFromGeoJSON(ST_AsGeoJSON(geom)) FROM types;
+----
+POINT EMPTY
+POINT (0 0)
+LINESTRING EMPTY
+LINESTRING (0 0, 1 1)
+POLYGON EMPTY
+POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))
+MULTIPOINT EMPTY
+MULTIPOINT (0 0, 1 1)
+MULTILINESTRING EMPTY
+MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))
+MULTIPOLYGON EMPTY
+MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))
+GEOMETRYCOLLECTION EMPTY
+GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))
+
