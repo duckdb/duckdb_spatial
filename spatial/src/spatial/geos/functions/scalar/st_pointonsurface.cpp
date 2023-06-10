@@ -17,12 +17,9 @@ static void PointOnSurfaceFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
     auto ctx = lstate.ctx.GetCtx();
 	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t &geometry_blob) {
-		auto geometry = lstate.factory.Deserialize(geometry_blob);
-		auto geos_geom = lstate.ctx.FromGeometry(geometry);
-		auto geos_centroid = make_uniq_geos(ctx, GEOSPointOnSurface_r(ctx, geos_geom.get()));
-		auto centroid_geometry = lstate.ctx.ToGeometry(lstate.factory, geos_centroid.get());
-
-		return lstate.factory.Serialize(result, centroid_geometry);
+		auto geometry = lstate.ctx.Deserialize(geometry_blob);
+		auto result_geom = make_uniq_geos(ctx, GEOSPointOnSurface_r(ctx, geometry.get()));
+		return lstate.ctx.Serialize(result, result_geom);
 	});
 }
 

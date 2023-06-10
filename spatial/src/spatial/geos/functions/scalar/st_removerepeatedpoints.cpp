@@ -23,11 +23,9 @@ static void RemoveRepeatedPointsFunction(DataChunk &args, ExpressionState &state
     auto ctx = lstate.ctx.GetCtx();
     UnaryExecutor::Execute<string_t, string_t>(
 	    input, result, count, [&](string_t input) {
-		    auto geom = lstate.factory.Deserialize(input);
-		    auto geos_geom = lstate.ctx.FromGeometry(geom);
-		    auto geos_result = make_uniq_geos(ctx, GEOSRemoveRepeatedPoints_r(ctx, geos_geom.get(), 0));
-            auto simplified_geom = lstate.ctx.ToGeometry(lstate.factory, geos_result.get());
-		    return lstate.factory.Serialize(result, simplified_geom);
+		    auto geom = lstate.ctx.Deserialize(input);
+		    auto result_geom = make_uniq_geos(ctx, GEOSRemoveRepeatedPoints_r(ctx, geom.get(), 0));
+		    return lstate.ctx.Serialize(result, result_geom);
 	    });
 }
 
@@ -42,11 +40,9 @@ static void RemoveRepeatedPointsFunctionWithTolerance(DataChunk &args, Expressio
 
     BinaryExecutor::Execute<string_t, double, string_t>(
 	    input, tolerance, result, count, [&](string_t input, double tolerance) {
-		    auto geom = lstate.factory.Deserialize(input);
-		    auto geos_geom = lstate.ctx.FromGeometry(geom);
-		    auto geos_result = make_uniq_geos(ctx, GEOSRemoveRepeatedPoints_r(ctx, geos_geom.get(), tolerance));
-            auto simplified_geom = lstate.ctx.ToGeometry(lstate.factory, geos_result.get());
-		    return lstate.factory.Serialize(result, simplified_geom);
+		    auto geom = lstate.ctx.Deserialize(input);
+		    auto result_geom = make_uniq_geos(ctx, GEOSRemoveRepeatedPoints_r(ctx, geom.get(), tolerance));
+		    return lstate.ctx.Serialize(result, result_geom);
 	    });
 }
 

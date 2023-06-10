@@ -16,13 +16,12 @@ using namespace spatial::core;
 
 static void SimplifyFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
+	auto &ctx = lstate.ctx.GetCtx();
 	BinaryExecutor::Execute<string_t, double, string_t>(
 	    args.data[0], args.data[1], result, args.size(), [&](string_t input, double distance) {
-		    auto geom = lstate.factory.Deserialize(input);
-		    auto geos_geom = lstate.ctx.FromGeometry(geom);
-		    auto geos_result = geos_geom.Simplify(distance);
-		    auto simplified_geom = lstate.ctx.ToGeometry(lstate.factory, geos_result.get());
-		    return lstate.factory.Serialize(result, simplified_geom);
+			auto geom = lstate.ctx.Deserialize(input);
+			auto simplified = make_uniq_geos(ctx, GEOSSimplify_r(ctx, geom.get(), distance));
+		    return lstate.ctx.Serialize(result, simplified);
 	    });
 }
 

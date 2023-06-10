@@ -16,10 +16,10 @@ using namespace spatial::core;
 
 static void IsRingFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
+	auto &ctx = lstate.ctx.GetCtx();
 	UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(), [&](string_t input) {
-		auto geom = lstate.factory.Deserialize(input);
-		auto geos_geom = lstate.ctx.FromGeometry(geom);
-		return geos_geom.IsRing();
+		auto geom = lstate.ctx.Deserialize(input);
+		return GEOSisRing_r(ctx, geom.get());
 	});
 }
 

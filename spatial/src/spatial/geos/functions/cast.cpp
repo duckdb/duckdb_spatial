@@ -31,9 +31,8 @@ static bool GeometryToTextCast(Vector &source, Vector &result, idx_t count, Cast
 	writer.SetTrim(true);
 
 	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t &wkt) {
-		auto geom = lstate.factory.Deserialize(wkt);
-		auto geos_geom = lstate.ctx.FromGeometry(geom);
-		return writer.Write(geos_geom, result);
+		auto geom = lstate.ctx.Deserialize(wkt);
+		return writer.Write(geom, result);
 	});
 
 	return true;

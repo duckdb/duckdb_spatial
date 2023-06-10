@@ -21,27 +21,24 @@ static void ExecuteContainsProperlyPrepared(GEOSFunctionLocalState &lstate, Vect
 
 	if (left.GetVectorType() == VectorType::CONSTANT_VECTOR && right.GetVectorType() != VectorType::CONSTANT_VECTOR) {
 		auto &left_blob = FlatVector::GetData<string_t>(left)[0];
-		auto left_geom = lstate.factory.Deserialize(left_blob);
-		auto left_geos = lstate.ctx.FromGeometry(left_geom);
-		auto left_prepared_geos = left_geos.Prepare();
+		auto left_geom = lstate.ctx.Deserialize(left_blob);
+		auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 
 		UnaryExecutor::Execute<string_t, bool>(right, result, count, [&](string_t &right_blob) {
-			auto right_geometry = lstate.factory.Deserialize(right_blob);
-			auto geos_right = lstate.ctx.FromGeometry(right_geometry);
-			auto ok = GEOSPreparedContainsProperly_r(ctx, left_prepared_geos.get(), geos_right.get());
+			auto right_geometry = lstate.ctx.Deserialize(right_blob);
+			auto ok = GEOSPreparedContainsProperly_r(ctx, left_prepared.get(), right_geometry.get());
 			return ok == 1;
 		});
 	} else {
 		// ContainsProperly only has a prepared version, so we just prepare the left one always
 		BinaryExecutor::Execute<string_t, string_t, bool>(
 		    left, right, result, count, [&](string_t &left_blob, string_t &right_blob) {
-			    auto left_geometry = lstate.factory.Deserialize(left_blob);
-			    auto right_geometry = lstate.factory.Deserialize(right_blob);
-			    auto geos_left = lstate.ctx.FromGeometry(left_geometry);
-			    auto geos_right = lstate.ctx.FromGeometry(right_geometry);
-			    auto left_prepared = geos_left.Prepare();
+			    auto left_geometry = lstate.ctx.Deserialize(left_blob);
+			    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 
-			    auto ok = GEOSPreparedContainsProperly_r(ctx, left_prepared.get(), geos_right.get());
+			    auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geometry.get()));
+
+			    auto ok = GEOSPreparedContainsProperly_r(ctx, left_prepared.get(), right_geometry.get());
 			    return ok == 1;
 		    });
 	}
