@@ -7,6 +7,9 @@ namespace spatial {
 
 namespace core {
 
+class BinaryReader;
+class BinaryWriter;
+
 struct GeometryFactory {
 public:
 	ArenaAllocator allocator;
@@ -76,13 +79,13 @@ private:
 	uint32_t GetSerializedSize(const Geometry &geometry);
 
 	// Deserialize
-	Point DeserializePoint(const_data_ptr_t &ptr);
-	LineString DeserializeLineString(const_data_ptr_t &ptr);
-	Polygon DeserializePolygon(const_data_ptr_t &ptr);
-	MultiPoint DeserializeMultiPoint(const_data_ptr_t &ptr);
-	MultiLineString DeserializeMultiLineString(const_data_ptr_t &ptr);
-	MultiPolygon DeserializeMultiPolygon(const_data_ptr_t &ptr);
-	GeometryCollection DeserializeGeometryCollection(const_data_ptr_t &ptr);
+	Point DeserializePoint(BinaryReader &reader);
+	LineString DeserializeLineString(BinaryReader &reader);
+	Polygon DeserializePolygon(BinaryReader &reader);
+	MultiPoint DeserializeMultiPoint(BinaryReader &reader);
+	MultiLineString DeserializeMultiLineString(BinaryReader &reader);
+	MultiPolygon DeserializeMultiPolygon(BinaryReader &reader);
+	GeometryCollection DeserializeGeometryCollection(BinaryReader &reader);
 };
 
 } // namespace core

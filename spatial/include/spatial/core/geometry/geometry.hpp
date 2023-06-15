@@ -391,6 +391,7 @@ struct GeometryPrefix {
 	GeometryType type;
 	uint16_t hash;
 
+
 	GeometryPrefix(uint8_t flags, GeometryType type, uint16_t hash) : flags(flags), type(type), hash(hash) {
 	}
 
@@ -407,6 +408,7 @@ struct GeometryPrefix {
 		dst += sizeof(uint16_t);
 	}
 };
+static_assert(sizeof(GeometryPrefix) == 4, "GeometryPrefix should be 4 bytes");
 static_assert(sizeof(GeometryPrefix) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");
 } // namespace core
 

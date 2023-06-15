@@ -70,8 +70,8 @@ static void IsValidFunction(DataChunk &args, ExpressionState &state, Vector &res
 			return false;
 		}
 
-		auto geos_geom = lstate.ctx.FromGeometry(geom);
-		return geos_geom.IsValid();
+		auto geos_geom = lstate.ctx.Deserialize(input);
+		return (bool)GEOSisValid_r(lstate.ctx.GetCtx(), geos_geom.get());
 	});
 }
 

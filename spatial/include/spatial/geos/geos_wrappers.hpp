@@ -47,79 +47,11 @@ struct GeosDeleter<const GEOSPreparedGeometry> {
 };
 
 template <class T>
-std::unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
-	return std::unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
+unique_ptr<T, GeosDeleter<T>> make_uniq_geos(GEOSContextHandle_t ctx, T *ptr) {
+	return unique_ptr<T, GeosDeleter<T>>(ptr, GeosDeleter<T> {ctx});
 }
 
-struct GeometryPtr {
-private:
-	GEOSContextHandle_t ctx;
-	GEOSGeometry *ptr;
-
-public:
-	explicit GeometryPtr(GEOSContextHandle_t ctx, GEOSGeometry *ptr) : ctx(ctx), ptr(ptr) {
-	}
-	GeometryPtr(const GeometryPtr &) = delete;
-	GeometryPtr &operator=(const GeometryPtr &) = delete;
-	GeometryPtr(GeometryPtr &&other) noexcept : ctx(other.ctx), ptr(other.ptr) {
-		std::swap(other.ptr, ptr);
-		ctx = other.ctx;
-	}
-
-	GeometryPtr &operator=(GeometryPtr &&other) noexcept {
-		std::swap(other.ptr, ptr);
-		ctx = other.ctx;
-		return *this;
-	}
-
-	GEOSGeometry *release() {
-		auto result = ptr;
-		ptr = nullptr;
-		return result;
-	}
-
-	~GeometryPtr() {
-		if (ptr) {
-			GEOSGeom_destroy_r(ctx, ptr);
-		}
-	}
-
-	inline GEOSGeometry *get() const {
-		return ptr;
-	}
-
-	std::unique_ptr<const GEOSPreparedGeometry, GeosDeleter<const GEOSPreparedGeometry>> Prepare() {
-		return make_uniq_geos(ctx, GEOSPrepare_r(ctx, ptr));
-	}
-
-	// Accessors
-	double Area() const;
-	double Length() const;
-	double GetX();
-	double GetY();
-	bool IsEmpty() const;
-	bool IsSimple() const;
-	bool IsValid() const;
-	bool IsRing() const;
-	bool IsClosed() const;
-
-	// Constructs
-	GeometryPtr Simplify(double tolerance) const;
-	GeometryPtr SimplifyPreserveTopology(double tolerance) const;
-	GeometryPtr Buffer(double distance, int n_quadrant_segments) const;
-	GeometryPtr Boundary() const;
-	GeometryPtr Centroid() const;
-	GeometryPtr ConvexHull() const;
-	GeometryPtr Envelope() const;
-	GeometryPtr Intersection(const GeometryPtr &other) const;
-	GeometryPtr Union(const GeometryPtr &other) const;
-	GeometryPtr Difference(const GeometryPtr &other) const;
-	// Mutations
-	void Normalize() const;
-
-	// Predicates
-	bool Equals(const GeometryPtr &other) const;
-};
+using GeometryPtr = unique_ptr<GEOSGeometry, GeosDeleter<GEOSGeometry>>;
 
 struct WKBReader {
 	GEOSContextHandle_t ctx;
@@ -134,7 +66,7 @@ struct WKBReader {
 		if (!geom) {
 			throw InvalidInputException("Could not read WKB");
 		}
-		return GeometryPtr(ctx, geom);
+		return make_uniq_geos(ctx, geom);
 	}
 
 	GeometryPtr Read(string_t &wkb) const {
@@ -191,9 +123,9 @@ struct WKTReader {
 		auto str = wkt.GetString();
 		auto geom = GEOSWKTReader_read_r(ctx, reader, str.c_str());
 		if (!geom) {
-			return GeometryPtr(ctx, nullptr);
+			return nullptr;
 		}
-		return GeometryPtr(ctx, geom);
+		return make_uniq_geos(ctx, geom);
 	}
 };
 
@@ -270,25 +202,8 @@ public:
 		return WKTReader(ctx);
 	}
 
-	GEOSCoordSeq FromVertexVector(const core::VertexVector &vec) const;
-	GeometryPtr FromPoint(const core::Point &point) const;
-	GeometryPtr FromLineString(const core::LineString &line) const;
-	GeometryPtr FromPolygon(const core::Polygon &poly) const;
-	GeometryPtr FromMultiPoint(const core::MultiPoint &mpoint) const;
-	GeometryPtr FromMultiLineString(const core::MultiLineString &mline) const;
-	GeometryPtr FromMultiPolygon(const core::MultiPolygon &mpoly) const;
-	GeometryPtr FromGeometryCollection(const core::GeometryCollection &gc) const;
-	GeometryPtr FromGeometry(const core::Geometry &geom) const;
-
-	core::VertexVector ToVertexVector(core::GeometryFactory &factory, const GEOSCoordSequence *seq) const;
-	core::Geometry ToGeometry(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::Point ToPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::LineString ToLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::Polygon ToPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::MultiPoint ToMultiPoint(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::MultiLineString ToMultiLineString(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::MultiPolygon ToMultiPolygon(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
-	core::GeometryCollection ToGeometryCollection(core::GeometryFactory &factory, const GEOSGeometry *geom) const;
+	unique_ptr<GEOSGeometry, GeosDeleter<GEOSGeometry>> Deserialize(const string_t &blob);
+	string_t Serialize(Vector &result, const unique_ptr<GEOSGeometry, GeosDeleter<GEOSGeometry>> &geom);
 };
 
 } // namespace geos

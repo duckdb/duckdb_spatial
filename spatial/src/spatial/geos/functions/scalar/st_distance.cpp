@@ -21,40 +21,34 @@ static void ExecutePreparedDistance(GEOSFunctionLocalState &lstate, Vector &left
 	// Optimize: if one of the arguments is a constant, we can prepare it once and reuse it
 	if (left.GetVectorType() == VectorType::CONSTANT_VECTOR && right.GetVectorType() != VectorType::CONSTANT_VECTOR) {
 		auto &left_blob = FlatVector::GetData<string_t>(left)[0];
-		auto left_geom = lstate.factory.Deserialize(left_blob);
-		auto left_geos = lstate.ctx.FromGeometry(left_geom);
-		auto left_prepared_geos = left_geos.Prepare();
-
+		auto left_geom = lstate.ctx.Deserialize(left_blob);
+		auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
+		
 		UnaryExecutor::Execute<string_t, double>(right, result, count, [&](string_t &right_blob) {
-			auto right_geometry = lstate.factory.Deserialize(right_blob);
-			auto geos_right = lstate.ctx.FromGeometry(right_geometry);
+			auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			double distance;
-			GEOSPreparedDistance_r(ctx, left_prepared_geos.get(), geos_right.get(), &distance);
+			GEOSPreparedDistance_r(ctx, left_prepared.get(), right_geometry.get(), &distance);
 			return distance;
 		});
 	} else if (right.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 	           left.GetVectorType() != VectorType::CONSTANT_VECTOR) {
 		auto &right_blob = FlatVector::GetData<string_t>(right)[0];
-		auto right_geom = lstate.factory.Deserialize(right_blob);
-		auto right_geos = lstate.ctx.FromGeometry(right_geom);
-		auto right_prepared_geos = right_geos.Prepare();
+		auto right_geom = lstate.ctx.Deserialize(right_blob);
+		auto right_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, right_geom.get()));
 
 		UnaryExecutor::Execute<string_t, double>(left, result, count, [&](string_t &left_blob) {
-			auto left_geometry = lstate.factory.Deserialize(left_blob);
-			auto geos_left = lstate.ctx.FromGeometry(left_geometry);
+			auto left_geometry = lstate.ctx.Deserialize(left_blob);
 			double distance;
-			GEOSPreparedDistance_r(ctx, right_prepared_geos.get(), geos_left.get(), &distance);
+			GEOSPreparedDistance_r(ctx, right_prepared.get(), left_geometry.get(), &distance);
 			return distance;
 		});
 	} else {
 		BinaryExecutor::Execute<string_t, string_t, double>(
 		    left, right, result, count, [&](string_t &left_blob, string_t &right_blob) {
-			    auto left_geometry = lstate.factory.Deserialize(left_blob);
-			    auto right_geometry = lstate.factory.Deserialize(right_blob);
-			    auto geos_left = lstate.ctx.FromGeometry(left_geometry);
-			    auto geos_right = lstate.ctx.FromGeometry(right_geometry);
+			    auto left_geometry = lstate.ctx.Deserialize(left_blob);
+			    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			    double distance;
-			    GEOSDistance_r(ctx, geos_left.get(), geos_right.get(), &distance);
+			    GEOSDistance_r(ctx, left_geometry.get(), right_geometry.get(), &distance);
 			    return distance;
 		    });
 	}
