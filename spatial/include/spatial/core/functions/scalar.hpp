@@ -22,6 +22,7 @@ public:
 		RegisterStDistance(context);
 		RegisterStFlipCoordinates(context);
 		RegisterStGeometryType(context);
+		RegisterStGeomFromHEXWKB(context);
 		RegisterStGeomFromWKB(context);
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
@@ -73,6 +74,9 @@ private:
 
 	// ST_GeometryType
 	static void RegisterStGeometryType(ClientContext &context);
+
+	// ST_GeomFromHEXWKB
+	static void RegisterStGeomFromHEXWKB(ClientContext &context);
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(ClientContext &context);

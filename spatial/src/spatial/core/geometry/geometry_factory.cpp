@@ -159,41 +159,44 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	case GeometryType::POINT: {
 		auto &point = geometry.GetPoint();
 		SerializePoint(ptr, point);
-		return str;
+		break;
 	}
 	case GeometryType::LINESTRING: {
 		auto &linestring = geometry.GetLineString();
 		SerializeLineString(ptr, linestring);
-		return str;
+		break;
 	}
 	case GeometryType::POLYGON: {
 		auto &polygon = geometry.GetPolygon();
 		SerializePolygon(ptr, polygon);
-		return str;
+		break;
 	}
 	case GeometryType::MULTIPOINT: {
 		auto &multipoint = geometry.GetMultiPoint();
 		SerializeMultiPoint(ptr, multipoint);
-		return str;
+		break;
 	}
 	case GeometryType::MULTILINESTRING: {
 		auto &multilinestring = geometry.GetMultiLineString();
 		SerializeMultiLineString(ptr, multilinestring);
-		return str;
+		break;
 	}
 	case GeometryType::MULTIPOLYGON: {
 		auto &multipolygon = geometry.GetMultiPolygon();
 		SerializeMultiPolygon(ptr, multipolygon);
-		return str;
+		break;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
 		auto &collection = geometry.GetGeometryCollection();
 		SerializeGeometryCollection(ptr, collection);
-		return str;
+		break;
 	}
 	default:
 		throw NotImplementedException("Unimplemented geometry type for serialization!");
 	}
+
+	str.Finalize();
+	return str;
 }
 
 void GeometryFactory::SerializePoint(data_ptr_t &ptr, const Point &point) {

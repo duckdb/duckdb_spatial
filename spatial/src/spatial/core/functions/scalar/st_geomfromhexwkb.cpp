@@ -15,51 +15,48 @@ namespace spatial {
 namespace core {
 
 //------------------------------------------------------------------------------
-// GEOMETRY -> HEX WKB
+// HEX WKB -> GEOMETRY
 //------------------------------------------------------------------------------
 
-void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 	auto &input = args.data[0];
 	auto count = args.size();
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		auto wkb_size = WKBWriter::GetRequiredSize(geometry);
-		unique_ptr<data_t[]> wkb_blob(new data_t[wkb_size]);
+	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input_hex) {
+		
+		auto hex_size = input_hex.GetSize();
+		auto hex_ptr = const_data_ptr_cast(input_hex.GetData());
+		D_ASSERT(hex_size % 2 == 0);
+		auto blob_size = hex_size / 2;
 
-		auto wkb_ptr = wkb_blob.get();
-		WKBWriter::Write(geometry, wkb_ptr);
-
-		auto blob_size = wkb_size * 2; // every byte is rendered as two characters
-		auto blob_str = StringVector::EmptyString(result, blob_size);
-		auto blob_ptr = blob_str.GetDataWriteable();
-
-		idx_t str_idx = 0;
-		wkb_ptr = wkb_blob.get(); // reset
-		for (idx_t i = 0; i < wkb_size; i++) {
-			auto byte_a = wkb_ptr[i] >> 4;
-			auto byte_b = wkb_ptr[i] & 0x0F;
-
-			blob_ptr[str_idx++] = Blob::HEX_TABLE[byte_a];
-			blob_ptr[str_idx++] = Blob::HEX_TABLE[byte_b];
+		unique_ptr<data_t[]> wkb_blob(new data_t[blob_size]);
+		auto blob_ptr = wkb_blob.get();
+		auto blob_idx = 0;
+		for (idx_t hex_idx = 0; hex_idx < hex_size; hex_idx += 2) {
+			auto byte_a = Blob::HEX_MAP[hex_ptr[hex_idx]];
+			auto byte_b = Blob::HEX_MAP[hex_ptr[hex_idx + 1]];
+			D_ASSERT(byte_a != -1);
+			D_ASSERT(byte_b != -1);
+			
+			blob_ptr[blob_idx++] = (byte_a << 4) + byte_b;
 		}
-
-		blob_str.Finalize();
-		return blob_str;
+		
+		auto geom = lstate.factory.FromWKB((const char*)wkb_blob.get(), blob_size);
+		return lstate.factory.Serialize(result, geom);
 	});
 }
 
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsHEXWKB(ClientContext &context) {
+void CoreScalarFunctions::RegisterStGeomFromHEXWKB(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	CreateScalarFunctionInfo info(ScalarFunction("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
-	                                             GeometryAsHEXWKBFunction, nullptr, nullptr, nullptr,
+	CreateScalarFunctionInfo info(ScalarFunction("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
+	                                             GeometryFromHEXWKB, nullptr, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, info);
