@@ -60,8 +60,7 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 		    if (multidimensional) {
 			    throw InvalidInputException("3D/4D geometries are not supported");
 		    }
-		    auto geometry = ctx.ToGeometry(lstate.factory, geos_geom.get());
-		    return lstate.factory.Serialize(result, geometry);
+		    return lstate.ctx.Serialize(result, geos_geom);
 	    });
 }
 

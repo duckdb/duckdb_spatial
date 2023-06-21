@@ -16,14 +16,11 @@ using namespace spatial::core;
 
 static void ConvexHullFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
-
+	auto &ctx = lstate.ctx.GetCtx();
 	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t &geometry_blob) {
-		auto geometry = lstate.factory.Deserialize(geometry_blob);
-		auto geos_geom = lstate.ctx.FromGeometry(geometry);
-		auto geos_convex_hull = geos_geom.ConvexHull();
-		auto convex_hull_geometry = lstate.ctx.ToGeometry(lstate.factory, geos_convex_hull.get());
-
-		return lstate.factory.Serialize(result, convex_hull_geometry);
+		auto geometry = lstate.ctx.Deserialize(geometry_blob);
+		auto convex_hull_geometry = make_uniq_geos(ctx, GEOSConvexHull_r(ctx, geometry.get()));
+		return lstate.ctx.Serialize(result, convex_hull_geometry);
 	});
 }
 

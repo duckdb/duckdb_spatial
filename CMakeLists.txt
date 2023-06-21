@@ -19,6 +19,8 @@ add_subdirectory(spatial/src)
 include_directories(spatial/third_party/yyjson/include)
 add_subdirectory(spatial/third_party/yyjson)
 
+include_directories(spatial/third_party/protozero/include)
+
 
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 

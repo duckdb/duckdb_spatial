@@ -16,12 +16,14 @@ using namespace spatial::core;
 
 static void NormalizeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
+	auto &ctx = lstate.ctx.GetCtx();
 	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t input) {
-		auto geom = lstate.factory.Deserialize(input);
-		auto geos_geom = lstate.ctx.FromGeometry(geom);
-		geos_geom.Normalize();
-		auto new_geom = lstate.ctx.ToGeometry(lstate.factory, geos_geom.get());
-		return lstate.factory.Serialize(result, new_geom);
+		auto geom = lstate.ctx.Deserialize(input);
+		auto res = GEOSNormalize_r(ctx, geom.get());
+		if (res == -1) {
+			throw Exception("Could not normalize geometry");;
+		}
+		return lstate.ctx.Serialize(result, geom);
 	});
 }
 

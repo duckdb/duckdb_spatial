@@ -3,6 +3,7 @@
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+#include "spatial/core/geometry/serialization.hpp"
 
 namespace spatial {
 
@@ -430,184 +431,158 @@ uint32_t GeometryFactory::GetSerializedSize(const Geometry &geometry) {
 // Deserialization
 //----------------------------------------------------------------------
 Geometry GeometryFactory::Deserialize(const string_t &data) {
-	auto ptr = (const_data_ptr_t)data.GetDataUnsafe();
-	// read prefix
-	auto type = (GeometryType)Load<uint8_t>(ptr++);
-	auto flags = (uint8_t)Load<uint8_t>(ptr++);
-	auto hash = Load<uint16_t>(ptr);
-	ptr += sizeof(uint16_t);
-
-	GeometryPrefix prefix(flags, type, hash);
-
-	// skip padding
-	ptr += sizeof(uint32_t);
+	BinaryReader reader(data);
+	reader.Skip(4); // Skip prefix
+	reader.Skip(4); // Skip padding
 
 	// peek the type
-	auto ty = (GeometryType)Load<uint32_t>(ptr);
+	auto ty = (GeometryType)reader.Peek<uint32_t>();
 	switch (ty) {
 	case GeometryType::POINT:
-		return Geometry(DeserializePoint(ptr));
+		return Geometry(DeserializePoint(reader));
 	case GeometryType::LINESTRING:
-		return Geometry(DeserializeLineString(ptr));
+		return Geometry(DeserializeLineString(reader));
 	case GeometryType::POLYGON:
-		return Geometry(DeserializePolygon(ptr));
+		return Geometry(DeserializePolygon(reader));
 	case GeometryType::MULTIPOINT:
-		return Geometry(DeserializeMultiPoint(ptr));
+		return Geometry(DeserializeMultiPoint(reader));
 	case GeometryType::MULTILINESTRING:
-		return Geometry(DeserializeMultiLineString(ptr));
+		return Geometry(DeserializeMultiLineString(reader));
 	case GeometryType::MULTIPOLYGON:
-		return Geometry(DeserializeMultiPolygon(ptr));
+		return Geometry(DeserializeMultiPolygon(reader));
 	case GeometryType::GEOMETRYCOLLECTION:
-		return Geometry(DeserializeGeometryCollection(ptr));
+		return Geometry(DeserializeGeometryCollection(reader));
 	default:
 		throw NotImplementedException("Deserialize::Geometry type not implemented yet!");
 	}
 }
 
-Point GeometryFactory::DeserializePoint(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+Point GeometryFactory::DeserializePoint(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::POINT);
 	(void)type;
 
 	// Points can be empty too, in which case the count is 0
-	auto count = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
-
+	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
-		VertexVector vertex_data((Vertex *)ptr, 0, 0);
+		VertexVector vertex_data((Vertex *)reader.GetPtr(), 0, 0);
 		return Point(vertex_data);
 	} else {
 		D_ASSERT(count == 1);
-		VertexVector vertex_data((Vertex *)ptr, 1, 1);
+		VertexVector vertex_data((Vertex *)reader.GetPtr(), 1, 1);
 		// Move the pointer forward (in case we are reading from a collection type)
-		ptr += sizeof(Vertex);
+		reader.Skip(sizeof(Vertex));
 		return Point(vertex_data);
 	}
 }
 
-LineString GeometryFactory::DeserializeLineString(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+LineString GeometryFactory::DeserializeLineString(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::LINESTRING);
 	(void)type;
 	// 0 if the linestring is empty
-	auto length = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
-
+	auto count = reader.Read<uint32_t>();
 	// read data
-	VertexVector vertex_data((Vertex *)ptr, length, length);
+	VertexVector vertex_data((Vertex *)reader.GetPtr(), count, count);
 
-	ptr += length * sizeof(Vertex);
+	reader.Skip(count * sizeof(Vertex));
 
 	return LineString(vertex_data);
 }
 
-Polygon GeometryFactory::DeserializePolygon(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+Polygon GeometryFactory::DeserializePolygon(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::POLYGON);
 	(void)type;
 	// read num rings
-	auto num_rings = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+	auto num_rings = reader.Read<uint32_t>();
 
 	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
-	auto data_offset = ptr + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
+	
+	// Read the count and corresponding ring in parallel
+	auto data_ptr = reader.GetPtr() + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
 	for (uint32_t i = 0; i < num_rings; i++) {
-		// read length
-		auto length = Load<uint32_t>(ptr);
-		ptr += sizeof(uint32_t);
-		rings[i] = VertexVector((Vertex *)data_offset, length, length);
-		data_offset += length * sizeof(Vertex);
+		auto count = reader.Read<uint32_t>();
+		rings[i] = VertexVector((Vertex *)data_ptr, count, count);
+		data_ptr += count * sizeof(Vertex);
 	}
-	ptr = data_offset;
-
+	reader.SetPtr(data_ptr);
 	return Polygon(rings, num_rings);
 }
 
-MultiPoint GeometryFactory::DeserializeMultiPoint(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+MultiPoint GeometryFactory::DeserializeMultiPoint(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::MULTIPOINT);
 	(void)type;
 	// read num points
-	auto num_points = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+	auto num_points = reader.Read<uint32_t>();
 
 	auto points = reinterpret_cast<Point *>(allocator.AllocateAligned(sizeof(Point) * num_points));
 	for (uint32_t i = 0; i < num_points; i++) {
-		points[i] = DeserializePoint(ptr);
+		points[i] = DeserializePoint(reader);
 	}
 	return MultiPoint(points, num_points);
 }
 
-MultiLineString GeometryFactory::DeserializeMultiLineString(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+MultiLineString GeometryFactory::DeserializeMultiLineString(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::MULTILINESTRING);
 	(void)type;
 	// read num linestrings
-	auto num_linestrings = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+	auto num_linestrings = reader.Read<uint32_t>();
 
 	auto linestrings = reinterpret_cast<LineString *>(allocator.AllocateAligned(sizeof(LineString) * num_linestrings));
 	for (uint32_t i = 0; i < num_linestrings; i++) {
-		linestrings[i] = DeserializeLineString(ptr);
+		linestrings[i] = DeserializeLineString(reader);
 	}
 	return MultiLineString(linestrings, num_linestrings);
 }
 
-MultiPolygon GeometryFactory::DeserializeMultiPolygon(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+MultiPolygon GeometryFactory::DeserializeMultiPolygon(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::MULTIPOLYGON);
 	(void)type;
 	// read num polygons
-	auto num_polygons = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+	auto num_polygons = reader.Read<uint32_t>();
 
 	auto polygons = reinterpret_cast<Polygon *>(allocator.AllocateAligned(sizeof(Polygon) * num_polygons));
 	for (uint32_t i = 0; i < num_polygons; i++) {
-		polygons[i] = DeserializePolygon(ptr);
+		polygons[i] = DeserializePolygon(reader);
 	}
 	return MultiPolygon(polygons, num_polygons);
 }
 
-GeometryCollection GeometryFactory::DeserializeGeometryCollection(const_data_ptr_t &ptr) {
-	auto type = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
+GeometryCollection GeometryFactory::DeserializeGeometryCollection(BinaryReader &reader) {
+	auto type = reader.Read<uint32_t>();
 	D_ASSERT(type == (uint32_t)GeometryType::GEOMETRYCOLLECTION);
 	(void)type;
 	// read num geometries
-	auto num_geometries = Load<uint32_t>(ptr);
-	ptr += sizeof(uint32_t);
-
+	auto num_geometries = reader.Read<uint32_t>();
 	auto geometries = reinterpret_cast<Geometry *>(allocator.AllocateAligned(sizeof(Geometry) * num_geometries));
 	for (uint32_t i = 0; i < num_geometries; i++) {
 		// peek at the type
-		auto geometry_type = (GeometryType)Load<uint32_t>(ptr);
+		auto geometry_type = (GeometryType)reader.Peek<uint32_t>();
 		switch (geometry_type) {
 		case GeometryType::POINT:
-			geometries[i] = Geometry(DeserializePoint(ptr));
+			geometries[i] = Geometry(DeserializePoint(reader));
 			break;
 		case GeometryType::LINESTRING:
-			geometries[i] = Geometry(DeserializeLineString(ptr));
+			geometries[i] = Geometry(DeserializeLineString(reader));
 			break;
 		case GeometryType::POLYGON:
-			geometries[i] = Geometry(DeserializePolygon(ptr));
+			geometries[i] = Geometry(DeserializePolygon(reader));
 			break;
 		case GeometryType::MULTIPOINT:
-			geometries[i] = Geometry(DeserializeMultiPoint(ptr));
+			geometries[i] = Geometry(DeserializeMultiPoint(reader));
 			break;
 		case GeometryType::MULTILINESTRING:
-			geometries[i] = Geometry(DeserializeMultiLineString(ptr));
+			geometries[i] = Geometry(DeserializeMultiLineString(reader));
 			break;
 		case GeometryType::MULTIPOLYGON:
-			geometries[i] = Geometry(DeserializeMultiPolygon(ptr));
+			geometries[i] = Geometry(DeserializeMultiPolygon(reader));
 			break;
 		case GeometryType::GEOMETRYCOLLECTION:
-			geometries[i] = Geometry(DeserializeGeometryCollection(ptr));
+			geometries[i] = Geometry(DeserializeGeometryCollection(reader));
 			break;
 		}
 	}
