@@ -1,0 +1,18 @@
+# Example taken from the PostGIS manual @ http://postgis.net, licensed under the Creative Commons Attribution-Share Alike 3.0 License.
+
+require spatial
+
+query I
+SELECT ST_AsText(ST_ReducePrecision(ST_GeomFromText('POINT(1.412 19.323)'), 0.1));
+----
+POINT (1.4 19.3)
+
+query I
+SELECT ST_AsText(ST_ReducePrecision(ST_GeomFromText('POINT(1.412 19.323)'), 1.0));
+----
+POINT (1 19)
+
+query I
+SELECT ST_AsText(ST_ReducePrecision(ST_GeomFromText('POINT(1.412 19.323)'), 10));
+----
+POINT (0 20)
