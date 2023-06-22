@@ -26,10 +26,13 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input_hex) {
-		
 		auto hex_size = input_hex.GetSize();
 		auto hex_ptr = const_data_ptr_cast(input_hex.GetData());
-		D_ASSERT(hex_size % 2 == 0);
+		
+		if (hex_size % 2 == 1) {
+			throw InvalidInputException("Invalid HEX WKB string, length must be even.");
+		}
+
 		auto blob_size = hex_size / 2;
 
 		unique_ptr<data_t[]> wkb_blob(new data_t[blob_size]);
@@ -55,11 +58,22 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 void CoreScalarFunctions::RegisterStGeomFromHEXWKB(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	CreateScalarFunctionInfo info(ScalarFunction("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
+	CreateScalarFunctionInfo hexwkb(ScalarFunction("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                             GeometryFromHEXWKB, nullptr, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	hexwkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.CreateFunction(context, hexwkb);
+
+	// Our WKB reader also parses EWKB, even though it will just ignore SRID's.
+	// so we'll just add an alias for now. In the future, once we actually handle 
+	// EWKB and store SRID's, these functions should differentiate between 
+	// the two formats.
+	CreateScalarFunctionInfo ewkb(ScalarFunction("ST_GeomFromHEXEWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
+	                                             GeometryFromHEXWKB, nullptr, nullptr, nullptr,
+	                                             GeometryFunctionLocalState::Init));
+	ewkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	catalog.CreateFunction(context, ewkb);
+		
 }
 
 } // namespace core

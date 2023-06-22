@@ -22,6 +22,19 @@ enum class WKBGeometryType : uint32_t {
 	GEOMETRYCOLLECTION = 7
 };
 
+
+struct WKBFlags {
+	WKBGeometryType type;
+	bool has_z;
+	bool has_m;
+	bool has_srid;
+	uint32_t srid;
+
+	explicit WKBFlags(WKBGeometryType type, bool has_z, bool has_m, bool has_srid, uint32_t srid)
+	    : type(type), has_z(has_z), has_m(has_m), has_srid(has_srid), srid(srid) {
+	}
+};
+
 struct WKBReader {
 private:
 	GeometryFactory &factory;
@@ -55,21 +68,23 @@ public:
 
 private:
 	template <WKBByteOrder ORDER>
-	Geometry ReadGeometryImpl();
+	WKBFlags ReadFlags();
 	template <WKBByteOrder ORDER>
-	Point ReadPointImpl();
+	Geometry ReadGeometryBody();
 	template <WKBByteOrder ORDER>
-	LineString ReadLineStringImpl();
+	Point ReadPointBody();
 	template <WKBByteOrder ORDER>
-	Polygon ReadPolygonImpl();
+	LineString ReadLineStringBody();
 	template <WKBByteOrder ORDER>
-	MultiPoint ReadMultiPointImpl();
+	Polygon ReadPolygonBody();
 	template <WKBByteOrder ORDER>
-	MultiLineString ReadMultiLineStringImpl();
+	MultiPoint ReadMultiPointBody();
 	template <WKBByteOrder ORDER>
-	MultiPolygon ReadMultiPolygonImpl();
+	MultiLineString ReadMultiLineStringBody();
 	template <WKBByteOrder ORDER>
-	GeometryCollection ReadGeometryCollectionImpl();
+	MultiPolygon ReadMultiPolygonBody();
+	template <WKBByteOrder ORDER>
+	GeometryCollection ReadGeometryCollectionBody();
 };
 
 } // namespace core
