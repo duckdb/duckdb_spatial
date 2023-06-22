@@ -47,6 +47,7 @@ void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &r
 			blob_ptr[str_idx++] = Blob::HEX_TABLE[byte_b];
 		}
 
+		blob_str.Finalize();
 		return blob_str;
 	});
 }

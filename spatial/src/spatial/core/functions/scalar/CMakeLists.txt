@@ -17,6 +17,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_npoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_perimeter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geometrytype.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromhexwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_removerepeatedpoints.cpp
