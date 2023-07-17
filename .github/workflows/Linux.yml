@@ -74,13 +74,14 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
 
-    - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      uses: ./duckdb/.github/actions/centos_7_setup
-      with:
-        openssl: 1
+    - name: Setup ManyLinux2014
+      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      run: |
+        ./duckdb/scripts/setup_manylinux2014.sh general ccache ssh openssl
     
-    - if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
-      uses: ./duckdb/.github/actions/ubuntu_16_setup
+    - name: Setup Ubuntu
+      if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
+      uses: ./duckdb/.github/actions/ubuntu_18_setup
       with:
         aarch64_cross_compile: ${{ matrix.arch == 'linux_arm64' && 1 }}
         openssl: 0
