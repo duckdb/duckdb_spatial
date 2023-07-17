@@ -72,11 +72,6 @@ jobs:
       run: |
         cd duckdb
         git checkout ${{ matrix.duckdb_version }}
-    
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
 
     # Setup ccache (not on _gcc4)
     - name: ccache
@@ -96,7 +91,12 @@ jobs:
       with:
         aarch64_cross_compile: ${{ matrix.arch == 'linux_arm64' && 1 }}
         openssl: 0
-    
+      
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
+        
     # Openssl install dir was weirdly configured in main duckdb?
     - name: Install OpenSSL 1.1.1 (for AMD64)
       if: ${{ matrix.arch == 'linux_amd64' }}
