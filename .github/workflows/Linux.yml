@@ -96,7 +96,21 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
+
+    - name: Set vcpkg env variables
+      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      shell: bash
+      run: |
+        echo "VCPKG_TOOLCHAIN_PATH=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+        echo "VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
         
+    - name: Install OpenSSL for Cross compiling (for AMD64_GCC4)
+      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      shell: bash
+      run: |
+        cd $VCPKG_ROOT && ./vcpkg install ${{ format('--triplet={0}', matrix.vcpkg_triplet) }}
+        echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
+
     # Openssl install dir was weirdly configured in main duckdb?
     - name: Install OpenSSL 1.1.1 (for AMD64)
       if: ${{ matrix.arch == 'linux_amd64' }}
@@ -110,13 +124,6 @@ jobs:
         ./config --libdir=lib no-shared zlib-dynamic
         make
         make install
-    
-    - name: Install OpenSSL for Cross compiling (for AMD64_GCC4)
-      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      shell: bash
-      run: |
-        cd $VCPKG_ROOT && ./vcpkg install ${{ format('--triplet={0}', matrix.vcpkg_triplet) }}
-        echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
 
     - name: Install OpenSSL for Cross compiling (for ARM64)
       if: ${{ matrix.arch == 'linux_arm64' }}
