@@ -71,13 +71,13 @@ release_python: release
 test: test_release
 
 test_release: release
-	./build/release/test/unittest --test-dir ./spatial "test/sql/*"
+	./build/release/test/unittest --test-dir . "test/sql/*"
 
 test_debug: debug
-	./build/debug/test/unittest --test-dir ./spatial "test/sql/*"
+	./build/debug/test/unittest --test-dir . "test/sql/*"
 
 test_debug_lldb: debug
-	lldb ./build/debug/test/unittest -- --test-dir ./spatial "test/sql/*"
+	lldb ./build/debug/test/unittest -- --test-dir . "test/sql/*"
 
 # Client tests
 test_js: test_debug_js

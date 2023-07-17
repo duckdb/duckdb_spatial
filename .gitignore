@@ -36,3 +36,4 @@
 build
 tmp
 .vscode
+duckdb_unittest_tempdir
