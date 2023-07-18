@@ -18,7 +18,15 @@ ifeq ($(GEN),ninja)
 	FORCE_COLOR=-DFORCE_COLORED_OUTPUT=1
 endif
 
-BUILD_FLAGS=-DEXTENSION_STATIC_BUILD=1 ${OSX_BUILD_UNIVERSAL_FLAG} ${STATIC_LIBCPP}
+VCPKG_TOOLCHAIN_PATH?=
+ifneq ("${VCPKG_TOOLCHAIN_PATH}", "")
+	TOOLCHAIN_FLAGS:=${TOOLCHAIN_FLAGS} -DVCPKG_MANIFEST_DIR='${PROJ_DIR}' -DVCPKG_BUILD=1 -DCMAKE_TOOLCHAIN_FILE='${VCPKG_TOOLCHAIN_PATH}'
+endif
+ifneq ("${VCPKG_TARGET_TRIPLET}", "")
+	TOOLCHAIN_FLAGS:=${TOOLCHAIN_FLAGS} -DVCPKG_TARGET_TRIPLET='${VCPKG_TARGET_TRIPLET}'
+endif
+
+BUILD_FLAGS=-DEXTENSION_STATIC_BUILD=1 ${OSX_BUILD_UNIVERSAL_FLAG} ${STATIC_LIBCPP} ${TOOLCHAIN_FLAGS}
 ifeq (${BUILD_SHELL}, 0)
 	BUILD_FLAGS += -DBUILD_SHELL=0
 endif
@@ -26,7 +34,7 @@ endif
 CLIENT_FLAGS :=
 
 # These flags will make DuckDB build the extension
-EXTENSION_FLAGS=-DENABLE_SANITIZER=OFF -DDUCKDB_OOT_EXTENSION_NAMES="spatial" -DDUCKDB_OOT_EXTENSION_SPATIAL_PATH="$(PROJ_DIR)" -DDUCKDB_OOT_EXTENSION_SPATIAL_SHOULD_LINK="TRUE" -DDUCKDB_OOT_EXTENSION_SPATIAL_INCLUDE_PATH="$(PROJ_DIR)spatial/include"
+EXTENSION_FLAGS=-DENABLE_SANITIZER=OFF -DDUCKDB_EXTENSION_NAMES="spatial" -DDUCKDB_EXTENSION_SPATIAL_PATH="$(PROJ_DIR)" -DDUCKDB_EXTENSION_SPATIAL_SHOULD_LINK="TRUE" -DDUCKDB_EXTENSION_SPATIAL_INCLUDE_PATH="$(PROJ_DIR)spatial/include"
 
 pull:
 	git submodule init
@@ -71,13 +79,13 @@ release_python: release
 test: test_release
 
 test_release: release
-	./build/release/test/unittest --test-dir ./spatial "test/sql/*"
+	./build/release/test/unittest --test-dir . "test/sql/*"
 
 test_debug: debug
-	./build/debug/test/unittest --test-dir ./spatial "test/sql/*"
+	./build/debug/test/unittest --test-dir . "test/sql/*"
 
 test_debug_lldb: debug
-	lldb ./build/debug/test/unittest -- --test-dir ./spatial "test/sql/*"
+	lldb ./build/debug/test/unittest -- --test-dir . "test/sql/*"
 
 # Client tests
 test_js: test_debug_js

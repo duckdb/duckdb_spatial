@@ -25,15 +25,21 @@ jobs:
         # Add commits/tags to build against other DuckDB versions
         duckdb_version: [ '<submodule_version>' ]
         arch: ['linux_amd64', 'linux_arm64', 'linux_amd64_gcc4']
+        vcpkg_version: [ '2023.04.15' ]
         include:
-          - arch: 'linux_amd64'
-            container: 'ubuntu:16.04'
-          - arch: 'linux_arm64'
-            container: 'ubuntu:18.04'
           - arch: 'linux_amd64_gcc4'
             container: 'quay.io/pypa/manylinux2014_x86_64'
+            vcpkg_triplet: 'x64-linux'
+          - arch: 'linux_amd64'
+            container: 'ubuntu:18.04'
+            vcpkg_triplet: 'x64-linux'
+          - arch: 'linux_arm64'
+            container: 'ubuntu:18.04'
+            vcpkg_triplet: 'arm64-linux'
     env:
+      VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
       GEN: ninja
+      VCPKG_TOOLCHAIN_PATH: ${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
       TREAT_WARNINGS_AS_ERRORS: 1
 
     steps:
@@ -66,7 +72,7 @@ jobs:
       run: |
         cd duckdb
         git checkout ${{ matrix.duckdb_version }}
-    
+
     # Setup ccache (not on _gcc4)
     - name: ccache
       if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
@@ -74,17 +80,37 @@ jobs:
       with:
         key: ${{ github.job }}-${{ matrix.arch }}
 
-    - if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      uses: ./duckdb/.github/actions/centos_7_setup
-      with:
-        openssl: 1
+    - name: Setup ManyLinux2014
+      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      run: |
+        ./duckdb/scripts/setup_manylinux2014.sh general ccache openssl
     
-    - if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
-      uses: ./duckdb/.github/actions/ubuntu_16_setup
+    - name: Setup Ubuntu
+      if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_arm64' }}
+      uses: ./duckdb/.github/actions/ubuntu_18_setup
       with:
         aarch64_cross_compile: ${{ matrix.arch == 'linux_arm64' && 1 }}
         openssl: 0
-    
+      
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
+
+    - name: Set vcpkg env variables
+      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      shell: bash
+      run: |
+        echo "VCPKG_TOOLCHAIN_PATH=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+        echo "VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
+        
+    - name: Install OpenSSL for Cross compiling (for AMD64_GCC4)
+      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
+      shell: bash
+      run: |
+        cd $VCPKG_ROOT && ./vcpkg install ${{ format('--triplet={0}', matrix.vcpkg_triplet) }}
+        echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
+
     # Openssl install dir was weirdly configured in main duckdb?
     - name: Install OpenSSL 1.1.1 (for AMD64)
       if: ${{ matrix.arch == 'linux_amd64' }}
@@ -98,7 +124,7 @@ jobs:
         ./config --libdir=lib no-shared zlib-dynamic
         make
         make install
-    
+
     - name: Install OpenSSL for Cross compiling (for ARM64)
       if: ${{ matrix.arch == 'linux_arm64' }}
       shell: bash
@@ -122,7 +148,7 @@ jobs:
         echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
 
     - name: Configure OpenSSL path for AMD64
-      if: ${{ matrix.arch == 'linux_amd64' || matrix.arch == 'linux_amd64_gcc4'}}
+      if: ${{ matrix.arch == 'linux_amd64' }}
       shell: bash
       run: |
         echo "OPENSSL_ROOT_DIR=/usr/local/ssl" >> $GITHUB_ENV
