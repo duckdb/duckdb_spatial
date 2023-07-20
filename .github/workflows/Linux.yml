@@ -103,6 +103,12 @@ jobs:
         echo "VCPKG_TOOLCHAIN_PATH=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
         echo "VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
 
+    - name: Install vcpkg dependencies (OpenSSL)
+      shell: bash
+      run: |
+        cd $VCPKG_ROOT && ./vcpkg install ${{ format('--triplet={0}', matrix.vcpkg_triplet) }}
+        echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
+  
     # Build extension
     - name: Build extension
       env:
