@@ -23,6 +23,13 @@ jobs:
       matrix:
         # Add commits/tags to build against other DuckDB versions
         duckdb_version: [ '<submodule_version>' ]
+        vcpkg_version: [ '2023.04.15' ]
+        vcpkg_triplet: ['x64-windows']
+    env:
+      VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+      GEN: Ninja
+      VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+      VCPKG_TOOLCHAIN_PATH: ${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake
 
     steps:
       - uses: actions/checkout@v3
@@ -33,11 +40,6 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.7'
-
-      - name: Install OpenSSL
-        shell: bash
-        run: |
-          choco install openssl -y --force
       
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
@@ -62,28 +64,28 @@ jobs:
         
       - uses: actions/upload-artifact@v2
         with:
-          name: windows_x64-extensions
+          name: windows-amd64-extensions
           path: |
             build/release/extension/spatial/spatial.duckdb_extension
 
-            - name: Deploy
-            env:
-              AWS_ACCESS_KEY_ID: ${{ secrets.S3_DEPLOY_ID }}
-              AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_DEPLOY_KEY }}
-              AWS_DEFAULT_REGION: ${{ secrets.S3_REGION }}
-              BUCKET_NAME: ${{ secrets.S3_BUCKET }}
-            run: |
-              cd duckdb
-              git fetch --tags
-              export DUCKDB_VERSION=`git tag --points-at HEAD`
-              export DUCKDB_VERSION=${DUCKDB_VERSION:=`git log -1 --format=%h`}
-              cd ..
-              if [[ "$AWS_ACCESS_KEY_ID" == "" ]] ; then
-                echo 'No key set, skipping'
-              elif [[ "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
-                python -m pip install awscli
-                ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION windows_amd64 $BUCKET_NAME true 
-              elif [[ "$GITHUB_REF" =~ ^(refs/heads/main)$ ]] ; then
-                python -m pip install awscli
-                ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION windows_amd64 $BUCKET_NAME false 
-              fi
+      - name: Deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_DEPLOY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_DEPLOY_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.S3_REGION }}
+          BUCKET_NAME: ${{ secrets.S3_BUCKET }}
+        run: |
+          cd duckdb
+          git fetch --tags
+          export DUCKDB_VERSION=`git tag --points-at HEAD`
+          export DUCKDB_VERSION=${DUCKDB_VERSION:=`git log -1 --format=%h`}
+          cd ..
+          if [[ "$AWS_ACCESS_KEY_ID" == "" ]] ; then
+            echo 'No key set, skipping'
+          elif [[ "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
+            python -m pip install awscli
+            ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION windows_amd64 $BUCKET_NAME true 
+          elif [[ "$GITHUB_REF" =~ ^(refs/heads/main)$ ]] ; then
+            python -m pip install awscli
+            ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION windows_amd64 $BUCKET_NAME false 
+          fi
