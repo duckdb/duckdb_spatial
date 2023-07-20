@@ -53,15 +53,21 @@ jobs:
         with:
           python-version: '3.7'
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
-      
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ runner.os }}-${{ github.job }}
+  
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
+
+      - name: Install vcpkg dependencies (OpenSSL)
+        shell: bash
+        run: |
+          cd $VCPKG_ROOT && ./vcpkg install ${{ format('--triplet={0}', matrix.vcpkg_triplet) }}
+          echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
 
       - name: Checkout DuckDB to version
         if: ${{ matrix.duckdb_version != '<submodule_version>'}}
@@ -72,6 +78,11 @@ jobs:
       # Build extension
       - name: Build extension
         shell: bash
+        env:
+          GEN: ninja
+          OPENSSL_ROOT_DIR: ${{ env.OPENSSL_ROOT_DIR }}
+          STATIC_OPENSSL: 1
+          STATIC_LIBCPP: 1
         run: |
           make release
           make test
