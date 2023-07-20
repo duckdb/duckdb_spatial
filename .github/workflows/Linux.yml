@@ -113,6 +113,7 @@ jobs:
     - name: Build extension
       env:
         GEN: ninja
+        OPENSSL_ROOT_DIR: ${{ env.OPENSSL_ROOT_DIR }}
         STATIC_OPENSSL: 1
         STATIC_LIBCPP: 1
         CC: ${{ matrix.arch == 'linux_arm64' && 'aarch64-linux-gnu-gcc' || '' }}

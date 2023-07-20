@@ -82,6 +82,7 @@ set(EXTENSION_DEPENDENCIES
 
 if(SPATIAL_USE_NETWORK)
   message(STATUS "Building with network functionality")
+  message(STATUS "OpenSSL root dir hint: '$ENV{OPENSSL_ROOT_DIR}'")
   find_package(OpenSSL REQUIRED)
   find_package(CURL REQUIRED)
   list(APPEND EXTENSION_DEPENDENCIES CURL::libcurl OpenSSL::SSL OpenSSL::Crypto)
