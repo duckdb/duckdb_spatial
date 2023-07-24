@@ -17,16 +17,27 @@ defaults:
 
 jobs:
   macos:
-    name: MacOS Release (Universal)
+    name: MacOS Release (${{ matrix.osx_build_arch }})
     runs-on: macos-latest
     strategy:
       matrix:
         # Add commits/tags to build against other DuckDB versions
         duckdb_version: [ '<submodule_version>' ]
+        vcpkg_version: [ '2023.04.15' ]
+        vcpkg_triplet: [ 'x64-osx', 'arm64-osx' ]
+        include:
+          - vcpkg_triplet: 'x64-osx'
+            osx_build_arch: 'x86_64'
+            duckdb_arch: 'osx_amd64'
+          - vcpkg_triplet: 'arm64-osx'
+            osx_build_arch: 'arm64'
+            duckdb_arch: 'osx_arm64'
 
     env:
-      OSX_BUILD_UNIVERSAL: 1
-      GEN: ninja
+      VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+      OSX_BUILD_ARCH: ${{ matrix.osx_build_arch }}
+      GEN: Ninja
+      VCPKG_TOOLCHAIN_PATH: ${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
     steps:
       - uses: actions/checkout@v3
@@ -34,44 +45,31 @@ jobs:
           fetch-depth: 0
           submodules: 'true'
 
-      - name: Install Ninja
+      - name: Setup Ninja
         run: brew install ninja
+      
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
 
-      - uses: actions/setup-python@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
         with:
           python-version: '3.7'
+      
+      # Setup ccache
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-${{ github.job }}
 
+      # Checkout DuckDB
       - name: Checkout DuckDB to version
         if: ${{ matrix.duckdb_version != '<submodule_version>'}}
         run: |
           cd duckdb
           git checkout ${{ matrix.duckdb_version }}
-      
-      # Setup ccache
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ runner.os }}-${{ github.job }}
-
-      - name: Install OpenSSL
-        shell: bash
-        run: |
-          mkdir -p build/openssl
-          cd build/openssl
-          mkdir sources build
-          curl https://www.openssl.org/source/openssl-3.0.5.tar.gz | tar xv -C sources --strip-components 1
-          export OPENSSL_ROOT_DIR=`pwd`/build
-          cd sources
-          export CC="clang -arch x86_64 -arch arm64"
-          perl ./Configure --prefix=$OPENSSL_ROOT_DIR darwin64-x86_64-cc no-asm
-          make -j
-          make install_sw
-
-      - name: Get OpenSSL path
-        shell: bash
-        run: |
-          export OPENSSL_ROOT_DIR=`pwd`/build/openssl/build
-          echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
       
       # Build extension
       - name: Build extension
@@ -83,7 +81,7 @@ jobs:
       # Upload artefact
       - uses: actions/upload-artifact@v2
         with:
-          name: macos_universal-extensions
+          name: osx-${{ matrix.osx_build_arch }}-extension
           path: |
             build/release/extension/spatial/spatial.duckdb_extension
 
@@ -94,21 +92,18 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.S3_REGION }}
           BUCKET_NAME: ${{ secrets.S3_BUCKET }}
         run: |
+          git config --global --add safe.directory '*'
           cd duckdb
           git fetch --tags
           export DUCKDB_VERSION=`git tag --points-at HEAD`
-          echo $DUCKDB_VERSION
           export DUCKDB_VERSION=${DUCKDB_VERSION:=`git log -1 --format=%h`}
-          echo $DUCKDB_VERSION
           cd ..
           if [[ "$AWS_ACCESS_KEY_ID" == "" ]] ; then
             echo 'No key set, skipping'
           elif [[ "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
-            python -m pip install awscli
-            ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION osx_amd64 $BUCKET_NAME true
-            ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION osx_arm64 $BUCKET_NAME true
+            python3 -m pip install pip awscli
+            ./scripts/extension-upload.sh spatial ${{ github.ref_name }} $DUCKDB_VERSION ${{matrix.duckdb_arch}} $BUCKET_NAME true
           elif [[ "$GITHUB_REF" =~ ^(refs/heads/main)$ ]] ; then
-            python -m pip install awscli
-            ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION osx_amd64 $BUCKET_NAME false
-            ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION osx_arm64 $BUCKET_NAME false
+            python3 -m pip install pip awscli
+            ./scripts/extension-upload.sh spatial `git log -1 --format=%h` $DUCKDB_VERSION ${{matrix.duckdb_arch}} $BUCKET_NAME false
           fi
