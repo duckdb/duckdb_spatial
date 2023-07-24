@@ -39,6 +39,7 @@ jobs:
       GEN: Ninja
       VCPKG_TOOLCHAIN_PATH: ${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
 
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -47,24 +48,21 @@ jobs:
 
       - name: Setup Ninja
         run: brew install ninja
-      
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
       
-      # Setup ccache
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ runner.os }}-${{ github.job }}
 
-      # Checkout DuckDB
       - name: Checkout DuckDB to version
         if: ${{ matrix.duckdb_version != '<submodule_version>'}}
         run: |

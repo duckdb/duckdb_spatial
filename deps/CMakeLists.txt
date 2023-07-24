@@ -11,16 +11,17 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
-if(OSX_BUILD_ARCH)
+if (OSX_BUILD_ARCH)
   message(STATUS "building for OSX architecture: ${OSX_BUILD_ARCH}")
   if (NOT APPLE)
     error("This only makes sense on OSX")
   endif()
   set(CMAKE_OSX_ARCHITECTURES ${OSX_BUILD_ARCH})
-
+  
   # Escape semicolons in CMAKE_OSX_ARCHITECTURES before passing to ExternalProject_Add
   string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHITECTURES_PACKED "${CMAKE_OSX_ARCHITECTURES}")
 endif()
+
 
 # ZLIB
 ExternalProject_Add(
