@@ -97,67 +97,10 @@ jobs:
       with:
         vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
 
-    - name: Set vcpkg env variables
-      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      shell: bash
-      run: |
-        echo "VCPKG_TOOLCHAIN_PATH=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-        echo "VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
-        
-    - name: Install OpenSSL for Cross compiling (for AMD64_GCC4)
-      if: ${{ matrix.arch == 'linux_amd64_gcc4' }}
-      shell: bash
-      run: |
-        cd $VCPKG_ROOT && ./vcpkg install ${{ format('--triplet={0}', matrix.vcpkg_triplet) }}
-        echo "OPENSSL_ROOT_DIR=$VCPKG_ROOT/installed/${{ matrix.vcpkg_triplet }}" >> $GITHUB_ENV
-
-    # Openssl install dir was weirdly configured in main duckdb?
-    - name: Install OpenSSL 1.1.1 (for AMD64)
-      if: ${{ matrix.arch == 'linux_amd64' }}
-      shell: bash
-      run: |
-        wget https://github.com/openssl/openssl/archive/refs/tags/OpenSSL_1_1_1s.tar.gz
-        tar -xzvf OpenSSL_1_1_1s.tar.gz
-        mv openssl-OpenSSL_1_1_1s openssl-1.1.1s
-        cd openssl-1.1.1s
-        find ./ -type f -exec sed -i -e 's/\#\ define\ OPENSSL\_VERSION\_NUMBER/\#define\ OPENSSL\_VERSION\_NUMBER/g' {} \;
-        ./config --libdir=lib no-shared zlib-dynamic
-        make
-        make install
-
-    - name: Install OpenSSL for Cross compiling (for ARM64)
-      if: ${{ matrix.arch == 'linux_arm64' }}
-      shell: bash
-      run: |
-        mkdir -p build/openssl
-        cd build/openssl
-        mkdir sources build
-        curl https://www.openssl.org/source/openssl-3.0.5.tar.gz | tar zxv -C sources --strip-components 1
-        export OPENSSL_ROOT_DIR=`pwd`/build
-        cd sources
-        export CC="aarch64-linux-gnu-gcc"
-        perl ./Configure --prefix=$OPENSSL_ROOT_DIR linux-aarch64 no-asm
-        make -j
-        make install_sw
-
-    - name: Configure OpenSSL path for ARM64
-      if: ${{ matrix.arch == 'linux_arm64' }}
-      shell: bash
-      run: |
-        export OPENSSL_ROOT_DIR=`pwd`/build/openssl/build
-        echo "OPENSSL_ROOT_DIR=$OPENSSL_ROOT_DIR" >> $GITHUB_ENV
-
-    - name: Configure OpenSSL path for AMD64
-      if: ${{ matrix.arch == 'linux_amd64' }}
-      shell: bash
-      run: |
-        echo "OPENSSL_ROOT_DIR=/usr/local/ssl" >> $GITHUB_ENV
-
       # Build extension
     - name: Build extension
       env:
         GEN: ninja        
-        OPENSSL_ROOT_DIR: ${{ env.OPENSSL_ROOT_DIR }}
         STATIC_OPENSSL: 1
         STATIC_LIBCPP: 1
         CC: ${{ matrix.arch == 'linux_arm64' && 'aarch64-linux-gnu-gcc' || '' }}
