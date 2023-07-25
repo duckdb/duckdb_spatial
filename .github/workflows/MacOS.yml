@@ -61,7 +61,7 @@ jobs:
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-${{ github.job }}
+          key: ${{ runner.os }}-${{ matrix.osx_build_arch }}-${{ github.job }}
 
       - name: Checkout DuckDB to version
         if: ${{ matrix.duckdb_version != '<submodule_version>'}}
