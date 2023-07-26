@@ -67,7 +67,6 @@ jobs:
           # Disable building shell. Since it includes sqlite3 which we statically link to as well it causes a conflict
           # and the build fails. Fixing this is a bit more involved so for now we just disable building the shell on windows.
           BUILD_SHELL: 0
-          OPENSSL_ROOT_DIR: ${{ env.OPENSSL_ROOT_DIR }}
         
       - uses: actions/upload-artifact@v2
         with:
