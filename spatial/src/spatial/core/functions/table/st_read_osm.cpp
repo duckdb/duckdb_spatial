@@ -40,8 +40,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
                                      vector<LogicalType> &return_types, vector<string> &names) {
 
 	// Create an enum type for all osm kinds
-	vector<string_t> enum_values = {"Node", "Way", "Relation", "ChangeSet"};
-
+	vector<string_t> enum_values = {"node", "way", "relation", "changeset"};
 	auto varchar_vector = Vector(LogicalType::VARCHAR, enum_values.size());
 	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
 	for (idx_t i = 0; i < enum_values.size(); i++) {
@@ -50,7 +49,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	}
 
 	// Set return types
-	return_types.push_back(LogicalType::ENUM("OsmEntity", varchar_vector, enum_values.size()));
+	return_types.push_back(LogicalType::ENUM("OSM_ENTITY_TYPE", varchar_vector, enum_values.size()));
 	names.push_back("kind");
 
 	return_types.push_back(LogicalType::BIGINT);
@@ -67,6 +66,22 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 
 	return_types.push_back(LogicalType::DOUBLE);
 	names.push_back("lon");
+
+	return_types.push_back(LogicalType::LIST(LogicalType::VARCHAR));
+	names.push_back("ref_roles");
+
+	// Create an enum type for the member kind
+	vector<string_t> member_enum_values = {"node", "way", "relation"};
+	auto member_varchar_vector = Vector(LogicalType::VARCHAR, member_enum_values.size());
+	auto member_varchar_data = FlatVector::GetData<string_t>(member_varchar_vector);
+	for (idx_t i = 0; i < member_enum_values.size(); i++) {
+		auto str = member_enum_values[i];
+		member_varchar_data[i] = str.IsInlined() ? str : StringVector::AddString(member_varchar_vector, str);
+	}
+
+	return_types.push_back(
+	    LogicalType::LIST(LogicalType::ENUM("OSM_REF_TYPE", member_varchar_vector, member_enum_values.size())));
+	names.push_back("ref_types");
 
 	// Create bind data
 	auto &config = DBConfig::GetConfig(context);
@@ -148,7 +163,8 @@ class GlobalState : public GlobalTableFunctionState {
 
 public:
 	GlobalState(unique_ptr<FileHandle> handle, idx_t file_size, idx_t max_threads)
-	    : handle(std::move(handle)), file_size(file_size), offset(0), done(false), blob_index(0), bytes_read(0), max_threads(max_threads) {
+	    : handle(std::move(handle)), file_size(file_size), offset(0), done(false), blob_index(0), bytes_read(0),
+	      max_threads(max_threads) {
 	}
 
 	double GetProgress() {
@@ -374,7 +390,7 @@ struct LocalState : LocalTableFunctionState {
 			auto key_iter = node.get_packed_uint32();
 
 			node.next(3);
-			
+
 			auto val_iter = node.get_packed_uint32();
 
 			auto tag_count = key_iter.size();
@@ -394,9 +410,9 @@ struct LocalState : LocalTableFunctionState {
 			auto vals = val_iter.begin();
 			for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
 				FlatVector::GetData<string_t>(key_vector)[i] =
-					StringVector::AddString(key_vector, string_table[*keys++]);
+				    StringVector::AddString(key_vector, string_table[*keys++]);
 				FlatVector::GetData<string_t>(value_vector)[i] =
-					StringVector::AddString(value_vector, string_table[*vals++]);
+				    StringVector::AddString(value_vector, string_table[*vals++]);
 			}
 		} else {
 			FlatVector::SetNull(output.data[2], index, true);
@@ -411,9 +427,14 @@ struct LocalState : LocalTableFunctionState {
 		auto lon = node.get_sint64();
 		FlatVector::GetData<double>(output.data[5])[index] = 0.000000001 * (lon_offset + (granularity * lon));
 
+		// Node has no refs, ref_roles or ref_types
+		FlatVector::SetNull(output.data[3], index, true);
+		FlatVector::SetNull(output.data[6], index, true);
+		FlatVector::SetNull(output.data[7], index, true);
+
 		index++;
 	}
-	
+
 	void PrepareDenseNodes(DataChunk &output, idx_t &index, idx_t capacity) {
 		dense_node_index = 0;
 		dense_node_ids.clear();
@@ -432,7 +453,7 @@ struct LocalState : LocalTableFunctionState {
 			dense_node_ids.push_back(last_id);
 		}
 
-		if(dense_nodes.next(8)) {
+		if (dense_nodes.next(8)) {
 			auto lats = dense_nodes.get_packed_sint64();
 			int64_t last_lat = 0;
 			for (auto lat : lats) {
@@ -441,7 +462,7 @@ struct LocalState : LocalTableFunctionState {
 			}
 		}
 
-		if(dense_nodes.next(9)) {
+		if (dense_nodes.next(9)) {
 			auto lons = dense_nodes.get_packed_sint64();
 			int64_t last_lon = 0;
 			for (auto lon : lons) {
@@ -450,15 +471,15 @@ struct LocalState : LocalTableFunctionState {
 			}
 		}
 
-		if(dense_nodes.next(10)) {
+		if (dense_nodes.next(10)) {
 			auto tags = dense_nodes.get_packed_uint32();
 
 			idx_t entry_offset = 0;
 
 			for (auto tag : tags) {
-				if(tag == 0) {
+				if (tag == 0) {
 					auto len = dense_node_tags.size() - entry_offset;
-					dense_node_tag_entries.push_back(list_entry_t{entry_offset, len});
+					dense_node_tag_entries.push_back(list_entry_t {entry_offset, len});
 					entry_offset = dense_node_tags.size();
 				} else {
 					dense_node_tags.push_back(tag);
@@ -477,6 +498,8 @@ struct LocalState : LocalTableFunctionState {
 
 		FlatVector::SetNull(output.data[4], index, true);
 		FlatVector::SetNull(output.data[5], index, true);
+		FlatVector::SetNull(output.data[6], index, true);
+		FlatVector::SetNull(output.data[7], index, true);
 
 		// Read tags
 		if (way.next(2)) {
@@ -484,7 +507,7 @@ struct LocalState : LocalTableFunctionState {
 			auto key_iter = way.get_packed_uint32();
 
 			way.next(3);
-			
+
 			auto val_iter = way.get_packed_uint32();
 
 			auto tag_count = key_iter.size();
@@ -504,16 +527,16 @@ struct LocalState : LocalTableFunctionState {
 			auto vals = val_iter.begin();
 			for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
 				FlatVector::GetData<string_t>(key_vector)[i] =
-					StringVector::AddString(key_vector, string_table[*keys++]);
+				    StringVector::AddString(key_vector, string_table[*keys++]);
 				FlatVector::GetData<string_t>(value_vector)[i] =
-					StringVector::AddString(value_vector, string_table[*vals++]);
+				    StringVector::AddString(value_vector, string_table[*vals++]);
 			}
 		} else {
 			FlatVector::SetNull(output.data[2], index, true);
 		}
 
 		// Refs
-		if(way.next(8)) {
+		if (way.next(8)) {
 			auto ref_iter = way.get_packed_sint64();
 			auto ref_count = ref_iter.size();
 
@@ -548,7 +571,7 @@ struct LocalState : LocalTableFunctionState {
 
 		FlatVector::SetNull(output.data[4], index, true);
 		FlatVector::SetNull(output.data[5], index, true);
-		
+
 		// Read tags
 		if (relation.next(2)) {
 
@@ -574,16 +597,42 @@ struct LocalState : LocalTableFunctionState {
 			auto vals = val_iter.begin();
 			for (idx_t i = tag_entry.offset; i < tag_entry.offset + tag_count; i++) {
 				FlatVector::GetData<string_t>(key_vector)[i] =
-					StringVector::AddString(key_vector, string_table[*keys++]);
+				    StringVector::AddString(key_vector, string_table[*keys++]);
 				FlatVector::GetData<string_t>(value_vector)[i] =
-					StringVector::AddString(value_vector, string_table[*vals++]);
+				    StringVector::AddString(value_vector, string_table[*vals++]);
 			}
 		} else {
 			FlatVector::SetNull(output.data[2], index, true);
 		}
 
+		// Roles
+		if (relation.next(8)) {
+			auto role_iter = relation.get_packed_int32();
+			auto role_count = role_iter.size();
+
+			auto total_roles = ListVector::GetListSize(output.data[6]);
+			ListVector::Reserve(output.data[6], total_roles + role_count);
+			ListVector::SetListSize(output.data[6], total_roles + role_count);
+			auto &role_entry = ListVector::GetData(output.data[6])[index];
+			auto &role_vector = ListVector::GetEntry(output.data[6]);
+			role_entry.offset = total_roles;
+			role_entry.length = role_count;
+
+			auto roles = role_iter.begin();
+			for (idx_t i = role_entry.offset; i < role_entry.offset + role_count; i++) {
+				auto &role_str = string_table[*roles++];
+				if (role_str.size() == 0) {
+					FlatVector::SetNull(role_vector, i, true);
+				} else {
+					FlatVector::GetData<string_t>(role_vector)[i] = StringVector::AddString(role_vector, role_str);
+				}
+			}
+		} else {
+			FlatVector::SetNull(output.data[6], index, true);
+		}
+
 		// Refs
-		if(relation.next(9)) {
+		if (relation.next(9)) {
 			auto ref_iter = relation.get_packed_sint64();
 			auto ref_count = ref_iter.size();
 
@@ -605,6 +654,28 @@ struct LocalState : LocalTableFunctionState {
 		} else {
 			FlatVector::SetNull(output.data[3], index, true);
 		}
+
+		// Types
+		if (relation.next(10)) {
+			auto type_iter = relation.get_packed_int32();
+			auto type_count = type_iter.size();
+
+			auto total_types = ListVector::GetListSize(output.data[7]);
+			ListVector::Reserve(output.data[7], total_types + type_count);
+			ListVector::SetListSize(output.data[7], total_types + type_count);
+			auto &type_entry = ListVector::GetData(output.data[7])[index];
+			auto &type_vector = ListVector::GetEntry(output.data[7]);
+			type_entry.offset = total_types;
+			type_entry.length = type_count;
+
+			auto type_data = FlatVector::GetData<uint8_t>(type_vector);
+			for (auto type : type_iter) {
+				type_data[total_types++] = (uint8_t)type;
+			}
+		} else {
+			FlatVector::SetNull(output.data[7], index, true);
+		}
+
 		index++;
 	}
 
@@ -628,9 +699,9 @@ struct LocalState : LocalTableFunctionState {
 			lon_data[index] = 0.000000001 * (lon_offset + (granularity * dense_node_lons[dense_node_index]));
 
 			// Do we have tags in this block?
-			if(!dense_node_tags.empty()) {
+			if (!dense_node_tags.empty()) {
 				auto entry = dense_node_tag_entries[dense_node_index];
-				if(entry.length != 0) {
+				if (entry.length != 0) {
 					// Dense nodes tags are stored as a list of key/value pairs,
 					// therefore we need to divide the length by 2 to get the number of tags
 					auto tag_count = entry.length / 2;
@@ -653,8 +724,10 @@ struct LocalState : LocalTableFunctionState {
 						auto key_id = dense_node_tags[t];
 						auto val_id = dense_node_tags[t + 1];
 
-						FlatVector::GetData<string_t>(key_vector)[r] = StringVector::AddString(key_vector, string_table[key_id]);
-						FlatVector::GetData<string_t>(value_vector)[r] = StringVector::AddString(value_vector, string_table[val_id]);
+						FlatVector::GetData<string_t>(key_vector)[r] =
+						    StringVector::AddString(key_vector, string_table[key_id]);
+						FlatVector::GetData<string_t>(value_vector)[r] =
+						    StringVector::AddString(value_vector, string_table[val_id]);
 
 						t += 2;
 						r += 1;
@@ -667,10 +740,14 @@ struct LocalState : LocalTableFunctionState {
 			}
 			FlatVector::SetNull(output.data[3], index, true);
 
+			// No ref types or roles for dense nodes
+			FlatVector::SetNull(output.data[6], index, true);
+			FlatVector::SetNull(output.data[7], index, true);
+
 			dense_node_index++;
 			index++;
 		}
-		if(dense_node_index >= dense_node_ids.size()) {
+		if (dense_node_index >= dense_node_ids.size()) {
 			return true;
 		}
 		return false;
@@ -679,7 +756,7 @@ struct LocalState : LocalTableFunctionState {
 
 static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, TableFunctionInitInput &input,
                                                      GlobalTableFunctionState *global_state) {
-	//auto &bind_data = (BindData &)*input.bind_data;
+	// auto &bind_data = (BindData &)*input.bind_data;
 	auto &global = (GlobalState &)*global_state;
 
 	auto blob = global.GetNextBlob(context.client);
@@ -696,7 +773,7 @@ static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk
 		return;
 	}
 
-	//auto &bind_data = (BindData &)*input.bind_data;
+	// auto &bind_data = (BindData &)*input.bind_data;
 	auto &global_state = (GlobalState &)*input.global_state;
 	auto &local_state = (LocalState &)*input.local_state;
 
@@ -729,10 +806,10 @@ static idx_t GetBatchIndex(ClientContext &context, const FunctionData *bind_data
 	return state.block->block_idx;
 }
 
-
-static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, const string &table_name, ReplacementScanData *data){
+static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, const string &table_name,
+                                                      ReplacementScanData *data) {
 	// Check if the table name ends with .osm.pbf
-	if(!StringUtil::EndsWith(StringUtil::Lower(table_name), ".osm.pbf")) {
+	if (!StringUtil::EndsWith(StringUtil::Lower(table_name), ".osm.pbf")) {
 		return nullptr;
 	}
 
@@ -751,7 +828,7 @@ void CoreTableFunctions::RegisterOsmTableFunction(ClientContext &context) {
 
 	read.get_batch_index = GetBatchIndex;
 	read.table_scan_progress = Progress;
-	
+
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateTableFunctionInfo info(read);
 	catalog.CreateTableFunction(context, &info);
@@ -759,7 +836,6 @@ void CoreTableFunctions::RegisterOsmTableFunction(ClientContext &context) {
 	// Replacement scan
 	auto &config = DBConfig::GetConfig(*context.db);
 	config.replacement_scans.emplace_back(ReadOsmPBFReplacementScan);
-
 }
 
 } // namespace core
