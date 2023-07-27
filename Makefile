@@ -39,7 +39,14 @@ endif
 CLIENT_FLAGS :=
 
 # These flags will make DuckDB build the extension
-EXTENSION_FLAGS=-DENABLE_SANITIZER=OFF -DDUCKDB_EXTENSION_NAMES="spatial" -DDUCKDB_EXTENSION_SPATIAL_PATH="$(PROJ_DIR)" -DDUCKDB_EXTENSION_SPATIAL_SHOULD_LINK="TRUE" -DDUCKDB_EXTENSION_SPATIAL_INCLUDE_PATH="$(PROJ_DIR)spatial/include"
+EXTENSION_FLAGS=\
+-DENABLE_SANITIZER=OFF \
+-DDUCKDB_EXTENSION_NAMES="spatial" \
+-DDUCKDB_EXTENSION_SPATIAL_PATH="$(PROJ_DIR)" \
+-DDUCKDB_EXTENSION_SPATIAL_SHOULD_LINK=1 \
+-DDUCKDB_EXTENSION_SPATIAL_LOAD_TESTS=1 \
+-DDUCKDB_EXTENSION_SPATIAL_TEST_PATH="$(PROJ_DIR)test" \
+-DDUCKDB_EXTENSION_SPATIAL_INCLUDE_PATH="$(PROJ_DIR)spatial/include" \
 
 pull:
 	git submodule init
@@ -84,13 +91,13 @@ release_python: release
 test: test_release
 
 test_release: release
-	./build/release/test/unittest --test-dir . "test/sql/*"
+	./build/release/test/unittest "$(PROJ_DIR)test/*"
 
 test_debug: debug
-	./build/debug/test/unittest --test-dir . "test/sql/*"
+	./build/debug/test/unittest "$(PROJ_DIR)test/*"
 
 test_debug_lldb: debug
-	lldb ./build/debug/test/unittest -- --test-dir . "test/sql/*"
+	lldb ./build/debug/test/unittest "$(PROJ_DIR)test/*"
 
 # Client tests
 test_js: test_debug_js
