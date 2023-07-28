@@ -498,7 +498,7 @@ Polygon GeometryFactory::DeserializePolygon(BinaryReader &reader) {
 	auto num_rings = reader.Read<uint32_t>();
 
 	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
-	
+
 	// Read the count and corresponding ring in parallel
 	auto data_ptr = reader.GetPtr() + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
 	for (uint32_t i = 0; i < num_rings; i++) {

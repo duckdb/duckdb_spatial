@@ -15,7 +15,7 @@ using namespace spatial::core;
 
 static void PointOnSurfaceFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
-    auto ctx = lstate.ctx.GetCtx();
+	auto ctx = lstate.ctx.GetCtx();
 	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t &geometry_blob) {
 		auto geometry = lstate.ctx.Deserialize(geometry_blob);
 		auto result_geom = make_uniq_geos(ctx, GEOSPointOnSurface_r(ctx, geometry.get()));
@@ -28,8 +28,8 @@ void GEOSScalarFunctions::RegisterStPointOnSurface(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_PointOnSurface");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), PointOnSurfaceFunction, nullptr, nullptr,
-	                               nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), PointOnSurfaceFunction, nullptr,
+	                               nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

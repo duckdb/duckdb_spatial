@@ -23,7 +23,8 @@ static void BufferFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	BinaryExecutor::Execute<string_t, double, string_t>(
 	    left, right, result, args.size(), [&](string_t &geometry_blob, double radius) {
 		    auto geos_geom = lstate.ctx.Deserialize(geometry_blob);
-			auto boundary = make_uniq_geos(lstate.ctx.GetCtx(), GEOSBuffer_r(lstate.ctx.GetCtx(), geos_geom.get(), radius, 8));
+		    auto boundary =
+		        make_uniq_geos(lstate.ctx.GetCtx(), GEOSBuffer_r(lstate.ctx.GetCtx(), geos_geom.get(), radius, 8));
 		    return lstate.ctx.Serialize(result, boundary);
 	    });
 }
@@ -38,7 +39,8 @@ static void BufferFunctionWithSegments(DataChunk &args, ExpressionState &state, 
 	TernaryExecutor::Execute<string_t, double, int32_t, string_t>(
 	    left, right, segments, result, args.size(), [&](string_t &geometry_blob, double radius, int32_t segments) {
 		    auto geos_geom = lstate.ctx.Deserialize(geometry_blob);
-		    auto boundary = make_uniq_geos(lstate.ctx.GetCtx(), GEOSBuffer_r(lstate.ctx.GetCtx(), geos_geom.get(), radius, segments));
+		    auto boundary = make_uniq_geos(lstate.ctx.GetCtx(),
+		                                   GEOSBuffer_r(lstate.ctx.GetCtx(), geos_geom.get(), radius, segments));
 		    return lstate.ctx.Serialize(result, boundary);
 	    });
 }

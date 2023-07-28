@@ -462,7 +462,7 @@ void GdalTableFunction::Register(ClientContext &context) {
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
 	                   GdalTableFunction::InitGlobal, ArrowTableFunction::ArrowScanInitLocal);
-					   
+
 	scan.cardinality = ArrowTableFunction::ArrowScanCardinality;
 	scan.get_batch_index = ArrowTableFunction::ArrowGetBatchIndex;
 

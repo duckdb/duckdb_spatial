@@ -7,7 +7,7 @@ namespace spatial {
 namespace core {
 
 // super illegal lol, we should try to get this exposed upstream.
-extern "C" int geos_d2sfixed_buffered_n(double f, uint32_t precision, char* result);
+extern "C" int geos_d2sfixed_buffered_n(double f, uint32_t precision, char *result);
 
 string Utils::format_coord(double d) {
 	char buf[25];

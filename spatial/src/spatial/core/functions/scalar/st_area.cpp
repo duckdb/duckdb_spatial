@@ -63,20 +63,17 @@ static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector 
 //------------------------------------------------------------------------------
 static void LineStringAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto input = args.data[0];
-	UnaryExecutor::Execute<list_entry_t, double>(input, result, args.size(), [](list_entry_t) {
-		return 0;
-	});
+	UnaryExecutor::Execute<list_entry_t, double>(input, result, args.size(), [](list_entry_t) { return 0; });
 }
 
 //------------------------------------------------------------------------------
 // POINT_2D
 //------------------------------------------------------------------------------
 static void PointAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-    using POINT_TYPE = StructTypeBinary<double, double>;
+	using POINT_TYPE = StructTypeBinary<double, double>;
 	using AREA_TYPE = PrimitiveType<double>;
-    GenericExecutor::ExecuteUnary<POINT_TYPE, AREA_TYPE>(args.data[0], result, args.size(), [](POINT_TYPE) {
-        return 0;
-	});
+	GenericExecutor::ExecuteUnary<POINT_TYPE, AREA_TYPE>(args.data[0], result, args.size(),
+	                                                     [](POINT_TYPE) { return 0; });
 }
 
 //------------------------------------------------------------------------------

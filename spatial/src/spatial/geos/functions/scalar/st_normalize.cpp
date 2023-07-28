@@ -21,7 +21,8 @@ static void NormalizeFunction(DataChunk &args, ExpressionState &state, Vector &r
 		auto geom = lstate.ctx.Deserialize(input);
 		auto res = GEOSNormalize_r(ctx, geom.get());
 		if (res == -1) {
-			throw Exception("Could not normalize geometry");;
+			throw Exception("Could not normalize geometry");
+			;
 		}
 		return lstate.ctx.Serialize(result, geom);
 	});

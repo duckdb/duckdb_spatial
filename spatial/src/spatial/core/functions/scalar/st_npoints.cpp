@@ -14,12 +14,11 @@ namespace core {
 // POINT_2D
 //------------------------------------------------------------------------------
 static void PointNumPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-    using POINT_TYPE = StructTypeBinary<double, double>;
+	using POINT_TYPE = StructTypeBinary<double, double>;
 	using COUNT_TYPE = PrimitiveType<idx_t>;
-    
-    GenericExecutor::ExecuteUnary<POINT_TYPE, COUNT_TYPE>(args.data[0], result, args.size(), [](POINT_TYPE) {
-        return 1;
-	});
+
+	GenericExecutor::ExecuteUnary<POINT_TYPE, COUNT_TYPE>(args.data[0], result, args.size(),
+	                                                      [](POINT_TYPE) { return 1; });
 }
 
 //------------------------------------------------------------------------------
@@ -27,9 +26,8 @@ static void PointNumPointsFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 static void LineStringNumPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto input = args.data[0];
-	UnaryExecutor::Execute<list_entry_t, idx_t>(input, result, args.size(), [](list_entry_t input) {
-		return input.length;
-	});
+	UnaryExecutor::Execute<list_entry_t, idx_t>(input, result, args.size(),
+	                                            [](list_entry_t input) { return input.length; });
 }
 
 //------------------------------------------------------------------------------
@@ -46,7 +44,7 @@ static void PolygonNumPointsFunction(DataChunk &args, ExpressionState &state, Ve
 	UnaryExecutor::Execute<list_entry_t, idx_t>(input, result, count, [&](list_entry_t polygon) {
 		auto polygon_offset = polygon.offset;
 		auto polygon_length = polygon.length;
-        idx_t npoints = 0;
+		idx_t npoints = 0;
 		for (idx_t ring_idx = polygon_offset; ring_idx < polygon_offset + polygon_length; ring_idx++) {
 			auto ring = ring_entries[ring_idx];
 			npoints += ring.length;
@@ -63,65 +61,63 @@ static void BoxNumPointsFunction(DataChunk &args, ExpressionState &state, Vector
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using COUNT_TYPE = PrimitiveType<idx_t>;
 
-	GenericExecutor::ExecuteUnary<BOX_TYPE, COUNT_TYPE>(args.data[0], result, args.size(), [](BOX_TYPE) {
-        return 4;
-	});
+	GenericExecutor::ExecuteUnary<BOX_TYPE, COUNT_TYPE>(args.data[0], result, args.size(), [](BOX_TYPE) { return 4; });
 }
 
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
 static uint32_t GetVertexCount(const Geometry &geometry) {
-    switch (geometry.Type()) {
-        case GeometryType::POINT:
-            return geometry.GetPoint().IsEmpty() ? 0U : 1U;
-        case GeometryType::LINESTRING:
-            return geometry.GetLineString().Count();
-		case GeometryType::POLYGON: {
-            auto &polygon = geometry.GetPolygon();
-            uint32_t count = 0;
-            for (auto &ring : polygon.Rings()) {
-                count += ring.Count();
-            }
-            return count;
-        }
-        case GeometryType::MULTIPOINT: {
-            uint32_t count = 0;
-            for (auto &point : geometry.GetMultiPoint()) {
-                if (!point.IsEmpty()) {
-                    count++;
-                }
-            }
-            return count;
-        }
-        case GeometryType::MULTILINESTRING: {
-            uint32_t count = 0;
-            for (auto &linestring : geometry.GetMultiLineString()) {
-                if (!linestring.IsEmpty()) {
-                    count += linestring.Count();
-                }
-            }
-            return count;
-        }
-        case GeometryType::MULTIPOLYGON: {
-            uint32_t count = 0;
-            for (auto &polygon : geometry.GetMultiPolygon()) {
-                for (auto &ring : polygon.Rings()) {
-                    count += ring.Count();
-                }
-            }
-            return count;
-        }
-		case GeometryType::GEOMETRYCOLLECTION: {
-            uint32_t count = 0;
-            for (auto &geom : geometry.GetGeometryCollection()) {
-                count += GetVertexCount(geom);
-            }
-            return count;
-        }
-		default:
-			throw NotImplementedException("Geometry type not supported");
+	switch (geometry.Type()) {
+	case GeometryType::POINT:
+		return geometry.GetPoint().IsEmpty() ? 0U : 1U;
+	case GeometryType::LINESTRING:
+		return geometry.GetLineString().Count();
+	case GeometryType::POLYGON: {
+		auto &polygon = geometry.GetPolygon();
+		uint32_t count = 0;
+		for (auto &ring : polygon.Rings()) {
+			count += ring.Count();
 		}
+		return count;
+	}
+	case GeometryType::MULTIPOINT: {
+		uint32_t count = 0;
+		for (auto &point : geometry.GetMultiPoint()) {
+			if (!point.IsEmpty()) {
+				count++;
+			}
+		}
+		return count;
+	}
+	case GeometryType::MULTILINESTRING: {
+		uint32_t count = 0;
+		for (auto &linestring : geometry.GetMultiLineString()) {
+			if (!linestring.IsEmpty()) {
+				count += linestring.Count();
+			}
+		}
+		return count;
+	}
+	case GeometryType::MULTIPOLYGON: {
+		uint32_t count = 0;
+		for (auto &polygon : geometry.GetMultiPolygon()) {
+			for (auto &ring : polygon.Rings()) {
+				count += ring.Count();
+			}
+		}
+		return count;
+	}
+	case GeometryType::GEOMETRYCOLLECTION: {
+		uint32_t count = 0;
+		for (auto &geom : geometry.GetGeometryCollection()) {
+			count += GetVertexCount(geom);
+		}
+		return count;
+	}
+	default:
+		throw NotImplementedException("Geometry type not supported");
+	}
 }
 static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
@@ -132,7 +128,7 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 
 	UnaryExecutor::Execute<string_t, uint32_t>(input, result, count, [&](string_t input) {
 		auto geometry = ctx.factory.Deserialize(input);
-        return GetVertexCount(geometry);
+		return GetVertexCount(geometry);
 	});
 }
 
@@ -142,19 +138,23 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 void CoreScalarFunctions::RegisterStNPoints(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-    const char* aliases[] = {"ST_NPoints", "ST_NumPoints"};
-    for (auto alias : aliases) {
-        ScalarFunctionSet area_function_set(alias);
-        area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::UBIGINT, PointNumPointsFunction));
-        area_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::UBIGINT, LineStringNumPointsFunction));
-        area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::UBIGINT, PolygonNumPointsFunction));
-        area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::UBIGINT, BoxNumPointsFunction));
-        area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UINTEGER, GeometryNumPointsFunction,
-                                                    nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-        CreateScalarFunctionInfo info(std::move(area_function_set));
-        info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-        catalog.CreateFunction(context, info);
-    }
+	const char *aliases[] = {"ST_NPoints", "ST_NumPoints"};
+	for (auto alias : aliases) {
+		ScalarFunctionSet area_function_set(alias);
+		area_function_set.AddFunction(
+		    ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::UBIGINT, PointNumPointsFunction));
+		area_function_set.AddFunction(
+		    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::UBIGINT, LineStringNumPointsFunction));
+		area_function_set.AddFunction(
+		    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::UBIGINT, PolygonNumPointsFunction));
+		area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::UBIGINT, BoxNumPointsFunction));
+		area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UINTEGER,
+		                                             GeometryNumPointsFunction, nullptr, nullptr, nullptr,
+		                                             GeometryFunctionLocalState::Init));
+		CreateScalarFunctionInfo info(std::move(area_function_set));
+		info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+		catalog.CreateFunction(context, info);
+	}
 }
 
 } // namespace core

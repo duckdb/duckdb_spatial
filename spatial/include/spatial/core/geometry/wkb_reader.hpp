@@ -22,7 +22,6 @@ enum class WKBGeometryType : uint32_t {
 	GEOMETRYCOLLECTION = 7
 };
 
-
 struct WKBFlags {
 	WKBGeometryType type;
 	bool has_z;

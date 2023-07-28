@@ -20,13 +20,13 @@ static void BoundaryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
 	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
 	    args.data[0], result, args.size(), [&](string_t &geometry_blob, ValidityMask &mask, idx_t i) {
-			auto geom = lstate.ctx.Deserialize(geometry_blob);
-			if(GEOSGeomTypeId_r(lstate.ctx.GetCtx(), geom.get()) == GEOS_GEOMETRYCOLLECTION) {
-				mask.SetInvalid(i);
-				return string_t();
-			}
+		    auto geom = lstate.ctx.Deserialize(geometry_blob);
+		    if (GEOSGeomTypeId_r(lstate.ctx.GetCtx(), geom.get()) == GEOS_GEOMETRYCOLLECTION) {
+			    mask.SetInvalid(i);
+			    return string_t();
+		    }
 
-			auto boundary = make_uniq_geos(lstate.ctx.GetCtx(), GEOSBoundary_r(lstate.ctx.GetCtx(), geom.get()));
+		    auto boundary = make_uniq_geos(lstate.ctx.GetCtx(), GEOSBoundary_r(lstate.ctx.GetCtx(), geom.get()));
 		    return lstate.ctx.Serialize(result, boundary);
 	    });
 }
