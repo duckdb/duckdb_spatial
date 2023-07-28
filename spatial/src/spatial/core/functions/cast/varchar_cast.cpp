@@ -7,7 +7,6 @@
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 
-
 namespace spatial {
 
 namespace core {
@@ -96,9 +95,9 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
 	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &point) {
-		return StringVector::AddString(result, StringUtil::Format("BOX(%s, %s)", 
-			Utils::format_coord(point.a_val, point.b_val), 
-			Utils::format_coord(point.c_val, point.d_val)));
+		return StringVector::AddString(result,
+		                               StringUtil::Format("BOX(%s, %s)", Utils::format_coord(point.a_val, point.b_val),
+		                                                  Utils::format_coord(point.c_val, point.d_val)));
 	});
 }
 
@@ -145,8 +144,7 @@ void CoreCastFunctions::RegisterVarcharCasts(ClientContext &context) {
 	auto &config = DBConfig::GetConfig(context);
 	auto &casts = config.GetCastFunctions();
 
-	casts.RegisterCastFunction(GeoTypes::POINT_2D(), LogicalType::VARCHAR,
-	                           BoundCastInfo(Point2DToVarcharCast), 1);
+	casts.RegisterCastFunction(GeoTypes::POINT_2D(), LogicalType::VARCHAR, BoundCastInfo(Point2DToVarcharCast), 1);
 
 	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), LogicalType::VARCHAR,
 	                           BoundCastInfo(LineString2DToVarcharCast), 1);

@@ -104,7 +104,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 
 	if (bind_data->layer_name.empty()) {
 		// Default to the base name of the file
-		auto& fs = FileSystem::GetFileSystem(context);
+		auto &fs = FileSystem::GetFileSystem(context);
 		bind_data->layer_name = fs.ExtractBaseName(bind_data->file_path);
 	}
 

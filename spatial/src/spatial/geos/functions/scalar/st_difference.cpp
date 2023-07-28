@@ -21,8 +21,8 @@ static void DifferenceFunction(DataChunk &args, ExpressionState &state, Vector &
 	    args.data[0], args.data[1], result, args.size(), [&](string_t left, string_t right) {
 		    auto left_geos_geom = lstate.ctx.Deserialize(left);
 		    auto right_geos_geom = lstate.ctx.Deserialize(right);
-			auto geos_result = make_uniq_geos(ctx, GEOSDifference_r(ctx, left_geos_geom.get(), right_geos_geom.get()));
-			return lstate.ctx.Serialize(result, geos_result);
+		    auto geos_result = make_uniq_geos(ctx, GEOSDifference_r(ctx, left_geos_geom.get(), right_geos_geom.get()));
+		    return lstate.ctx.Serialize(result, geos_result);
 	    });
 }
 

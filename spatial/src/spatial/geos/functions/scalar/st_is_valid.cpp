@@ -15,7 +15,7 @@ namespace geos {
 using namespace spatial::core;
 
 static bool IsValidForGeos(Geometry &geometry) {
-	switch(geometry.Type()) {
+	switch (geometry.Type()) {
 	case GeometryType::LINESTRING:
 		// Every linestring needs 0 or at least 2 points
 		return geometry.GetLineString().Count() != 1;

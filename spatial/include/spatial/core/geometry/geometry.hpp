@@ -391,7 +391,6 @@ struct GeometryPrefix {
 	GeometryType type;
 	uint16_t hash;
 
-
 	GeometryPrefix(uint8_t flags, GeometryType type, uint16_t hash) : flags(flags), type(type), hash(hash) {
 	}
 

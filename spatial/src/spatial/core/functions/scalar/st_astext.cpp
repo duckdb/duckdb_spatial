@@ -23,7 +23,7 @@ static void Point2DAsTextFunction(DataChunk &args, ExpressionState &state, Vecto
 	auto count = args.size();
 	CoreVectorOperations::Point2DToVarchar(input, result, count);
 }
- 
+
 //------------------------------------------------------------------------------
 // LINESTRING_2D
 //------------------------------------------------------------------------------
@@ -83,10 +83,10 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::VARCHAR, LineString2DAsTextFunction));
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
-	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::VARCHAR, Box2DAsTextFunction));
-	as_text_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::VARCHAR, Box2DAsTextFunction));
+	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
+	                                                GeometryAsTextFunction, nullptr, nullptr, nullptr,
+	                                                GeometryFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(as_text_function_set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

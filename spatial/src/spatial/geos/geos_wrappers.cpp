@@ -9,15 +9,14 @@ namespace geos {
 
 using namespace core;
 
-
 //------------------------------------------------------------------------------
 // Deserialize
 //------------------------------------------------------------------------------
 // Note: We dont use GEOSCoordSeq_CopyFromBuffer here because we cant actually guarantee that the
 // double* is aligned to 8 bytes when duckdb loads the blob from storage, and GEOS only performs a
 // memcpy for 3d geometry. In the future this may change on our end though.
-static GEOSGeometry* DeserializeGeometry(BinaryReader &reader, GEOSContextHandle_t ctx);
-static GEOSGeometry* DeserializePoint(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeGeometry(BinaryReader &reader, GEOSContextHandle_t ctx);
+static GEOSGeometry *DeserializePoint(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
@@ -34,7 +33,7 @@ static GEOSGeometry* DeserializePoint(BinaryReader &reader, GEOSContextHandle_t 
 	}
 }
 
-static GEOSGeometry* DeserializeLineString(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeLineString(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
@@ -51,14 +50,14 @@ static GEOSGeometry* DeserializeLineString(BinaryReader &reader, GEOSContextHand
 	}
 }
 
-static GEOSGeometry* DeserializePolygon(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializePolygon(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_rings = reader.Read<uint32_t>();
 	if (num_rings == 0) {
 		return GEOSGeom_createEmptyPolygon_r(ctx);
 	} else {
 		// TODO: This doesnt handle the offset properly
-		auto rings = new GEOSGeometry*[num_rings];
+		auto rings = new GEOSGeometry *[num_rings];
 		auto data_ptr = reader.GetPtr() + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
 		for (uint32_t i = 0; i < num_rings; i++) {
 			auto count = reader.Read<uint32_t>();
@@ -80,13 +79,13 @@ static GEOSGeometry* DeserializePolygon(BinaryReader &reader, GEOSContextHandle_
 	}
 }
 
-static GEOSGeometry* DeserializeMultiPoint(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeMultiPoint(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_points = reader.Read<uint32_t>();
 	if (num_points == 0) {
 		return GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOINT);
 	} else {
-		auto points = new GEOSGeometry*[num_points];
+		auto points = new GEOSGeometry *[num_points];
 		for (uint32_t i = 0; i < num_points; i++) {
 			points[i] = DeserializePoint(reader, ctx);
 		}
@@ -96,13 +95,13 @@ static GEOSGeometry* DeserializeMultiPoint(BinaryReader &reader, GEOSContextHand
 	}
 }
 
-static GEOSGeometry* DeserializeMultiLineString(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeMultiLineString(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_lines = reader.Read<uint32_t>();
 	if (num_lines == 0) {
 		return GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTILINESTRING);
 	} else {
-		auto lines = new GEOSGeometry*[num_lines];
+		auto lines = new GEOSGeometry *[num_lines];
 		for (uint32_t i = 0; i < num_lines; i++) {
 			lines[i] = DeserializeLineString(reader, ctx);
 		}
@@ -112,13 +111,13 @@ static GEOSGeometry* DeserializeMultiLineString(BinaryReader &reader, GEOSContex
 	}
 }
 
-static GEOSGeometry* DeserializeMultiPolygon(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeMultiPolygon(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_polygons = reader.Read<uint32_t>();
 	if (num_polygons == 0) {
 		return GEOSGeom_createEmptyCollection_r(ctx, GEOS_MULTIPOLYGON);
 	} else {
-		auto polygons = new GEOSGeometry*[num_polygons];
+		auto polygons = new GEOSGeometry *[num_polygons];
 		for (uint32_t i = 0; i < num_polygons; i++) {
 			polygons[i] = DeserializePolygon(reader, ctx);
 		}
@@ -128,13 +127,13 @@ static GEOSGeometry* DeserializeMultiPolygon(BinaryReader &reader, GEOSContextHa
 	}
 }
 
-static GEOSGeometry* DeserializeGeometryCollection(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeGeometryCollection(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_geoms = reader.Read<uint32_t>();
 	if (num_geoms == 0) {
 		return GEOSGeom_createEmptyCollection_r(ctx, GEOS_GEOMETRYCOLLECTION);
 	} else {
-		auto geoms = new GEOSGeometry*[num_geoms];
+		auto geoms = new GEOSGeometry *[num_geoms];
 		for (uint32_t i = 0; i < num_geoms; i++) {
 			geoms[i] = DeserializeGeometry(reader, ctx);
 		}
@@ -144,30 +143,33 @@ static GEOSGeometry* DeserializeGeometryCollection(BinaryReader &reader, GEOSCon
 	}
 }
 
-static GEOSGeometry* DeserializeGeometry(BinaryReader &reader, GEOSContextHandle_t ctx) {
+static GEOSGeometry *DeserializeGeometry(BinaryReader &reader, GEOSContextHandle_t ctx) {
 	auto type = reader.Peek<GeometryType>();
 	switch (type) {
-		case GeometryType::POINT: {
-			return DeserializePoint(reader, ctx);
-		}
-		case GeometryType::LINESTRING: {
-			return DeserializeLineString(reader, ctx);
-		}
-		case GeometryType::POLYGON: {
-			return DeserializePolygon(reader, ctx);
-		}
-		case GeometryType::MULTIPOINT: {
-			return DeserializeMultiPoint(reader, ctx);
-		}
-		case GeometryType::MULTILINESTRING: {
-			return DeserializeMultiLineString(reader, ctx);
-		}
-		case GeometryType::MULTIPOLYGON: {
-			return DeserializeMultiPolygon(reader, ctx);
-		}
-		case GeometryType::GEOMETRYCOLLECTION: {
-			return DeserializeGeometryCollection(reader, ctx);
-		}
+	case GeometryType::POINT: {
+		return DeserializePoint(reader, ctx);
+	}
+	case GeometryType::LINESTRING: {
+		return DeserializeLineString(reader, ctx);
+	}
+	case GeometryType::POLYGON: {
+		return DeserializePolygon(reader, ctx);
+	}
+	case GeometryType::MULTIPOINT: {
+		return DeserializeMultiPoint(reader, ctx);
+	}
+	case GeometryType::MULTILINESTRING: {
+		return DeserializeMultiLineString(reader, ctx);
+	}
+	case GeometryType::MULTIPOLYGON: {
+		return DeserializeMultiPolygon(reader, ctx);
+	}
+	case GeometryType::GEOMETRYCOLLECTION: {
+		return DeserializeGeometryCollection(reader, ctx);
+	}
+	default: {
+		throw NotImplementedException("Geometry type not implemented for deserialization");
+	}
 	}
 }
 
@@ -183,108 +185,108 @@ GeometryPtr GeosContextWrapper::Deserialize(const string_t &blob) {
 //-------------------------------------------------------------------
 static uint32_t GetSerializedSize(const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	switch (GEOSGeomTypeId_r(ctx, geom)) {
-		case GEOS_POINT: {
-			// 4 bytes for type, 
-			// 4 bytes for num points, 
-			// 16 bytes for data if not empty
-			bool empty = GEOSisEmpty_r(ctx, geom);
-			return 4 + 4 + (empty ? 0 : 16);
-		}
-		case GEOS_LINESTRING: {
-			// 4 bytes for type,
-			// 4 bytes for num points,
-			// 16 bytes per point
-			auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
-			uint32_t count;
-			GEOSCoordSeq_getSize_r(ctx, seq, &count);
-			return 4 + 4 + count * 16;
-		}
-		case GEOS_POLYGON: {
-			// 4 bytes for type,
-			// 4 bytes for num rings
-			//   4 bytes for num points in shell,
-			//   16 bytes per point in shell,
-			// 4 bytes for num holes,
-			//   4 bytes for num points in hole,
-			// 	 16 bytes per point in hole
-			// 4 bytes padding if (shell + holes) % 2 == 1
-			uint32_t size = 4 + 4;
-			auto shell = GEOSGetExteriorRing_r(ctx, geom);
-			auto seq = GEOSGeom_getCoordSeq_r(ctx, shell);
+	case GEOS_POINT: {
+		// 4 bytes for type,
+		// 4 bytes for num points,
+		// 16 bytes for data if not empty
+		bool empty = GEOSisEmpty_r(ctx, geom);
+		return 4 + 4 + (empty ? 0 : 16);
+	}
+	case GEOS_LINESTRING: {
+		// 4 bytes for type,
+		// 4 bytes for num points,
+		// 16 bytes per point
+		auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
+		uint32_t count;
+		GEOSCoordSeq_getSize_r(ctx, seq, &count);
+		return 4 + 4 + count * 16;
+	}
+	case GEOS_POLYGON: {
+		// 4 bytes for type,
+		// 4 bytes for num rings
+		//   4 bytes for num points in shell,
+		//   16 bytes per point in shell,
+		// 4 bytes for num holes,
+		//   4 bytes for num points in hole,
+		// 	 16 bytes per point in hole
+		// 4 bytes padding if (shell + holes) % 2 == 1
+		uint32_t size = 4 + 4;
+		auto shell = GEOSGetExteriorRing_r(ctx, geom);
+		auto seq = GEOSGeom_getCoordSeq_r(ctx, shell);
+		uint32_t count;
+		GEOSCoordSeq_getSize_r(ctx, seq, &count);
+		size += 4 + count * 16;
+		auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
+		for (uint32_t i = 0; i < num_holes; i++) {
+			auto hole = GEOSGetInteriorRingN_r(ctx, geom, i);
+			auto seq = GEOSGeom_getCoordSeq_r(ctx, hole);
 			uint32_t count;
 			GEOSCoordSeq_getSize_r(ctx, seq, &count);
 			size += 4 + count * 16;
-			auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
-			for (uint32_t i = 0; i < num_holes; i++) {
-				auto hole = GEOSGetInteriorRingN_r(ctx, geom, i);
-				auto seq = GEOSGeom_getCoordSeq_r(ctx, hole);
-				uint32_t count;
-				GEOSCoordSeq_getSize_r(ctx, seq, &count);
-				size += 4 + count * 16;
-			}
+		}
 
-			if ((num_holes + 1) % 2 == 1) {
-				size += 4;
-			}
+		if ((num_holes + 1) % 2 == 1) {
+			size += 4;
+		}
 
-			return size;
+		return size;
+	}
+	case GEOS_MULTIPOINT: {
+		// 4 bytes for type,
+		// 4 bytes for num points,
+		// x bytes per point
+		auto size = 4 + 4;
+		auto num_points = GEOSGetNumGeometries_r(ctx, geom);
+		for (uint32_t i = 0; i < num_points; i++) {
+			auto point = GEOSGetGeometryN_r(ctx, geom, i);
+			size += GetSerializedSize(point, ctx);
 		}
-		case GEOS_MULTIPOINT: {
-			// 4 bytes for type,
-			// 4 bytes for num points,
-			// x bytes per point
-			auto size = 4 + 4;
-			auto num_points = GEOSGetNumGeometries_r(ctx, geom);
-			for (uint32_t i = 0; i < num_points; i++) {
-				auto point = GEOSGetGeometryN_r(ctx, geom, i);
-				size += GetSerializedSize(point, ctx);
-			}
-			return size;
+		return size;
+	}
+	case GEOS_MULTILINESTRING: {
+		// 4 bytes for type,
+		// 4 bytes for num lines,
+		// x bytes per line
+		auto size = 4 + 4;
+		auto num_lines = GEOSGetNumGeometries_r(ctx, geom);
+		for (uint32_t i = 0; i < num_lines; i++) {
+			auto line = GEOSGetGeometryN_r(ctx, geom, i);
+			size += GetSerializedSize(line, ctx);
 		}
-		case GEOS_MULTILINESTRING: {
-			// 4 bytes for type,
-			// 4 bytes for num lines,
-			// x bytes per line
-			auto size = 4 + 4;
-			auto num_lines = GEOSGetNumGeometries_r(ctx, geom);
-			for (uint32_t i = 0; i < num_lines; i++) {
-				auto line = GEOSGetGeometryN_r(ctx, geom, i);
-				size += GetSerializedSize(line, ctx);
-			}
-			return size;
+		return size;
+	}
+	case GEOS_MULTIPOLYGON: {
+		// 4 bytes for type,
+		// 4 bytes for num polygons,
+		// x bytes per polygon
+		auto size = 4 + 4;
+		auto num_polygons = GEOSGetNumGeometries_r(ctx, geom);
+		for (uint32_t i = 0; i < num_polygons; i++) {
+			auto polygon = GEOSGetGeometryN_r(ctx, geom, i);
+			size += GetSerializedSize(polygon, ctx);
 		}
-		case GEOS_MULTIPOLYGON: {
-			// 4 bytes for type,
-			// 4 bytes for num polygons,
-			// x bytes per polygon
-			auto size = 4 + 4;
-			auto num_polygons = GEOSGetNumGeometries_r(ctx, geom);
-			for (uint32_t i = 0; i < num_polygons; i++) {
-				auto polygon = GEOSGetGeometryN_r(ctx, geom, i);
-				size += GetSerializedSize(polygon, ctx);
-			}
-			return size;
+		return size;
+	}
+	case GEOS_GEOMETRYCOLLECTION: {
+		// 4 bytes for type,
+		// 4 bytes for num geoms,
+		// x bytes per geom
+		auto size = 4 + 4;
+		auto num_geoms = GEOSGetNumGeometries_r(ctx, geom);
+		for (uint32_t i = 0; i < num_geoms; i++) {
+			auto subgeom = GEOSGetGeometryN_r(ctx, geom, i);
+			size += GetSerializedSize(subgeom, ctx);
 		}
-		case GEOS_GEOMETRYCOLLECTION: {
-			// 4 bytes for type,
-			// 4 bytes for num geoms,
-			// x bytes per geom
-			auto size = 4 + 4;
-			auto num_geoms = GEOSGetNumGeometries_r(ctx, geom);
-			for (uint32_t i = 0; i < num_geoms; i++) {
-				auto subgeom = GEOSGetGeometryN_r(ctx, geom, i);
-				size += GetSerializedSize(subgeom, ctx);
-			}
-			return size;
-		}
-		default: {
-			throw NotImplementedException("Geometry type not implemented for serialization");
-		}
+		return size;
+	}
+	default: {
+		throw NotImplementedException("Geometry type not implemented for serialization");
+	}
 	}
 }
-static void SerializeGeometry(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx);
+static void SerializeGeometry(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx);
 
-static void SerializePoint(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializePoint(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::POINT);
 
 	if (GEOSisEmpty_r(ctx, geom)) {
@@ -300,7 +302,7 @@ static void SerializePoint(BinaryWriter &writer, const GEOSGeometry* geom, const
 	writer.Write<double>(y);
 }
 
-static void SerializeLineString(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializeLineString(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::LINESTRING);
 	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
 	uint32_t count;
@@ -315,10 +317,10 @@ static void SerializeLineString(BinaryWriter &writer, const GEOSGeometry* geom, 
 	}
 }
 
-static void SerializePolygon(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializePolygon(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	// TODO: check this
 	writer.Write<uint32_t>((uint32_t)GeometryType::POLYGON);
-	
+
 	// Write number of rings
 	if (GEOSisEmpty_r(ctx, geom)) {
 		writer.Write<uint32_t>(0);
@@ -337,7 +339,7 @@ static void SerializePolygon(BinaryWriter &writer, const GEOSGeometry* geom, con
 	uint32_t shell_count;
 	GEOSCoordSeq_getSize_r(ctx, shell_seq, &shell_count);
 	writer.Write<uint32_t>(shell_count);
-	
+
 	// Then write all holes
 	for (uint32_t i = 0; i < num_holes; i++) {
 		auto ring = GEOSGetInteriorRingN_r(ctx, geom, i);
@@ -378,7 +380,7 @@ static void SerializePolygon(BinaryWriter &writer, const GEOSGeometry* geom, con
 	}
 }
 
-static void SerializeMultiPoint(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializeMultiPoint(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::MULTIPOINT);
 	auto num_points = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_points);
@@ -388,7 +390,7 @@ static void SerializeMultiPoint(BinaryWriter &writer, const GEOSGeometry* geom, 
 	}
 }
 
-static void SerializeMultiLineString(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializeMultiLineString(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::MULTILINESTRING);
 	auto num_linestrings = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_linestrings);
@@ -398,7 +400,7 @@ static void SerializeMultiLineString(BinaryWriter &writer, const GEOSGeometry* g
 	}
 }
 
-static void SerializeMultiPolygon(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializeMultiPolygon(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::MULTIPOLYGON);
 	auto num_polygons = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_polygons);
@@ -408,7 +410,7 @@ static void SerializeMultiPolygon(BinaryWriter &writer, const GEOSGeometry* geom
 	}
 }
 
-static void SerializeGeometryCollection(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
+static void SerializeGeometryCollection(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::GEOMETRYCOLLECTION);
 	auto num_geometries = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_geometries);
@@ -418,17 +420,32 @@ static void SerializeGeometryCollection(BinaryWriter &writer, const GEOSGeometry
 	}
 }
 
-static void SerializeGeometry(BinaryWriter &writer, const GEOSGeometry* geom, const GEOSContextHandle_t ctx) {
-	switch(GEOSGeomTypeId_r(ctx, geom)) {
-		case GEOS_POINT: SerializePoint(writer, geom, ctx); break;
-		case GEOS_LINESTRING: SerializeLineString(writer, geom, ctx); break;
-		case GEOS_POLYGON: SerializePolygon(writer, geom, ctx); break;
-		case GEOS_MULTIPOINT: SerializeMultiPoint(writer, geom, ctx); break;
-		case GEOS_MULTILINESTRING: SerializeMultiLineString(writer, geom, ctx); break;
-		case GEOS_MULTIPOLYGON: SerializeMultiPolygon(writer, geom, ctx); break;
-		case GEOS_GEOMETRYCOLLECTION: SerializeGeometryCollection(writer, geom, ctx); break;
-		default: throw NotImplementedException("Geometry type not implemented for serialization");
-	}	
+static void SerializeGeometry(BinaryWriter &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
+	switch (GEOSGeomTypeId_r(ctx, geom)) {
+	case GEOS_POINT:
+		SerializePoint(writer, geom, ctx);
+		break;
+	case GEOS_LINESTRING:
+		SerializeLineString(writer, geom, ctx);
+		break;
+	case GEOS_POLYGON:
+		SerializePolygon(writer, geom, ctx);
+		break;
+	case GEOS_MULTIPOINT:
+		SerializeMultiPoint(writer, geom, ctx);
+		break;
+	case GEOS_MULTILINESTRING:
+		SerializeMultiLineString(writer, geom, ctx);
+		break;
+	case GEOS_MULTIPOLYGON:
+		SerializeMultiPolygon(writer, geom, ctx);
+		break;
+	case GEOS_GEOMETRYCOLLECTION:
+		SerializeGeometryCollection(writer, geom, ctx);
+		break;
+	default:
+		throw NotImplementedException("Geometry type not implemented for serialization");
+	}
 }
 
 string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) {
@@ -447,24 +464,39 @@ string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) 
 	}
 
 	GeometryType type;
-	switch(GEOSGeomTypeId_r(ctx, geom.get())) {
-		case GEOS_POINT: type = GeometryType::POINT; break;
-		case GEOS_LINESTRING: type = GeometryType::LINESTRING; break;
-		case GEOS_POLYGON: type = GeometryType::POLYGON; break;
-		case GEOS_MULTIPOINT: type = GeometryType::MULTIPOINT; break;
-		case GEOS_MULTILINESTRING: type = GeometryType::MULTILINESTRING; break;
-		case GEOS_MULTIPOLYGON: type = GeometryType::MULTIPOLYGON; break;
-		case GEOS_GEOMETRYCOLLECTION: type = GeometryType::GEOMETRYCOLLECTION; break;
-		default: throw NotImplementedException("Geometry type not implemented for serialization");
+	switch (GEOSGeomTypeId_r(ctx, geom.get())) {
+	case GEOS_POINT:
+		type = GeometryType::POINT;
+		break;
+	case GEOS_LINESTRING:
+		type = GeometryType::LINESTRING;
+		break;
+	case GEOS_POLYGON:
+		type = GeometryType::POLYGON;
+		break;
+	case GEOS_MULTIPOINT:
+		type = GeometryType::MULTIPOINT;
+		break;
+	case GEOS_MULTILINESTRING:
+		type = GeometryType::MULTILINESTRING;
+		break;
+	case GEOS_MULTIPOLYGON:
+		type = GeometryType::MULTIPOLYGON;
+		break;
+	case GEOS_GEOMETRYCOLLECTION:
+		type = GeometryType::GEOMETRYCOLLECTION;
+		break;
+	default:
+		throw NotImplementedException("Geometry type not implemented for serialization");
 	}
 
-	writer.Write<uint8_t>(0); // Flags
+	writer.Write<uint8_t>(0);         // Flags
 	writer.Write<GeometryType>(type); // Type
-	writer.Write<uint16_t>(hash); // Hash
-	writer.Write<uint32_t>(0); // Padding
+	writer.Write<uint16_t>(hash);     // Hash
+	writer.Write<uint32_t>(0);        // Padding
 
 	SerializeGeometry(writer, geom.get(), ctx);
-	
+
 	return blob;
 }
 

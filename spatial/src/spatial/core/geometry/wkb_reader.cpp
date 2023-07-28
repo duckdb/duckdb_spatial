@@ -76,12 +76,14 @@ WKBFlags WKBReader::ReadFlags() {
 
 	if (has_z) {
 		// Z present, throw
-		throw NotImplementedException("Z value present in WKB, DuckDB spatial does not support geometries with Z coordinates yet");
+		throw NotImplementedException(
+		    "Z value present in WKB, DuckDB spatial does not support geometries with Z coordinates yet");
 	}
 
 	if (has_m) {
 		// M present, throw
-		throw NotImplementedException("M value present in WKB, DuckDB spatial does not support geometries with M coordinates yet");
+		throw NotImplementedException(
+		    "M value present in WKB, DuckDB spatial does not support geometries with M coordinates yet");
 	}
 
 	if (has_srid) {
@@ -157,7 +159,6 @@ MultiPolygon WKBReader::ReadMultiPolygon() {
 	}
 }
 
-
 GeometryCollection WKBReader::ReadGeometryCollection() {
 	auto order = static_cast<WKBByteOrder>(data[cursor++]);
 	if (order == WKBByteOrder::XDR) {
@@ -172,7 +173,7 @@ Geometry WKBReader::ReadGeometryBody() {
 	// Only peek the flags, don't advance the cursor
 	auto flags = ReadFlags<ORDER>();
 	cursor -= sizeof(uint32_t);
-	if(flags.has_srid) {
+	if (flags.has_srid) {
 		cursor -= sizeof(uint32_t);
 	}
 

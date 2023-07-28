@@ -23,7 +23,7 @@ static void ExecutePreparedDistance(GEOSFunctionLocalState &lstate, Vector &left
 		auto &left_blob = FlatVector::GetData<string_t>(left)[0];
 		auto left_geom = lstate.ctx.Deserialize(left_blob);
 		auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
-		
+
 		UnaryExecutor::Execute<string_t, double>(right, result, count, [&](string_t &right_blob) {
 			auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			double distance;

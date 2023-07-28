@@ -28,7 +28,7 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input_hex) {
 		auto hex_size = input_hex.GetSize();
 		auto hex_ptr = const_data_ptr_cast(input_hex.GetData());
-		
+
 		if (hex_size % 2 == 1) {
 			throw InvalidInputException("Invalid HEX WKB string, length must be even.");
 		}
@@ -43,11 +43,11 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 			auto byte_b = Blob::HEX_MAP[hex_ptr[hex_idx + 1]];
 			D_ASSERT(byte_a != -1);
 			D_ASSERT(byte_b != -1);
-			
+
 			blob_ptr[blob_idx++] = (byte_a << 4) + byte_b;
 		}
-		
-		auto geom = lstate.factory.FromWKB((const char*)wkb_blob.get(), blob_size);
+
+		auto geom = lstate.factory.FromWKB((const char *)wkb_blob.get(), blob_size);
 		return lstate.factory.Serialize(result, geom);
 	});
 }
@@ -59,21 +59,20 @@ void CoreScalarFunctions::RegisterStGeomFromHEXWKB(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	CreateScalarFunctionInfo hexwkb(ScalarFunction("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
-	                                             GeometryFromHEXWKB, nullptr, nullptr, nullptr,
-	                                             GeometryFunctionLocalState::Init));
+	                                               GeometryFromHEXWKB, nullptr, nullptr, nullptr,
+	                                               GeometryFunctionLocalState::Init));
 	hexwkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, hexwkb);
 
 	// Our WKB reader also parses EWKB, even though it will just ignore SRID's.
-	// so we'll just add an alias for now. In the future, once we actually handle 
-	// EWKB and store SRID's, these functions should differentiate between 
+	// so we'll just add an alias for now. In the future, once we actually handle
+	// EWKB and store SRID's, these functions should differentiate between
 	// the two formats.
 	CreateScalarFunctionInfo ewkb(ScalarFunction("ST_GeomFromHEXEWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                             GeometryFromHEXWKB, nullptr, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
 	ewkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	catalog.CreateFunction(context, ewkb);
-		
 }
 
 } // namespace core
