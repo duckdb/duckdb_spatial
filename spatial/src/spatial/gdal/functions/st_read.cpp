@@ -110,6 +110,15 @@ struct GdalScanLocalState : ArrowScanLocalState {
 
 struct GdalScanGlobalState : ArrowScanGlobalState {};
 
+struct ScopeGuard {
+	std::function<void()> f;
+	ScopeGuard(std::function<void()> f) : f(f) {
+	}
+	~ScopeGuard() {
+		f();
+	}
+};
+
 unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
                                                  vector<LogicalType> &return_types, vector<string> &names) {
 
@@ -152,6 +161,22 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		gdal_sibling_files.push_back(nullptr);
 	}
 
+	// HACK: check for XLSX_HEADERS open option
+	// TODO: Remove this once GDAL 3.8 is released
+	auto xlsx_default = string(CPLGetConfigOption("OGR_XLSX_HEADERS", "AUTO"));
+	for (auto &option : gdal_open_options) {
+		if (option == nullptr) {
+			break;
+		}
+		if (strcmp(option, "HEADERS=FORCE") == 0) {
+			CPLSetThreadLocalConfigOption("OGR_XLSX_HEADERS", "FORCE");
+
+		}
+		if (strcmp(option, "HEADERS=DISABLE") == 0) {
+			CPLSetThreadLocalConfigOption("OGR_XLSX_HEADERS", "DISABLE");
+		}
+	}
+
 	// Now we can open the dataset
 	auto file_name = input.inputs[0].GetValue<string>();
 	auto dataset =
@@ -159,6 +184,12 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
 	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
 	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
+
+	// Reset upon exit
+	ScopeGuard _guard([&] {
+		CPLSetThreadLocalConfigOption("OGR_XLSX_HEADERS", xlsx_default.c_str());
+	});
+
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
