@@ -14,7 +14,6 @@ void GdalModule::Register(ClientContext &context) {
 	// Load GDAL
 	OGRRegisterAll();
 
-
 	// Register functions
 	GdalTableFunction::Register(context);
 	GdalDriversTableFunction::Register(context);
