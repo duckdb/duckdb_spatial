@@ -110,6 +110,27 @@ struct GdalScanLocalState : ArrowScanLocalState {
 
 struct GdalScanGlobalState : ArrowScanGlobalState {};
 
+
+struct ScopedOption {
+	string option;
+	string original_value;
+
+	ScopedOption(string option_p, const char* default_value) : option(option_p) {
+		// Save current value
+		original_value = CPLGetConfigOption(option.c_str(), default_value);
+	}
+
+	void Set(const char* new_value) {
+		CPLSetThreadLocalConfigOption(option.c_str(), new_value);
+	}
+
+	~ScopedOption() {
+		// Reset
+		CPLSetThreadLocalConfigOption(option.c_str(), original_value.c_str());
+	}
+};
+
+
 unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
                                                  vector<LogicalType> &return_types, vector<string> &names) {
 
@@ -152,6 +173,31 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		gdal_sibling_files.push_back(nullptr);
 	}
 
+	// HACK: check for XLSX_HEADERS open option
+	// TODO: Remove this once GDAL 3.8 is released
+	ScopedOption xlsx_headers("OGR_XLSX_HEADERS", "AUTO");
+	ScopedOption xlsx_field_types("OGR_XLSX_FIELD_TYPES", "AUTO");
+	for (auto &option : gdal_open_options) {
+		if (option == nullptr) {
+			break;
+		}
+		else if (strcmp(option, "HEADERS=FORCE") == 0) {
+			xlsx_headers.Set("FORCE");
+		}
+		else if (strcmp(option, "HEADERS=DISABLE") == 0) {
+			xlsx_headers.Set("DISABLE");
+		}
+		else if (strcmp(option, "HEADERS=AUTO") == 0) {
+			xlsx_headers.Set("AUTO");
+		}
+		else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
+			xlsx_field_types.Set("STRING");
+		}
+		else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
+			xlsx_field_types.Set("AUTO");
+		}
+	}
+	
 	// Now we can open the dataset
 	auto file_name = input.inputs[0].GetValue<string>();
 	auto dataset =
@@ -159,6 +205,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
 	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
 	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
+
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
