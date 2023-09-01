@@ -395,12 +395,7 @@ idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *
 	return data->max_threads;
 }
 
-// init global
-unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
-                                                                   TableFunctionInitInput &input) {
-	auto &data = (GdalScanFunctionData &)*input.bind_data;
-
-	auto global_state = make_uniq<GdalScanGlobalState>();
+OGRLayer* open_layer(const GdalScanFunctionData &data) {
 
 	// Get selected layer
 	OGRLayer *layer = nullptr;
@@ -434,6 +429,16 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 		}
 	}
 
+	return layer;
+}
+
+// init global
+unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
+                                                                   TableFunctionInitInput &input) {
+	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
+	auto global_state = make_uniq<GdalScanGlobalState>();
+
+	auto layer = open_layer(data);
 	// TODO: Apply projection pushdown
 
 	// Apply predicate pushdown
@@ -507,13 +512,36 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 	state.chunk_offset += output.size();
 }
 
+unique_ptr<NodeStatistics> GdalTableFunction::Cardinality(ClientContext &context, const FunctionData *data) {
+	auto &gdal_data = data->Cast<GdalScanFunctionData>();
+	auto result = make_uniq<NodeStatistics>();
+
+	if(gdal_data.sequential_layer_scan) {
+		// It would be too expensive to calculate the cardinality for a sequential layer scan
+		// as we would have to scan through all the layers twice.
+		return result;
+	}
+	
+	// Some drivers wont return a feature count if it would be to expensive to calculate 
+	// (unless we pass 1 "= force" to the function calculate)
+	auto layer = open_layer(gdal_data);
+
+	auto count = layer->GetFeatureCount(0);
+	if(count > -1) {
+		result->has_estimated_cardinality = true;
+		result->estimated_cardinality = count;
+	}
+	
+	return result;
+}
+
 void GdalTableFunction::Register(ClientContext &context) {
 
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
 	                   GdalTableFunction::InitGlobal, ArrowTableFunction::ArrowScanInitLocal);
 
-	scan.cardinality = ArrowTableFunction::ArrowScanCardinality;
+	scan.cardinality = GdalTableFunction::Cardinality;
 	scan.get_batch_index = ArrowTableFunction::ArrowGetBatchIndex;
 
 	scan.projection_pushdown = true;
