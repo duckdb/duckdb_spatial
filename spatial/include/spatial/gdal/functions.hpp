@@ -23,6 +23,9 @@ private:
 
 	static unique_ptr<NodeStatistics> Cardinality(ClientContext &context, const FunctionData *data);
 
+	static unique_ptr<TableRef> ReplacementScan(ClientContext &context, const string &table_name,
+	                                            ReplacementScanData *data);
+
 public:
 	static void Register(ClientContext &context);
 };

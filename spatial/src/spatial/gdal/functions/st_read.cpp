@@ -1,8 +1,13 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
+#include "duckdb/parser/expression/constant_expression.hpp"
+#include "duckdb/parser/expression/function_expression.hpp"
+#include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
 #include "duckdb/function/function.hpp"
+#include "duckdb/function/replacement_scan.hpp"
+
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
@@ -527,6 +532,24 @@ unique_ptr<NodeStatistics> GdalTableFunction::Cardinality(ClientContext &context
 	return result;
 }
 
+unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const string &table_name,
+                                                        ReplacementScanData *) {
+
+	auto lower_name = StringUtil::Lower(table_name);
+	// Check if the table name ends with some common geospatial file extensions
+	if (StringUtil::EndsWith(lower_name, ".shp") || StringUtil::EndsWith(lower_name, ".gpkg") ||
+	    StringUtil::EndsWith(lower_name, ".fgb")) {
+
+		auto table_function = make_uniq<TableFunctionRef>();
+		vector<unique_ptr<ParsedExpression>> children;
+		children.push_back(make_uniq<ConstantExpression>(Value(table_name)));
+		table_function->function = make_uniq<FunctionExpression>("st_read", std::move(children));
+		return std::move(table_function);
+	}
+	// else not something we can replace
+	return nullptr;
+}
+
 void GdalTableFunction::Register(ClientContext &context) {
 
 	TableFunctionSet set("st_read");
@@ -552,6 +575,10 @@ void GdalTableFunction::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateTableFunctionInfo info(set);
 	catalog.CreateTableFunction(context, &info);
+
+	// Replacement scan
+	auto &config = DBConfig::GetConfig(*context.db);
+	config.replacement_scans.emplace_back(GdalTableFunction::ReplacementScan);
 }
 
 } // namespace gdal
