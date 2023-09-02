@@ -1,7 +1,9 @@
 #pragma once
 
 #include "spatial/common.hpp"
+#include "spatial/core/geometry/geometry_properties.hpp"
 #include "spatial/core/geometry/vertex_vector.hpp"
+#include "spatial/core/geometry/cursor.hpp"
 
 namespace spatial {
 
@@ -52,7 +54,7 @@ struct Geometry;
 struct GeometryFactory;
 
 enum class GeometryType : uint8_t {
-	POINT,
+	POINT = 0,
 	LINESTRING,
 	POLYGON,
 	MULTIPOINT,
@@ -263,6 +265,7 @@ struct Geometry {
 
 private:
 	GeometryType type;
+	GeometryProperties properties;
 	union {
 		Point point;
 		LineString linestring;
@@ -294,6 +297,14 @@ public:
 	// Accessor methods
 	inline GeometryType Type() const {
 		return type;
+	}
+
+	inline GeometryProperties &Properties() {
+		return properties;
+	}
+
+	inline const GeometryProperties &Properties() const {
+		return properties;
 	}
 
 	inline Point &GetPoint() {
@@ -386,29 +397,41 @@ RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
 	return result;
 }
 
-struct GeometryPrefix {
-	uint8_t flags;
+class GeometryHeader {
+public:
 	GeometryType type;
+	GeometryProperties properties;
 	uint16_t hash;
-
-	GeometryPrefix(uint8_t flags, GeometryType type, uint16_t hash) : flags(flags), type(type), hash(hash) {
+	explicit GeometryHeader() : type(GeometryType::POINT), properties(GeometryProperties()), hash(0) {
 	}
 
-	uint32_t SerializedSize() const {
-		return sizeof(GeometryPrefix);
+	explicit GeometryHeader(GeometryType type, GeometryProperties properties, uint16_t hash)
+	    : type(type), properties(properties), hash(hash) {
 	}
 
 	void Serialize(data_ptr_t &dst) const {
-		Store<uint8_t>(flags, dst);
-		dst += sizeof(uint8_t);
-		Store<uint8_t>((uint8_t)type, dst);
+		Store<GeometryType>(type, dst);
 		dst += sizeof(GeometryType);
+		Store<GeometryProperties>(properties, dst);
+		dst += sizeof(GeometryProperties);
 		Store<uint16_t>(hash, dst);
 		dst += sizeof(uint16_t);
 	}
+
+	// Deserialize a GeometryHeader from a string prefix
+	static GeometryHeader Get(const string_t &blob) {
+		auto prefix = const_data_ptr_cast(blob.GetPrefix());
+		auto header = Load<GeometryHeader>(prefix);
+		return header;
+	}
+
+	// Deserialize a GeometryHeader from a Cursor
+	static GeometryHeader Deserialize(Cursor &cursor) {
+		return cursor.Read<GeometryHeader>();
+	}
 };
-static_assert(sizeof(GeometryPrefix) == 4, "GeometryPrefix should be 4 bytes");
-static_assert(sizeof(GeometryPrefix) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");
+static_assert(sizeof(GeometryHeader) == 4, "GeometryPrefix should be 4 bytes");
+static_assert(sizeof(GeometryHeader) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");
 } // namespace core
 
 } // namespace spatial

@@ -7,8 +7,7 @@ namespace spatial {
 
 namespace core {
 
-class BinaryReader;
-class BinaryWriter;
+class Cursor;
 
 struct GeometryFactory {
 public:
@@ -60,13 +59,13 @@ public:
 
 private:
 	// Serialize
-	void SerializePoint(data_ptr_t &ptr, const Point &point);
-	void SerializeLineString(data_ptr_t &ptr, const LineString &linestring);
-	void SerializePolygon(data_ptr_t &ptr, const Polygon &polygon);
-	void SerializeMultiPoint(data_ptr_t &ptr, const MultiPoint &multipoint);
-	void SerializeMultiLineString(data_ptr_t &ptr, const MultiLineString &multilinestring);
-	void SerializeMultiPolygon(data_ptr_t &ptr, const MultiPolygon &multipolygon);
-	void SerializeGeometryCollection(data_ptr_t &ptr, const GeometryCollection &collection);
+	void SerializePoint(Cursor &cursor, const Point &point);
+	void SerializeLineString(Cursor &cursor, const LineString &linestring);
+	void SerializePolygon(Cursor &cursor, const Polygon &polygon);
+	void SerializeMultiPoint(Cursor &cursor, const MultiPoint &multipoint);
+	void SerializeMultiLineString(Cursor &cursor, const MultiLineString &multilinestring);
+	void SerializeMultiPolygon(Cursor &cursor, const MultiPolygon &multipolygon);
+	void SerializeGeometryCollection(Cursor &cursor, const GeometryCollection &collection);
 
 	// Get Serialize Size
 	uint32_t GetSerializedSize(const Point &point);
@@ -79,13 +78,13 @@ private:
 	uint32_t GetSerializedSize(const Geometry &geometry);
 
 	// Deserialize
-	Point DeserializePoint(BinaryReader &reader);
-	LineString DeserializeLineString(BinaryReader &reader);
-	Polygon DeserializePolygon(BinaryReader &reader);
-	MultiPoint DeserializeMultiPoint(BinaryReader &reader);
-	MultiLineString DeserializeMultiLineString(BinaryReader &reader);
-	MultiPolygon DeserializeMultiPolygon(BinaryReader &reader);
-	GeometryCollection DeserializeGeometryCollection(BinaryReader &reader);
+	Point DeserializePoint(Cursor &reader);
+	LineString DeserializeLineString(Cursor &reader);
+	Polygon DeserializePolygon(Cursor &reader);
+	MultiPoint DeserializeMultiPoint(Cursor &reader);
+	MultiLineString DeserializeMultiLineString(Cursor &reader);
+	MultiPolygon DeserializeMultiPolygon(Cursor &reader);
+	GeometryCollection DeserializeGeometryCollection(Cursor &reader);
 };
 
 } // namespace core

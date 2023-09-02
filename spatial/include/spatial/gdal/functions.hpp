@@ -22,6 +22,7 @@ private:
 	static idx_t MaxThreads(ClientContext &context, const FunctionData *bind_data_p);
 
 	static unique_ptr<NodeStatistics> Cardinality(ClientContext &context, const FunctionData *data);
+
 public:
 	static void Register(ClientContext &context);
 };

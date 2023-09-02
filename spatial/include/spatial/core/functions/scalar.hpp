@@ -18,6 +18,7 @@ public:
 		RegisterStCollect(context);
 		RegisterStCollectionExtract(context);
 		RegisterStContains(context);
+		RegisterStDescribe(context);
 		RegisterStDimension(context);
 		RegisterStDistance(context);
 		RegisterStFlipCoordinates(context);
@@ -65,6 +66,9 @@ private:
 
 	// ST_Dimension
 	static void RegisterStDimension(ClientContext &context);
+
+	// ST_Describe
+	static void RegisterStDescribe(ClientContext &context);
 
 	// ST_Distance
 	static void RegisterStDistance(ClientContext &context);

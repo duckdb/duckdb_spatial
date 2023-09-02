@@ -110,17 +110,16 @@ struct GdalScanLocalState : ArrowScanLocalState {
 
 struct GdalScanGlobalState : ArrowScanGlobalState {};
 
-
 struct ScopedOption {
 	string option;
 	string original_value;
 
-	ScopedOption(string option_p, const char* default_value) : option(option_p) {
+	ScopedOption(string option_p, const char *default_value) : option(option_p) {
 		// Save current value
 		original_value = CPLGetConfigOption(option.c_str(), default_value);
 	}
 
-	void Set(const char* new_value) {
+	void Set(const char *new_value) {
 		CPLSetThreadLocalConfigOption(option.c_str(), new_value);
 	}
 
@@ -129,7 +128,6 @@ struct ScopedOption {
 		CPLSetThreadLocalConfigOption(option.c_str(), original_value.c_str());
 	}
 };
-
 
 unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
                                                  vector<LogicalType> &return_types, vector<string> &names) {
@@ -180,24 +178,19 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	for (auto &option : gdal_open_options) {
 		if (option == nullptr) {
 			break;
-		}
-		else if (strcmp(option, "HEADERS=FORCE") == 0) {
+		} else if (strcmp(option, "HEADERS=FORCE") == 0) {
 			xlsx_headers.Set("FORCE");
-		}
-		else if (strcmp(option, "HEADERS=DISABLE") == 0) {
+		} else if (strcmp(option, "HEADERS=DISABLE") == 0) {
 			xlsx_headers.Set("DISABLE");
-		}
-		else if (strcmp(option, "HEADERS=AUTO") == 0) {
+		} else if (strcmp(option, "HEADERS=AUTO") == 0) {
 			xlsx_headers.Set("AUTO");
-		}
-		else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
+		} else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
 			xlsx_field_types.Set("STRING");
-		}
-		else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
+		} else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
 			xlsx_field_types.Set("AUTO");
 		}
 	}
-	
+
 	// Now we can open the dataset
 	auto file_name = input.inputs[0].GetValue<string>();
 	auto dataset =
@@ -205,7 +198,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
 	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
 	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
-
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
@@ -395,7 +387,7 @@ idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *
 	return data->max_threads;
 }
 
-OGRLayer* open_layer(const GdalScanFunctionData &data) {
+OGRLayer *open_layer(const GdalScanFunctionData &data) {
 
 	// Get selected layer
 	OGRLayer *layer = nullptr;
@@ -516,22 +508,22 @@ unique_ptr<NodeStatistics> GdalTableFunction::Cardinality(ClientContext &context
 	auto &gdal_data = data->Cast<GdalScanFunctionData>();
 	auto result = make_uniq<NodeStatistics>();
 
-	if(gdal_data.sequential_layer_scan) {
+	if (gdal_data.sequential_layer_scan) {
 		// It would be too expensive to calculate the cardinality for a sequential layer scan
 		// as we would have to scan through all the layers twice.
 		return result;
 	}
-	
-	// Some drivers wont return a feature count if it would be to expensive to calculate 
+
+	// Some drivers wont return a feature count if it would be to expensive to calculate
 	// (unless we pass 1 "= force" to the function calculate)
 	auto layer = open_layer(gdal_data);
 
 	auto count = layer->GetFeatureCount(0);
-	if(count > -1) {
+	if (count > -1) {
 		result->has_estimated_cardinality = true;
 		result->estimated_cardinality = count;
 	}
-	
+
 	return result;
 }
 

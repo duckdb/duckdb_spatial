@@ -1,4 +1,5 @@
 #include "spatial/core/geometry/vertex_vector.hpp"
+#include "spatial/core/geometry/cursor.hpp"
 #include <cmath>
 
 namespace spatial {
@@ -20,6 +21,13 @@ double Vertex::Distance(const Vertex &p1, const Vertex &p2) const {
 double Vertex::DistanceSquared(const Vertex &p1, const Vertex &p2) const {
 	auto p = ClosestPointOnSegment(*this, p1, p2);
 	return DistanceSquared(p);
+}
+
+void VertexVector::Serialize(Cursor &cursor) const {
+	auto ptr = cursor.GetPtr();
+	memcpy((void *)ptr, (const char *)data, count * sizeof(Vertex));
+	ptr += count * sizeof(Vertex);
+	cursor.SetPtr(ptr);
 }
 
 double VertexVector::Length() const {
