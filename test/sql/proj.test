@@ -14,3 +14,23 @@ query I
 SELECT st_transform({'x': 52.3676, 'y': 4.9041}::POINT_2D, 'EPSG:4326', 'EPSG:3857')
 ----
 POINT (545921.9147992929 6866867.121983132)
+
+
+# Issue #119
+# Create a table with columns for Longitude and Latitude
+statement ok
+CREATE OR REPLACE TABLE test (Longitude DOUBLE, Latitude DOUBLE);
+
+# Insert a row with a point
+statement ok
+INSERT INTO test VALUES (-123.12345, 49.12345);
+
+statement ok
+INSERT INTO test VALUES (-123.12345, 49.02345);
+
+query IIII
+SELECT *, ST_Point(Longitude, Latitude) AS GEOM, ST_Transform(ST_FlipCoordinates(GEOM), 'EPSG:4326', 'ESRI:102001') AS AEAC FROM test;
+----
+-123.12345	49.12345	POINT (-123.12345 49.12345)	POINT (-1930488.8492580962 1393621.3250992913)
+-123.12345	49.02345	POINT (-123.12345 49.02345)	POINT (-1934848.4152605666 1383417.3974102244)
+

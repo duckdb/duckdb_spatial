@@ -323,12 +323,12 @@ string MultiPolygon::ToString() const {
 		str += "(";
 		bool first_ring = true;
 		for (auto &ring : poly.Rings()) {
-			str += "(";
 			if (first_ring) {
 				first_ring = false;
 			} else {
 				str += ", ";
 			}
+			str += "(";
 			bool first_vert = true;
 			for (auto &vert : ring) {
 				if (first_vert) {
