@@ -14,6 +14,7 @@ struct GdalTableFunction : ArrowTableFunction {
 private:
 	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
 	                                     vector<LogicalType> &return_types, vector<string> &names);
+	static void RenameColumns(vector<string> &names);
 
 	static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, TableFunctionInitInput &input);
 

@@ -338,8 +338,8 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto attribute_count = schema.n_children;
 	auto attributes = schema.children;
 
-	result->all_names.reserve(attribute_count);
-	names.reserve(attribute_count);
+	result->all_names.reserve(attribute_count + 1);
+	names.reserve(attribute_count + 1);
 
 	for (idx_t col_idx = 0; col_idx < (idx_t)attribute_count; col_idx++) {
 		auto &attribute = *attributes[col_idx];
@@ -379,13 +379,37 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	schema.release(&schema);
 	stream.release(&stream);
 
-	RenameArrowColumns(names);
+	GdalTableFunction::RenameColumns(names);
 
 	result->dataset = std::move(dataset);
 	result->all_types = return_types;
 
 	return std::move(result);
 };
+
+void GdalTableFunction::RenameColumns(vector<string> &names) {
+	unordered_map<string, idx_t> name_map;
+	for (auto &column_name : names) {
+		// put it all lower_case
+		auto low_column_name = StringUtil::Lower(column_name);
+		if (name_map.find(low_column_name) == name_map.end()) {
+			// Name does not exist yet
+			name_map[low_column_name]++;
+		} else {
+			// Name already exists, we add _x where x is the repetition number
+			string new_column_name = column_name + "_" + std::to_string(name_map[low_column_name]);
+			auto new_column_name_low = StringUtil::Lower(new_column_name);
+			while (name_map.find(new_column_name_low) != name_map.end()) {
+				// This name is already here due to a previous definition
+				name_map[low_column_name]++;
+				new_column_name = column_name + "_" + std::to_string(name_map[low_column_name]);
+				new_column_name_low = StringUtil::Lower(new_column_name);
+			}
+			column_name = new_column_name;
+			name_map[new_column_name_low]++;
+		}
+	}
+}
 
 idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *bind_data_p) {
 	auto data = (const GdalScanFunctionData *)bind_data_p;

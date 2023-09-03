@@ -2,6 +2,8 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_view_info.hpp"
+#include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/planner/expression/bound_function_expression.hpp"
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
@@ -40,6 +42,40 @@ struct ProjFunctionLocalState : public FunctionLocalState {
 	}
 };
 
+struct TransformFunctionData : FunctionData {
+
+	// Whether or not to always return XY coordinates, even when the CRS has a different axis order.
+	bool conventional_gis_order = false;
+
+	unique_ptr<FunctionData> Copy() const override {
+		auto result = make_uniq<TransformFunctionData>();
+		result->conventional_gis_order = conventional_gis_order;
+		return result;
+	}
+	bool Equals(const FunctionData &other) const override {
+		auto &data = other.Cast<TransformFunctionData>();
+		return conventional_gis_order == data.conventional_gis_order;
+	}
+};
+
+static unique_ptr<FunctionData> TransformBind(ClientContext &context, ScalarFunction &bound_function,
+                                              vector<unique_ptr<Expression>> &arguments) {
+
+	auto result = make_uniq<TransformFunctionData>();
+	if (arguments.size() == 4) {
+		// Ensure the "always_xy" parameter is a constant
+		auto &arg = arguments[3];
+		if (arg->HasParameter()) {
+			throw InvalidInputException("The 'always_xy' parameter must be a constant");
+		}
+		if (!arg->IsFoldable()) {
+			throw InvalidInputException("The 'always_xy' parameter must be a constant");
+		}
+		result->conventional_gis_order = BooleanValue::Get(ExpressionExecutor::EvaluateScalar(context, *arg));
+	}
+	return result;
+}
+
 static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using PROJ_TYPE = PrimitiveType<string_t>;
@@ -51,27 +87,70 @@ static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vect
 
 	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
 	auto &proj_ctx = local_state.proj_ctx;
+	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
+	auto &info = func_expr.bind_info->Cast<TransformFunctionData>();
 
-	GenericExecutor::ExecuteTernary<BOX_TYPE, PROJ_TYPE, PROJ_TYPE, BOX_TYPE>(
-	    box, proj_from, proj_to, result, count, [&](BOX_TYPE box_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
-		    auto from_str = proj_from.val.GetString();
-		    auto to_str = proj_to.val.GetString();
+	if (proj_from.GetVectorType() == VectorType::CONSTANT_VECTOR &&
+	    proj_to.GetVectorType() == VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(proj_from) &&
+	    !ConstantVector::IsNull(proj_to)) {
+		// Special case: both projections are constant, so we can create the projection once and reuse it
+		auto from_str = ConstantVector::GetData<PROJ_TYPE>(proj_from)[0].val.GetString();
+		auto to_str = ConstantVector::GetData<PROJ_TYPE>(proj_to)[0].val.GetString();
 
-		    auto crs = proj_create_crs_to_crs(nullptr, from_str.c_str(), to_str.c_str(), nullptr);
-		    if (!crs) {
-			    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
-		    }
+		auto crs = proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr);
+		if (!crs) {
+			throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+		}
 
-		    // TODO: this may be interesting to use, but at that point we can only return a BOX_TYPE
-		    int densify_pts = 0;
-		    BOX_TYPE box_out;
-		    proj_trans_bounds(proj_ctx, crs, PJ_FWD, box_in.a_val, box_in.b_val, box_in.c_val, box_in.d_val,
-		                      &box_out.a_val, &box_out.b_val, &box_out.c_val, &box_out.d_val, densify_pts);
+		if (info.conventional_gis_order) {
+			auto normalized_crs = proj_normalize_for_visualization(proj_ctx, crs);
+			if (normalized_crs) {
+				proj_destroy(crs);
+				crs = normalized_crs;
+			}
+			// otherwise fall back to the original CRS
+		}
 
-		    proj_destroy(crs);
+		GenericExecutor::ExecuteUnary<BOX_TYPE, BOX_TYPE>(box, result, count, [&](BOX_TYPE box_in) {
+			BOX_TYPE box_out;
+			int densify_pts = 0;
+			proj_trans_bounds(proj_ctx, crs, PJ_FWD, box_in.a_val, box_in.b_val, box_in.c_val, box_in.d_val,
+			                  &box_out.a_val, &box_out.b_val, &box_out.c_val, &box_out.d_val, densify_pts);
+			return box_out;
+		});
 
-		    return box_out;
-	    });
+		proj_destroy(crs);
+	} else {
+		GenericExecutor::ExecuteTernary<BOX_TYPE, PROJ_TYPE, PROJ_TYPE, BOX_TYPE>(
+		    box, proj_from, proj_to, result, count, [&](BOX_TYPE box_in, PROJ_TYPE proj_from, PROJ_TYPE proj_to) {
+			    auto from_str = proj_from.val.GetString();
+			    auto to_str = proj_to.val.GetString();
+
+			    auto crs = proj_create_crs_to_crs(nullptr, from_str.c_str(), to_str.c_str(), nullptr);
+			    if (!crs) {
+				    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+			    }
+
+			    if (info.conventional_gis_order) {
+				    auto normalized_crs = proj_normalize_for_visualization(proj_ctx, crs);
+				    if (normalized_crs) {
+					    proj_destroy(crs);
+					    crs = normalized_crs;
+				    }
+				    // otherwise fall back to the original CRS
+			    }
+
+			    // TODO: this may be interesting to use, but at that point we can only return a BOX_TYPE
+			    int densify_pts = 0;
+			    BOX_TYPE box_out;
+			    proj_trans_bounds(proj_ctx, crs, PJ_FWD, box_in.a_val, box_in.b_val, box_in.c_val, box_in.d_val,
+			                      &box_out.a_val, &box_out.b_val, &box_out.c_val, &box_out.d_val, densify_pts);
+
+			    proj_destroy(crs);
+
+			    return box_out;
+		    });
+	}
 }
 
 static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -85,6 +164,8 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 
 	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
 	auto &proj_ctx = local_state.proj_ctx;
+	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
+	auto &info = func_expr.bind_info->Cast<TransformFunctionData>();
 
 	if (proj_from.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 	    proj_to.GetVectorType() == VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(proj_from) &&
@@ -96,6 +177,15 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 		auto crs = proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr);
 		if (!crs) {
 			throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+		}
+
+		if (info.conventional_gis_order) {
+			auto normalized_crs = proj_normalize_for_visualization(proj_ctx, crs);
+			if (normalized_crs) {
+				proj_destroy(crs);
+				crs = normalized_crs;
+			}
+			// otherwise fall back to the original CRS
 		}
 
 		GenericExecutor::ExecuteUnary<POINT_TYPE, POINT_TYPE>(point, result, count, [&](POINT_TYPE point_in) {
@@ -116,6 +206,15 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 			    auto crs = proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr);
 			    if (!crs) {
 				    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+			    }
+
+			    if (info.conventional_gis_order) {
+				    auto normalized_crs = proj_normalize_for_visualization(proj_ctx, crs);
+				    if (normalized_crs) {
+					    proj_destroy(crs);
+					    crs = normalized_crs;
+				    }
+				    // otherwise fall back to the original CRS
 			    }
 
 			    POINT_TYPE point_out;
@@ -217,8 +316,8 @@ struct ProjCRSDelete {
 		proj_destroy(crs);
 	}
 };
-// TODO: duckdbs safe unique_ptr does not support custom deleters yet
-using ProjCRS = std::unique_ptr<PJ, ProjCRSDelete>;
+
+using ProjCRS = unique_ptr<PJ, ProjCRSDelete>;
 
 static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();
@@ -227,6 +326,10 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 	auto &proj_to_vec = args.data[2];
 
 	auto &local_state = ProjFunctionLocalState::ResetAndGet(state);
+
+	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
+	auto &info = func_expr.bind_info->Cast<TransformFunctionData>();
+
 	auto &proj_ctx = local_state.proj_ctx;
 	auto &factory = local_state.factory;
 
@@ -243,6 +346,14 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 		auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));
 		if (!crs.get()) {
 			throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+		}
+
+		if (info.conventional_gis_order) {
+			auto normalized_crs = proj_normalize_for_visualization(proj_ctx, crs.get());
+			if (normalized_crs) {
+				crs = ProjCRS(normalized_crs);
+			}
+			// otherwise fall back to the original CRS
 		}
 
 		UnaryExecutor::Execute<string_t, string_t>(geom_vec, result, count, [&](string_t input_geom) {
@@ -263,6 +374,14 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 
 			    if (!crs.get()) {
 				    throw InvalidInputException("Could not create projection: " + from_str + " -> " + to_str);
+			    }
+
+			    if (info.conventional_gis_order) {
+				    auto normalized_crs = proj_normalize_for_visualization(proj_ctx, crs.get());
+				    if (normalized_crs) {
+					    crs = ProjCRS(normalized_crs);
+				    }
+				    // otherwise fall back to the original CRS
 			    }
 
 			    auto geom = factory.Deserialize(input_geom);
@@ -379,16 +498,28 @@ void ProjFunctions::Register(ClientContext &context) {
 
 	ScalarFunctionSet set("st_transform");
 
-	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::BOX_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               spatial::core::GeoTypes::BOX_2D(), Box2DTransformFunction, nullptr, nullptr, nullptr,
-	                               ProjFunctionLocalState::Init));
-	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::POINT_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               spatial::core::GeoTypes::POINT_2D(), Point2DTransformFunction, nullptr, nullptr,
-	                               nullptr, ProjFunctionLocalState::Init));
+	using namespace spatial::core;
 
-	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                               spatial::core::GeoTypes::GEOMETRY(), GeometryTransformFunction, nullptr, nullptr,
-	                               nullptr, ProjFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR}, GeoTypes::BOX_2D(),
+	                               Box2DTransformFunction, TransformBind, nullptr, nullptr,
+	                               ProjFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction(
+	    {GeoTypes::BOX_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BOOLEAN}, GeoTypes::BOX_2D(),
+	    Box2DTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
+
+	set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR},
+	                               GeoTypes::POINT_2D(), Point2DTransformFunction, TransformBind, nullptr, nullptr,
+	                               ProjFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction(
+	    {GeoTypes::POINT_2D(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BOOLEAN}, GeoTypes::POINT_2D(),
+	    Point2DTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
+
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::VARCHAR, LogicalType::VARCHAR},
+	                               GeoTypes::GEOMETRY(), GeometryTransformFunction, TransformBind, nullptr, nullptr,
+	                               ProjFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction(
+	    {GeoTypes::GEOMETRY(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BOOLEAN}, GeoTypes::GEOMETRY(),
+	    GeometryTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
