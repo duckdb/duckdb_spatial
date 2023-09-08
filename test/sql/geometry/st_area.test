@@ -67,9 +67,9 @@ SELECT ST_Area(ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1
 # Test ST_Area for BOX_2D
 query I
 SELECT ST_Area(b) FROM (VALUES
-	({'minx': 0, 'miny': 0, 'maxx': 1, 'maxy': 1}::BOX_2D),
-	({'minx': -5, 'miny': -2, 'maxx': 5, 'maxy': 2}::BOX_2D),
-	({'minx': 5, 'miny': 5, 'maxx': -5, 'maxy': -5}::BOX_2D)
+	({'min_x': 0, 'min_y': 0, 'max_x': 1, 'max_y': 1}::BOX_2D),
+	({'min_x': -5, 'min_y': -2, 'max_x': 5, 'max_y': 2}::BOX_2D),
+	({'min_x': 5, 'min_y': 5, 'max_x': -5, 'max_y': -5}::BOX_2D)
 ) as t(b);
 ----
 1
