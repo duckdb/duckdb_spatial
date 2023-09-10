@@ -168,7 +168,8 @@ static GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx
 		return DeserializeGeometryCollection(reader, ctx);
 	}
 	default: {
-		throw NotImplementedException("Geometry type not implemented for deserialization");
+		throw NotImplementedException(
+		    StringUtil::Format("GEOS Deserialize: Geometry type %d not supported", static_cast<int>(type)));
 	}
 	}
 }
@@ -184,7 +185,8 @@ GeometryPtr GeosContextWrapper::Deserialize(const string_t &blob) {
 // Serialize
 //-------------------------------------------------------------------
 static uint32_t GetSerializedSize(const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
-	switch (GEOSGeomTypeId_r(ctx, geom)) {
+	auto type = GEOSGeomTypeId_r(ctx, geom);
+	switch (type) {
 	case GEOS_POINT: {
 		// 4 bytes for type,
 		// 4 bytes for num points,
@@ -280,7 +282,7 @@ static uint32_t GetSerializedSize(const GEOSGeometry *geom, const GEOSContextHan
 		return size;
 	}
 	default: {
-		throw NotImplementedException("Geometry type not implemented for serialization");
+		throw NotImplementedException(StringUtil::Format("GEOS SerializedSize: Geometry type %d not supported", type));
 	}
 	}
 }
@@ -421,7 +423,8 @@ static void SerializeGeometryCollection(Cursor &writer, const GEOSGeometry *geom
 }
 
 static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
-	switch (GEOSGeomTypeId_r(ctx, geom)) {
+	auto type = GEOSGeomTypeId_r(ctx, geom);
+	switch (type) {
 	case GEOS_POINT:
 		SerializePoint(writer, geom, ctx);
 		break;
@@ -444,16 +447,14 @@ static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GE
 		SerializeGeometryCollection(writer, geom, ctx);
 		break;
 	default:
-		throw NotImplementedException("Geometry type not implemented for serialization");
+		throw NotImplementedException(StringUtil::Format("GEOS Serialize: Geometry type %d not supported", type));
 	}
 }
 
 string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) {
 	auto size = GetSerializedSize(geom.get(), ctx);
-	size += 1; // 1 bytes for flags
-	size += 1; // 1 bytes for type
-	size += 2; // 2 bytes for hash
-	size += 4; // 4 bytes padding
+	size += sizeof(GeometryHeader); // Header
+	size += sizeof(uint32_t);       // Padding
 
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor writer(blob);
@@ -464,7 +465,8 @@ string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) 
 	}
 
 	GeometryType type;
-	switch (GEOSGeomTypeId_r(ctx, geom.get())) {
+	auto geos_type = GEOSGeomTypeId_r(ctx, geom.get());
+	switch (geos_type) {
 	case GEOS_POINT:
 		type = GeometryType::POINT;
 		break;
@@ -487,13 +489,17 @@ string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) 
 		type = GeometryType::GEOMETRYCOLLECTION;
 		break;
 	default:
-		throw NotImplementedException("Geometry type not implemented for serialization");
+		throw NotImplementedException(
+		    StringUtil::Format("GEOS Wrapper Serialize: Geometry type %d not supported", geos_type));
 	}
 
-	writer.Write<uint8_t>(0);         // Properties
-	writer.Write<GeometryType>(type); // Type
-	writer.Write<uint16_t>(hash);     // Hash
-	writer.Write<uint32_t>(0);        // Padding
+	GeometryHeader header;
+	header.type = type;
+	header.hash = hash;
+	header.properties = GeometryProperties();
+
+	writer.Write<GeometryHeader>(header); // Header
+	writer.Write<uint32_t>(0);            // Padding
 
 	SerializeGeometry(writer, geom.get(), ctx);
 

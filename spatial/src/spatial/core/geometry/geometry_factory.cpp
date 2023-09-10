@@ -3,7 +3,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/cursor.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_properties.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
 
@@ -125,7 +124,7 @@ enum class SerializedGeometryType : uint32_t {
 //----------------------------------------------------------------------
 // We always want the coordinates to be double aligned (8 bytes)
 // layout:
-// GeometryPrefix (4 bytes)
+// GeometryHeader (4 bytes)
 // Padding (4 bytes) (or SRID?)
 // Data (variable length)
 // -- Point
@@ -159,15 +158,15 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	for (uint32_t i = 0; i < sizeof(uint32_t); i++) {
 		hash ^= (geom_size >> (i * 8)) & 0xFF;
 	}
-	GeometryHeader prefix(type, properties, hash);
+	GeometryHeader header(type, properties, hash);
 
 	auto header_size = sizeof(GeometryHeader);
 	auto size = header_size + 4 + geom_size; // + 4 for padding
 	auto str = StringVector::EmptyString(result, size);
 	Cursor cursor(str);
 
-	// Write the prefix
-	cursor.Write(prefix);
+	// Write the header
+	cursor.Write(header);
 	// Pad with 4 bytes (we might want to use this to store SRID in the future)
 	cursor.Write<uint32_t>(0);
 
@@ -460,7 +459,8 @@ Geometry GeometryFactory::Deserialize(const string_t &data) {
 	case SerializedGeometryType::GEOMETRYCOLLECTION:
 		return Geometry(DeserializeGeometryCollection(cursor));
 	default:
-		throw NotImplementedException("Deserialize::Geometry type not implemented yet!");
+		throw NotImplementedException(
+		    StringUtil::Format("Deserialize: Geometry type %d not supported", static_cast<int>(type)));
 	}
 }
 

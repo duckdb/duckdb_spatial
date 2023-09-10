@@ -4,6 +4,7 @@
 #include "spatial/core/geometry/geometry_properties.hpp"
 #include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
 
 namespace spatial {
 
@@ -52,16 +53,6 @@ struct Utils {
 
 struct Geometry;
 struct GeometryFactory;
-
-enum class GeometryType : uint8_t {
-	POINT = 0,
-	LINESTRING,
-	POLYGON,
-	MULTIPOINT,
-	MULTILINESTRING,
-	MULTIPOLYGON,
-	GEOMETRYCOLLECTION
-};
 
 class Point {
 	friend GeometryFactory;
