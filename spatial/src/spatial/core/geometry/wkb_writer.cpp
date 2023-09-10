@@ -34,7 +34,8 @@ uint32_t WKBWriter::GetRequiredSize(const Geometry &geom) {
 	case GeometryType::GEOMETRYCOLLECTION:
 		return GetRequiredSize(geom.GetGeometryCollection());
 	default:
-		throw NotImplementedException("Geometry type not supported");
+		throw NotImplementedException(
+		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geom.Type())));
 	}
 }
 
@@ -129,7 +130,8 @@ void WKBWriter::Write(const Geometry &geom, data_ptr_t &ptr) {
 		Write(geom.GetGeometryCollection(), ptr);
 		break;
 	default:
-		throw NotImplementedException("Geometry type not supported");
+		throw NotImplementedException(
+		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geom.Type())));
 	}
 }
 

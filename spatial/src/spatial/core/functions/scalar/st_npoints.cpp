@@ -116,7 +116,8 @@ static uint32_t GetVertexCount(const Geometry &geometry) {
 		return count;
 	}
 	default:
-		throw NotImplementedException("Geometry type not supported");
+		throw NotImplementedException(
+		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geometry.Type())));
 	}
 }
 static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {

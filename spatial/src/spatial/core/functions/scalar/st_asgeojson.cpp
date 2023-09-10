@@ -176,7 +176,8 @@ static void ToGeoJSON(const Geometry &geom, yyjson_mut_doc *doc, yyjson_mut_val 
 		ToGeoJSON(geom.GetGeometryCollection(), doc, obj);
 		break;
 	default: {
-		throw NotImplementedException("Geometry type not supported");
+		throw NotImplementedException(
+		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geom.Type())));
 	}
 	}
 }

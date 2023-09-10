@@ -1,8 +1,13 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
+#include "duckdb/parser/expression/constant_expression.hpp"
+#include "duckdb/parser/expression/function_expression.hpp"
+#include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
 #include "duckdb/function/function.hpp"
+#include "duckdb/function/replacement_scan.hpp"
+
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
@@ -110,17 +115,16 @@ struct GdalScanLocalState : ArrowScanLocalState {
 
 struct GdalScanGlobalState : ArrowScanGlobalState {};
 
-
 struct ScopedOption {
 	string option;
 	string original_value;
 
-	ScopedOption(string option_p, const char* default_value) : option(option_p) {
+	ScopedOption(string option_p, const char *default_value) : option(option_p) {
 		// Save current value
 		original_value = CPLGetConfigOption(option.c_str(), default_value);
 	}
 
-	void Set(const char* new_value) {
+	void Set(const char *new_value) {
 		CPLSetThreadLocalConfigOption(option.c_str(), new_value);
 	}
 
@@ -129,7 +133,6 @@ struct ScopedOption {
 		CPLSetThreadLocalConfigOption(option.c_str(), original_value.c_str());
 	}
 };
-
 
 unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
                                                  vector<LogicalType> &return_types, vector<string> &names) {
@@ -180,24 +183,19 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	for (auto &option : gdal_open_options) {
 		if (option == nullptr) {
 			break;
-		}
-		else if (strcmp(option, "HEADERS=FORCE") == 0) {
+		} else if (strcmp(option, "HEADERS=FORCE") == 0) {
 			xlsx_headers.Set("FORCE");
-		}
-		else if (strcmp(option, "HEADERS=DISABLE") == 0) {
+		} else if (strcmp(option, "HEADERS=DISABLE") == 0) {
 			xlsx_headers.Set("DISABLE");
-		}
-		else if (strcmp(option, "HEADERS=AUTO") == 0) {
+		} else if (strcmp(option, "HEADERS=AUTO") == 0) {
 			xlsx_headers.Set("AUTO");
-		}
-		else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
+		} else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
 			xlsx_field_types.Set("STRING");
-		}
-		else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
+		} else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
 			xlsx_field_types.Set("AUTO");
 		}
 	}
-	
+
 	// Now we can open the dataset
 	auto file_name = input.inputs[0].GetValue<string>();
 	auto dataset =
@@ -205,7 +203,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
 	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
 	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
-
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
@@ -341,8 +338,8 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto attribute_count = schema.n_children;
 	auto attributes = schema.children;
 
-	result->all_names.reserve(attribute_count);
-	names.reserve(attribute_count);
+	result->all_names.reserve(attribute_count + 1);
+	names.reserve(attribute_count + 1);
 
 	for (idx_t col_idx = 0; col_idx < (idx_t)attribute_count; col_idx++) {
 		auto &attribute = *attributes[col_idx];
@@ -382,7 +379,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	schema.release(&schema);
 	stream.release(&stream);
 
-	RenameArrowColumns(names);
+	GdalTableFunction::RenameColumns(names);
 
 	result->dataset = std::move(dataset);
 	result->all_types = return_types;
@@ -390,17 +387,36 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	return std::move(result);
 };
 
+void GdalTableFunction::RenameColumns(vector<string> &names) {
+	unordered_map<string, idx_t> name_map;
+	for (auto &column_name : names) {
+		// put it all lower_case
+		auto low_column_name = StringUtil::Lower(column_name);
+		if (name_map.find(low_column_name) == name_map.end()) {
+			// Name does not exist yet
+			name_map[low_column_name]++;
+		} else {
+			// Name already exists, we add _x where x is the repetition number
+			string new_column_name = column_name + "_" + std::to_string(name_map[low_column_name]);
+			auto new_column_name_low = StringUtil::Lower(new_column_name);
+			while (name_map.find(new_column_name_low) != name_map.end()) {
+				// This name is already here due to a previous definition
+				name_map[low_column_name]++;
+				new_column_name = column_name + "_" + std::to_string(name_map[low_column_name]);
+				new_column_name_low = StringUtil::Lower(new_column_name);
+			}
+			column_name = new_column_name;
+			name_map[new_column_name_low]++;
+		}
+	}
+}
+
 idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *bind_data_p) {
 	auto data = (const GdalScanFunctionData *)bind_data_p;
 	return data->max_threads;
 }
 
-// init global
-unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
-                                                                   TableFunctionInitInput &input) {
-	auto &data = (GdalScanFunctionData &)*input.bind_data;
-
-	auto global_state = make_uniq<GdalScanGlobalState>();
+OGRLayer *open_layer(const GdalScanFunctionData &data) {
 
 	// Get selected layer
 	OGRLayer *layer = nullptr;
@@ -434,6 +450,16 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 		}
 	}
 
+	return layer;
+}
+
+// init global
+unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
+                                                                   TableFunctionInitInput &input) {
+	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
+	auto global_state = make_uniq<GdalScanGlobalState>();
+
+	auto layer = open_layer(data);
 	// TODO: Apply projection pushdown
 
 	// Apply predicate pushdown
@@ -507,13 +533,54 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 	state.chunk_offset += output.size();
 }
 
+unique_ptr<NodeStatistics> GdalTableFunction::Cardinality(ClientContext &context, const FunctionData *data) {
+	auto &gdal_data = data->Cast<GdalScanFunctionData>();
+	auto result = make_uniq<NodeStatistics>();
+
+	if (gdal_data.sequential_layer_scan) {
+		// It would be too expensive to calculate the cardinality for a sequential layer scan
+		// as we would have to scan through all the layers twice.
+		return result;
+	}
+
+	// Some drivers wont return a feature count if it would be to expensive to calculate
+	// (unless we pass 1 "= force" to the function calculate)
+	auto layer = open_layer(gdal_data);
+
+	auto count = layer->GetFeatureCount(0);
+	if (count > -1) {
+		result->has_estimated_cardinality = true;
+		result->estimated_cardinality = count;
+	}
+
+	return result;
+}
+
+unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const string &table_name,
+                                                        ReplacementScanData *) {
+
+	auto lower_name = StringUtil::Lower(table_name);
+	// Check if the table name ends with some common geospatial file extensions
+	if (StringUtil::EndsWith(lower_name, ".shp") || StringUtil::EndsWith(lower_name, ".gpkg") ||
+	    StringUtil::EndsWith(lower_name, ".fgb")) {
+
+		auto table_function = make_uniq<TableFunctionRef>();
+		vector<unique_ptr<ParsedExpression>> children;
+		children.push_back(make_uniq<ConstantExpression>(Value(table_name)));
+		table_function->function = make_uniq<FunctionExpression>("st_read", std::move(children));
+		return std::move(table_function);
+	}
+	// else not something we can replace
+	return nullptr;
+}
+
 void GdalTableFunction::Register(ClientContext &context) {
 
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
 	                   GdalTableFunction::InitGlobal, ArrowTableFunction::ArrowScanInitLocal);
 
-	scan.cardinality = ArrowTableFunction::ArrowScanCardinality;
+	scan.cardinality = GdalTableFunction::Cardinality;
 	scan.get_batch_index = ArrowTableFunction::ArrowGetBatchIndex;
 
 	scan.projection_pushdown = true;
@@ -532,6 +599,10 @@ void GdalTableFunction::Register(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	CreateTableFunctionInfo info(set);
 	catalog.CreateTableFunction(context, &info);
+
+	// Replacement scan
+	auto &config = DBConfig::GetConfig(*context.db);
+	config.replacement_scans.emplace_back(GdalTableFunction::ReplacementScan);
 }
 
 } // namespace gdal
