@@ -6,7 +6,9 @@ namespace spatial {
 namespace core {
 
 struct CoreAggregateFunctions {
-	static void Register(ClientContext &context);
+public:
+	static void Register(ClientContext &context) {
+	}
 };
 
 } // namespace core

@@ -18,7 +18,7 @@ void CoreModule::Register(ClientContext &context) {
 	CoreScalarFunctions::Register(context);
 	CoreCastFunctions::Register(context);
 	CoreTableFunctions::Register(context);
-	// CoreAggregateFunctions::Register(context);
+	CoreAggregateFunctions::Register(context);
 }
 
 } // namespace core

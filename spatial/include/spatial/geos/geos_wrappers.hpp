@@ -206,6 +206,9 @@ public:
 	string_t Serialize(Vector &result, const unique_ptr<GEOSGeometry, GeosDeleter<GEOSGeometry>> &geom);
 };
 
+GEOSGeometry *DeserializeGEOSGeometry(const string_t &blob, GEOSContextHandle_t ctx);
+string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSContextHandle_t ctx);
+
 } // namespace geos
 
 } // namespace spatial

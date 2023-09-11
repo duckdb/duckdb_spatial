@@ -143,7 +143,7 @@ static GEOSGeometry *DeserializeGeometryCollection(Cursor &reader, GEOSContextHa
 	}
 }
 
-static GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx) {
+GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx) {
 	auto type = reader.Peek<GeometryType>();
 	switch (type) {
 	case GeometryType::POINT: {
@@ -174,11 +174,15 @@ static GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx
 	}
 }
 
-GeometryPtr GeosContextWrapper::Deserialize(const string_t &blob) {
+GEOSGeometry *DeserializeGEOSGeometry(const string_t &blob, GEOSContextHandle_t ctx) {
 	Cursor reader(blob);
 	reader.Skip(4); // Skip type, flags and hash
 	reader.Skip(4); // Skip padding
-	return GeometryPtr(DeserializeGeometry(reader, ctx));
+	return DeserializeGeometry(reader, ctx);
+}
+
+GeometryPtr GeosContextWrapper::Deserialize(const string_t &blob) {
+	return GeometryPtr(DeserializeGEOSGeometry(blob, ctx));
 }
 
 //-------------------------------------------------------------------
@@ -451,8 +455,8 @@ static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GE
 	}
 }
 
-string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) {
-	auto size = GetSerializedSize(geom.get(), ctx);
+string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSContextHandle_t ctx) {
+	auto size = GetSerializedSize(geom, ctx);
 	size += sizeof(GeometryHeader); // Header
 	size += sizeof(uint32_t);       // Padding
 
@@ -465,7 +469,7 @@ string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) 
 	}
 
 	GeometryType type;
-	auto geos_type = GEOSGeomTypeId_r(ctx, geom.get());
+	auto geos_type = GEOSGeomTypeId_r(ctx, geom);
 	switch (geos_type) {
 	case GEOS_POINT:
 		type = GeometryType::POINT;
@@ -501,9 +505,13 @@ string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) 
 	writer.Write<GeometryHeader>(header); // Header
 	writer.Write<uint32_t>(0);            // Padding
 
-	SerializeGeometry(writer, geom.get(), ctx);
+	SerializeGeometry(writer, geom, ctx);
 
 	return blob;
+}
+
+string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) {
+	return SerializeGEOSGeometry(result, geom.get(), ctx);
 }
 
 } // namespace geos
