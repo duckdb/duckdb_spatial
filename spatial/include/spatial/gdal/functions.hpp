@@ -17,6 +17,8 @@ private:
 	static void RenameColumns(vector<string> &names);
 
 	static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, TableFunctionInitInput &input);
+	static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, TableFunctionInitInput &input,
+	                                                     GlobalTableFunctionState *global_state_p);
 
 	static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &output);
 

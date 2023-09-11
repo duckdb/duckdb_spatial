@@ -9,8 +9,8 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
-#include "spatial/core/geometry/wkb_writer.hpp"
 #include "spatial/gdal/functions.hpp"
+#include "spatial/gdal/file_handler.hpp"
 
 #include "ogrsf_frmts.h"
 
@@ -115,6 +115,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 // Init Local
 //===--------------------------------------------------------------------===//
 static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, FunctionData &bind_data) {
+	GdalFileHandler::SetLocalClientContext(context.client);
 	auto local_data = make_uniq<LocalState>(context.client);
 	return std::move(local_data);
 }
@@ -208,9 +209,9 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 }
 static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, FunctionData &bind_data,
                                                  const string &file_path) {
-	// auto gdal_data = (BindData&)bind_data;
-	// auto global_data = make_uniq<GlobalState>(file_path, "FlatGeobuf");
-	// return std::move(global_data);
+
+	// Set the local client context so that we can access it from the filesystem handler
+	GdalFileHandler::SetLocalClientContext(context);
 
 	auto &gdal_data = (BindData &)bind_data;
 	GDALDriver *driver = GetGDALDriverManager()->GetDriverByName(gdal_data.driver_name.c_str());

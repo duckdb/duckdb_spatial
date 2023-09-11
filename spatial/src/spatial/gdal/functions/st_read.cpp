@@ -11,6 +11,7 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
+#include "spatial/gdal/file_handler.hpp"
 
 #include "ogrsf_frmts.h"
 
@@ -134,6 +135,9 @@ struct ScopedOption {
 	}
 };
 
+//------------------------------------------------------------------------------
+// Bind
+//------------------------------------------------------------------------------
 unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFunctionBindInput &input,
                                                  vector<LogicalType> &return_types, vector<string> &names) {
 
@@ -141,6 +145,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	if (!config.options.enable_external_access) {
 		throw PermissionException("Scanning GDAL files is disabled through configuration");
 	}
+
+	// Set the local client context so that we can access it from the filesystem handler
+	GdalFileHandler::SetLocalClientContext(context);
 
 	// First scan for "options" parameter
 	auto gdal_open_options = vector<char const *>();
@@ -453,7 +460,9 @@ OGRLayer *open_layer(const GdalScanFunctionData &data) {
 	return layer;
 }
 
-// init global
+//-----------------------------------------------------------------------------
+// Init global
+//-----------------------------------------------------------------------------
 unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
                                                                    TableFunctionInitInput &input) {
 	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
@@ -500,7 +509,19 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	return std::move(global_state);
 }
 
+//-----------------------------------------------------------------------------
+// Init Local
+//-----------------------------------------------------------------------------
+unique_ptr<LocalTableFunctionState> GdalTableFunction::InitLocal(ExecutionContext &context,
+                                                                 TableFunctionInitInput &input,
+                                                                 GlobalTableFunctionState *global_state_p) {
+	GdalFileHandler::SetLocalClientContext(context.client);
+	return ArrowTableFunction::ArrowScanInitLocal(context, input, global_state_p);
+}
+
+//-----------------------------------------------------------------------------
 // Scan
+//-----------------------------------------------------------------------------
 void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
 	if (!input.local_state) {
 		return;
@@ -578,7 +599,7 @@ void GdalTableFunction::Register(ClientContext &context) {
 
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
-	                   GdalTableFunction::InitGlobal, ArrowTableFunction::ArrowScanInitLocal);
+	                   GdalTableFunction::InitGlobal, GdalTableFunction::InitLocal);
 
 	scan.cardinality = GdalTableFunction::Cardinality;
 	scan.get_batch_index = ArrowTableFunction::ArrowGetBatchIndex;
