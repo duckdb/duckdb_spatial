@@ -1,6 +1,8 @@
 #include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/geometry/geometry.hpp"
 #include <cmath>
+#include <algorithm>
 
 namespace spatial {
 
@@ -29,6 +31,20 @@ void VertexVector::Serialize(Cursor &cursor) const {
 	ptr += count * sizeof(Vertex);
 	cursor.SetPtr(ptr);
 }
+
+void VertexVector::SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) const {
+	for(idx_t i = 0; i < count; i++) {
+		auto &p = data[i];
+        bbox.minx = std::min(bbox.minx, Utils::DoubleToFloatDown(p.x));
+        bbox.miny = std::min(bbox.miny, Utils::DoubleToFloatDown(p.y));
+        bbox.maxx = std::max(bbox.maxx, Utils::DoubleToFloatUp(p.x));
+        bbox.maxy = std::max(bbox.maxy, Utils::DoubleToFloatUp(p.y));
+		cursor.Write(p.x);
+		cursor.Write(p.y);
+	}
+}
+
+
 
 double VertexVector::Length() const {
 	double length = 0;

@@ -8,6 +8,7 @@ namespace spatial {
 namespace core {
 
 class Cursor;
+struct BoundingBox;
 
 struct GeometryFactory {
 public:
@@ -46,6 +47,8 @@ public:
 	string_t Serialize(Vector &result, const Geometry &geometry);
 	Geometry Deserialize(const string_t &data);
 
+	static bool TryGetSerializedBoundingBox(const string_t &data, BoundingBox &bbox);
+
 	// Deep Copy
 	VertexVector CopyVertexVector(const VertexVector &vector);
 	Point CopyPoint(const Point &point);
@@ -59,13 +62,13 @@ public:
 
 private:
 	// Serialize
-	void SerializePoint(Cursor &cursor, const Point &point);
-	void SerializeLineString(Cursor &cursor, const LineString &linestring);
-	void SerializePolygon(Cursor &cursor, const Polygon &polygon);
-	void SerializeMultiPoint(Cursor &cursor, const MultiPoint &multipoint);
-	void SerializeMultiLineString(Cursor &cursor, const MultiLineString &multilinestring);
-	void SerializeMultiPolygon(Cursor &cursor, const MultiPolygon &multipolygon);
-	void SerializeGeometryCollection(Cursor &cursor, const GeometryCollection &collection);
+	void SerializePoint(Cursor &cursor, const Point &point, BoundingBox &bbox);
+	void SerializeLineString(Cursor &cursor, const LineString &linestring, BoundingBox &bbox);
+	void SerializePolygon(Cursor &cursor, const Polygon &polygon, BoundingBox &bbox);
+	void SerializeMultiPoint(Cursor &cursor, const MultiPoint &multipoint, BoundingBox &bbox);
+	void SerializeMultiLineString(Cursor &cursor, const MultiLineString &multilinestring, BoundingBox &bbox);
+	void SerializeMultiPolygon(Cursor &cursor, const MultiPolygon &multipolygon, BoundingBox &bbox);
+	void SerializeGeometryCollection(Cursor &cursor, const GeometryCollection &collection, BoundingBox &bbox);
 
 	// Get Serialize Size
 	uint32_t GetSerializedSize(const Point &point);

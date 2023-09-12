@@ -20,6 +20,7 @@ public:
 		RegisterStContains(context);
 		RegisterStDimension(context);
 		RegisterStDistance(context);
+		RegisterStExtent(context);
 		RegisterStFlipCoordinates(context);
 		RegisterStGeometryType(context);
 		RegisterStGeomFromHEXWKB(context);
@@ -32,7 +33,11 @@ public:
 		RegisterStPoint(context);
 		RegisterStRemoveRepeatedPoints(context);
 		RegisterStX(context);
+		RegisterStXMax(context);
+		RegisterStXMin(context);
 		RegisterStY(context);
+		RegisterStYMax(context);
+		RegisterStYMin(context);
 	}
 
 private:
@@ -68,6 +73,9 @@ private:
 
 	// ST_Distance
 	static void RegisterStDistance(ClientContext &context);
+
+	// ST_Extent
+	static void RegisterStExtent(ClientContext &context);
 
 	// ST_FlipCoordinates
 	static void RegisterStFlipCoordinates(ClientContext &context);
@@ -105,8 +113,20 @@ private:
 	// ST_X
 	static void RegisterStX(ClientContext &context);
 
+	// ST_XMax
+	static void RegisterStXMax(ClientContext &context);
+
+	// ST_XMin
+	static void RegisterStXMin(ClientContext &context);
+
 	// ST_Y
 	static void RegisterStY(ClientContext &context);
+
+	// ST_YMax
+	static void RegisterStYMax(ClientContext &context);
+
+	// ST_YMin
+	static void RegisterStYMin(ClientContext &context);
 };
 
 } // namespace core
