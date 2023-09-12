@@ -86,6 +86,10 @@ struct BoundingBox {
 	float miny = std::numeric_limits<float>::max();
 	float maxx = std::numeric_limits<float>::lowest();
 	float maxy = std::numeric_limits<float>::lowest();
+
+	bool Intersects(const BoundingBox &other) const {
+		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);
+	}
 };
 
 struct Geometry;
@@ -458,8 +462,8 @@ public:
 		return cursor.Read<GeometryHeader>();
 	}
 };
-static_assert(sizeof(GeometryHeader) == 4, "GeometryPrefix should be 4 bytes");
-static_assert(sizeof(GeometryHeader) == string_t::PREFIX_BYTES, "GeometryPrefix should fit in string_t prefix");
+static_assert(sizeof(GeometryHeader) == 4, "GeometryHeader should be 4 bytes");
+static_assert(sizeof(GeometryHeader) == string_t::PREFIX_BYTES, "GeometryHeader should fit in string_t prefix");
 } // namespace core
 
 } // namespace spatial

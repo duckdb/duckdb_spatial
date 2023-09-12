@@ -27,6 +27,7 @@ struct BindData : public TableFunctionData {
 	string layer_name;
 	vector<string> dataset_creation_options;
 	vector<string> layer_creation_options;
+	string target_srs;
 
 	BindData(string file_path, vector<LogicalType> field_sql_types, vector<string> field_names)
 	    : file_path(std::move(file_path)), field_sql_types(std::move(field_sql_types)),
@@ -84,7 +85,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 				}
 				bind_data->layer_creation_options.push_back(s.GetValue<string>());
 			}
-		} else if (StringUtil::Lower(option.first) == "DATASET_CREATION_OPTIONS") {
+		} else if (StringUtil::Upper(option.first) == "DATASET_CREATION_OPTIONS") {
 			auto set = option.second;
 			for (auto &s : set) {
 				if (s.type().id() != LogicalTypeId::VARCHAR) {
@@ -92,7 +93,16 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 				}
 				bind_data->dataset_creation_options.push_back(s.GetValue<string>());
 			}
-		} else {
+		}
+		else if (StringUtil::Upper(option.first) == "SRS") {
+			auto set = option.second.front();
+			if (set.type().id() == LogicalTypeId::VARCHAR) {
+				bind_data->target_srs = set.GetValue<string>();
+			} else {
+				throw BinderException("SRS must be a string");
+			}
+		}
+		else {
 			throw BinderException("Unknown option '%s'", option.first);
 		}
 		// save dataset open options.. i guess?
@@ -236,7 +246,13 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 		lco = CSLAddString(lco, option.c_str());
 	}
 
-	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), nullptr, wkbUnknown, lco);
+	// Set the SRS if provided
+	OGRSpatialReference srs;
+	if(!gdal_data.target_srs.empty()) {
+		srs.SetFromUserInput(gdal_data.target_srs.c_str());
+	}
+
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), &srs, wkbUnknown, lco);
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
