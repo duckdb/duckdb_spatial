@@ -179,7 +179,7 @@ GEOSGeometry *DeserializeGEOSGeometry(const string_t &blob, GEOSContextHandle_t 
 	auto header = reader.Read<GeometryHeader>();
 	reader.Skip(4); // Skip padding
 
-	if(header.properties.HasBBox()) {
+	if (header.properties.HasBBox()) {
 		reader.Skip(16); // Skip bbox
 	}
 
@@ -496,7 +496,7 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 	auto size = GetSerializedSize(geom, ctx);
 	size += sizeof(GeometryHeader); // Header
 	size += sizeof(uint32_t);       // Padding
-	size += has_bbox ? 16 : 0;		// BBox
+	size += has_bbox ? 16 : 0;      // BBox
 
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor writer(blob);

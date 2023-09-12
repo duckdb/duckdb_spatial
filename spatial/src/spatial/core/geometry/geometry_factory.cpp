@@ -164,7 +164,7 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	GeometryHeader header(type, properties, hash);
 
 	auto header_size = sizeof(GeometryHeader);
-	auto size = header_size + 4 + (has_bbox ? 16 : 0) +  geom_size; // + 4 for padding, + 16 for bbox
+	auto size = header_size + 4 + (has_bbox ? 16 : 0) + geom_size; // + 4 for padding, + 16 for bbox
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor cursor(blob);
 
@@ -177,7 +177,7 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	// TODO: If the geometry is empty, dont write a bounding box
 	BoundingBox bbox;
 	auto bbox_ptr = cursor.GetPtr();
-	if(has_bbox) {
+	if (has_bbox) {
 		// skip the bounding box for now
 		// we will come back and write it later
 		cursor.Skip(16);
@@ -278,7 +278,7 @@ void GeometryFactory::SerializePolygon(Cursor &cursor, const Polygon &polygon, B
 
 	// Write ring data
 	for (uint32_t i = 0; i < polygon.num_rings; i++) {
-		if(i == 0) {
+		if (i == 0) {
 			// The first ring is always the shell, and must be the only ring contributing to the bounding box
 			// or the geometry is invalid.
 			polygon.rings[i].SerializeAndUpdateBounds(cursor, bbox);
@@ -301,7 +301,8 @@ void GeometryFactory::SerializeMultiPoint(Cursor &cursor, const MultiPoint &mult
 	}
 }
 
-void GeometryFactory::SerializeMultiLineString(Cursor &cursor, const MultiLineString &multilinestring, BoundingBox &bbox) {
+void GeometryFactory::SerializeMultiLineString(Cursor &cursor, const MultiLineString &multilinestring,
+                                               BoundingBox &bbox) {
 	// Write type (4 bytes)
 	cursor.Write(SerializedGeometryType::MULTILINESTRING);
 
@@ -327,7 +328,8 @@ void GeometryFactory::SerializeMultiPolygon(Cursor &cursor, const MultiPolygon &
 	}
 }
 
-void GeometryFactory::SerializeGeometryCollection(Cursor &cursor, const GeometryCollection &collection, BoundingBox &bbox) {
+void GeometryFactory::SerializeGeometryCollection(Cursor &cursor, const GeometryCollection &collection,
+                                                  BoundingBox &bbox) {
 	// Write type (4 bytes)
 	cursor.Write(SerializedGeometryType::GEOMETRYCOLLECTION);
 
@@ -370,7 +372,7 @@ bool GeometryFactory::TryGetSerializedBoundingBox(const string_t &data, Bounding
 
 	// Read the header
 	auto header = cursor.Read<GeometryHeader>();
-	if(header.properties.HasBBox()) {
+	if (header.properties.HasBBox()) {
 		cursor.Skip(4); // skip padding
 
 		// Now set the bounding box
@@ -381,7 +383,7 @@ bool GeometryFactory::TryGetSerializedBoundingBox(const string_t &data, Bounding
 		return true;
 	}
 
-	if(header.type == GeometryType::POINT) {
+	if (header.type == GeometryType::POINT) {
 		cursor.Skip(4); // skip padding
 
 		// Read the point
@@ -390,7 +392,7 @@ bool GeometryFactory::TryGetSerializedBoundingBox(const string_t &data, Bounding
 		(void)type;
 
 		auto count = cursor.Read<uint32_t>();
-		if(count == 0) {
+		if (count == 0) {
 			// If the point is empty, there is no bounding box
 			return false;
 		}
@@ -514,7 +516,7 @@ Geometry GeometryFactory::Deserialize(const string_t &data) {
 	GeometryHeader header = cursor.Read<GeometryHeader>();
 	cursor.Skip(4); // Skip padding
 
-	if(header.properties.HasBBox()) {
+	if (header.properties.HasBBox()) {
 		cursor.Skip(16); // Skip bounding box
 	}
 

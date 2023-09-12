@@ -6,7 +6,7 @@
 #include "spatial/core/functions/cast.hpp"
 #include "spatial/core/functions/aggregate.hpp"
 #include "spatial/core/functions/table.hpp"
-#include "spatial/core/layout_benchmark/test.hpp"
+#include "spatial/core/optimizers.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -19,6 +19,7 @@ void CoreModule::Register(ClientContext &context) {
 	CoreCastFunctions::Register(context);
 	CoreTableFunctions::Register(context);
 	CoreAggregateFunctions::Register(context);
+	CoreOptimizerRules::Register(context);
 }
 
 } // namespace core

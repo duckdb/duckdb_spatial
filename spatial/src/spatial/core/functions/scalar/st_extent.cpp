@@ -26,17 +26,17 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 
 	UnifiedVectorFormat input_vdata;
 	input.ToUnifiedFormat(count, input_vdata);
-	auto input_data = reinterpret_cast<string_t*>(input_vdata.data);
+	auto input_data = reinterpret_cast<string_t *>(input_vdata.data);
 
 	BoundingBox bbox;
 
-	for(idx_t i = 0; i < count; i++) {
+	for (idx_t i = 0; i < count; i++) {
 		auto row_idx = input_vdata.sel->get_index(i);
-		if(input_vdata.validity.RowIsValid(row_idx)) {
+		if (input_vdata.validity.RowIsValid(row_idx)) {
 			auto &blob = input_data[row_idx];
 
 			// Try to get the cached bounding box from the blob
-			if(GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
+			if (GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
 				min_x_data[i] = bbox.minx;
 				min_y_data[i] = bbox.miny;
 				max_x_data[i] = bbox.maxx;
@@ -51,7 +51,7 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 		}
 	}
 
-	if(input.GetVectorType() == VectorType::CONSTANT_VECTOR) {
+	if (input.GetVectorType() == VectorType::CONSTANT_VECTOR) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -61,8 +61,8 @@ void CoreScalarFunctions::RegisterStExtent(ClientContext &context) {
 
 	ScalarFunctionSet set("ST_Extent");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2D(), ExtentFunction, nullptr, nullptr,
-	                               nullptr));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2D(), ExtentFunction, nullptr, nullptr, nullptr));
 
 	CreateScalarFunctionInfo info(std::move(set));
 	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

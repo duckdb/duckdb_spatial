@@ -93,16 +93,14 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vec
 				}
 				bind_data->dataset_creation_options.push_back(s.GetValue<string>());
 			}
-		}
-		else if (StringUtil::Upper(option.first) == "SRS") {
+		} else if (StringUtil::Upper(option.first) == "SRS") {
 			auto set = option.second.front();
 			if (set.type().id() == LogicalTypeId::VARCHAR) {
 				bind_data->target_srs = set.GetValue<string>();
 			} else {
 				throw BinderException("SRS must be a string");
 			}
-		}
-		else {
+		} else {
 			throw BinderException("Unknown option '%s'", option.first);
 		}
 		// save dataset open options.. i guess?
@@ -248,7 +246,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 
 	// Set the SRS if provided
 	OGRSpatialReference srs;
-	if(!gdal_data.target_srs.empty()) {
+	if (!gdal_data.target_srs.empty()) {
 		srs.SetFromUserInput(gdal_data.target_srs.c_str());
 	}
 

@@ -32,7 +32,7 @@ struct MaxOp {
 //------------------------------------------------------------------------------
 // POINT_2D
 //------------------------------------------------------------------------------
-template<size_t N>
+template <size_t N>
 static void Point2DFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 	auto &point = args.data[0];
@@ -45,7 +45,7 @@ static void Point2DFunction(DataChunk &args, ExpressionState &state, Vector &res
 // BOX_2D
 //------------------------------------------------------------------------------
 
-template<size_t N> // 0: x_min, 1: y_min, 2: x_max, 3: y_max
+template <size_t N> // 0: x_min, 1: y_min, 2: x_max, 3: y_max
 static void Box2DFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &input = args.data[0];
 	auto &box_vec = StructVector::GetEntries(input);
@@ -56,7 +56,7 @@ static void Box2DFunction(DataChunk &args, ExpressionState &state, Vector &resul
 //------------------------------------------------------------------------------
 // LINESTRING_2D
 //------------------------------------------------------------------------------
-template<size_t N, class OP>
+template <size_t N, class OP>
 static void LineString2DFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 
@@ -65,23 +65,23 @@ static void LineString2DFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &line_coords_vec = StructVector::GetEntries(line_coords);
 	auto ordinate_data = FlatVector::GetData<double>(*line_coords_vec[N]);
 
-	UnaryExecutor::ExecuteWithNulls<list_entry_t, double>(line, result, args.size(), [&](list_entry_t &line, ValidityMask &mask, idx_t idx) {
+	UnaryExecutor::ExecuteWithNulls<list_entry_t, double>(
+	    line, result, args.size(), [&](list_entry_t &line, ValidityMask &mask, idx_t idx) {
+		    // Empty line, return NULL
+		    if (line.length == 0) {
+			    mask.SetInvalid(idx);
+			    return 0.0;
+		    }
 
-		// Empty line, return NULL
-		if(line.length == 0) {
-			mask.SetInvalid(idx);
-			return 0.0;
-		}
+		    auto val = OP::Default();
+		    for (idx_t i = line.offset; i < line.offset + line.length; i++) {
+			    auto ordinate = ordinate_data[i];
+			    val = OP::Operation(val, ordinate);
+		    }
+		    return val;
+	    });
 
-		auto val = OP::Default();
-		for(idx_t i = line.offset; i < line.offset + line.length; i++) {
-			auto ordinate = ordinate_data[i];
-			val = OP::Operation(val, ordinate);
-		}
-		return val;
-	});
-
-	if(line.GetVectorType() == VectorType::CONSTANT_VECTOR) {
+	if (line.GetVectorType() == VectorType::CONSTANT_VECTOR) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -89,7 +89,7 @@ static void LineString2DFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // POLYGON_2D
 //------------------------------------------------------------------------------
-template<size_t N, class OP>
+template <size_t N, class OP>
 static void Polygon2DFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 1);
 
@@ -105,41 +105,40 @@ static void Polygon2DFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto &vertex_vec_children = StructVector::GetEntries(vertex_vec);
 	auto ordinate_data = FlatVector::GetData<double>(*vertex_vec_children[N]);
 
-	UnaryExecutor::ExecuteWithNulls<list_entry_t, double>(input, result, count,
-	                                                      [&](list_entry_t polygon, ValidityMask &mask, idx_t idx) {
-		auto polygon_offset = polygon.offset;
+	UnaryExecutor::ExecuteWithNulls<list_entry_t, double>(
+	    input, result, count, [&](list_entry_t polygon, ValidityMask &mask, idx_t idx) {
+		    auto polygon_offset = polygon.offset;
 
-		// Empty polygon, return NULL
-		if(polygon.length == 0) {
-			mask.SetInvalid(idx);
-			return 0.0;
-		}
+		    // Empty polygon, return NULL
+		    if (polygon.length == 0) {
+			    mask.SetInvalid(idx);
+			    return 0.0;
+		    }
 
-		// We only have to check the outer shell
-		auto shell_ring = ring_entries[polygon_offset];
-		auto ring_offset = shell_ring.offset;
-		auto ring_length = shell_ring.length;
+		    // We only have to check the outer shell
+		    auto shell_ring = ring_entries[polygon_offset];
+		    auto ring_offset = shell_ring.offset;
+		    auto ring_length = shell_ring.length;
 
-		// Polygon is invalid. This should never happen but just in case
-		if(ring_length == 0) {
-			mask.SetInvalid(idx);
-			return 0.0;
-		}
+		    // Polygon is invalid. This should never happen but just in case
+		    if (ring_length == 0) {
+			    mask.SetInvalid(idx);
+			    return 0.0;
+		    }
 
-		auto val = OP::Default();
-		for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
-			auto ordinate = ordinate_data[coord_idx];
-			val = OP::Operation(val, ordinate);
-		}
-		return val;
-	});
-
+		    auto val = OP::Default();
+		    for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
+			    auto ordinate = ordinate_data[coord_idx];
+			    val = OP::Operation(val, ordinate);
+		    }
+		    return val;
+	    });
 }
 
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-template<size_t N, bool MIN>
+template <size_t N, bool MIN>
 static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	static_assert(N < 2, "Invalid ordinate index");
 	D_ASSERT(args.data.size() == 1);
@@ -151,17 +150,17 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
 	UnaryExecutor::ExecuteWithNulls<string_t, double>(
 	    input, result, count, [&](string_t blob, ValidityMask &mask, idx_t idx) {
-		    if(GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)){
-				if(MIN && N == 0) {
+		    if (GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
+			    if (MIN && N == 0) {
 				    return static_cast<double>(bbox.minx);
 			    }
-			    if(MIN && N == 1) {
+			    if (MIN && N == 1) {
 				    return static_cast<double>(bbox.miny);
 			    }
-			    if(!MIN && N == 0) {
+			    if (!MIN && N == 0) {
 				    return static_cast<double>(bbox.maxx);
 			    }
-			    if(!MIN && N == 1) {
+			    if (!MIN && N == 1) {
 				    return static_cast<double>(bbox.maxy);
 			    }
 			    return 0.0; // unreachable
@@ -176,7 +175,7 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 	}
 }
 
-template<size_t N>
+template <size_t N>
 static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	static_assert(N < 2, "Invalid ordinate index");
 	D_ASSERT(args.data.size() == 1);
@@ -189,20 +188,20 @@ static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vect
 	UnaryExecutor::ExecuteWithNulls<string_t, double>(
 	    input, result, count, [&](string_t blob, ValidityMask &mask, idx_t idx) {
 		    auto header = GeometryHeader::Get(blob);
-		    if(header.type != GeometryType::POINT){
-			 	throw InvalidInputException("ST_X/ST_Y only supports POINT geometries");
+		    if (header.type != GeometryType::POINT) {
+			    throw InvalidInputException("ST_X/ST_Y only supports POINT geometries");
 		    }
-		    if(!GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)){
+		    if (!GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
 			    mask.SetInvalid(idx);
 			    return 0.0;
 		    }
 
 		    // The bounding box for a point is the same as the point itself
 		    // so we can just return the ordinate directly
-		    if(N == 0) {
+		    if (N == 0) {
 			    return static_cast<double>(bbox.minx);
 		    }
-		    if( N == 1) {
+		    if (N == 1) {
 			    return static_cast<double>(bbox.miny);
 		    }
 		    return 0.0; // unreachable
@@ -233,7 +232,8 @@ void CoreScalarFunctions::RegisterStXMax(ClientContext &context) {
 	ScalarFunctionSet st_xmax("st_xmax");
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<2>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
-	st_xmax.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<0, MaxOp>));
+	st_xmax.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<0, MaxOp>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<0, MaxOp>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<0, false>));
 
@@ -247,14 +247,14 @@ void CoreScalarFunctions::RegisterStXMin(ClientContext &context) {
 	ScalarFunctionSet st_xmin("st_xmin");
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<0>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
-	st_xmin.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<0, MinOp>));
+	st_xmin.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<0, MinOp>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<0, MinOp>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<0, true>));
 
 	CreateScalarFunctionInfo info(std::move(st_xmin));
 	catalog.AddFunction(context, info);
 }
-
 
 void CoreScalarFunctions::RegisterStY(ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
@@ -273,7 +273,8 @@ void CoreScalarFunctions::RegisterStYMax(ClientContext &context) {
 	ScalarFunctionSet st_ymax("st_ymax");
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<3>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
-	st_ymax.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<1, MaxOp>));
+	st_ymax.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<1, MaxOp>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<1, MaxOp>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<1, false>));
 
@@ -287,14 +288,14 @@ void CoreScalarFunctions::RegisterStYMin(ClientContext &context) {
 	ScalarFunctionSet st_ymin("st_ymin");
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<1>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
-	st_ymin.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<1, MinOp>));
+	st_ymin.AddFunction(
+	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<1, MinOp>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<1, MinOp>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<1, true>));
 
 	CreateScalarFunctionInfo info(std::move(st_ymin));
 	catalog.AddFunction(context, info);
 }
-
 
 } // namespace core
 
