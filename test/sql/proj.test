@@ -1,7 +1,4 @@
 # name: test/sql/proj.test
-# description: test geo proj extension
-# group: [geo]
-
 require spatial
 
 # Note:

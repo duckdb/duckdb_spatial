@@ -11,6 +11,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_contains.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_dimension.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_distance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_extent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_flipcoordinates.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_makeline.cpp
@@ -21,8 +22,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_removerepeatedpoints.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/st_x.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/st_y.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_xyzm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_isempty.cpp
     PARENT_SCOPE
 )

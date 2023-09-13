@@ -176,8 +176,13 @@ GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx) {
 
 GEOSGeometry *DeserializeGEOSGeometry(const string_t &blob, GEOSContextHandle_t ctx) {
 	Cursor reader(blob);
-	reader.Skip(4); // Skip type, flags and hash
+	auto header = reader.Read<GeometryHeader>();
 	reader.Skip(4); // Skip padding
+
+	if (header.properties.HasBBox()) {
+		reader.Skip(16); // Skip bbox
+	}
+
 	return DeserializeGeometry(reader, ctx);
 }
 
@@ -456,17 +461,6 @@ static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GE
 }
 
 string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSContextHandle_t ctx) {
-	auto size = GetSerializedSize(geom, ctx);
-	size += sizeof(GeometryHeader); // Header
-	size += sizeof(uint32_t);       // Padding
-
-	auto blob = StringVector::EmptyString(result, size);
-	Cursor writer(blob);
-
-	uint16_t hash = 0;
-	for (uint32_t i = 0; i < sizeof(uint32_t); i++) {
-		hash ^= (size >> (i * 8)) & 0xFF;
-	}
 
 	GeometryType type;
 	auto geos_type = GEOSGeomTypeId_r(ctx, geom);
@@ -497,15 +491,45 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 		    StringUtil::Format("GEOS Wrapper Serialize: Geometry type %d not supported", geos_type));
 	}
 
+	bool has_bbox = type != GeometryType::POINT;
+
+	auto size = GetSerializedSize(geom, ctx);
+	size += sizeof(GeometryHeader); // Header
+	size += sizeof(uint32_t);       // Padding
+	size += has_bbox ? 16 : 0;      // BBox
+
+	auto blob = StringVector::EmptyString(result, size);
+	Cursor writer(blob);
+
+	uint16_t hash = 0;
+	for (uint32_t i = 0; i < sizeof(uint32_t); i++) {
+		hash ^= (size >> (i * 8)) & 0xFF;
+	}
+
 	GeometryHeader header;
 	header.type = type;
 	header.hash = hash;
 	header.properties = GeometryProperties();
+	header.properties.SetBBox(has_bbox);
 
 	writer.Write<GeometryHeader>(header); // Header
 	writer.Write<uint32_t>(0);            // Padding
 
+	// If the geom is not a point, write the bounding box
+	BoundingBox bbox;
+	if (has_bbox) {
+		double minx, maxx, miny, maxy;
+		GEOSGeom_getExtent_r(ctx, geom, &minx, &maxx, &miny, &maxy);
+		bbox.minx = Utils::DoubleToFloatDown(minx);
+		bbox.maxx = Utils::DoubleToFloatUp(maxx);
+		bbox.miny = Utils::DoubleToFloatDown(miny);
+		bbox.maxy = Utils::DoubleToFloatUp(maxy);
+		writer.Write<BoundingBox>(bbox);
+	}
+
 	SerializeGeometry(writer, geom, ctx);
+
+	blob.Finalize();
 
 	return blob;
 }

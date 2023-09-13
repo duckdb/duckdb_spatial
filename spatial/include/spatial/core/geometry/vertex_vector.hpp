@@ -2,7 +2,6 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
-
 #include <cmath>
 
 namespace spatial {
@@ -10,6 +9,7 @@ namespace spatial {
 namespace core {
 
 class Cursor;
+struct BoundingBox;
 
 struct Vertex {
 	double x;
@@ -118,6 +118,7 @@ public:
 	}
 
 	void Serialize(Cursor &cursor) const;
+	void SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) const;
 
 	inline Vertex *Data() {
 		return data;
