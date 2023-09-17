@@ -1,5 +1,6 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
@@ -207,9 +208,7 @@ static unique_ptr<FunctionData> BoxCentroidBind(ClientContext &context, ScalarFu
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStCentroid(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStCentroid(DatabaseInstance &instance) {
 	ScalarFunctionSet area_function_set("ST_Centroid");
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointCentroidFunction));
 	area_function_set.AddFunction(
@@ -219,9 +218,8 @@ void CoreScalarFunctions::RegisterStCentroid(ClientContext &context) {
 	area_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction, BoxCentroidBind));
 
-	CreateScalarFunctionInfo info(std::move(area_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, area_function_set);
+	// ?? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

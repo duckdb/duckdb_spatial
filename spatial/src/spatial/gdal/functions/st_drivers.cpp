@@ -1,3 +1,4 @@
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 
 #include "spatial/common.hpp"
@@ -77,12 +78,10 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 	output.SetCardinality(count);
 }
 
-void GdalDriversTableFunction::Register(ClientContext &context) {
+void GdalDriversTableFunction::Register(DatabaseInstance &instance) {
 	TableFunction func("st_drivers", {}, Execute, Bind, Init);
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(func);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(instance, func);
 }
 
 } // namespace gdal

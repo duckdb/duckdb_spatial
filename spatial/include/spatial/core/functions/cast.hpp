@@ -18,18 +18,18 @@ public:
 
 struct CoreCastFunctions {
 public:
-	static void Register(ClientContext &context) {
-		RegisterVarcharCasts(context);
-		RegisterDimensionalCasts(context);
-		RegisterGeometryCasts(context);
-		RegisterWKBCasts(context);
+	static void Register(DatabaseInstance &instance) {
+		RegisterVarcharCasts(instance);
+		RegisterDimensionalCasts(instance);
+		RegisterGeometryCasts(instance);
+		RegisterWKBCasts(instance);
 	}
 
 private:
-	static void RegisterVarcharCasts(ClientContext &context);
-	static void RegisterDimensionalCasts(ClientContext &context);
-	static void RegisterGeometryCasts(ClientContext &context);
-	static void RegisterWKBCasts(ClientContext &context);
+	static void RegisterVarcharCasts(DatabaseInstance &instance);
+	static void RegisterDimensionalCasts(DatabaseInstance &instance);
+	static void RegisterGeometryCasts(DatabaseInstance &instance);
+	static void RegisterWKBCasts(DatabaseInstance &instance);
 };
 
 } // namespace core

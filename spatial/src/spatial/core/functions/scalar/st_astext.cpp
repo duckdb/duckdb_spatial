@@ -1,5 +1,6 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -72,9 +73,7 @@ static void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStAsText(DatabaseInstance &instance) {
 	ScalarFunctionSet as_text_function_set("ST_AsText");
 
 	as_text_function_set.AddFunction(
@@ -88,9 +87,8 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 	                                                GeometryAsTextFunction, nullptr, nullptr, nullptr,
 	                                                GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(as_text_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	// ?? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, as_text_function_set);
 }
 
 } // namespace core

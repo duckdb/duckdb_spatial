@@ -5,6 +5,7 @@
 #include "spatial/core/geometry/geometry.hpp"
 
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 
@@ -83,17 +84,14 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 	});
 }
 
-void CoreScalarFunctions::RegisterStCollect(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStCollect(DatabaseInstance &instance) {
 	ScalarFunctionSet set("ST_Collect");
 
 	set.AddFunction(ScalarFunction({LogicalType::LIST(GeoTypes::GEOMETRY())}, GeoTypes::GEOMETRY(), CollectFunction,
 	                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, set);
+	// ?? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

@@ -7,10 +7,10 @@ namespace spatial {
 
 namespace geographiclib {
 
-void GeographicLibModule::Register(ClientContext &context) {
+void GeographicLibModule::Register(DatabaseInstance &instance) {
 
 	// Register functions
-	GeographicLibFunctions::Register(context);
+	GeographicLibFunctions::Register(instance);
 }
 
 } // namespace geographiclib

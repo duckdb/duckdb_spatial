@@ -1,5 +1,6 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -34,17 +35,14 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsWKB(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStAsWKB(DatabaseInstance &instance) {
 	ScalarFunctionSet as_wkb_function_set("ST_AsWKB");
 
 	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction,
 	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(as_wkb_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+// ??	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, as_wkb_function_set);
 }
 
 } // namespace core

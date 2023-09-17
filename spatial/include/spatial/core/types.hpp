@@ -15,7 +15,7 @@ struct GeoTypes {
 	static LogicalType GEOMETRY();
 	static LogicalType WKB_BLOB();
 
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &instance);
 };
 
 enum class Side { LEFT, RIGHT, ON };

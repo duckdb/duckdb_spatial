@@ -1,3 +1,4 @@
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -139,8 +140,7 @@ static void LineStringToPointDistanceFunction(DataChunk &args, ExpressionState &
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStDistance(DatabaseInstance &instance) {
 	ScalarFunctionSet distance_function_set("ST_Distance");
 
 	distance_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE,
@@ -150,9 +150,8 @@ void CoreScalarFunctions::RegisterStDistance(ClientContext &context) {
 	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), GeoTypes::POINT_2D()},
 	                                                 LogicalType::DOUBLE, LineStringToPointDistanceFunction));
 
-	CreateScalarFunctionInfo info(std::move(distance_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, distance_function_set);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

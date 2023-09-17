@@ -16,18 +16,11 @@
 namespace duckdb {
 
 static void LoadInternal(DatabaseInstance &instance) {
-	Connection con(instance);
-	con.BeginTransaction();
-
-	auto &context = *con.context;
-
-	spatial::core::CoreModule::Register(context);
-	spatial::proj::ProjModule::Register(context);
-	spatial::gdal::GdalModule::Register(context);
-	spatial::geos::GeosModule::Register(context);
-	spatial::geographiclib::GeographicLibModule::Register(context);
-
-	con.Commit();
+	spatial::core::CoreModule::Register(instance);
+	spatial::proj::ProjModule::Register(instance);
+	spatial::gdal::GdalModule::Register(instance);
+	spatial::geos::GeosModule::Register(instance);
+	spatial::geographiclib::GeographicLibModule::Register(instance);
 }
 
 void SpatialExtension::Load(DuckDB &db) {

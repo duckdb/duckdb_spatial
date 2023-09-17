@@ -1,3 +1,4 @@
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/parser/expression/constant_expression.hpp"
 #include "duckdb/parser/expression/function_expression.hpp"
@@ -595,8 +596,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 	return nullptr;
 }
 
-void GdalTableFunction::Register(ClientContext &context) {
-
+void GdalTableFunction::Register(DatabaseInstance &instance) {
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
 	                   GdalTableFunction::InitGlobal, GdalTableFunction::InitLocal);
@@ -617,12 +617,11 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["max_batch_size"] = LogicalType::INTEGER;
 	set.AddFunction(scan);
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(set);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(instance, set);
+	ExtensionUtil::RegisterFunction(instance, scan);
 
 	// Replacement scan
-	auto &config = DBConfig::GetConfig(*context.db);
+	auto &config = DBConfig::GetConfig(instance);
 	config.replacement_scans.emplace_back(GdalTableFunction::ReplacementScan);
 }
 

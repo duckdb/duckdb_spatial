@@ -4,6 +4,7 @@
 #include "spatial/geos/functions/cast.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 
 namespace spatial {
@@ -38,12 +39,9 @@ static bool GeometryToTextCast(Vector &source, Vector &result, idx_t count, Cast
 	return true;
 }
 
-void GeosCastFunctions::Register(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
-
-	casts.RegisterCastFunction(core::GeoTypes::WKB_BLOB(), LogicalType::VARCHAR, WKBToWKTCast);
-	casts.RegisterCastFunction(core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+void GeosCastFunctions::Register(DatabaseInstance &instance) {
+	ExtensionUtil::RegisterCastFunction(instance, core::GeoTypes::WKB_BLOB(), LogicalType::VARCHAR, WKBToWKTCast);
+	ExtensionUtil::RegisterCastFunction(instance, core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
 	                           BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
 };
 

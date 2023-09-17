@@ -1,5 +1,6 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
@@ -131,9 +132,7 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStArea(DatabaseInstance &instance) {
 	ScalarFunctionSet area_function_set("ST_Area");
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointAreaFunction));
 	area_function_set.AddFunction(
@@ -143,9 +142,8 @@ void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
 	                                             nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
 
-	CreateScalarFunctionInfo info(std::move(area_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	//What this needed?? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, area_function_set);
 }
 
 } // namespace core

@@ -160,8 +160,8 @@ public:
 	}
 };
 
-void CoreOptimizerRules::Register(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
+void CoreOptimizerRules::Register(DatabaseInstance &instance) {
+	auto &config = DBConfig::GetConfig(instance);
 
 	// Register the optimizer rules
 	config.optimizer_extensions.push_back(RangeJoinSpatialPredicateRewriter());

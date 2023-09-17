@@ -4,6 +4,7 @@
 #include "spatial/geos/functions/common.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
@@ -62,17 +63,13 @@ static void DistanceFunction(DataChunk &args, ExpressionState &state, Vector &re
 	ExecutePreparedDistance(lstate, left, right, count, result);
 }
 
-void GEOSScalarFunctions::RegisterStDistance(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStDistance(DatabaseInstance &instance) {
 	ScalarFunctionSet set("ST_Distance");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, DistanceFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

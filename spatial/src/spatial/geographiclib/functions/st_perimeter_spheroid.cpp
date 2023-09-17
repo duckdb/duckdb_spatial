@@ -1,5 +1,6 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
@@ -135,9 +136,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	}
 }
 
-void GeographicLibFunctions::RegisterPerimeter(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GeographicLibFunctions::RegisterPerimeter(DatabaseInstance &instance) {
 	// Perimiter
 	ScalarFunctionSet set("st_perimeter_spheroid");
 	set.AddFunction(
@@ -145,9 +144,7 @@ void GeographicLibFunctions::RegisterPerimeter(ClientContext &context) {
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction,
 	                               nullptr, nullptr, nullptr, spatial::core::GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geographiclib

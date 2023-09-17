@@ -1,6 +1,7 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/storage/buffer_manager.hpp"
 #include "duckdb/function/replacement_scan.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/expression/constant_expression.hpp"
 #include "duckdb/parser/expression/function_expression.hpp"
 #include "duckdb/parser/tableref/table_function_ref.hpp"
@@ -823,18 +824,16 @@ static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, co
 //------------------------------------------------------------------------------
 //  Register
 //------------------------------------------------------------------------------
-void CoreTableFunctions::RegisterOsmTableFunction(ClientContext &context) {
+void CoreTableFunctions::RegisterOsmTableFunction(DatabaseInstance &instance) {
 	TableFunction read("ST_ReadOSM", {LogicalType::VARCHAR}, Execute, Bind, InitGlobal, InitLocal);
 
 	read.get_batch_index = GetBatchIndex;
 	read.table_scan_progress = Progress;
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(read);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(instance, read);
 
 	// Replacement scan
-	auto &config = DBConfig::GetConfig(*context.db);
+	auto &config = DBConfig::GetConfig(instance);
 	config.replacement_scans.emplace_back(ReadOsmPBFReplacementScan);
 }
 

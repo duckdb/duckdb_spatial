@@ -3,6 +3,7 @@
 #include "spatial/geos/functions/scalar.hpp"
 #include "spatial/geos/functions/common.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
@@ -23,17 +24,13 @@ static void PointOnSurfaceFunction(DataChunk &args, ExpressionState &state, Vect
 	});
 }
 
-void GEOSScalarFunctions::RegisterStPointOnSurface(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStPointOnSurface(DatabaseInstance &instance) {
 	ScalarFunctionSet set("ST_PointOnSurface");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), PointOnSurfaceFunction, nullptr,
 	                               nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

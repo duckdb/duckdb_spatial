@@ -4,6 +4,7 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 
@@ -140,20 +141,17 @@ static bool GeometryToVarcharCast(Vector &source, Vector &result, idx_t count, C
 	return true;
 }
 
-void CoreCastFunctions::RegisterVarcharCasts(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
+void CoreCastFunctions::RegisterVarcharCasts(DatabaseInstance &instance) {
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::POINT_2D(), LogicalType::VARCHAR, BoundCastInfo(Point2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::POINT_2D(), LogicalType::VARCHAR, BoundCastInfo(Point2DToVarcharCast), 1);
-
-	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), LogicalType::VARCHAR,
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::LINESTRING_2D(), LogicalType::VARCHAR,
 	                           BoundCastInfo(LineString2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), LogicalType::VARCHAR, BoundCastInfo(Polygon2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::POLYGON_2D(), LogicalType::VARCHAR, BoundCastInfo(Polygon2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
 	                           BoundCastInfo(GeometryToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 

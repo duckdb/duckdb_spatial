@@ -2,6 +2,7 @@
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/types/blob.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -55,14 +56,12 @@ void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &r
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsHEXWKB(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
-	CreateScalarFunctionInfo info(ScalarFunction("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
+void CoreScalarFunctions::RegisterStAsHEXWKB(DatabaseInstance &instance) {
+	auto fun = ScalarFunction("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
 	                                             GeometryAsHEXWKBFunction, nullptr, nullptr, nullptr,
-	                                             GeometryFunctionLocalState::Init));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	                                             GeometryFunctionLocalState::Init);
+	// ?? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, fun);
 }
 
 } // namespace core

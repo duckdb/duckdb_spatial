@@ -1,4 +1,5 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -215,20 +216,15 @@ static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Register Functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStX(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStX(DatabaseInstance &instance) {
 	ScalarFunctionSet st_x("st_x");
 	st_x.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
 	st_x.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<0>));
 
-	CreateScalarFunctionInfo info(std::move(st_x));
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, st_x);
 }
 
-void CoreScalarFunctions::RegisterStXMax(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStXMax(DatabaseInstance &instance) {
 	ScalarFunctionSet st_xmax("st_xmax");
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<2>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
@@ -237,13 +233,10 @@ void CoreScalarFunctions::RegisterStXMax(ClientContext &context) {
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<0, MaxOp>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<0, false>));
 
-	CreateScalarFunctionInfo info(std::move(st_xmax));
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, st_xmax);
 }
 
-void CoreScalarFunctions::RegisterStXMin(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStXMin(DatabaseInstance &instance) {
 	ScalarFunctionSet st_xmin("st_xmin");
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<0>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
@@ -252,24 +245,18 @@ void CoreScalarFunctions::RegisterStXMin(ClientContext &context) {
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<0, MinOp>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<0, true>));
 
-	CreateScalarFunctionInfo info(std::move(st_xmin));
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, st_xmin);
 }
 
-void CoreScalarFunctions::RegisterStY(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStY(DatabaseInstance &instance) {
 	ScalarFunctionSet st_y("st_y");
 	st_y.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
 	st_y.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<1>));
 
-	CreateScalarFunctionInfo info(std::move(st_y));
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, st_y);
 }
 
-void CoreScalarFunctions::RegisterStYMax(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStYMax(DatabaseInstance &instance) {
 	ScalarFunctionSet st_ymax("st_ymax");
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<3>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
@@ -278,13 +265,10 @@ void CoreScalarFunctions::RegisterStYMax(ClientContext &context) {
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<1, MaxOp>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<1, false>));
 
-	CreateScalarFunctionInfo info(std::move(st_ymax));
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, st_ymax);
 }
 
-void CoreScalarFunctions::RegisterStYMin(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStYMin(DatabaseInstance &instance) {
 	ScalarFunctionSet st_ymin("st_ymin");
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<1>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
@@ -293,8 +277,7 @@ void CoreScalarFunctions::RegisterStYMin(ClientContext &context) {
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DFunction<1, MinOp>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<1, true>));
 
-	CreateScalarFunctionInfo info(std::move(st_ymin));
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, st_ymin);
 }
 
 } // namespace core

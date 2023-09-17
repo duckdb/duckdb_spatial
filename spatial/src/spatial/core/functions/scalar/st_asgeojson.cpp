@@ -3,6 +3,7 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/common/types/cast_helpers.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -468,26 +469,22 @@ static void GeoJSONFragmentToGeometryFunction(DataChunk &args, ExpressionState &
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsGeoJSON(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &instance) {
 	ScalarFunctionSet to_geojson("ST_AsGeoJSON");
 	to_geojson.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
 	                                      GeometryToGeoJSONFragmentFunction, nullptr, nullptr, nullptr,
 	                                      GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo to_info(to_geojson);
-	to_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, to_info);
+	//?? to_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, to_geojson);
 
 	ScalarFunctionSet from_geojson("ST_GeomFromGeoJSON");
 	from_geojson.AddFunction(ScalarFunction({LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                        GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
 	                                        GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo from_info(from_geojson);
-	from_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, from_info);
+	//?? from_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, from_geojson);
 }
 
 } // namespace core

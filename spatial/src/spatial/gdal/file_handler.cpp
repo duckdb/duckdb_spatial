@@ -1,5 +1,7 @@
 #include "spatial/gdal/file_handler.hpp"
 
+#include "duckdb/main/extension_util.hpp"
+
 #include "cpl_vsi.h"
 #include "cpl_string.h"
 
@@ -172,7 +174,7 @@ static char **DuckDBSiblingFiles(void *, const char *dir_name) {
 //--------------------------------------------------------------------------
 // Register
 //--------------------------------------------------------------------------
-void GdalFileHandler::Register(ClientContext &context) {
+void GdalFileHandler::Register(DatabaseInstance &instance) {
 
 	auto callbacks = VSIAllocFilesystemPluginCallbacksStruct();
 

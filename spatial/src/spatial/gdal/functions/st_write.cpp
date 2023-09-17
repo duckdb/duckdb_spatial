@@ -4,6 +4,7 @@
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/config.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/copy_info.hpp"
 #include "duckdb/parser/parsed_data/create_copy_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
@@ -412,7 +413,7 @@ static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunc
 	global_state.dataset->FlushCache();
 }
 
-void GdalCopyFunction::Register(ClientContext &context) {
+void GdalCopyFunction::Register(DatabaseInstance &instance) {
 	// register the copy function
 	CopyFunction info("GDAL");
 	info.copy_to_bind = Bind;
@@ -421,10 +422,7 @@ void GdalCopyFunction::Register(ClientContext &context) {
 	info.copy_to_sink = Sink;
 	info.copy_to_finalize = Finalize;
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateCopyFunctionInfo create(std::move(info));
-	create.internal = true;
-	catalog.CreateCopyFunction(context, create);
+	ExtensionUtil::RegisterFunction(instance, info);
 }
 
 } // namespace gdal

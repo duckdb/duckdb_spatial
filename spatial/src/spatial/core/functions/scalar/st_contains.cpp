@@ -2,6 +2,7 @@
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/scalar.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 namespace spatial {
 
@@ -143,9 +144,7 @@ static void PointWithinPolygonFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStContains(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStContains(DatabaseInstance &instance) {
 	// ST_Within is the inverse of ST_Contains
 	ScalarFunctionSet contains_function_set("st_contains");
 	ScalarFunctionSet within_function_set("st_within");
@@ -156,13 +155,11 @@ void CoreScalarFunctions::RegisterStContains(ClientContext &context) {
 	within_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN,
 	                                               PointWithinPolygonFunction));
 
-	CreateScalarFunctionInfo contains_info(std::move(contains_function_set));
-	contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, contains_info);
+	ExtensionUtil::RegisterFunction(instance, contains_function_set);
+	//contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 
-	CreateScalarFunctionInfo within_info(std::move(within_function_set));
-	within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, within_info);
+	ExtensionUtil::RegisterFunction(instance, within_function_set);
+	//within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

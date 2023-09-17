@@ -1,5 +1,6 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/types/blob.hpp"
 
@@ -55,24 +56,22 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStGeomFromHEXWKB(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
-	CreateScalarFunctionInfo hexwkb(ScalarFunction("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
+void CoreScalarFunctions::RegisterStGeomFromHEXWKB(DatabaseInstance &instance) {
+	auto hexwkb = ScalarFunction("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                               GeometryFromHEXWKB, nullptr, nullptr, nullptr,
-	                                               GeometryFunctionLocalState::Init));
-	hexwkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, hexwkb);
+	                                               GeometryFunctionLocalState::Init);
+	//hexwkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, hexwkb);
 
 	// Our WKB reader also parses EWKB, even though it will just ignore SRID's.
 	// so we'll just add an alias for now. In the future, once we actually handle
 	// EWKB and store SRID's, these functions should differentiate between
 	// the two formats.
-	CreateScalarFunctionInfo ewkb(ScalarFunction("ST_GeomFromHEXEWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
+	auto ewkb = ScalarFunction("ST_GeomFromHEXEWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                             GeometryFromHEXWKB, nullptr, nullptr, nullptr,
-	                                             GeometryFunctionLocalState::Init));
-	ewkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, ewkb);
+	                                             GeometryFunctionLocalState::Init);
+	//ewkb.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, ewkb);
 }
 
 } // namespace core

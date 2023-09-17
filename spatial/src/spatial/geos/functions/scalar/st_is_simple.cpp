@@ -4,6 +4,7 @@
 #include "spatial/geos/functions/common.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
@@ -23,17 +24,13 @@ static void IsSimpleFunction(DataChunk &args, ExpressionState &state, Vector &re
 	});
 }
 
-void GEOSScalarFunctions::RegisterStIsSimple(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStIsSimple(DatabaseInstance &instance) {
 	ScalarFunctionSet set("ST_IsSimple");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, IsSimpleFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

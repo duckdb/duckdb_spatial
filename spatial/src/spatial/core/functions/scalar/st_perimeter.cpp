@@ -1,4 +1,5 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 
 #include "spatial/common.hpp"
@@ -128,9 +129,7 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 	}
 }
 
-void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStPerimeter(DatabaseInstance &instance) {
 	// Perimiter
 	ScalarFunctionSet set("st_perimeter");
 	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DPerimeterFunction));
@@ -138,9 +137,8 @@ void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr,
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace core

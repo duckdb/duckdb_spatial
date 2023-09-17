@@ -7,7 +7,7 @@ namespace core {
 
 struct CoreOptimizerRules {
 public:
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &instance);
 };
 
 } // namespace core

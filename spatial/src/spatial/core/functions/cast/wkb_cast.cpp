@@ -6,6 +6,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 
@@ -48,22 +49,19 @@ static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastP
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreCastFunctions::RegisterWKBCasts(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
-
+void CoreCastFunctions::RegisterWKBCasts(DatabaseInstance &instance) {
 	// Geometry <-> WKB is explicitly castable
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
 	                           BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
 
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast));
 
 	// WKB -> BLOB is implicitly castable
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
 
 	// Geometry -> BLOB is implicitly castable
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::GEOMETRY(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
 }
 
 } // namespace core

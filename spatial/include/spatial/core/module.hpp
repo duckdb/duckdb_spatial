@@ -9,7 +9,7 @@ namespace core {
 
 struct CoreModule {
 public:
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &instance);
 };
 
 } // namespace core

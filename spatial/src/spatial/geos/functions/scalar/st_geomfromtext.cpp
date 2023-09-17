@@ -4,6 +4,7 @@
 #include "spatial/geos/functions/common.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
@@ -94,18 +95,14 @@ static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, Scal
 	return make_uniq<GeometryFromWKTBindData>(ignore_invalid);
 }
 
-void GEOSScalarFunctions::RegisterStGeomFromText(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStGeomFromText(DatabaseInstance &instance) {
 	ScalarFunctionSet set("ST_GeomFromText");
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY(), GeometryFromWKTFunction,
 	                               GeometryFromWKTBind, nullptr, nullptr, GEOSFunctionLocalState::Init));
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR, LogicalType::BOOLEAN}, core::GeoTypes::GEOMETRY(),
 	                               GeometryFromWKTFunction, GeometryFromWKTBind, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
-	CreateScalarFunctionInfo info(set);
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

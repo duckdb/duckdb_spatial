@@ -1,4 +1,5 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -243,9 +244,7 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStFlipCoordinates(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStFlipCoordinates(DatabaseInstance &instance) {
 	ScalarFunctionSet flip_function_set("ST_FlipCoordinates");
 	flip_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointFlipCoordinatesFunction));
@@ -258,9 +257,8 @@ void CoreScalarFunctions::RegisterStFlipCoordinates(ClientContext &context) {
 	                                             GeometryFlipCoordinatesFunction, nullptr, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(flip_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, flip_function_set);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

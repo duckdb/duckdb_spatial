@@ -3,6 +3,7 @@
 #include "spatial/core/types.hpp"
 
 #include "duckdb/function/cast/cast_function_set.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 namespace spatial {
 
@@ -31,12 +32,9 @@ static bool ToPoint2DCast(Vector &source, Vector &result, idx_t count, CastParam
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreCastFunctions::RegisterDimensionalCasts(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
-
-	casts.RegisterCastFunction(GeoTypes::POINT_4D(), GeoTypes::POINT_2D(), ToPoint2DCast, 1);
-	casts.RegisterCastFunction(GeoTypes::POINT_3D(), GeoTypes::POINT_2D(), ToPoint2DCast, 1);
+void CoreCastFunctions::RegisterDimensionalCasts(DatabaseInstance &instance) {
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::POINT_4D(), GeoTypes::POINT_2D(), ToPoint2DCast, 1);
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::POINT_3D(), GeoTypes::POINT_2D(), ToPoint2DCast, 1);
 }
 
 } // namespace core

@@ -1,5 +1,6 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
@@ -35,17 +36,14 @@ static void GeodesicPoint2DFunction(DataChunk &args, ExpressionState &state, Vec
 	    });
 }
 
-void GeographicLibFunctions::RegisterDistanceWithin(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GeographicLibFunctions::RegisterDistanceWithin(DatabaseInstance &instance) {
 	// Distance
 	ScalarFunctionSet set("ST_DWithin_Spheroid");
 	set.AddFunction(
 	    ScalarFunction({spatial::core::GeoTypes::POINT_2D(), spatial::core::GeoTypes::POINT_2D(), LogicalType::DOUBLE},
 	                   LogicalType::DOUBLE, GeodesicPoint2DFunction));
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geographiclib

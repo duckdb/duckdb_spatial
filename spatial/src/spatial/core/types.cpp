@@ -1,6 +1,7 @@
 #include "spatial/core/types.hpp"
 
 #include "duckdb/function/cast/cast_function_set.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
 #include "spatial/common.hpp"
@@ -73,32 +74,30 @@ static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, 
 	catalog.CreateType(context, type_info);
 }
 
-void GeoTypes::Register(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GeoTypes::Register(DatabaseInstance &instance) {
 	// POINT_2D
-	AddType(catalog, context, GeoTypes::POINT_2D(), "POINT_2D");
+	ExtensionUtil::RegisterType(instance, "POINT_2D", GeoTypes::POINT_2D());
 
 	// POINT_3D
-	AddType(catalog, context, GeoTypes::POINT_3D(), "POINT_3D");
+	ExtensionUtil::RegisterType(instance, "POINT_3D", GeoTypes::POINT_3D());
 
 	// POINT_4D
-	AddType(catalog, context, GeoTypes::POINT_4D(), "POINT_4D");
+	ExtensionUtil::RegisterType(instance, "POINT_4D", GeoTypes::POINT_4D());
 
 	// LineString2D
-	AddType(catalog, context, GeoTypes::LINESTRING_2D(), "LINESTRING_2D");
+	ExtensionUtil::RegisterType(instance, "LINESTRING_2D", GeoTypes::LINESTRING_2D());
 
 	// Polygon2D
-	AddType(catalog, context, GeoTypes::POLYGON_2D(), "POLYGON_2D");
+	ExtensionUtil::RegisterType(instance, "POLYGON_2D", GeoTypes::POLYGON_2D());
 
 	// Box2D
-	AddType(catalog, context, GeoTypes::BOX_2D(), "BOX_2D");
+	ExtensionUtil::RegisterType(instance, "BOX_2D", GeoTypes::BOX_2D());
 
 	// GEOMETRY
-	AddType(catalog, context, GeoTypes::GEOMETRY(), "GEOMETRY");
+	ExtensionUtil::RegisterType(instance, "GEOMETRY", GeoTypes::GEOMETRY());
 
 	// WKB_BLOB
-	AddType(catalog, context, GeoTypes::WKB_BLOB(), "WKB_BLOB");
+	ExtensionUtil::RegisterType(instance, "WKB_BLOB", GeoTypes::WKB_BLOB());
 }
 
 } // namespace core

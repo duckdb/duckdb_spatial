@@ -1,4 +1,5 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
@@ -86,9 +87,7 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStLength(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStLength(DatabaseInstance &instance) {
 	ScalarFunctionSet length_function_set("ST_Length");
 
 	length_function_set.AddFunction(
@@ -96,9 +95,8 @@ void CoreScalarFunctions::RegisterStLength(ClientContext &context) {
 	length_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryLengthFunction,
 	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(length_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, length_function_set);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

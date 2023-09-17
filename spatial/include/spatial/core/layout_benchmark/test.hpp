@@ -7,7 +7,7 @@ namespace spatial {
 namespace core {
 
 struct LayoutBenchmark {
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &instance);
 };
 
 } // namespace core

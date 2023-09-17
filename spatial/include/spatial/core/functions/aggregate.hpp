@@ -7,7 +7,7 @@ namespace core {
 
 struct CoreAggregateFunctions {
 public:
-	static void Register(ClientContext &context) {
+	static void Register(DatabaseInstance &db) {
 	}
 };
 

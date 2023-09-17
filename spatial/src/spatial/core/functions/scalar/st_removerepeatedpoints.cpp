@@ -4,6 +4,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
@@ -267,9 +268,7 @@ static void LineStringRemoveRepeatedPointsFunctionsWithTolerance(DataChunk &args
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(DatabaseInstance &instance) {
 	ScalarFunctionSet set("ST_RemoveRepeatedPoints");
 
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::LINESTRING_2D(),
@@ -278,9 +277,8 @@ void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(ClientContext &context)
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), LogicalType::DOUBLE}, GeoTypes::LINESTRING_2D(),
 	                               LineStringRemoveRepeatedPointsFunctionsWithTolerance));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace core

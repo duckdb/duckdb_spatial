@@ -3,6 +3,7 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_view_info.hpp"
 #include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 
 #include "spatial/common.hpp"
@@ -408,7 +409,7 @@ struct GenerateSpatialRefSysTable {
 
 	static void Execute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output);
 
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &instance);
 };
 
 unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context, TableFunctionBindInput &input,
@@ -474,11 +475,9 @@ void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionIn
 	output.SetCardinality(count);
 }
 
-void GenerateSpatialRefSysTable::Register(ClientContext &context) {
+void GenerateSpatialRefSysTable::Register(DatabaseInstance &instance) {
 	TableFunction func("st_list_proj_crs", {}, Execute, Bind, Init);
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(func);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(instance, func);
 
 	// Also create a view
 	/*
@@ -493,9 +492,7 @@ void GenerateSpatialRefSysTable::Register(ClientContext &context) {
 	*/
 }
 
-void ProjFunctions::Register(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void ProjFunctions::Register(DatabaseInstance &instance) {
 	ScalarFunctionSet set("st_transform");
 
 	using namespace spatial::core;
@@ -521,11 +518,10 @@ void ProjFunctions::Register(ClientContext &context) {
 	    {GeoTypes::GEOMETRY(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BOOLEAN}, GeoTypes::GEOMETRY(),
 	    GeometryTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	// What this needed? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, set);
 
-	GenerateSpatialRefSysTable::Register(context);
+	GenerateSpatialRefSysTable::Register(instance);
 }
 
 } // namespace proj

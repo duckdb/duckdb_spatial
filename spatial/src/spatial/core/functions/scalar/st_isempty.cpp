@@ -1,4 +1,5 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
@@ -83,9 +84,7 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStIsEmpty(DatabaseInstance &instance) {
 	ScalarFunctionSet is_empty_function_set("ST_IsEmpty");
 
 	is_empty_function_set.AddFunction(
@@ -96,9 +95,8 @@ void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
 	                                                 GeometryIsEmptyFunction, nullptr, nullptr, nullptr,
 	                                                 GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(is_empty_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(instance, is_empty_function_set);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

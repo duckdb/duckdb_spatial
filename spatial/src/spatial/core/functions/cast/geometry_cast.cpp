@@ -7,6 +7,7 @@
 #include "spatial/core/geometry/wkb_writer.hpp"
 
 #include "duckdb/function/cast/cast_function_set.hpp"
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
 
 namespace spatial {
@@ -238,30 +239,27 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreCastFunctions::RegisterGeometryCasts(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
-
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::LINESTRING_2D(),
+void CoreCastFunctions::RegisterGeometryCasts(DatabaseInstance &instance) {
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::GEOMETRY(), GeoTypes::LINESTRING_2D(),
 	                           BoundCastInfo(GeometryToLineString2DCast, nullptr, GeometryFunctionLocalState::InitCast),
 	                           1);
-	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), GeoTypes::GEOMETRY(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::LINESTRING_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(LineString2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast),
 	                           1);
 
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::POINT_2D(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::GEOMETRY(), GeoTypes::POINT_2D(),
 	                           BoundCastInfo(GeometryToPoint2DCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
-	casts.RegisterCastFunction(GeoTypes::POINT_2D(), GeoTypes::GEOMETRY(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::POINT_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Point2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::POLYGON_2D(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::GEOMETRY(), GeoTypes::POLYGON_2D(),
 	                           BoundCastInfo(GeometryToPolygon2DCast, nullptr, GeometryFunctionLocalState::InitCast),
 	                           1);
-	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), GeoTypes::GEOMETRY(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::POLYGON_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Polygon2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast),
 	                           1);
 
-	casts.RegisterCastFunction(GeoTypes::BOX_2D(), GeoTypes::GEOMETRY(),
+	ExtensionUtil::RegisterCastFunction(instance, GeoTypes::BOX_2D(), GeoTypes::GEOMETRY(),
 	                           BoundCastInfo(Box2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 

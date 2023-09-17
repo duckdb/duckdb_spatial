@@ -1,3 +1,4 @@
+#include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
@@ -74,9 +75,7 @@ static void GeometryTypeFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStGeometryType(DatabaseInstance &instance) {
 	ScalarFunctionSet geometry_type_set("ST_GeometryType");
 	geometry_type_set.AddFunction(
 	    ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::ANY, Point2DTypeFunction, GeometryTypeFunctionBind));
@@ -88,9 +87,8 @@ void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
 	                                             GeometryTypeFunctionBind, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(geometry_type_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(instance, geometry_type_set);
 }
 
 } // namespace core
