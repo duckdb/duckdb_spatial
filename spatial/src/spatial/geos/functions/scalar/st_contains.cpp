@@ -25,14 +25,9 @@ static void ContainsFunction(DataChunk &args, ExpressionState &state, Vector &re
 	                                                GEOSPreparedContains_r);
 }
 
-void GEOSScalarFunctions::RegisterStContains(DatabaseInstance &instance) {
-	ScalarFunctionSet set("ST_Contains");
-
+void GEOSScalarFunctions::RegisterStContains(ScalarFunctionSet &set) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, ContainsFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
-
-	ExtensionUtil::RegisterFunction(instance, set);
-	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace geos

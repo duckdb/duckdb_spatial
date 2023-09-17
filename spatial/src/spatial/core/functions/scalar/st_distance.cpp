@@ -6,6 +6,7 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/geos/functions/scalar.hpp"
 
 namespace spatial {
 
@@ -149,9 +150,9 @@ void CoreScalarFunctions::RegisterStDistance(DatabaseInstance &instance) {
 	                                                 LogicalType::DOUBLE, PointToLineStringDistanceFunction));
 	distance_function_set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), GeoTypes::POINT_2D()},
 	                                                 LogicalType::DOUBLE, LineStringToPointDistanceFunction));
+	geos::GEOSScalarFunctions::RegisterStDistance(distance_function_set);
 
 	ExtensionUtil::RegisterFunction(instance, distance_function_set);
-	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

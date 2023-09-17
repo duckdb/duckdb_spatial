@@ -10,8 +10,6 @@ public:
 	static void Register(DatabaseInstance &instance) {
 		RegisterStBoundary(instance);
 		RegisterStBuffer(instance);
-		RegisterStCentroid(instance);
-		RegisterStContains(instance);
 		RegisterStContainsProperly(instance);
 		RegisterStConvexHull(instance);
 		RegisterStCoveredBy(instance);
@@ -19,7 +17,6 @@ public:
 		RegisterStCrosses(instance);
 		RegisterStDifference(instance);
 		RegisterStDisjoint(instance);
-		RegisterStDistance(instance);
 		RegisterStDistanceWithin(instance);
 		RegisterStEquals(instance);
 		RegisterStGeomFromText(instance);
@@ -34,19 +31,20 @@ public:
 		RegisterStOverlaps(instance);
 		RegisterStPointOnSurface(instance);
 		RegisterStReducePrecision(instance);
-		RegisterStRemoveRepeatedPoints(instance);
 		RegisterStSimplifyPreserveTopology(instance);
 		RegisterStSimplify(instance);
 		RegisterStTouches(instance);
 		RegisterStUnion(instance);
-		RegisterStWithin(instance);
 	}
 
+	static void RegisterStCentroid(ScalarFunctionSet &set);
+	static void RegisterStContains(ScalarFunctionSet &set);
+	static void RegisterStDistance(ScalarFunctionSet &set);
+	static void RegisterStRemoveRepeatedPoints(ScalarFunctionSet &set);
+	static void RegisterStWithin(ScalarFunctionSet &set);
 private:
 	static void RegisterStBoundary(DatabaseInstance &instance);
 	static void RegisterStBuffer(DatabaseInstance &instance);
-	static void RegisterStCentroid(DatabaseInstance &instance);
-	static void RegisterStContains(DatabaseInstance &instance);
 	static void RegisterStContainsProperly(DatabaseInstance &instance);
 	static void RegisterStConvexHull(DatabaseInstance &instance);
 	static void RegisterStCoveredBy(DatabaseInstance &instance);
@@ -54,7 +52,6 @@ private:
 	static void RegisterStCrosses(DatabaseInstance &instance);
 	static void RegisterStDifference(DatabaseInstance &instance);
 	static void RegisterStDisjoint(DatabaseInstance &instance);
-	static void RegisterStDistance(DatabaseInstance &instance);
 	static void RegisterStDistanceWithin(DatabaseInstance &instance);
 	static void RegisterStEquals(DatabaseInstance &instance);
 	static void RegisterStGeomFromText(DatabaseInstance &instance);
@@ -69,12 +66,10 @@ private:
 	static void RegisterStOverlaps(DatabaseInstance &instance);
 	static void RegisterStPointOnSurface(DatabaseInstance &instance);
 	static void RegisterStReducePrecision(DatabaseInstance &instance);
-	static void RegisterStRemoveRepeatedPoints(DatabaseInstance &instance);
 	static void RegisterStSimplifyPreserveTopology(DatabaseInstance &instance);
 	static void RegisterStSimplify(DatabaseInstance &instance);
 	static void RegisterStTouches(DatabaseInstance &instance);
 	static void RegisterStUnion(DatabaseInstance &instance);
-	static void RegisterStWithin(DatabaseInstance &instance);
 };
 
 } // namespace geos

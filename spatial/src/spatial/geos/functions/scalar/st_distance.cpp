@@ -63,13 +63,9 @@ static void DistanceFunction(DataChunk &args, ExpressionState &state, Vector &re
 	ExecutePreparedDistance(lstate, left, right, count, result);
 }
 
-void GEOSScalarFunctions::RegisterStDistance(DatabaseInstance &instance) {
-	ScalarFunctionSet set("ST_Distance");
-
+void GEOSScalarFunctions::RegisterStDistance(ScalarFunctionSet &set) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, DistanceFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
-
-	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

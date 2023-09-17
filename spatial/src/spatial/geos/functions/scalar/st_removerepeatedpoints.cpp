@@ -46,16 +46,12 @@ static void RemoveRepeatedPointsFunctionWithTolerance(DataChunk &args, Expressio
 	    });
 }
 
-void GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(DatabaseInstance &instance) {
-	ScalarFunctionSet set("ST_RemoveRepeatedPoints");
-
+void GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(ScalarFunctionSet &set) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), RemoveRepeatedPointsFunction, nullptr,
 	                               nullptr, nullptr, GEOSFunctionLocalState::Init));
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, GeoTypes::GEOMETRY(),
 	                               RemoveRepeatedPointsFunctionWithTolerance, nullptr, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
-
-	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

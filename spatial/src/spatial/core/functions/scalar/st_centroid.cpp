@@ -6,6 +6,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/geos/functions/scalar.hpp"
 
 namespace spatial {
 
@@ -217,6 +218,8 @@ void CoreScalarFunctions::RegisterStCentroid(DatabaseInstance &instance) {
 	    ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
 	area_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction, BoxCentroidBind));
+
+	geos::GEOSScalarFunctions::RegisterStCentroid(area_function_set);
 
 	ExtensionUtil::RegisterFunction(instance, area_function_set);
 	// ?? info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;

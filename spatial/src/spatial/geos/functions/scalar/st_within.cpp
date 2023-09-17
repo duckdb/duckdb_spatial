@@ -25,13 +25,9 @@ static void WithinFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	                                                GEOSPreparedWithin_r);
 }
 
-void GEOSScalarFunctions::RegisterStWithin(DatabaseInstance &instance) {
-	ScalarFunctionSet set("ST_Within");
-
+void GEOSScalarFunctions::RegisterStWithin(ScalarFunctionSet &set) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, WithinFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
-
-	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos

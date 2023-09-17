@@ -1,6 +1,7 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/scalar.hpp"
+#include "spatial/geos/functions/scalar.hpp"
 
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
@@ -152,14 +153,15 @@ void CoreScalarFunctions::RegisterStContains(DatabaseInstance &instance) {
 	// POLYGON_2D - POINT_2D
 	contains_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D(), GeoTypes::POINT_2D()},
 	                                                 LogicalType::BOOLEAN, PolygonContainsPointFunction));
+	geos::GEOSScalarFunctions::RegisterStContains(contains_function_set);
+
 	within_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN,
 	                                               PointWithinPolygonFunction));
+	geos::GEOSScalarFunctions::RegisterStWithin(within_function_set);
 
 	ExtensionUtil::RegisterFunction(instance, contains_function_set);
-	//contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 
 	ExtensionUtil::RegisterFunction(instance, within_function_set);
-	//within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 }
 
 } // namespace core

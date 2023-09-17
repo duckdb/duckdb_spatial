@@ -3,6 +3,7 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
+#include "spatial/geos/functions/scalar.hpp"
 
 #include "duckdb/main/extension_util.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
@@ -276,6 +277,7 @@ void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(DatabaseInstance &insta
 
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), LogicalType::DOUBLE}, GeoTypes::LINESTRING_2D(),
 	                               LineStringRemoveRepeatedPointsFunctionsWithTolerance));
+	geos::GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(set);
 
 	//info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
 	ExtensionUtil::RegisterFunction(instance, set);

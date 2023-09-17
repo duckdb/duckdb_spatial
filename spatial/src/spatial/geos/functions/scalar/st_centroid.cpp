@@ -24,13 +24,9 @@ static void CentroidFunction(DataChunk &args, ExpressionState &state, Vector &re
 	});
 }
 
-void GEOSScalarFunctions::RegisterStCentroid(DatabaseInstance &instance) {
-	ScalarFunctionSet set("ST_Centroid");
-
+void GEOSScalarFunctions::RegisterStCentroid(ScalarFunctionSet& set) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), CentroidFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
-
-	ExtensionUtil::RegisterFunction(instance, set);
 }
 
 } // namespace geos
