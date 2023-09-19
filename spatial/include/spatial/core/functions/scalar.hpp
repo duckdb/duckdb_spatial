@@ -29,6 +29,8 @@ public:
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
 		RegisterStMakeLine(context);
+		RegisterStNGeometries(context);
+		RegisterStNInteriorRings(context);
 		RegisterStNPoints(context);
 		RegisterStPerimeter(context);
 		RegisterStPoint(context);
@@ -102,6 +104,12 @@ private:
 
 	// ST_MakeLine
 	static void RegisterStMakeLine(ClientContext &context);
+
+	// ST_NGeometries
+	static void RegisterStNGeometries(ClientContext &context);
+
+	// ST_NInteriorRings
+	static void RegisterStNInteriorRings(ClientContext &context);
 
 	// ST_NPoints
 	static void RegisterStNPoints(ClientContext &context);

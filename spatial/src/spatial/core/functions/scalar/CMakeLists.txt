@@ -19,6 +19,8 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersects_extent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_makeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_ngeometries.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_ninteriorrings.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_npoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_perimeter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp
