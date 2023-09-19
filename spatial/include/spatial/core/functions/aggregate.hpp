@@ -8,7 +8,11 @@ namespace core {
 struct CoreAggregateFunctions {
 public:
 	static void Register(ClientContext &context) {
+		RegisterStEnvelopeAgg(context);
 	}
+
+private:
+	static void RegisterStEnvelopeAgg(ClientContext &context);
 };
 
 } // namespace core

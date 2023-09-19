@@ -21,6 +21,11 @@ void CoreVectorOperations::Point2DToVarchar(Vector &source, Vector &result, idx_
 	GenericExecutor::ExecuteUnary<POINT_TYPE, VARCHAR_TYPE>(source, result, count, [&](POINT_TYPE &point) {
 		auto x = point.a_val;
 		auto y = point.b_val;
+
+		if (std::isnan(x) || std::isnan(y)) {
+			return StringVector::AddString(result, "POINT EMPTY");
+		}
+
 		return StringVector::AddString(result, StringUtil::Format("POINT (%s)", Utils::format_coord(x, y)));
 	});
 }
@@ -37,6 +42,10 @@ void CoreVectorOperations::LineString2DToVarchar(Vector &source, Vector &result,
 	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &line) {
 		auto offset = line.offset;
 		auto length = line.length;
+
+		if (length == 0) {
+			return StringVector::AddString(result, "LINESTRING EMPTY");
+		}
 
 		string result_str = "LINESTRING (";
 		for (idx_t i = offset; i < offset + length; i++) {
@@ -66,6 +75,10 @@ void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, id
 		auto offset = polygon_entry.offset;
 		auto length = polygon_entry.length;
 
+		if (length == 0) {
+			return StringVector::AddString(result, "POLYGON EMPTY");
+		}
+
 		string result_str = "POLYGON (";
 		for (idx_t i = offset; i < offset + length; i++) {
 			auto ring_entry = ring_entries[i];
@@ -94,10 +107,10 @@ void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, id
 void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t count) {
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
-	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &point) {
+	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &box) {
 		return StringVector::AddString(result,
-		                               StringUtil::Format("BOX(%s, %s)", Utils::format_coord(point.a_val, point.b_val),
-		                                                  Utils::format_coord(point.c_val, point.d_val)));
+		                               StringUtil::Format("BOX(%s, %s)", Utils::format_coord(box.a_val, box.b_val),
+		                                                  Utils::format_coord(box.c_val, box.d_val)));
 	});
 }
 

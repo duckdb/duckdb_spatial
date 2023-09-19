@@ -21,16 +21,21 @@ public:
 		RegisterStDimension(context);
 		RegisterStDistance(context);
 		RegisterStExtent(context);
+		RegisterStExteriorRing(context);
 		RegisterStFlipCoordinates(context);
 		RegisterStGeometryType(context);
 		RegisterStGeomFromHEXWKB(context);
 		RegisterStGeomFromWKB(context);
+		RegisterStIntersectsExtent(context);
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
 		RegisterStMakeLine(context);
+		RegisterStNGeometries(context);
+		RegisterStNInteriorRings(context);
 		RegisterStNPoints(context);
 		RegisterStPerimeter(context);
 		RegisterStPoint(context);
+		RegisterStPointN(context);
 		RegisterStRemoveRepeatedPoints(context);
 		RegisterStX(context);
 		RegisterStXMax(context);
@@ -77,6 +82,9 @@ private:
 	// ST_Extent
 	static void RegisterStExtent(ClientContext &context);
 
+	// ST_ExteriorRing
+	static void RegisterStExteriorRing(ClientContext &context);
+
 	// ST_FlipCoordinates
 	static void RegisterStFlipCoordinates(ClientContext &context);
 
@@ -89,6 +97,9 @@ private:
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(ClientContext &context);
 
+	// ST_IntersectsExtent (&&)
+	static void RegisterStIntersectsExtent(ClientContext &context);
+
 	// ST_IsEmpty
 	static void RegisterStIsEmpty(ClientContext &context);
 
@@ -98,6 +109,12 @@ private:
 	// ST_MakeLine
 	static void RegisterStMakeLine(ClientContext &context);
 
+	// ST_NGeometries
+	static void RegisterStNGeometries(ClientContext &context);
+
+	// ST_NInteriorRings
+	static void RegisterStNInteriorRings(ClientContext &context);
+
 	// ST_NPoints
 	static void RegisterStNPoints(ClientContext &context);
 
@@ -106,6 +123,9 @@ private:
 
 	// ST_Point
 	static void RegisterStPoint(ClientContext &context);
+
+	// ST_PointN
+	static void RegisterStPointN(ClientContext &context);
 
 	// ST_RemoveRepeatedPoints
 	static void RegisterStRemoveRepeatedPoints(ClientContext &context);
