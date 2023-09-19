@@ -516,15 +516,13 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 	writer.Write<uint32_t>(0);            // Padding
 
 	// If the geom is not a point, write the bounding box
-	BoundingBox bbox;
 	if (has_bbox) {
 		double minx, maxx, miny, maxy;
 		GEOSGeom_getExtent_r(ctx, geom, &minx, &maxx, &miny, &maxy);
-		bbox.minx = Utils::DoubleToFloatDown(minx);
-		bbox.maxx = Utils::DoubleToFloatUp(maxx);
-		bbox.miny = Utils::DoubleToFloatDown(miny);
-		bbox.maxy = Utils::DoubleToFloatUp(maxy);
-		writer.Write<BoundingBox>(bbox);
+		writer.Write<float>(Utils::DoubleToFloatDown(minx));
+		writer.Write<float>(Utils::DoubleToFloatDown(miny));
+		writer.Write<float>(Utils::DoubleToFloatUp(maxx));
+		writer.Write<float>(Utils::DoubleToFloatUp(maxy));
 	}
 
 	SerializeGeometry(writer, geom, ctx);

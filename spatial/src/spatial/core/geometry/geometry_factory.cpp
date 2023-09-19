@@ -80,6 +80,18 @@ GeometryCollection GeometryFactory::CreateGeometryCollection(uint32_t num_geomet
 	return GeometryCollection(geometries, num_geometries);
 }
 
+Polygon GeometryFactory::CreateBox(double xmin, double ymin, double xmax, double ymax) {
+	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * 1));
+	auto &shell = rings[0];
+	shell = AllocateVertexVector(5);
+	shell.Add(Vertex(xmin, ymin));
+	shell.Add(Vertex(xmin, ymax));
+	shell.Add(Vertex(xmax, ymax));
+	shell.Add(Vertex(xmax, ymin));
+	shell.Add(Vertex(xmin, ymin)); // close the ring
+	return Polygon(rings, 1);
+}
+
 // Empty
 Point GeometryFactory::CreateEmptyPoint() {
 	return Point(AllocateVertexVector(0));
@@ -227,12 +239,13 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	// Now write the bounding box
 	if (has_bbox) {
 		cursor.SetPtr(bbox_ptr);
-		cursor.Write<float>(bbox.minx);
-		cursor.Write<float>(bbox.miny);
-		cursor.Write<float>(bbox.maxx);
-		cursor.Write<float>(bbox.maxy);
+		// We serialize the bounding box as floats to save space, but ensure that the bounding box is
+		// still large enough to contain the original double values by rounding up and down
+		cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minx));
+		cursor.Write<float>(Utils::DoubleToFloatDown(bbox.miny));
+		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxx));
+		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxy));
 	}
-
 	blob.Finalize();
 	return blob;
 }
@@ -399,10 +412,10 @@ bool GeometryFactory::TryGetSerializedBoundingBox(const string_t &data, Bounding
 
 		auto x = cursor.Read<double>();
 		auto y = cursor.Read<double>();
-		bbox.minx = Utils::DoubleToFloatDown(x);
-		bbox.miny = Utils::DoubleToFloatDown(y);
-		bbox.maxx = Utils::DoubleToFloatUp(x);
-		bbox.maxy = Utils::DoubleToFloatUp(y);
+		bbox.minx = x;
+		bbox.miny = y;
+		bbox.maxx = x;
+		bbox.maxy = y;
 		return true;
 	}
 	return false;

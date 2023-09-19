@@ -82,10 +82,10 @@ struct Utils {
 };
 
 struct BoundingBox {
-	float minx = std::numeric_limits<float>::max();
-	float miny = std::numeric_limits<float>::max();
-	float maxx = std::numeric_limits<float>::lowest();
-	float maxy = std::numeric_limits<float>::lowest();
+	double minx = std::numeric_limits<double>::max();
+	double miny = std::numeric_limits<double>::max();
+	double maxx = std::numeric_limits<double>::lowest();
+	double maxy = std::numeric_limits<double>::lowest();
 
 	bool Intersects(const BoundingBox &other) const {
 		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);

@@ -35,6 +35,8 @@ public:
 	MultiPolygon CreateMultiPolygon(uint32_t capacity);
 	GeometryCollection CreateGeometryCollection(uint32_t capacity);
 
+	Polygon CreateBox(double xmin, double ymin, double xmax, double ymax);
+
 	// Empty
 	Point CreateEmptyPoint();
 	LineString CreateEmptyLineString();

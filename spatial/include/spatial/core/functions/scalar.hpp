@@ -25,6 +25,7 @@ public:
 		RegisterStGeometryType(context);
 		RegisterStGeomFromHEXWKB(context);
 		RegisterStGeomFromWKB(context);
+		RegisterStIntersectsExtent(context);
 		RegisterStIsEmpty(context);
 		RegisterStLength(context);
 		RegisterStMakeLine(context);
@@ -88,6 +89,9 @@ private:
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(ClientContext &context);
+
+	// ST_IntersectsExtent (&&)
+	static void RegisterStIntersectsExtent(ClientContext &context);
 
 	// ST_IsEmpty
 	static void RegisterStIsEmpty(ClientContext &context);
