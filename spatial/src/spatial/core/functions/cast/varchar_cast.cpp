@@ -94,10 +94,10 @@ void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, id
 void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t count) {
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
-	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &point) {
+	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &box) {
 		return StringVector::AddString(result,
-		                               StringUtil::Format("BOX(%s, %s)", Utils::format_coord(point.a_val, point.b_val),
-		                                                  Utils::format_coord(point.c_val, point.d_val)));
+		                               StringUtil::Format("BOX(%s, %s)", Utils::format_coord(box.a_val, box.b_val),
+		                                                  Utils::format_coord(box.c_val, box.d_val)));
 	});
 }
 

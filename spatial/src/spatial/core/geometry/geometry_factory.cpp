@@ -163,7 +163,7 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	auto geom_size = GetSerializedSize(geometry);
 
 	auto type = geometry.Type();
-	bool has_bbox = type != GeometryType::POINT;
+	bool has_bbox = type != GeometryType::POINT && !geometry.IsEmpty();
 
 	auto properties = geometry.Properties();
 	properties.SetBBox(has_bbox);
@@ -186,7 +186,6 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	cursor.Write<uint32_t>(0);
 
 	// All geometries except points have a bounding box
-	// TODO: If the geometry is empty, dont write a bounding box
 	BoundingBox bbox;
 	auto bbox_ptr = cursor.GetPtr();
 	if (has_bbox) {

@@ -491,7 +491,7 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 		    StringUtil::Format("GEOS Wrapper Serialize: Geometry type %d not supported", geos_type));
 	}
 
-	bool has_bbox = type != GeometryType::POINT;
+	bool has_bbox = type != GeometryType::POINT && GEOSisEmpty_r(ctx, geom) == 0;
 
 	auto size = GetSerializedSize(geom, ctx);
 	size += sizeof(GeometryHeader); // Header
@@ -518,7 +518,7 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 	// If the geom is not a point, write the bounding box
 	if (has_bbox) {
 		double minx, maxx, miny, maxy;
-		GEOSGeom_getExtent_r(ctx, geom, &minx, &maxx, &miny, &maxy);
+		GEOSGeom_getExtent_r(ctx, geom, &minx, &miny, &maxx, &maxy);
 		writer.Write<float>(Utils::DoubleToFloatDown(minx));
 		writer.Write<float>(Utils::DoubleToFloatDown(miny));
 		writer.Write<float>(Utils::DoubleToFloatUp(maxx));
