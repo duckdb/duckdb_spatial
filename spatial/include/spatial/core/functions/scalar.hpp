@@ -21,6 +21,7 @@ public:
 		RegisterStDimension(context);
 		RegisterStDistance(context);
 		RegisterStExtent(context);
+		RegisterStExteriorRing(context);
 		RegisterStFlipCoordinates(context);
 		RegisterStGeometryType(context);
 		RegisterStGeomFromHEXWKB(context);
@@ -80,6 +81,9 @@ private:
 
 	// ST_Extent
 	static void RegisterStExtent(ClientContext &context);
+
+	// ST_ExteriorRing
+	static void RegisterStExteriorRing(ClientContext &context);
 
 	// ST_FlipCoordinates
 	static void RegisterStFlipCoordinates(ClientContext &context);

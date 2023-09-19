@@ -21,6 +21,11 @@ void CoreVectorOperations::Point2DToVarchar(Vector &source, Vector &result, idx_
 	GenericExecutor::ExecuteUnary<POINT_TYPE, VARCHAR_TYPE>(source, result, count, [&](POINT_TYPE &point) {
 		auto x = point.a_val;
 		auto y = point.b_val;
+
+		if (std::isnan(x) || std::isnan(y)) {
+			return StringVector::AddString(result, "POINT EMPTY");
+		}
+
 		return StringVector::AddString(result, StringUtil::Format("POINT (%s)", Utils::format_coord(x, y)));
 	});
 }
@@ -37,6 +42,10 @@ void CoreVectorOperations::LineString2DToVarchar(Vector &source, Vector &result,
 	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &line) {
 		auto offset = line.offset;
 		auto length = line.length;
+
+		if (length == 0) {
+			return StringVector::AddString(result, "LINESTRING EMPTY");
+		}
 
 		string result_str = "LINESTRING (";
 		for (idx_t i = offset; i < offset + length; i++) {
@@ -65,6 +74,10 @@ void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, id
 	UnaryExecutor::Execute<list_entry_t, string_t>(poly_vector, result, count, [&](list_entry_t polygon_entry) {
 		auto offset = polygon_entry.offset;
 		auto length = polygon_entry.length;
+
+		if (length == 0) {
+			return StringVector::AddString(result, "POLYGON EMPTY");
+		}
 
 		string result_str = "POLYGON (";
 		for (idx_t i = offset; i < offset + length; i++) {
