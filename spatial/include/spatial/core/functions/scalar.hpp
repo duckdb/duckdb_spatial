@@ -32,6 +32,7 @@ public:
 		RegisterStNPoints(context);
 		RegisterStPerimeter(context);
 		RegisterStPoint(context);
+		RegisterStPointN(context);
 		RegisterStRemoveRepeatedPoints(context);
 		RegisterStX(context);
 		RegisterStXMax(context);
@@ -110,6 +111,9 @@ private:
 
 	// ST_Point
 	static void RegisterStPoint(ClientContext &context);
+
+	// ST_PointN
+	static void RegisterStPointN(ClientContext &context);
 
 	// ST_RemoveRepeatedPoints
 	static void RegisterStRemoveRepeatedPoints(ClientContext &context);

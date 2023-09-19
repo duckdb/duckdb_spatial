@@ -22,6 +22,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_npoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_perimeter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_pointn.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_removerepeatedpoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_xyzm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_isempty.cpp
