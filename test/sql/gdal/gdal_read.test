@@ -25,7 +25,7 @@ CREATE TABLE roads2 AS SELECT * FROM st_read('__WORKING_DIRECTORY__/test/data/am
 # GDAL I/O should preserve order, so this is safe
 # Compare that the two tables are identical even though they were round-tripped through GDAL
 query I
-SELECT bool_and(roads1.kind = roads2.kind) = bool_and(roads1.wkb_geometry = roads2.wkb_geometry)
+SELECT bool_and(roads1.kind = roads2.kind) = bool_and(roads1.geom = roads2.geom)
 FROM roads1 JOIN roads2 on roads1.rowid = roads2.rowid;
 ----
 true

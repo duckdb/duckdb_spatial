@@ -4,22 +4,43 @@
 #include "duckdb/planner/operator/logical_any_join.hpp"
 #include "duckdb/planner/operator/logical_comparison_join.hpp"
 #include "duckdb/planner/operator/logical_filter.hpp"
+#include "duckdb/planner/operator/logical_get.hpp"
+#include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/planner/expression/bound_comparison_expression.hpp"
 #include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/catalog/catalog_entry/scalar_function_catalog_entry.hpp"
 #include "spatial/common.hpp"
-#include "spatial/core/types.hpp"
 #include "spatial/core/optimizers.hpp"
 
 namespace spatial {
 
 namespace core {
 
+//------------------------------------------------------------------------------
+// Range Join Spatial Predicate Rewriter
+//------------------------------------------------------------------------------
+//
+//	Rewrites joins on spatial predicates to range joins on their bounding boxes
+//  combined with a spatial predicate filter. This turns the joins from a
+//  blockwise-nested loop join into a inequality join, which is much faster.
+//
+//	All spatial predicates (except st_disjoint) imply an intersection of the
+//  bounding boxes of the two geometries.
+//
 class RangeJoinSpatialPredicateRewriter : public OptimizerExtension {
 public:
 	RangeJoinSpatialPredicateRewriter() {
 		optimize_function = RangeJoinSpatialPredicateRewriter::Optimize;
+	}
+
+	static void AddComparison(unique_ptr<LogicalComparisonJoin> &join, unique_ptr<BoundFunctionExpression> left,
+	                          unique_ptr<BoundFunctionExpression> right, ExpressionType type) {
+		JoinCondition cmp;
+		cmp.comparison = type;
+		cmp.left = std::move(left);
+		cmp.right = std::move(right);
+		join->conditions.push_back(std::move(cmp));
 	}
 
 	static void Optimize(ClientContext &context, OptimizerExtensionInfo *info, unique_ptr<LogicalOperator> &plan) {
@@ -34,13 +55,16 @@ public:
 			if (any_join.condition->type == ExpressionType::BOUND_FUNCTION && any_join.join_type == JoinType::INNER) {
 				auto &bound_function = any_join.condition->Cast<BoundFunctionExpression>();
 
-				// Found a spatial predicate we can optimize
-				auto lower_name = StringUtil::Lower(bound_function.function.name);
-				if (lower_name == "st_intersects") {
+				// Note that we cant perform this optimization for st_disjoint as all comparisons have to be AND'd
+				case_insensitive_set_t predicates = {"st_equals",  "st_disjoint",  "st_intersects",      "st_touches",
+				                                     "st_crosses", "st_within",    "st_contains",        "st_overlaps",
+				                                     "st_covers",  "st_coveredby", "st_containsproperly"};
+
+				if (predicates.find(bound_function.function.name) != predicates.end()) {
+					// Found a spatial predicate we can optimize
 
 					// Convert this into a comparison join on st_xmin, st_xmax, st_ymin, st_ymax of the two input
 					// geometries
-
 					auto &left_pred_expr = bound_function.children[0];
 					auto &right_pred_expr = bound_function.children[1];
 
@@ -78,70 +102,55 @@ public:
 					// Left
 					vector<unique_ptr<Expression>> left_xmin_args;
 					left_xmin_args.push_back(left_pred_expr->Copy());
-					auto xmin_left_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(xmin_func_left), std::move(left_xmin_args), nullptr);
+					auto a_x_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmin_func_left),
+					                                                  std::move(left_xmin_args), nullptr);
 
 					vector<unique_ptr<Expression>> left_xmax_args;
 					left_xmax_args.push_back(left_pred_expr->Copy());
-					auto xmax_left_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(xmax_func_left), std::move(left_xmax_args), nullptr);
+					auto a_x_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmax_func_left),
+					                                                  std::move(left_xmax_args), nullptr);
 
 					vector<unique_ptr<Expression>> left_ymin_args;
 					left_ymin_args.push_back(left_pred_expr->Copy());
-					auto ymin_left_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(ymin_func_left), std::move(left_ymin_args), nullptr);
+					auto a_y_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymin_func_left),
+					                                                  std::move(left_ymin_args), nullptr);
 
 					vector<unique_ptr<Expression>> left_ymax_args;
 					left_ymax_args.push_back(left_pred_expr->Copy());
-					auto ymax_left_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(ymax_func_left), std::move(left_ymax_args), nullptr);
+					auto a_y_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymax_func_left),
+					                                                  std::move(left_ymax_args), nullptr);
 
 					// Right
 					vector<unique_ptr<Expression>> right_xmin_args;
 					right_xmin_args.push_back(right_pred_expr->Copy());
-					auto xmin_right_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(xmin_func_right), std::move(right_xmin_args), nullptr);
+					auto b_x_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmin_func_right),
+					                                                  std::move(right_xmin_args), nullptr);
 
 					vector<unique_ptr<Expression>> right_xmax_args;
 					right_xmax_args.push_back(right_pred_expr->Copy());
-					auto xmax_right_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(xmax_func_right), std::move(right_xmax_args), nullptr);
+					auto b_x_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmax_func_right),
+					                                                  std::move(right_xmax_args), nullptr);
 
 					vector<unique_ptr<Expression>> right_ymin_args;
 					right_ymin_args.push_back(right_pred_expr->Copy());
-					auto ymin_right_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(ymin_func_right), std::move(right_ymin_args), nullptr);
+					auto b_y_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymin_func_right),
+					                                                  std::move(right_ymin_args), nullptr);
 
 					vector<unique_ptr<Expression>> right_ymax_args;
 					right_ymax_args.push_back(right_pred_expr->Copy());
-					auto ymax_right_expr = make_uniq<BoundFunctionExpression>(
-					    LogicalType::DOUBLE, std::move(ymax_func_right), std::move(right_ymax_args), nullptr);
-
-					// Now create the new join condition
-
-					JoinCondition cmp1, cmp2, cmp3, cmp4;
-					cmp1.comparison = ExpressionType::COMPARE_GREATERTHAN;
-					cmp1.left = std::move(ymax_left_expr);
-					cmp1.right = std::move(ymin_right_expr);
-
-					cmp2.comparison = ExpressionType::COMPARE_LESSTHAN;
-					cmp2.left = std::move(ymin_left_expr);
-					cmp2.right = std::move(ymax_right_expr);
-
-					cmp3.comparison = ExpressionType::COMPARE_GREATERTHAN;
-					cmp3.left = std::move(xmax_left_expr);
-					cmp3.right = std::move(xmin_right_expr);
-
-					cmp4.comparison = ExpressionType::COMPARE_LESSTHAN;
-					cmp4.left = std::move(xmin_left_expr);
-					cmp4.right = std::move(xmax_right_expr);
+					auto b_y_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymax_func_right),
+					                                                  std::move(right_ymax_args), nullptr);
 
 					// Now create the new join operator
 					auto new_join = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
-					new_join->conditions.push_back(std::move(cmp1));
-					new_join->conditions.push_back(std::move(cmp2));
-					new_join->conditions.push_back(std::move(cmp3));
-					new_join->conditions.push_back(std::move(cmp4));
+					AddComparison(new_join, std::move(a_x_min), std::move(b_x_max),
+					              ExpressionType::COMPARE_LESSTHANOREQUALTO);
+					AddComparison(new_join, std::move(a_x_max), std::move(b_x_min),
+					              ExpressionType::COMPARE_GREATERTHANOREQUALTO);
+					AddComparison(new_join, std::move(a_y_min), std::move(b_y_max),
+					              ExpressionType::COMPARE_LESSTHANOREQUALTO);
+					AddComparison(new_join, std::move(a_y_max), std::move(b_y_min),
+					              ExpressionType::COMPARE_GREATERTHANOREQUALTO);
 					new_join->children = std::move(any_join.children);
 
 					// Also, we need to create a filter with the original predicate
@@ -160,6 +169,9 @@ public:
 	}
 };
 
+//------------------------------------------------------------------------------
+// Register optimizers
+//------------------------------------------------------------------------------
 void CoreOptimizerRules::Register(ClientContext &context) {
 	auto &config = DBConfig::GetConfig(context);
 
