@@ -20,6 +20,7 @@ public:
 		RegisterStContains(context);
 		RegisterStDimension(context);
 		RegisterStDistance(context);
+		RegisterStEndPoint(context);
 		RegisterStExtent(context);
 		RegisterStExteriorRing(context);
 		RegisterStFlipCoordinates(context);
@@ -37,6 +38,7 @@ public:
 		RegisterStPoint(context);
 		RegisterStPointN(context);
 		RegisterStRemoveRepeatedPoints(context);
+		RegisterStStartPoint(context);
 		RegisterStX(context);
 		RegisterStXMax(context);
 		RegisterStXMin(context);
@@ -78,6 +80,9 @@ private:
 
 	// ST_Distance
 	static void RegisterStDistance(ClientContext &context);
+
+	// ST_EndPoint
+	static void RegisterStEndPoint(ClientContext &context);
 
 	// ST_Extent
 	static void RegisterStExtent(ClientContext &context);
@@ -129,6 +134,9 @@ private:
 
 	// ST_RemoveRepeatedPoints
 	static void RegisterStRemoveRepeatedPoints(ClientContext &context);
+
+	// ST_StartPoint
+	static void RegisterStStartPoint(ClientContext &context);
 
 	// ST_X
 	static void RegisterStX(ClientContext &context);
