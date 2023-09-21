@@ -35,6 +35,7 @@ public:
 		RegisterStPointOnSurface(context);
 		RegisterStReducePrecision(context);
 		RegisterStRemoveRepeatedPoints(context);
+		RegisterStReverse(context);
 		RegisterStSimplifyPreserveTopology(context);
 		RegisterStSimplify(context);
 		RegisterStTouches(context);
@@ -70,6 +71,7 @@ private:
 	static void RegisterStPointOnSurface(ClientContext &context);
 	static void RegisterStReducePrecision(ClientContext &context);
 	static void RegisterStRemoveRepeatedPoints(ClientContext &context);
+	static void RegisterStReverse(ClientContext &context);
 	static void RegisterStSimplifyPreserveTopology(ClientContext &context);
 	static void RegisterStSimplify(ClientContext &context);
 	static void RegisterStTouches(ClientContext &context);
