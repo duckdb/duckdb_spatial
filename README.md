@@ -388,6 +388,3 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Within                   | 🧭        | 🦆 or 🔄  | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_X                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Y                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-
-
-```
