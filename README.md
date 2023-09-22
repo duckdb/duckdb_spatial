@@ -256,7 +256,7 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 [GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `COPY ... TO ... WITH (FORMAT GDAL)` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats - check for yourself by running 
 <details>
 <summary>
-`SELECT * FROM st_drivers();`!
+    SELECT * FROM st_drivers();
 </summary>
 
 |   short_name   |                      long_name                       | can_create | can_copy | can_open |                      help_url                      |
@@ -314,6 +314,7 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 | AVCE00         | Arc/Info E00 (ASCII) Coverage                        | false      | false    | true     | https://gdal.org/drivers/vector/avce00.html        |
 
 </details>
+
 Note that far from all of these formats have been tested properly, if you run into any issues please first [consult the GDAL docs](https://gdal.org/drivers/vector/index.html), or open an issue here on GitHub.
 
 
