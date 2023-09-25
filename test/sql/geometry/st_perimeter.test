@@ -57,26 +57,26 @@ SELECT ST_Perimeter(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY'))
 
 # BOX_2D
 query I
-SELECT ST_Perimeter({minx: 0, miny: 0, maxx: 1, maxy: 1}::BOX_2D);
+SELECT ST_Perimeter({min_x: 0, min_y: 0, max_x: 1, max_y: 1}::BOX_2D);
 ----
 4.0
 
 query I
-SELECT ST_Perimeter({minx: -1, miny: -1, maxx: 0, maxy: 0}::BOX_2D);
+SELECT ST_Perimeter({min_x: -1, min_y: -1, max_x: 0, max_y: 0}::BOX_2D);
 ----
 4.0
 
 query I
-SELECT ST_Perimeter({minx: 0, miny: 0, maxx: 1, maxy: 2}::BOX_2D);
+SELECT ST_Perimeter({min_x: 0, min_y: 0, max_x: 1, max_y: 2}::BOX_2D);
 ----
 6.0
 
 query I
-SELECT ST_Perimeter({minx: -1, miny: -2, maxx: 0, maxy: 0}::BOX_2D);
+SELECT ST_Perimeter({min_x: -1, min_y: -2, max_x: 0, max_y: 0}::BOX_2D);
 ----
 6.0
 
 query I
-SELECT ST_Perimeter({minx: 0, miny: 0, maxx: 0, maxy: 0}::BOX_2D);
+SELECT ST_Perimeter({min_x: 0, min_y: 0, max_x: 0, max_y: 0}::BOX_2D);
 ----
 0.0
