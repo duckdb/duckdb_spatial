@@ -49,17 +49,15 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStNGeometries(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStNGeometries(DatabaseInstance &db) {
 
 	const char *aliases[] = {"ST_NGeometries", "ST_NumGeometries"};
 	for (auto alias : aliases) {
 		ScalarFunctionSet set(alias);
 		set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::INTEGER, GeometryNGeometriesFunction,
 		                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-		CreateScalarFunctionInfo info(std::move(set));
-		info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-		catalog.CreateFunction(context, info);
+
+		ExtensionUtil::RegisterFunction(db, set);
 	}
 }
 

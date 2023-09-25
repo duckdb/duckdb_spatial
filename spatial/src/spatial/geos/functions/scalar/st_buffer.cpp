@@ -45,9 +45,7 @@ static void BufferFunctionWithSegments(DataChunk &args, ExpressionState &state, 
 	    });
 }
 
-void GEOSScalarFunctions::RegisterStBuffer(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStBuffer(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Buffer");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::DOUBLE}, GeoTypes::GEOMETRY(), BufferFunction,
@@ -56,9 +54,7 @@ void GEOSScalarFunctions::RegisterStBuffer(ClientContext &context) {
 	                               GeoTypes::GEOMETRY(), BufferFunctionWithSegments, nullptr, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

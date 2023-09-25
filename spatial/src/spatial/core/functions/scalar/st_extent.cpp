@@ -56,17 +56,13 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	}
 }
 
-void CoreScalarFunctions::RegisterStExtent(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStExtent(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Extent");
 
 	set.AddFunction(
 	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2D(), ExtentFunction, nullptr, nullptr, nullptr));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

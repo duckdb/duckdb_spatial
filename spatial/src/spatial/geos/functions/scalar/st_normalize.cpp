@@ -28,17 +28,14 @@ static void NormalizeFunction(DataChunk &args, ExpressionState &state, Vector &r
 	});
 }
 
-void GEOSScalarFunctions::RegisterStNormalize(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStNormalize(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Normalize");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), NormalizeFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

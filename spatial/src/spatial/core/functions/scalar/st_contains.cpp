@@ -143,8 +143,7 @@ static void PointWithinPolygonFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStContains(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStContains(DatabaseInstance &db) {
 
 	// ST_Within is the inverse of ST_Contains
 	ScalarFunctionSet contains_function_set("st_contains");
@@ -156,13 +155,8 @@ void CoreScalarFunctions::RegisterStContains(ClientContext &context) {
 	within_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POLYGON_2D()}, LogicalType::BOOLEAN,
 	                                               PointWithinPolygonFunction));
 
-	CreateScalarFunctionInfo contains_info(std::move(contains_function_set));
-	contains_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, contains_info);
-
-	CreateScalarFunctionInfo within_info(std::move(within_function_set));
-	within_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, within_info);
+	ExtensionUtil::RegisterFunction(db, contains_function_set);
+	ExtensionUtil::RegisterFunction(db, within_function_set);
 }
 
 } // namespace core

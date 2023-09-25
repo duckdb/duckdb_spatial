@@ -7,12 +7,12 @@ namespace core {
 
 struct CoreTableFunctions {
 public:
-	static void Register(ClientContext &context) {
-		RegisterOsmTableFunction(context);
+	static void Register(DatabaseInstance &db) {
+		RegisterOsmTableFunction(db);
 	}
 
 private:
-	static void RegisterOsmTableFunction(ClientContext &context);
+	static void RegisterOsmTableFunction(DatabaseInstance &db);
 };
 
 } // namespace core

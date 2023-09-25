@@ -34,17 +34,14 @@ static void GeometryReverseFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void GEOSScalarFunctions::RegisterStReverse(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStReverse(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Reverse");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), GeometryReverseFunction, nullptr,
 	                               nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

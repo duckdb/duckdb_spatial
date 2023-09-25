@@ -1,6 +1,5 @@
 #pragma once
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 
 namespace spatial {
 
@@ -8,153 +7,153 @@ namespace core {
 
 struct CoreScalarFunctions {
 public:
-	static void Register(ClientContext &context) {
-		RegisterStArea(context);
-		RegisterStAsGeoJSON(context);
-		RegisterStAsText(context);
-		RegisterStAsWKB(context);
-		RegisterStAsHEXWKB(context);
-		RegisterStCentroid(context);
-		RegisterStCollect(context);
-		RegisterStCollectionExtract(context);
-		RegisterStContains(context);
-		RegisterStDimension(context);
-		RegisterStDistance(context);
-		RegisterStEndPoint(context);
-		RegisterStExtent(context);
-		RegisterStExteriorRing(context);
-		RegisterStFlipCoordinates(context);
-		RegisterStGeometryType(context);
-		RegisterStGeomFromHEXWKB(context);
-		RegisterStGeomFromWKB(context);
-		RegisterStIntersectsExtent(context);
-		RegisterStIsEmpty(context);
-		RegisterStLength(context);
-		RegisterStMakeLine(context);
-		RegisterStNGeometries(context);
-		RegisterStNInteriorRings(context);
-		RegisterStNPoints(context);
-		RegisterStPerimeter(context);
-		RegisterStPoint(context);
-		RegisterStPointN(context);
-		RegisterStRemoveRepeatedPoints(context);
-		RegisterStStartPoint(context);
-		RegisterStX(context);
-		RegisterStXMax(context);
-		RegisterStXMin(context);
-		RegisterStY(context);
-		RegisterStYMax(context);
-		RegisterStYMin(context);
+	static void Register(DatabaseInstance &db) {
+		RegisterStArea(db);
+		RegisterStAsGeoJSON(db);
+		RegisterStAsText(db);
+		RegisterStAsWKB(db);
+		RegisterStAsHEXWKB(db);
+		RegisterStCentroid(db);
+		RegisterStCollect(db);
+		RegisterStCollectionExtract(db);
+		RegisterStContains(db);
+		RegisterStDimension(db);
+		RegisterStDistance(db);
+		RegisterStEndPoint(db);
+		RegisterStExtent(db);
+		RegisterStExteriorRing(db);
+		RegisterStFlipCoordinates(db);
+		RegisterStGeometryType(db);
+		RegisterStGeomFromHEXWKB(db);
+		RegisterStGeomFromWKB(db);
+		RegisterStIntersectsExtent(db);
+		RegisterStIsEmpty(db);
+		RegisterStLength(db);
+		RegisterStMakeLine(db);
+		RegisterStNGeometries(db);
+		RegisterStNInteriorRings(db);
+		RegisterStNPoints(db);
+		RegisterStPerimeter(db);
+		RegisterStPoint(db);
+		RegisterStPointN(db);
+		RegisterStRemoveRepeatedPoints(db);
+		RegisterStStartPoint(db);
+		RegisterStX(db);
+		RegisterStXMax(db);
+		RegisterStXMin(db);
+		RegisterStY(db);
+		RegisterStYMax(db);
+		RegisterStYMin(db);
 	}
 
 private:
 	// ST_Area
-	static void RegisterStArea(ClientContext &context);
+	static void RegisterStArea(DatabaseInstance &db);
 
 	// ST_AsGeoJSON
-	static void RegisterStAsGeoJSON(ClientContext &context);
+	static void RegisterStAsGeoJSON(DatabaseInstance &db);
 
 	// ST_AsText
-	static void RegisterStAsText(ClientContext &context);
+	static void RegisterStAsText(DatabaseInstance &db);
 
 	// ST_AsHextWKB
-	static void RegisterStAsHEXWKB(ClientContext &context);
+	static void RegisterStAsHEXWKB(DatabaseInstance &db);
 
 	// ST_AsWKB
-	static void RegisterStAsWKB(ClientContext &context);
+	static void RegisterStAsWKB(DatabaseInstance &db);
 
 	// ST_Centroid
-	static void RegisterStCentroid(ClientContext &context);
+	static void RegisterStCentroid(DatabaseInstance &db);
 
 	// ST_Collect
-	static void RegisterStCollect(ClientContext &context);
+	static void RegisterStCollect(DatabaseInstance &db);
 
 	// ST_CollectionExtract
-	static void RegisterStCollectionExtract(ClientContext &context);
+	static void RegisterStCollectionExtract(DatabaseInstance &db);
 
 	// ST_Contains
-	static void RegisterStContains(ClientContext &context);
+	static void RegisterStContains(DatabaseInstance &db);
 
 	// ST_Dimension
-	static void RegisterStDimension(ClientContext &context);
+	static void RegisterStDimension(DatabaseInstance &db);
 
 	// ST_Distance
-	static void RegisterStDistance(ClientContext &context);
+	static void RegisterStDistance(DatabaseInstance &db);
 
 	// ST_EndPoint
-	static void RegisterStEndPoint(ClientContext &context);
+	static void RegisterStEndPoint(DatabaseInstance &db);
 
 	// ST_Extent
-	static void RegisterStExtent(ClientContext &context);
+	static void RegisterStExtent(DatabaseInstance &db);
 
 	// ST_ExteriorRing
-	static void RegisterStExteriorRing(ClientContext &context);
+	static void RegisterStExteriorRing(DatabaseInstance &db);
 
 	// ST_FlipCoordinates
-	static void RegisterStFlipCoordinates(ClientContext &context);
+	static void RegisterStFlipCoordinates(DatabaseInstance &db);
 
 	// ST_GeometryType
-	static void RegisterStGeometryType(ClientContext &context);
+	static void RegisterStGeometryType(DatabaseInstance &db);
 
 	// ST_GeomFromHEXWKB
-	static void RegisterStGeomFromHEXWKB(ClientContext &context);
+	static void RegisterStGeomFromHEXWKB(DatabaseInstance &db);
 
 	// ST_GeomFromWKB
-	static void RegisterStGeomFromWKB(ClientContext &context);
+	static void RegisterStGeomFromWKB(DatabaseInstance &db);
 
 	// ST_IntersectsExtent (&&)
-	static void RegisterStIntersectsExtent(ClientContext &context);
+	static void RegisterStIntersectsExtent(DatabaseInstance &db);
 
 	// ST_IsEmpty
-	static void RegisterStIsEmpty(ClientContext &context);
+	static void RegisterStIsEmpty(DatabaseInstance &db);
 
 	// ST_Length
-	static void RegisterStLength(ClientContext &context);
+	static void RegisterStLength(DatabaseInstance &db);
 
 	// ST_MakeLine
-	static void RegisterStMakeLine(ClientContext &context);
+	static void RegisterStMakeLine(DatabaseInstance &db);
 
 	// ST_NGeometries
-	static void RegisterStNGeometries(ClientContext &context);
+	static void RegisterStNGeometries(DatabaseInstance &db);
 
 	// ST_NInteriorRings
-	static void RegisterStNInteriorRings(ClientContext &context);
+	static void RegisterStNInteriorRings(DatabaseInstance &db);
 
 	// ST_NPoints
-	static void RegisterStNPoints(ClientContext &context);
+	static void RegisterStNPoints(DatabaseInstance &db);
 
 	// ST_Perimeter
-	static void RegisterStPerimeter(ClientContext &context);
+	static void RegisterStPerimeter(DatabaseInstance &db);
 
 	// ST_Point
-	static void RegisterStPoint(ClientContext &context);
+	static void RegisterStPoint(DatabaseInstance &db);
 
 	// ST_PointN
-	static void RegisterStPointN(ClientContext &context);
+	static void RegisterStPointN(DatabaseInstance &db);
 
 	// ST_RemoveRepeatedPoints
-	static void RegisterStRemoveRepeatedPoints(ClientContext &context);
+	static void RegisterStRemoveRepeatedPoints(DatabaseInstance &db);
 
 	// ST_StartPoint
-	static void RegisterStStartPoint(ClientContext &context);
+	static void RegisterStStartPoint(DatabaseInstance &db);
 
 	// ST_X
-	static void RegisterStX(ClientContext &context);
+	static void RegisterStX(DatabaseInstance &db);
 
 	// ST_XMax
-	static void RegisterStXMax(ClientContext &context);
+	static void RegisterStXMax(DatabaseInstance &db);
 
 	// ST_XMin
-	static void RegisterStXMin(ClientContext &context);
+	static void RegisterStXMin(DatabaseInstance &db);
 
 	// ST_Y
-	static void RegisterStY(ClientContext &context);
+	static void RegisterStY(DatabaseInstance &db);
 
 	// ST_YMax
-	static void RegisterStYMax(ClientContext &context);
+	static void RegisterStYMax(DatabaseInstance &db);
 
 	// ST_YMin
-	static void RegisterStYMin(ClientContext &context);
+	static void RegisterStYMin(DatabaseInstance &db);
 };
 
 } // namespace core

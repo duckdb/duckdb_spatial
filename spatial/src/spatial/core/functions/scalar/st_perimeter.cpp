@@ -128,8 +128,7 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 	}
 }
 
-void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStPerimeter(DatabaseInstance &db) {
 
 	// Perimiter
 	ScalarFunctionSet set("st_perimeter");
@@ -138,9 +137,7 @@ void CoreScalarFunctions::RegisterStPerimeter(ClientContext &context) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr,
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

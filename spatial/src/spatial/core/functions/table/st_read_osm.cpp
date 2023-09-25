@@ -823,18 +823,16 @@ static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, co
 //------------------------------------------------------------------------------
 //  Register
 //------------------------------------------------------------------------------
-void CoreTableFunctions::RegisterOsmTableFunction(ClientContext &context) {
+void CoreTableFunctions::RegisterOsmTableFunction(DatabaseInstance &db) {
 	TableFunction read("ST_ReadOSM", {LogicalType::VARCHAR}, Execute, Bind, InitGlobal, InitLocal);
 
 	read.get_batch_index = GetBatchIndex;
 	read.table_scan_progress = Progress;
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(read);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(db, read);
 
 	// Replacement scan
-	auto &config = DBConfig::GetConfig(*context.db);
+	auto &config = DBConfig::GetConfig(db);
 	config.replacement_scans.emplace_back(ReadOsmPBFReplacementScan);
 }
 

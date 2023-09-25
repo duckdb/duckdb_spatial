@@ -197,31 +197,17 @@ static void BoxCentroidFunction(DataChunk &args, ExpressionState &state, Vector 
 	}
 }
 
-static unique_ptr<FunctionData> BoxCentroidBind(ClientContext &context, ScalarFunction &bound_function,
-                                                vector<unique_ptr<Expression>> &arguments) {
-
-	bound_function.return_type = GeoTypes::POINT_2D();
-	return nullptr;
-}
-
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStCentroid(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStCentroid(DatabaseInstance &db) {
+	ScalarFunctionSet set("ST_Centroid");
+	set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointCentroidFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringCentroidFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction));
 
-	ScalarFunctionSet area_function_set("ST_Centroid");
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointCentroidFunction));
-	area_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringCentroidFunction));
-	area_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
-	area_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction, BoxCentroidBind));
-
-	CreateScalarFunctionInfo info(std::move(area_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

@@ -280,28 +280,27 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStGeomFromWKB(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStGeomFromWKB(DatabaseInstance &db) {
 
-	CreateScalarFunctionInfo point2d_from_wkb_info(
-	    ScalarFunction("ST_Point2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POINT_2D(), Point2DFromWKBFunction));
-	catalog.CreateFunction(context, point2d_from_wkb_info);
+	ScalarFunction point2d_from_wkb_info("ST_Point2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POINT_2D(),
+	                                     Point2DFromWKBFunction);
+	ExtensionUtil::RegisterFunction(db, point2d_from_wkb_info);
 
-	CreateScalarFunctionInfo linestring2d_from_wkb_info(ScalarFunction(
-	    "ST_LineString2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::LINESTRING_2D(), LineString2DFromWKBFunction));
-	catalog.CreateFunction(context, linestring2d_from_wkb_info);
+	ScalarFunction linestring2d_from_wkb_info("ST_LineString2DFromWKB", {GeoTypes::WKB_BLOB()},
+	                                          GeoTypes::LINESTRING_2D(), LineString2DFromWKBFunction);
+	ExtensionUtil::RegisterFunction(db, linestring2d_from_wkb_info);
 
-	CreateScalarFunctionInfo polygon2d_from_wkb_info(ScalarFunction("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB()},
-	                                                                GeoTypes::POLYGON_2D(), Polygon2DFromWKBFunction));
-	catalog.CreateFunction(context, polygon2d_from_wkb_info);
+	ScalarFunction polygon2d_from_wkb("ST_Polygon2DFromWKB", {GeoTypes::WKB_BLOB()}, GeoTypes::POLYGON_2D(),
+	                                  Polygon2DFromWKBFunction);
+	ExtensionUtil::RegisterFunction(db, polygon2d_from_wkb);
 
 	ScalarFunctionSet st_geom_from_wkb("ST_GeomFromWKB");
 	st_geom_from_wkb.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, GeoTypes::GEOMETRY(), GeometryFromWKBFunction,
 	                                            nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	st_geom_from_wkb.AddFunction(ScalarFunction({LogicalType::BLOB}, GeoTypes::GEOMETRY(), GeometryFromWKBFunction,
 	                                            nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-	CreateScalarFunctionInfo geometry_from_wkb_info(st_geom_from_wkb);
-	catalog.CreateFunction(context, geometry_from_wkb_info);
+
+	ExtensionUtil::RegisterFunction(db, st_geom_from_wkb);
 }
 
 } // namespace core

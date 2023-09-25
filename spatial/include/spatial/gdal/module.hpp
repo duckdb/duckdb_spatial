@@ -7,7 +7,7 @@ namespace gdal {
 
 struct GdalModule {
 public:
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &db);
 };
 
 } // namespace gdal

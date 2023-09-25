@@ -72,9 +72,7 @@ static void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStAsText(DatabaseInstance &db) {
 	ScalarFunctionSet as_text_function_set("ST_AsText");
 
 	as_text_function_set.AddFunction(
@@ -88,9 +86,7 @@ void CoreScalarFunctions::RegisterStAsText(ClientContext &context) {
 	                                                GeometryAsTextFunction, nullptr, nullptr, nullptr,
 	                                                GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(as_text_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, as_text_function_set);
 }
 
 } // namespace core

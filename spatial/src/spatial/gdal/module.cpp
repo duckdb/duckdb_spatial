@@ -11,7 +11,7 @@ namespace spatial {
 
 namespace gdal {
 
-void GdalModule::Register(ClientContext &context) {
+void GdalModule::Register(DatabaseInstance &db) {
 
 	// Load GDAL (once)
 	static std::once_flag loaded;
@@ -45,13 +45,13 @@ void GdalModule::Register(ClientContext &context) {
 		});
 
 		// Install the duckdb file handler
-		GdalFileHandler::Register(context);
+		GdalFileHandler::Register();
 	});
 
 	// Register functions
-	GdalTableFunction::Register(context);
-	GdalDriversTableFunction::Register(context);
-	GdalCopyFunction::Register(context);
+	GdalTableFunction::Register(db);
+	GdalDriversTableFunction::Register(db);
+	GdalCopyFunction::Register(db);
 }
 
 } // namespace gdal

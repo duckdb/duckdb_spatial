@@ -86,8 +86,7 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStLength(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStLength(DatabaseInstance &db) {
 
 	ScalarFunctionSet length_function_set("ST_Length");
 
@@ -96,9 +95,7 @@ void CoreScalarFunctions::RegisterStLength(ClientContext &context) {
 	length_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryLengthFunction,
 	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(length_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, length_function_set);
 }
 
 } // namespace core

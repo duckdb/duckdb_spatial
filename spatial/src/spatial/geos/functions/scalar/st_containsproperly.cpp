@@ -52,17 +52,14 @@ static void ContainsProperlyFunction(DataChunk &args, ExpressionState &state, Ve
 	ExecuteContainsProperlyPrepared(lstate, left, right, count, result);
 }
 
-void GEOSScalarFunctions::RegisterStContainsProperly(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStContainsProperly(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_ContainsProperly");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
 	                               ContainsProperlyFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

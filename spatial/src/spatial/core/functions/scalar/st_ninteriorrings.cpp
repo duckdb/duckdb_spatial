@@ -49,9 +49,7 @@ static void GeometryInteriorRingsFunction(DataChunk &args, ExpressionState &stat
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStNInteriorRings(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStNInteriorRings(DatabaseInstance &db) {
 	const char *aliases[] = {"ST_NumInteriorRings", "ST_NInteriorRings"};
 	for (auto alias : aliases) {
 		ScalarFunctionSet set(alias);
@@ -60,9 +58,7 @@ void CoreScalarFunctions::RegisterStNInteriorRings(ClientContext &context) {
 		set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::INTEGER, GeometryInteriorRingsFunction,
 		                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-		CreateScalarFunctionInfo info(std::move(set));
-		info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-		catalog.CreateFunction(context, info);
+		ExtensionUtil::RegisterFunction(db, set);
 	}
 }
 

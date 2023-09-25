@@ -56,9 +56,9 @@ public:
 				auto &bound_function = any_join.condition->Cast<BoundFunctionExpression>();
 
 				// Note that we cant perform this optimization for st_disjoint as all comparisons have to be AND'd
-				case_insensitive_set_t predicates = {"st_equals",  "st_disjoint",  "st_intersects",      "st_touches",
-				                                     "st_crosses", "st_within",    "st_contains",        "st_overlaps",
-				                                     "st_covers",  "st_coveredby", "st_containsproperly"};
+				case_insensitive_set_t predicates = {"st_equals",    "st_intersects",      "st_touches",  "st_crosses",
+				                                     "st_within",    "st_contains",        "st_overlaps", "st_covers",
+				                                     "st_coveredby", "st_containsproperly"};
 
 				if (predicates.find(bound_function.function.name) != predicates.end()) {
 					// Found a spatial predicate we can optimize
@@ -172,11 +172,17 @@ public:
 //------------------------------------------------------------------------------
 // Register optimizers
 //------------------------------------------------------------------------------
-void CoreOptimizerRules::Register(ClientContext &context) {
+void CoreOptimizerRules::Register(DatabaseInstance &db) {
+	Connection con(db);
+	auto &context = *con.context;
+
+	con.BeginTransaction();
 	auto &config = DBConfig::GetConfig(context);
 
 	// Register the optimizer rules
 	config.optimizer_extensions.push_back(RangeJoinSpatialPredicateRewriter());
+
+	con.Commit();
 }
 
 } // namespace core

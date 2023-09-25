@@ -468,26 +468,19 @@ static void GeoJSONFragmentToGeometryFunction(DataChunk &args, ExpressionState &
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsGeoJSON(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	ScalarFunctionSet to_geojson("ST_AsGeoJSON");
 	to_geojson.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
 	                                      GeometryToGeoJSONFragmentFunction, nullptr, nullptr, nullptr,
 	                                      GeometryFunctionLocalState::Init));
-
-	CreateScalarFunctionInfo to_info(to_geojson);
-	to_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, to_info);
+	ExtensionUtil::RegisterFunction(db, to_geojson);
 
 	ScalarFunctionSet from_geojson("ST_GeomFromGeoJSON");
 	from_geojson.AddFunction(ScalarFunction({LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                        GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
 	                                        GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo from_info(from_geojson);
-	from_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, from_info);
+	ExtensionUtil::RegisterFunction(db, from_geojson);
 }
 
 } // namespace core

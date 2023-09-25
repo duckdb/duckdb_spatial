@@ -41,7 +41,7 @@ PJ_CONTEXT *ProjModule::GetThreadProjContext() {
 // TODO: ignore memvfs, load into :memory: at runtime instead...?
 
 // IMPORTANT: Make sure this module is loaded before any other modules that use proj (like GDAL)
-void ProjModule::Register(ClientContext &context) {
+void ProjModule::Register(DatabaseInstance &db) {
 	// we use the sqlite "memvfs" to store the proj.db database in the extension binary itself
 	// this way we don't have to worry about the user having the proj.db database installed
 	// on their system. We therefore have to tell proj to use memvfs as the sqlite3 vfs and
@@ -68,7 +68,7 @@ void ProjModule::Register(ClientContext &context) {
 	}
 
 	// Register functions
-	ProjFunctions::Register(context);
+	ProjFunctions::Register(db);
 }
 
 } // namespace proj

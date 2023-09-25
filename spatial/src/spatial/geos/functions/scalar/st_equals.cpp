@@ -25,17 +25,12 @@ static void EqualsFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	                                                  });
 }
 
-void GEOSScalarFunctions::RegisterStEquals(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStEquals(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Equals");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, EqualsFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
-
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

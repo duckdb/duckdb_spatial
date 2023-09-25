@@ -23,17 +23,14 @@ static void IsRingFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	});
 }
 
-void GEOSScalarFunctions::RegisterStIsRing(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStIsRing(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_IsRing");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, IsRingFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

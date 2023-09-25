@@ -74,8 +74,7 @@ static void GeometryTypeFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStGeometryType(DatabaseInstance &db) {
 
 	ScalarFunctionSet geometry_type_set("ST_GeometryType");
 	geometry_type_set.AddFunction(
@@ -88,9 +87,7 @@ void CoreScalarFunctions::RegisterStGeometryType(ClientContext &context) {
 	                                             GeometryTypeFunctionBind, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(geometry_type_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, geometry_type_set);
 }
 
 } // namespace core

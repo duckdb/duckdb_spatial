@@ -412,7 +412,7 @@ static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunc
 	global_state.dataset->FlushCache();
 }
 
-void GdalCopyFunction::Register(ClientContext &context) {
+void GdalCopyFunction::Register(DatabaseInstance &db) {
 	// register the copy function
 	CopyFunction info("GDAL");
 	info.copy_to_bind = Bind;
@@ -421,10 +421,7 @@ void GdalCopyFunction::Register(ClientContext &context) {
 	info.copy_to_sink = Sink;
 	info.copy_to_finalize = Finalize;
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateCopyFunctionInfo create(std::move(info));
-	create.internal = true;
-	catalog.CreateCopyFunction(context, create);
+	ExtensionUtil::RegisterFunction(db, info);
 }
 
 } // namespace gdal

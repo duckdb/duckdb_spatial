@@ -98,8 +98,7 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStPointN(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStPointN(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_PointN");
 
@@ -110,9 +109,7 @@ void CoreScalarFunctions::RegisterStPointN(ClientContext &context) {
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), LogicalType::INTEGER}, GeoTypes::POINT_2D(),
 	                               LineStringPointNFunction));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

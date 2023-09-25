@@ -123,8 +123,7 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStExteriorRing(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStExteriorRing(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_ExteriorRing");
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::LINESTRING_2D(), PolygonExteriorRingFunction));
@@ -132,9 +131,7 @@ void CoreScalarFunctions::RegisterStExteriorRing(ClientContext &context) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), GeometryExteriorRingFunction, nullptr,
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

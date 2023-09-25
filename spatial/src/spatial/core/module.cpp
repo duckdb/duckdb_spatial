@@ -13,13 +13,13 @@ namespace spatial {
 
 namespace core {
 
-void CoreModule::Register(ClientContext &context) {
-	GeoTypes::Register(context);
-	CoreScalarFunctions::Register(context);
-	CoreCastFunctions::Register(context);
-	CoreTableFunctions::Register(context);
-	CoreAggregateFunctions::Register(context);
-	CoreOptimizerRules::Register(context);
+void CoreModule::Register(DatabaseInstance &db) {
+	GeoTypes::Register(db);
+	CoreScalarFunctions::Register(db);
+	CoreCastFunctions::Register(db);
+	CoreTableFunctions::Register(db);
+	CoreAggregateFunctions::Register(db);
+	CoreOptimizerRules::Register(db);
 }
 
 } // namespace core

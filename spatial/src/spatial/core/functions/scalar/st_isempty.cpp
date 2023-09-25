@@ -83,8 +83,7 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStIsEmpty(DatabaseInstance &db) {
 
 	ScalarFunctionSet is_empty_function_set("ST_IsEmpty");
 
@@ -96,9 +95,7 @@ void CoreScalarFunctions::RegisterStIsEmpty(ClientContext &context) {
 	                                                 GeometryIsEmptyFunction, nullptr, nullptr, nullptr,
 	                                                 GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(is_empty_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, is_empty_function_set);
 }
 
 } // namespace core

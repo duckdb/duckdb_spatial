@@ -172,7 +172,7 @@ static char **DuckDBSiblingFiles(void *, const char *dir_name) {
 //--------------------------------------------------------------------------
 // Register
 //--------------------------------------------------------------------------
-void GdalFileHandler::Register(ClientContext &context) {
+void GdalFileHandler::Register() {
 
 	auto callbacks = VSIAllocFilesystemPluginCallbacksStruct();
 

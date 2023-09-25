@@ -116,28 +116,27 @@ static void PointFunction(DataChunk &args, ExpressionState &state, Vector &resul
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStPoint(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStPoint(DatabaseInstance &db) {
 
-	CreateScalarFunctionInfo st_point_info(ScalarFunction("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE},
-	                                                      GeoTypes::GEOMETRY(), PointFunction, nullptr, nullptr,
-	                                                      nullptr, GeometryFunctionLocalState::Init));
-	catalog.CreateFunction(context, st_point_info);
+	ScalarFunction st_point("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY(), PointFunction,
+	                        nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init);
+
+	ExtensionUtil::RegisterFunction(db, st_point);
 
 	// Non-standard
-	CreateScalarFunctionInfo st_point_2d_info(ScalarFunction("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE},
-	                                                         GeoTypes::POINT_2D(), Point2DFunction));
-	catalog.CreateFunction(context, st_point_2d_info);
+	ScalarFunction st_point2d("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::POINT_2D(),
+	                          Point2DFunction);
+	ExtensionUtil::RegisterFunction(db, st_point2d);
 
-	CreateScalarFunctionInfo st_point_3d_info(
-	    ScalarFunction("ST_Point3D", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-	                   GeoTypes::POINT_3D(), Point3DFunction));
-	catalog.CreateFunction(context, st_point_3d_info);
+	ScalarFunction st_point_3d("ST_Point3D", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
+	                           GeoTypes::POINT_3D(), Point3DFunction);
+	ExtensionUtil::RegisterFunction(db, st_point_3d);
 
-	CreateScalarFunctionInfo st_point_4d_info(ScalarFunction(
-	    "ST_Point4D", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
-	    GeoTypes::POINT_4D(), Point4DFunction));
-	catalog.CreateFunction(context, st_point_4d_info);
+	ScalarFunction st_point_4d("ST_Point4D",
+	                           {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
+	                           GeoTypes::POINT_4D(), Point4DFunction);
+
+	ExtensionUtil::RegisterFunction(db, st_point_4d);
 }
 
 } // namespace core

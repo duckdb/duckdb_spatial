@@ -131,21 +131,17 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStArea(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStArea(DatabaseInstance &db) {
 
-	ScalarFunctionSet area_function_set("ST_Area");
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointAreaFunction));
-	area_function_set.AddFunction(
-	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineStringAreaFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction,
-	                                             nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
-	area_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
+	ScalarFunctionSet set("ST_Area");
+	set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointAreaFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineStringAreaFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr,
+	                               nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
 
-	CreateScalarFunctionInfo info(std::move(area_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

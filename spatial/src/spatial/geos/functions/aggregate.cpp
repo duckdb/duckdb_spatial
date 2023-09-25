@@ -173,25 +173,22 @@ struct UnionAggFunction {
 //------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------
-void GeosAggregateFunctions::Register(ClientContext &context) {
-
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GeosAggregateFunctions::Register(DatabaseInstance &db) {
+	;
 
 	AggregateFunctionSet st_intersection_agg("st_intersection_agg");
 	st_intersection_agg.AddFunction(
 	    AggregateFunction::UnaryAggregateDestructor<GEOSAggState, string_t, string_t, IntersectionAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
-	CreateAggregateFunctionInfo intersection_info(std::move(st_intersection_agg));
-	intersection_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, intersection_info);
+
+	ExtensionUtil::RegisterFunction(db, st_intersection_agg);
 
 	AggregateFunctionSet st_union_agg("st_union_agg");
 	st_union_agg.AddFunction(
 	    AggregateFunction::UnaryAggregateDestructor<GEOSAggState, string_t, string_t, UnionAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
-	CreateAggregateFunctionInfo union_info(std::move(st_union_agg));
-	union_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, union_info);
+
+	ExtensionUtil::RegisterFunction(db, st_union_agg);
 }
 
 } // namespace geos

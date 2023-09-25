@@ -88,9 +88,7 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStStartPoint(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStStartPoint(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_StartPoint");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), GeometryStartPointFunction, nullptr,
@@ -98,9 +96,7 @@ void CoreScalarFunctions::RegisterStStartPoint(ClientContext &context) {
 
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringStartPointFunction));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

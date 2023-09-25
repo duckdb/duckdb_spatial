@@ -28,15 +28,11 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 	});
 }
 
-void CoreScalarFunctions::RegisterStIntersectsExtent(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStIntersectsExtent(DatabaseInstance &db) {
 	ScalarFunction intersects_func("st_intersects_extent", {GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()},
 	                               LogicalType::BOOLEAN, IntersectsExtentFunction);
 
-	CreateScalarFunctionInfo func_info(std::move(intersects_func));
-	func_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, func_info);
+	ExtensionUtil::RegisterFunction(db, intersects_func);
 
 	// So because this is a macro, we cant add an alias to it. crap.
 	// ScalarFunctionSet intersects_op("&&");

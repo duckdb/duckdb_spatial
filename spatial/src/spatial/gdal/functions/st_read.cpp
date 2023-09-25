@@ -641,7 +641,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 	return nullptr;
 }
 
-void GdalTableFunction::Register(ClientContext &context) {
+void GdalTableFunction::Register(DatabaseInstance &db) {
 
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
@@ -664,12 +664,10 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["keep_wkb"] = LogicalType::BOOLEAN;
 	set.AddFunction(scan);
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(set);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(db, set);
 
 	// Replacement scan
-	auto &config = DBConfig::GetConfig(*context.db);
+	auto &config = DBConfig::GetConfig(db);
 	config.replacement_scans.emplace_back(GdalTableFunction::ReplacementScan);
 }
 

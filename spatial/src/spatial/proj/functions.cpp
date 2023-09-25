@@ -408,7 +408,7 @@ struct GenerateSpatialRefSysTable {
 
 	static void Execute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output);
 
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &db);
 };
 
 unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context, TableFunctionBindInput &input,
@@ -474,11 +474,9 @@ void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionIn
 	output.SetCardinality(count);
 }
 
-void GenerateSpatialRefSysTable::Register(ClientContext &context) {
+void GenerateSpatialRefSysTable::Register(DatabaseInstance &db) {
 	TableFunction func("st_list_proj_crs", {}, Execute, Bind, Init);
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(func);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(db, func);
 
 	// Also create a view
 	/*
@@ -493,9 +491,7 @@ void GenerateSpatialRefSysTable::Register(ClientContext &context) {
 	*/
 }
 
-void ProjFunctions::Register(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void ProjFunctions::Register(DatabaseInstance &db) {
 	ScalarFunctionSet set("st_transform");
 
 	using namespace spatial::core;
@@ -521,11 +517,9 @@ void ProjFunctions::Register(ClientContext &context) {
 	    {GeoTypes::GEOMETRY(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BOOLEAN}, GeoTypes::GEOMETRY(),
 	    GeometryTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 
-	GenerateSpatialRefSysTable::Register(context);
+	GenerateSpatialRefSysTable::Register(db);
 }
 
 } // namespace proj

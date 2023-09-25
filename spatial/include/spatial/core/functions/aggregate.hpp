@@ -7,12 +7,12 @@ namespace core {
 
 struct CoreAggregateFunctions {
 public:
-	static void Register(ClientContext &context) {
-		RegisterStEnvelopeAgg(context);
+	static void Register(DatabaseInstance &db) {
+		RegisterStEnvelopeAgg(db);
 	}
 
 private:
-	static void RegisterStEnvelopeAgg(ClientContext &context);
+	static void RegisterStEnvelopeAgg(DatabaseInstance &db);
 };
 
 } // namespace core

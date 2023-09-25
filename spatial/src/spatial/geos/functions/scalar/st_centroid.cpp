@@ -23,17 +23,13 @@ static void CentroidFunction(DataChunk &args, ExpressionState &state, Vector &re
 	});
 }
 
-void GEOSScalarFunctions::RegisterStCentroid(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void GEOSScalarFunctions::RegisterStCentroid(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Centroid");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), CentroidFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::AddFunctionOverload(db, set);
 }
 
 } // namespace geos

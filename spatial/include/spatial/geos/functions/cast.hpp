@@ -6,7 +6,7 @@ namespace spatial {
 namespace geos {
 
 struct GeosCastFunctions {
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &db);
 };
 
 } // namespace geos

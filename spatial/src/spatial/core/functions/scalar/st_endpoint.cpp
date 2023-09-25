@@ -88,9 +88,7 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStEndPoint(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStEndPoint(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_EndPoint");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), GeometryEndPointFunction, nullptr,
@@ -98,9 +96,7 @@ void CoreScalarFunctions::RegisterStEndPoint(ClientContext &context) {
 
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringEndPointFunction));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

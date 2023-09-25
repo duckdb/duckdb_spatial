@@ -24,17 +24,14 @@ static void OverlapsFunction(DataChunk &args, ExpressionState &state, Vector &re
 	                                             GEOSPreparedOverlaps_r);
 }
 
-void GEOSScalarFunctions::RegisterStOverlaps(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStOverlaps(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Overlaps");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, OverlapsFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

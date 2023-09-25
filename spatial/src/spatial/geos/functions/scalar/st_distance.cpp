@@ -62,17 +62,14 @@ static void DistanceFunction(DataChunk &args, ExpressionState &state, Vector &re
 	ExecutePreparedDistance(lstate, left, right, count, result);
 }
 
-void GEOSScalarFunctions::RegisterStDistance(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStDistance(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Distance");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, DistanceFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::AddFunctionOverload(db, set);
 }
 
 } // namespace geos

@@ -248,9 +248,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 	});
 }
 
-void CoreScalarFunctions::RegisterStCollectionExtract(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStCollectionExtract(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_CollectionExtract");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), CollectionExtractAutoFunction, nullptr,
@@ -259,9 +257,7 @@ void CoreScalarFunctions::RegisterStCollectionExtract(ClientContext &context) {
 	                               CollectionExtractTypeFunction, nullptr, nullptr, nullptr,
 	                               GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core
