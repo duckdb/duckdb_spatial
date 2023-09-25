@@ -26,6 +26,7 @@ public:
 		RegisterStGeometryType(db);
 		RegisterStGeomFromHEXWKB(db);
 		RegisterStGeomFromWKB(db);
+		RegisterStIntersects(db);
 		RegisterStIntersectsExtent(db);
 		RegisterStIsEmpty(db);
 		RegisterStLength(db);
@@ -100,6 +101,9 @@ private:
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(DatabaseInstance &db);
+
+	// ST_Intersects
+	static void RegisterStIntersects(DatabaseInstance &db);
 
 	// ST_IntersectsExtent (&&)
 	static void RegisterStIntersectsExtent(DatabaseInstance &db);

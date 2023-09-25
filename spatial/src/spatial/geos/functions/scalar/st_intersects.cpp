@@ -31,7 +31,7 @@ void GEOSScalarFunctions::RegisterStIntersects(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
 	                               IntersectsFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	ExtensionUtil::RegisterFunction(db, set);
+	ExtensionUtil::AddFunctionOverload(db, set);
 }
 
 } // namespace geos
