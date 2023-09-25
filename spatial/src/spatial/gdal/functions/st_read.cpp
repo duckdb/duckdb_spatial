@@ -99,7 +99,7 @@ struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
 	bool sequential_layer_scan = false;
 	bool keep_wkb = false;
-	vector<idx_t> geometry_column_ids;
+	unordered_set<idx_t> geometry_column_ids;
 	vector<string> layer_creation_options;
 	unique_ptr<SpatialFilter> spatial_filter;
 	GDALDatasetUniquePtr dataset;
@@ -374,7 +374,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				return_types.emplace_back(core::GeoTypes::GEOMETRY());
 				column_name = "geom";
 			}
-			result->geometry_column_ids.push_back(col_idx);
+			result->geometry_column_ids.insert(col_idx);
 
 		} else if (attribute.dictionary) {
 			auto dictionary_type = GetArrowLogicalType(attribute);
@@ -579,20 +579,20 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 
 	if (!data.keep_wkb) {
 		// Find the geometry columns
-		for (auto &geom_col_idx : data.geometry_column_ids) {
-			if (geom_col_idx >= output.ColumnCount()) {
-				// Column is projected away
-				continue;
+		for (auto col_idx = 0; col_idx < state.column_ids.size(); col_idx++) {
+			auto mapped_idx = state.column_ids[col_idx];
+			if (data.geometry_column_ids.find(mapped_idx) != data.geometry_column_ids.end()) {
+				// Found a geometry column
+				// Convert the WKB columns to a geometry column
+				state.factory.allocator.Reset();
+				auto &wkb_vec = output.data[col_idx];
+				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
+				UnaryExecutor::Execute<string_t, string_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
+					auto geometry = state.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
+					return state.factory.Serialize(geom_vec, geometry);
+				});
+				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}
-			// Convert the WKB columns to a geometry column
-			state.factory.allocator.Reset();
-			auto &wkb_vec = output.data[geom_col_idx];
-			Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
-			UnaryExecutor::Execute<string_t, string_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
-				auto geometry = state.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-				return state.factory.Serialize(geom_vec, geometry);
-			});
-			output.data[geom_col_idx].ReferenceAndSetType(geom_vec);
 		}
 	}
 
