@@ -1,0 +1,10 @@
+require spatial
+
+# Test XLSX driver roundtrip
+statement ok
+COPY (SELECT 1337 as i, 'foobar' as f) TO '__TEST_DIR__/test.xlsx' WITH (FORMAT GDAL, DRIVER 'xlsx');
+
+query II
+SELECT i, f FROM st_read('__TEST_DIR__/test.xlsx');
+----
+1337	foobar

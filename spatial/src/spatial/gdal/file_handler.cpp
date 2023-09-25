@@ -169,6 +169,34 @@ static char **DuckDBSiblingFiles(void *, const char *dir_name) {
 	return files.StealList();
 }
 
+static int DuckDBStatCallback(void *userData, const char *filename, VSIStatBufL *pstatbuf, int nflags) {
+	auto &context = GdalFileHandler::GetLocalClientContext();
+	auto &fs = context.db->GetFileSystem();
+
+	if (!fs.FileExists(filename)) {
+		return -1;
+	}
+
+	auto file = fs.OpenFile(filename, FileFlags::FILE_FLAGS_READ);
+	if (!file) {
+		return -1;
+	}
+
+	pstatbuf->st_size = static_cast<off_t>(file->GetFileSize());
+	/* DuckDB doesnt have anything equivalent to these yet... Hopefully thats ok?
+	pstatbuf->st_mtime = file->GetLastModifiedTime();
+	pstatbuf->st_mode = file->GetFileMode();
+	pstatbuf->st_uid = file->GetFileOwner();
+	pstatbuf->st_gid = file->GetFileGroup();
+	pstatbuf->st_ino = file->GetFileInode();
+	pstatbuf->st_dev = file->GetFileDevice();
+	pstatbuf->st_nlink = file->GetFileLinkCount();
+	pstatbuf->st_ctime = file->GetFileCreationTime();
+	pstatbuf->st_atime = file->GetFileAccessTime();
+	 */
+
+	return 0;
+}
 //--------------------------------------------------------------------------
 // Register
 //--------------------------------------------------------------------------
@@ -190,6 +218,7 @@ void GdalFileHandler::Register() {
 	callbacks->rmdir = DuckDBDeleteDir;
 	callbacks->read_dir = DuckDBReadDir;
 	callbacks->sibling_files = DuckDBSiblingFiles;
+	callbacks->stat = DuckDBStatCallback;
 
 	// Override this as the default file system
 	VSIInstallPluginHandler("", callbacks);
