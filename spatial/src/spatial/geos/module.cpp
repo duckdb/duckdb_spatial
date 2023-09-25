@@ -9,10 +9,10 @@ namespace spatial {
 
 namespace geos {
 
-void GeosModule::Register(ClientContext &context) {
-	GEOSScalarFunctions::Register(context);
-	GeosAggregateFunctions::Register(context);
-	GeosCastFunctions::Register(context);
+void GeosModule::Register(DatabaseInstance &db) {
+	GEOSScalarFunctions::Register(db);
+	GeosAggregateFunctions::Register(db);
+	GeosCastFunctions::Register(db);
 }
 
 } // namespace geos

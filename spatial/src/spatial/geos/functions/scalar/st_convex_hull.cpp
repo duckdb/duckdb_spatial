@@ -24,17 +24,14 @@ static void ConvexHullFunction(DataChunk &args, ExpressionState &state, Vector &
 	});
 }
 
-void GEOSScalarFunctions::RegisterStConvexHull(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStConvexHull(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_ConvexHull");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), ConvexHullFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

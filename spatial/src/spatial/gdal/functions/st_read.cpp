@@ -12,6 +12,7 @@
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
 #include "spatial/gdal/file_handler.hpp"
+#include "spatial/core/geometry/geometry_factory.hpp"
 
 #include "ogrsf_frmts.h"
 
@@ -96,7 +97,9 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 
 struct GdalScanFunctionData : public TableFunctionData {
 	idx_t layer_idx;
-	bool sequential_layer_scan;
+	bool sequential_layer_scan = false;
+	bool keep_wkb = false;
+	unordered_set<idx_t> geometry_column_ids;
 	vector<string> layer_creation_options;
 	unique_ptr<SpatialFilter> spatial_filter;
 	GDALDatasetUniquePtr dataset;
@@ -109,8 +112,9 @@ struct GdalScanFunctionData : public TableFunctionData {
 };
 
 struct GdalScanLocalState : ArrowScanLocalState {
-	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk)
-	    : ArrowScanLocalState(std::move(current_chunk)) {
+	core::GeometryFactory factory;
+	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
+	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)) {
 	}
 };
 
@@ -223,7 +227,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 	// Now we can bind the additonal options
 	auto result = make_uniq<GdalScanFunctionData>();
-	result->sequential_layer_scan = false;
 	bool max_batch_size_set = false;
 	for (auto &kv : input.named_parameters) {
 		auto loption = StringUtil::Lower(kv.first);
@@ -299,6 +302,10 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", max_batch_size));
 			max_batch_size_set = true;
 		}
+
+		if (loption == "keep_wkb") {
+			result->keep_wkb = BooleanValue::Get(kv.second);
+		}
 	}
 
 	// set default max_threads
@@ -356,10 +363,19 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		                         'm',    'e',  '\a', '\0', '\0',   '\0', 'o',  'g',  'c', '.', 'w', 'k', 'b'};
 
 		auto arrow_type = GetArrowLogicalType(attribute);
+		auto column_name = string(attribute.name);
 		if (attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
 			// This is a WKB geometry blob
 			result->arrow_table.AddColumn(col_idx, std::move(arrow_type));
-			return_types.emplace_back(core::GeoTypes::WKB_BLOB());
+
+			if (result->keep_wkb) {
+				return_types.emplace_back(core::GeoTypes::WKB_BLOB());
+			} else {
+				return_types.emplace_back(core::GeoTypes::GEOMETRY());
+				column_name = "geom";
+			}
+			result->geometry_column_ids.insert(col_idx);
+
 		} else if (attribute.dictionary) {
 			auto dictionary_type = GetArrowLogicalType(attribute);
 			return_types.emplace_back(dictionary_type->GetDuckType());
@@ -372,14 +388,12 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 		// keep these around for projection/filter pushdown later
 		// does GDAL even allow duplicate/missing names?
-		auto s = string(attributes[col_idx]->name);
-		result->all_names.push_back(s);
+		result->all_names.push_back(column_name);
 
-		if (strcmp(attribute.name, "") == 0) {
+		if (column_name.empty()) {
 			names.push_back("v" + to_string(col_idx));
 		} else {
-			auto s2 = string(attributes[col_idx]->name);
-			names.push_back(s2);
+			names.push_back(column_name);
 		}
 	}
 
@@ -516,7 +530,21 @@ unique_ptr<LocalTableFunctionState> GdalTableFunction::InitLocal(ExecutionContex
                                                                  TableFunctionInitInput &input,
                                                                  GlobalTableFunctionState *global_state_p) {
 	GdalFileHandler::SetLocalClientContext(context.client);
-	return ArrowTableFunction::ArrowScanInitLocal(context, input, global_state_p);
+
+	auto &global_state = global_state_p->Cast<ArrowScanGlobalState>();
+	auto current_chunk = make_uniq<ArrowArrayWrapper>();
+	auto result = make_uniq<GdalScanLocalState>(std::move(current_chunk), context.client);
+	result->column_ids = input.column_ids;
+	result->filters = input.filters.get();
+	if (input.CanRemoveFilterColumns()) {
+		result->all_columns.Initialize(context.client, global_state.scanned_types);
+	}
+
+	if (!ArrowScanParallelStateNext(context.client, input.bind_data.get(), *result, global_state)) {
+		return nullptr;
+	}
+
+	return std::move(result);
 }
 
 //-----------------------------------------------------------------------------
@@ -527,7 +555,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 		return;
 	}
 	auto &data = (GdalScanFunctionData &)*input.bind_data;
-	auto &state = (ArrowScanLocalState &)*input.local_state;
+	auto &state = (GdalScanLocalState &)*input.local_state;
 	auto &global_state = (GdalScanGlobalState &)*input.global_state;
 
 	//! Out of tuples in this chunk
@@ -546,8 +574,26 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 		output.ReferenceColumns(state.all_columns, global_state.projection_ids);
 	} else {
 		output.SetCardinality(output_size);
-
 		ArrowToDuckDB(state, data.arrow_table.GetColumns(), output, data.lines_read - output_size, false);
+	}
+
+	if (!data.keep_wkb) {
+		// Find the geometry columns
+		for (auto col_idx = 0; col_idx < state.column_ids.size(); col_idx++) {
+			auto mapped_idx = state.column_ids[col_idx];
+			if (data.geometry_column_ids.find(mapped_idx) != data.geometry_column_ids.end()) {
+				// Found a geometry column
+				// Convert the WKB columns to a geometry column
+				state.factory.allocator.Reset();
+				auto &wkb_vec = output.data[col_idx];
+				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
+				UnaryExecutor::Execute<string_t, string_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
+					auto geometry = state.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
+					return state.factory.Serialize(geom_vec, geometry);
+				});
+				output.data[col_idx].ReferenceAndSetType(geom_vec);
+			}
+		}
 	}
 
 	output.Verify();
@@ -595,7 +641,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 	return nullptr;
 }
 
-void GdalTableFunction::Register(ClientContext &context) {
+void GdalTableFunction::Register(DatabaseInstance &db) {
 
 	TableFunctionSet set("st_read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
@@ -615,14 +661,13 @@ void GdalTableFunction::Register(ClientContext &context) {
 	scan.named_parameters["layer"] = LogicalType::VARCHAR;
 	scan.named_parameters["sequential_layer_scan"] = LogicalType::BOOLEAN;
 	scan.named_parameters["max_batch_size"] = LogicalType::INTEGER;
+	scan.named_parameters["keep_wkb"] = LogicalType::BOOLEAN;
 	set.AddFunction(scan);
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(set);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(db, set);
 
 	// Replacement scan
-	auto &config = DBConfig::GetConfig(*context.db);
+	auto &config = DBConfig::GetConfig(db);
 	config.replacement_scans.emplace_back(GdalTableFunction::ReplacementScan);
 }
 

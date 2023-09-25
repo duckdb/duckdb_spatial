@@ -114,8 +114,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	}
 }
 
-void GeographicLibFunctions::RegisterLength(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GeographicLibFunctions::RegisterLength(DatabaseInstance &db) {
 
 	// Length
 	ScalarFunctionSet set("st_length_spheroid");
@@ -124,9 +123,7 @@ void GeographicLibFunctions::RegisterLength(ClientContext &context) {
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction,
 	                               nullptr, nullptr, nullptr, spatial::core::GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geographiclib

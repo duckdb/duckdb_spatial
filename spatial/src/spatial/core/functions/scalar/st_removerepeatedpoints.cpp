@@ -267,8 +267,7 @@ static void LineStringRemoveRepeatedPointsFunctionsWithTolerance(DataChunk &args
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_RemoveRepeatedPoints");
 
@@ -278,9 +277,7 @@ void CoreScalarFunctions::RegisterStRemoveRepeatedPoints(ClientContext &context)
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D(), LogicalType::DOUBLE}, GeoTypes::LINESTRING_2D(),
 	                               LineStringRemoveRepeatedPointsFunctionsWithTolerance));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

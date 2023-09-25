@@ -55,14 +55,11 @@ void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &r
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStAsHEXWKB(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStAsHEXWKB(DatabaseInstance &db) {
 
-	CreateScalarFunctionInfo info(ScalarFunction("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
-	                                             GeometryAsHEXWKBFunction, nullptr, nullptr, nullptr,
-	                                             GeometryFunctionLocalState::Init));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ScalarFunction func("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsHEXWKBFunction, nullptr,
+	                    nullptr, nullptr, GeometryFunctionLocalState::Init);
+	ExtensionUtil::RegisterFunction(db, func);
 }
 
 } // namespace core

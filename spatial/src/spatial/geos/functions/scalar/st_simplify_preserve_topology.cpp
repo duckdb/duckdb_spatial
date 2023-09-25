@@ -25,8 +25,7 @@ static void SimplifyPreserveTopologyFunction(DataChunk &args, ExpressionState &s
 	    });
 }
 
-void GEOSScalarFunctions::RegisterStSimplifyPreserveTopology(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStSimplifyPreserveTopology(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_SimplifyPreserveTopology");
 
@@ -34,9 +33,7 @@ void GEOSScalarFunctions::RegisterStSimplifyPreserveTopology(ClientContext &cont
 	                               SimplifyPreserveTopologyFunction, nullptr, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

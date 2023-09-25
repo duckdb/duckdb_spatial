@@ -62,8 +62,7 @@ static void DistanceWithinFunction(DataChunk &args, ExpressionState &state, Vect
 	ExecutePreparedDistanceWithin(lstate, left, right, distance_vec, count, result);
 }
 
-void GEOSScalarFunctions::RegisterStDistanceWithin(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStDistanceWithin(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_DWithin");
 
@@ -71,9 +70,7 @@ void GEOSScalarFunctions::RegisterStDistanceWithin(ClientContext &context) {
 	                               LogicalType::BOOLEAN, DistanceWithinFunction, nullptr, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

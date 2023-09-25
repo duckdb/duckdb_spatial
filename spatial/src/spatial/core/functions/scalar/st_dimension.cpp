@@ -27,17 +27,13 @@ static void DimensionFunction(DataChunk &args, ExpressionState &state, Vector &r
 	});
 }
 
-void CoreScalarFunctions::RegisterStDimension(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStDimension(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Dimension");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::INTEGER, DimensionFunction, nullptr, nullptr,
 	                               nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

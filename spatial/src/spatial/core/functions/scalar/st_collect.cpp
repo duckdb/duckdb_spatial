@@ -83,17 +83,13 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 	});
 }
 
-void CoreScalarFunctions::RegisterStCollect(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStCollect(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Collect");
 
 	set.AddFunction(ScalarFunction({LogicalType::LIST(GeoTypes::GEOMETRY())}, GeoTypes::GEOMETRY(), CollectFunction,
 	                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

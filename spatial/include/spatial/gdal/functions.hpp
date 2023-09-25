@@ -30,7 +30,7 @@ private:
 	                                            ReplacementScanData *data);
 
 public:
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &db);
 };
 
 struct GdalDriversTableFunction {
@@ -48,12 +48,12 @@ struct GdalDriversTableFunction {
 	};
 	static unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFunctionInitInput &input);
 	static void Execute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output);
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &db);
 	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
 	                                     vector<LogicalType> &return_types, vector<string> &names);
 };
 struct GdalCopyFunction {
-	static void Register(ClientContext &context);
+	static void Register(DatabaseInstance &db);
 };
 
 } // namespace gdal

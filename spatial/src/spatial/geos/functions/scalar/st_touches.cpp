@@ -24,17 +24,14 @@ static void TouchesFunction(DataChunk &args, ExpressionState &state, Vector &res
 	                                             GEOSPreparedTouches_r);
 }
 
-void GEOSScalarFunctions::RegisterStTouches(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStTouches(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Touches");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, TouchesFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

@@ -7,6 +7,8 @@
 #include "duckdb/parser/parsed_data/create_macro_info.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
+#include "duckdb/function/scalar_macro_function.hpp"
+#include "duckdb/parser/expression/function_expression.hpp"
 
 namespace spatial {
 
@@ -28,21 +30,36 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 	});
 }
 
-void CoreScalarFunctions::RegisterStIntersectsExtent(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStIntersectsExtent(DatabaseInstance &db) {
 	ScalarFunction intersects_func("st_intersects_extent", {GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()},
 	                               LogicalType::BOOLEAN, IntersectsExtentFunction);
 
-	CreateScalarFunctionInfo func_info(std::move(intersects_func));
-	func_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, func_info);
+	ExtensionUtil::RegisterFunction(db, intersects_func);
 
-	// So because this is a macro, we cant add an alias to it. crap.
-	// ScalarFunctionSet intersects_op("&&");
-	// intersects_op.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
-	// IntersectsExtentFunction)); CreateScalarFunctionInfo op_info(std::move(intersects_op)); op_info.on_conflict =
-	// OnCreateConflict::IGNORE_ON_CONFLICT; catalog.CreateFunction(context, op_info);
+	// So because this is a macro, we cant overload it. crap.
+	// Provide a "&&" macro
+	/*
+	vector<unique_ptr<ParsedExpression>> args;
+	args.push_back(make_uniq<ColumnRefExpression>("left"));
+	args.push_back(make_uniq<ColumnRefExpression>("right"));
+
+	auto func = make_uniq_base<ParsedExpression, FunctionExpression>("st_intersects_extent", std::move(args));
+	auto macro = make_uniq_base<MacroFunction, ScalarMacroFunction>(std::move(func));
+
+	vector<unique_ptr<ParsedExpression>> macro_args;
+	macro_args.push_back(make_uniq<ColumnRefExpression>("left"));
+	macro_args.push_back(make_uniq<ColumnRefExpression>("right"));
+	macro->parameters = std::move(macro_args);
+
+	CreateMacroInfo macro_info(CatalogType::MACRO_ENTRY);
+	macro_info.name = "&&";
+	macro_info.function = std::move(macro);
+	macro_info.schema = DEFAULT_SCHEMA;
+	macro_info.internal = true;
+	macro_info.parameter_names = {"left", "right"};
+	macro_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
+	ExtensionUtil::RegisterFunction(db, macro_info);
+	*/
 }
 
 } // namespace core

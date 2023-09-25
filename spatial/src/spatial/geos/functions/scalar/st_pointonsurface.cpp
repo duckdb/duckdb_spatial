@@ -23,17 +23,14 @@ static void PointOnSurfaceFunction(DataChunk &args, ExpressionState &state, Vect
 	});
 }
 
-void GEOSScalarFunctions::RegisterStPointOnSurface(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStPointOnSurface(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_PointOnSurface");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), PointOnSurfaceFunction, nullptr,
 	                               nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

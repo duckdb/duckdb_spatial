@@ -153,21 +153,23 @@ static bool GeometryToVarcharCast(Vector &source, Vector &result, idx_t count, C
 	return true;
 }
 
-void CoreCastFunctions::RegisterVarcharCasts(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
+void CoreCastFunctions::RegisterVarcharCasts(DatabaseInstance &db) {
 
-	casts.RegisterCastFunction(GeoTypes::POINT_2D(), LogicalType::VARCHAR, BoundCastInfo(Point2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::POINT_2D(), LogicalType::VARCHAR,
+	                                    BoundCastInfo(Point2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::LINESTRING_2D(), LogicalType::VARCHAR,
-	                           BoundCastInfo(LineString2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::LINESTRING_2D(), LogicalType::VARCHAR,
+	                                    BoundCastInfo(LineString2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::POLYGON_2D(), LogicalType::VARCHAR, BoundCastInfo(Polygon2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::POLYGON_2D(), LogicalType::VARCHAR,
+	                                    BoundCastInfo(Polygon2DToVarcharCast), 1);
 
-	casts.RegisterCastFunction(GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast),
+	                                    1);
 
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
-	                           BoundCastInfo(GeometryToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	ExtensionUtil::RegisterCastFunction(
+	    db, GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+	    BoundCastInfo(GeometryToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

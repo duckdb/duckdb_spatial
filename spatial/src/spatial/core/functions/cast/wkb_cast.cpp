@@ -1,8 +1,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/cast.hpp"
-#include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
 
@@ -48,22 +46,21 @@ static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastP
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
-void CoreCastFunctions::RegisterWKBCasts(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
-
+void CoreCastFunctions::RegisterWKBCasts(DatabaseInstance &db) {
 	// Geometry <-> WKB is explicitly castable
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
-	                           BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
+	ExtensionUtil::RegisterCastFunction(
+	    db, GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
+	    BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
 
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),
-	                           BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast));
+	ExtensionUtil::RegisterCastFunction(
+	    db, GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),
+	    BoundCastInfo(WKBToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast));
 
 	// WKB -> BLOB is implicitly castable
-	casts.RegisterCastFunction(GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::WKB_BLOB(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
 
 	// Geometry -> BLOB is implicitly castable
-	casts.RegisterCastFunction(GeoTypes::GEOMETRY(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), LogicalType::BLOB, DefaultCasts::ReinterpretCast, 1);
 }
 
 } // namespace core

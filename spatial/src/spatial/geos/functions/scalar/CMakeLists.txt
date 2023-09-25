@@ -27,6 +27,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_pointonsurface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_reduceprecision.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_removerepeatedpoints.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_reverse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_simplify_preserve_topology.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_simplify.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_touches.cpp

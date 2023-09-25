@@ -38,13 +38,11 @@ static bool GeometryToTextCast(Vector &source, Vector &result, idx_t count, Cast
 	return true;
 }
 
-void GeosCastFunctions::Register(ClientContext &context) {
-	auto &config = DBConfig::GetConfig(context);
-	auto &casts = config.GetCastFunctions();
+void GeosCastFunctions::Register(DatabaseInstance &db) {
 
-	casts.RegisterCastFunction(core::GeoTypes::WKB_BLOB(), LogicalType::VARCHAR, WKBToWKTCast);
-	casts.RegisterCastFunction(core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
-	                           BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
+	ExtensionUtil::RegisterCastFunction(db, core::GeoTypes::WKB_BLOB(), LogicalType::VARCHAR, WKBToWKTCast);
+	ExtensionUtil::RegisterCastFunction(db, core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+	                                    BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
 };
 
 } // namespace geos

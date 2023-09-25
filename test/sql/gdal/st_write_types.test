@@ -20,9 +20,9 @@ statement ok
 COPY (SELECT * FROM st_write_geometry) TO '__TEST_DIR__/st_write_geometry.geojson'
 WITH (FORMAT GDAL, DRIVER 'GeoJSON', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES');
 
-# Test reading it back
+# Test reading it back with default options
 query III
-SELECT id, value, ST_GeomFromWKB(wkb_geometry),  FROM st_read('__TEST_DIR__/st_write_geometry.geojson') ORDER BY id
+SELECT id, value, geom,  FROM st_read('__TEST_DIR__/st_write_geometry.geojson') ORDER BY id
 ----
 1	10.0	POINT (0 0)
 2	20.0	LINESTRING (0 0, 1 1)
@@ -31,3 +31,18 @@ SELECT id, value, ST_GeomFromWKB(wkb_geometry),  FROM st_read('__TEST_DIR__/st_w
 5	50.0	MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))
 6	60.0	MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))
 7	70.0	GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))
+
+# Test reading it back as WKB
+query III
+SELECT id, value, ST_GeomFromWKB(wkb_geometry),  FROM st_read('__TEST_DIR__/st_write_geometry.geojson', keep_wkb = true) ORDER BY id
+----
+1	10.0	POINT (0 0)
+2	20.0	LINESTRING (0 0, 1 1)
+3	30.0	POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))
+4	40.0	MULTIPOINT (0 0, 1 1)
+5	50.0	MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))
+6	60.0	MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))
+7	70.0	GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))
+
+
+

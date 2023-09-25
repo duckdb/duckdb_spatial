@@ -1,10 +1,8 @@
 #include "spatial/core/types.hpp"
 
-#include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
 #include "spatial/common.hpp"
-#include "spatial/core/functions/common.hpp"
 
 namespace spatial {
 
@@ -66,39 +64,31 @@ LogicalType GeoTypes::WKB_BLOB() {
 	return blob_type;
 }
 
-static void AddType(Catalog &catalog, ClientContext &context, LogicalType type, const char *name) {
-	CreateTypeInfo type_info(name, std::move(type));
-	type_info.temporary = true;
-	type_info.internal = true;
-	catalog.CreateType(context, type_info);
-}
-
-void GeoTypes::Register(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GeoTypes::Register(DatabaseInstance &db) {
 
 	// POINT_2D
-	AddType(catalog, context, GeoTypes::POINT_2D(), "POINT_2D");
+	ExtensionUtil::RegisterType(db, "POINT_2D", GeoTypes::POINT_2D());
 
 	// POINT_3D
-	AddType(catalog, context, GeoTypes::POINT_3D(), "POINT_3D");
+	ExtensionUtil::RegisterType(db, "POINT_3D", GeoTypes::POINT_3D());
 
 	// POINT_4D
-	AddType(catalog, context, GeoTypes::POINT_4D(), "POINT_4D");
+	ExtensionUtil::RegisterType(db, "POINT_4D", GeoTypes::POINT_4D());
 
 	// LineString2D
-	AddType(catalog, context, GeoTypes::LINESTRING_2D(), "LINESTRING_2D");
+	ExtensionUtil::RegisterType(db, "LINESTRING_2D", GeoTypes::LINESTRING_2D());
 
 	// Polygon2D
-	AddType(catalog, context, GeoTypes::POLYGON_2D(), "POLYGON_2D");
+	ExtensionUtil::RegisterType(db, "POLYGON_2D", GeoTypes::POLYGON_2D());
 
 	// Box2D
-	AddType(catalog, context, GeoTypes::BOX_2D(), "BOX_2D");
+	ExtensionUtil::RegisterType(db, "BOX_2D", GeoTypes::BOX_2D());
 
 	// GEOMETRY
-	AddType(catalog, context, GeoTypes::GEOMETRY(), "GEOMETRY");
+	ExtensionUtil::RegisterType(db, "GEOMETRY", GeoTypes::GEOMETRY());
 
 	// WKB_BLOB
-	AddType(catalog, context, GeoTypes::WKB_BLOB(), "WKB_BLOB");
+	ExtensionUtil::RegisterType(db, "WKB_BLOB", GeoTypes::WKB_BLOB());
 }
 
 } // namespace core

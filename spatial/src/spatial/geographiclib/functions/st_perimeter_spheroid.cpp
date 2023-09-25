@@ -135,8 +135,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	}
 }
 
-void GeographicLibFunctions::RegisterPerimeter(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GeographicLibFunctions::RegisterPerimeter(DatabaseInstance &db) {
 
 	// Perimiter
 	ScalarFunctionSet set("st_perimeter_spheroid");
@@ -144,10 +143,7 @@ void GeographicLibFunctions::RegisterPerimeter(ClientContext &context) {
 	    ScalarFunction({spatial::core::GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, GeodesicPolygon2DFunction));
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction,
 	                               nullptr, nullptr, nullptr, spatial::core::GeometryFunctionLocalState::Init));
-
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geographiclib

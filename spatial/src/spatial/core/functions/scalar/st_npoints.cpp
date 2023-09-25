@@ -136,9 +136,7 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStNPoints(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStNPoints(DatabaseInstance &db) {
 	const char *aliases[] = {"ST_NPoints", "ST_NumPoints"};
 	for (auto alias : aliases) {
 		ScalarFunctionSet area_function_set(alias);
@@ -152,9 +150,8 @@ void CoreScalarFunctions::RegisterStNPoints(ClientContext &context) {
 		area_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UINTEGER,
 		                                             GeometryNumPointsFunction, nullptr, nullptr, nullptr,
 		                                             GeometryFunctionLocalState::Init));
-		CreateScalarFunctionInfo info(std::move(area_function_set));
-		info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-		catalog.CreateFunction(context, info);
+
+		ExtensionUtil::RegisterFunction(db, area_function_set);
 	}
 }
 

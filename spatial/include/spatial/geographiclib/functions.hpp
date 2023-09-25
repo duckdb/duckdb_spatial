@@ -8,20 +8,20 @@ namespace geographiclib {
 
 struct GeographicLibFunctions {
 public:
-	static void Register(ClientContext &context) {
-		RegisterDistance(context);
-		RegisterDistanceWithin(context);
-		RegisterLength(context);
-		RegisterArea(context);
-		RegisterPerimeter(context);
+	static void Register(DatabaseInstance &db) {
+		RegisterDistance(db);
+		RegisterDistanceWithin(db);
+		RegisterLength(db);
+		RegisterArea(db);
+		RegisterPerimeter(db);
 	}
 
 private:
-	static void RegisterDistance(ClientContext &context);
-	static void RegisterDistanceWithin(ClientContext &context);
-	static void RegisterLength(ClientContext &context);
-	static void RegisterArea(ClientContext &context);
-	static void RegisterPerimeter(ClientContext &context);
+	static void RegisterDistance(DatabaseInstance &db);
+	static void RegisterDistanceWithin(DatabaseInstance &db);
+	static void RegisterLength(DatabaseInstance &db);
+	static void RegisterArea(DatabaseInstance &db);
+	static void RegisterPerimeter(DatabaseInstance &db);
 };
 
 } // namespace geographiclib

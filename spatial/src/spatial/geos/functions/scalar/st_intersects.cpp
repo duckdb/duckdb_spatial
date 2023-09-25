@@ -24,17 +24,14 @@ static void IntersectsFunction(DataChunk &args, ExpressionState &state, Vector &
 	                                             GEOSPreparedIntersects_r);
 }
 
-void GEOSScalarFunctions::RegisterStIntersects(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStIntersects(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Intersects");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
 	                               IntersectsFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::AddFunctionOverload(db, set);
 }
 
 } // namespace geos

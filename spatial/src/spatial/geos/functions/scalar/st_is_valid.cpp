@@ -75,17 +75,14 @@ static void IsValidFunction(DataChunk &args, ExpressionState &state, Vector &res
 	});
 }
 
-void GEOSScalarFunctions::RegisterStIsValid(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStIsValid(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_IsValid");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, IsValidFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

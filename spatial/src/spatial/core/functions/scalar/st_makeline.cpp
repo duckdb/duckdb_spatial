@@ -85,8 +85,7 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 	    });
 }
 
-void CoreScalarFunctions::RegisterStMakeLine(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreScalarFunctions::RegisterStMakeLine(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_MakeLine");
 
@@ -95,9 +94,8 @@ void CoreScalarFunctions::RegisterStMakeLine(ClientContext &context) {
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(),
 	                               MakeLineBinaryFunction, nullptr, nullptr, nullptr,
 	                               GeometryFunctionLocalState::Init));
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace core

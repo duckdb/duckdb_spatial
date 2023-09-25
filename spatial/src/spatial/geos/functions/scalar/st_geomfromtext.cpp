@@ -94,8 +94,7 @@ static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, Scal
 	return make_uniq<GeometryFromWKTBindData>(ignore_invalid);
 }
 
-void GEOSScalarFunctions::RegisterStGeomFromText(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStGeomFromText(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GeomFromText");
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY(), GeometryFromWKTFunction,
@@ -103,9 +102,7 @@ void GEOSScalarFunctions::RegisterStGeomFromText(ClientContext &context) {
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR, LogicalType::BOOLEAN}, core::GeoTypes::GEOMETRY(),
 	                               GeometryFromWKTFunction, GeometryFromWKTBind, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
-	CreateScalarFunctionInfo info(set);
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.AddFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

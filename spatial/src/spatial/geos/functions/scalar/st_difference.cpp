@@ -26,17 +26,14 @@ static void DifferenceFunction(DataChunk &args, ExpressionState &state, Vector &
 	    });
 }
 
-void GEOSScalarFunctions::RegisterStDifference(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStDifference(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Difference");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(),
 	                               DifferenceFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

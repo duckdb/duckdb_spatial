@@ -24,17 +24,14 @@ static void CrossesFunction(DataChunk &args, ExpressionState &state, Vector &res
 	                                             GEOSPreparedCrosses_r);
 }
 
-void GEOSScalarFunctions::RegisterStCrosses(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStCrosses(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Crosses");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, CrossesFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos

@@ -243,9 +243,7 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
-void CoreScalarFunctions::RegisterStFlipCoordinates(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
+void CoreScalarFunctions::RegisterStFlipCoordinates(DatabaseInstance &db) {
 	ScalarFunctionSet flip_function_set("ST_FlipCoordinates");
 	flip_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointFlipCoordinatesFunction));
@@ -258,9 +256,7 @@ void CoreScalarFunctions::RegisterStFlipCoordinates(ClientContext &context) {
 	                                             GeometryFlipCoordinatesFunction, nullptr, nullptr, nullptr,
 	                                             GeometryFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(flip_function_set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, flip_function_set);
 }
 
 } // namespace core

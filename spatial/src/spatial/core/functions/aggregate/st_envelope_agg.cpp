@@ -88,18 +88,14 @@ struct EnvelopeAggFunction {
 //------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------
-void CoreAggregateFunctions::RegisterStEnvelopeAgg(ClientContext &context) {
-
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void CoreAggregateFunctions::RegisterStEnvelopeAgg(DatabaseInstance &db) {
 
 	AggregateFunctionSet st_envelope_agg("st_envelope_agg");
 	st_envelope_agg.AddFunction(
 	    AggregateFunction::UnaryAggregate<EnvelopeAggState, string_t, string_t, EnvelopeAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
-	CreateAggregateFunctionInfo envelope_info(std::move(st_envelope_agg));
 
-	envelope_info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, envelope_info);
+	ExtensionUtil::RegisterFunction(db, st_envelope_agg);
 }
 
 } // namespace core

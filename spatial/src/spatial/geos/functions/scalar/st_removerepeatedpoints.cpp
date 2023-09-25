@@ -45,8 +45,7 @@ static void RemoveRepeatedPointsFunctionWithTolerance(DataChunk &args, Expressio
 	    });
 }
 
-void GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_RemoveRepeatedPoints");
 
@@ -56,9 +55,7 @@ void GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(ClientContext &context)
 	                               RemoveRepeatedPointsFunctionWithTolerance, nullptr, nullptr, nullptr,
 	                               GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::AddFunctionOverload(db, set);
 }
 
 } // namespace geos

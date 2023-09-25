@@ -77,12 +77,10 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 	output.SetCardinality(count);
 }
 
-void GdalDriversTableFunction::Register(ClientContext &context) {
+void GdalDriversTableFunction::Register(DatabaseInstance &db) {
 	TableFunction func("st_drivers", {}, Execute, Bind, Init);
 
-	auto &catalog = Catalog::GetSystemCatalog(context);
-	CreateTableFunctionInfo info(func);
-	catalog.CreateTableFunction(context, &info);
+	ExtensionUtil::RegisterFunction(db, func);
 }
 
 } // namespace gdal

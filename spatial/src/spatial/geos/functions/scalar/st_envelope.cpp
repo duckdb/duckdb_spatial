@@ -25,17 +25,14 @@ static void EnvelopeFunction(DataChunk &args, ExpressionState &state, Vector &re
 	    });
 }
 
-void GEOSScalarFunctions::RegisterStEnvelope(ClientContext &context) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
+void GEOSScalarFunctions::RegisterStEnvelope(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Envelope");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), EnvelopeFunction, nullptr, nullptr,
 	                               nullptr, GEOSFunctionLocalState::Init));
 
-	CreateScalarFunctionInfo info(std::move(set));
-	info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
-	catalog.CreateFunction(context, info);
+	ExtensionUtil::RegisterFunction(db, set);
 }
 
 } // namespace geos
