@@ -58,6 +58,8 @@ struct GlobalState : public GlobalFunctionData {
 static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vector<string> &names,
                                      vector<LogicalType> &sql_types) {
 
+	GdalFileHandler::SetLocalClientContext(context);
+
 	auto bind_data = make_uniq<BindData>(info.file_path, sql_types, names);
 
 	// check all the options in the copy info
@@ -366,7 +368,6 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 
 static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionData &gstate, LocalFunctionData &lstate,
                  DataChunk &input) {
-
 	auto &bind_data = (BindData &)bdata;
 	auto &global_state = (GlobalState &)gstate;
 	auto &local_state = (LocalState &)lstate;
@@ -408,6 +409,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 // Finalize
 //===--------------------------------------------------------------------===//
 static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunctionData &gstate) {
+	GdalFileHandler::SetLocalClientContext(context);
 	auto &global_state = (GlobalState &)gstate;
 	global_state.dataset->FlushCache();
 }
