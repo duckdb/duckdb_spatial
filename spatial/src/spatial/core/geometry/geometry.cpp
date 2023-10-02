@@ -112,9 +112,9 @@ double Polygon::Area() const {
 	double area = 0;
 	for (uint32_t i = 0; i < num_rings; i++) {
 		if (i == 0) {
-			area += rings[i].SignedArea();
+			area += rings[i].Area();
 		} else {
-			area -= rings[i].SignedArea();
+			area -= rings[i].Area();
 		}
 	}
 	return std::abs(area);

@@ -41,6 +41,7 @@ static void PolygonAreaFunction(DataChunk &args, ExpressionState &state, Vector 
 			for (idx_t coord_idx = ring_offset; coord_idx < ring_offset + ring_length - 1; coord_idx++) {
 				sum += (x_data[coord_idx] * y_data[coord_idx + 1]) - (x_data[coord_idx + 1] * y_data[coord_idx]);
 			}
+			sum = std::abs(sum);
 			if (first) {
 				// Add outer ring
 				area = sum * 0.5;

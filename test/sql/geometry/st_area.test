@@ -76,14 +76,36 @@ SELECT ST_Area(b) FROM (VALUES
 40
 100.0
 
-# Test ST_Area for POLYGON_2D
+# Test ST_Area for POLYGON_2D, also with holes
 query I
 SELECT ST_Area(p) FROM (VALUES
 	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')::POLYGON_2D),
-	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0), (0.2 0.2, 0.8 0.2, 0.8 0.8, 0.2 0.8, 0.2 0.2))')::POLYGON_2D) 
+	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0), (0.2 0.2, 0.8 0.2, 0.8 0.8, 0.2 0.8, 0.2 0.2))')::POLYGON_2D),
+	(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.2 0.2, 0.8 0.2, 0.8 0.8, 0.2 0.8, 0.2 0.2))')::POLYGON_2D),
+	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0), (0.2 0.2, 0.2 0.8, 0.8 0.8, 0.8 0.2, 0.2 0.2))')::POLYGON_2D),
+	(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.2 0.2, 0.2 0.8, 0.8 0.8, 0.8 0.2, 0.2 0.2))')::POLYGON_2D)
 ) as t(p);
 ----
 1
+0.64
+0.64
+0.64
+0.64
+
+# Test ST_Area for GEOMETRY, with holes
+query I
+SELECT ST_Area(p) FROM (VALUES
+	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')),
+	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0), (0.2 0.2, 0.8 0.2, 0.8 0.8, 0.2 0.8, 0.2 0.2))')),
+	(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.2 0.2, 0.8 0.2, 0.8 0.8, 0.2 0.8, 0.2 0.2))')),
+	(ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0), (0.2 0.2, 0.2 0.8, 0.8 0.8, 0.8 0.2, 0.2 0.2))')),
+	(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0), (0.2 0.2, 0.2 0.8, 0.8 0.8, 0.8 0.2, 0.2 0.2))'))
+) as t(p);
+----
+1
+0.64
+0.64
+0.64
 0.64
 
 # Test ST_Area for POINT_2D
