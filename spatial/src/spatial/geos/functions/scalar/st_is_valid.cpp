@@ -28,6 +28,7 @@ static bool IsValidForGeos(Geometry &geometry) {
 				return false;
 			}
 		}
+		return true;
 	}
 	case GeometryType::MULTILINESTRING: {
 		for (auto &linestring : geometry.GetMultiLineString()) {
