@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         # Add commits/tags to build against other DuckDB versions
-        duckdb_version: [ '<submodule_version>' ]
+        duckdb_version: [ '<submodule_version>', 'v0.9.1' ]
         arch: ['linux_amd64', 'linux_arm64', 'linux_amd64_gcc4']
         vcpkg_version: [ '2023.04.15' ]
         include:
