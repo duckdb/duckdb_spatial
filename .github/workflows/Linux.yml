@@ -116,7 +116,7 @@ jobs:
 
     - uses: actions/upload-artifact@v2
       with:
-        name: ${{matrix.arch}}-extensions
+        name: ${{matrix.arch}}-extensions-${{ matrix.duckdb_version == '<submodule_version>' && 'latest' || matrix.duckdb_version }}
         path: |
           build/release/extension/spatial/spatial.duckdb_extension
 
