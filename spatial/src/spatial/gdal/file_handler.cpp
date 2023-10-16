@@ -58,6 +58,10 @@ static void *DuckDBOpen(void *, const char *file_name, const char *access) {
 		if (len > 1 && access[1] == '+') {
 			flags |= FileFlags::FILE_FLAGS_READ;
 		}
+		if (len > 2 && access[2] == '+') {
+			// might be "ab+"
+			flags |= FileFlags::FILE_FLAGS_READ;
+		}
 	} else {
 		throw InternalException("Unknown file access type");
 	}
