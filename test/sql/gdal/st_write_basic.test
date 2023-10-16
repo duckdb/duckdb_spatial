@@ -1,0 +1,6 @@
+require spatial
+
+statement ok
+COPY (SELECT ST_GeomFromText('POINT (1 1)'))
+TO 'test.json'
+WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq');

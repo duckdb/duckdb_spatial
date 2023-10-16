@@ -251,8 +251,11 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	if (!gdal_data.target_srs.empty()) {
 		srs.SetFromUserInput(gdal_data.target_srs.c_str());
 	}
+	// Not all GDAL drivers check if the SRS is empty (cough cough GeoJSONSeq)
+	// so we have to pass nullptr if we want the default behavior.
+	OGRSpatialReference *srs_ptr = gdal_data.target_srs.empty() ? nullptr : &srs;
 
-	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), &srs, wkbUnknown, lco);
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, wkbUnknown, lco);
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
