@@ -1,6 +1,9 @@
 require spatial
 
+#statement ok
+#COPY (SELECT ST_GeomFromText('POINT (1 1)'))
+#TO '__TEST_DIR__/test_seq.json'
+#WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq');
+
 statement ok
-COPY (SELECT ST_GeomFromText('POINT (1 1)'))
-TO 'test.json'
-WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq');
+COPY (SELECT ST_GeomFromText('POINT (1 1)'))  TO '__TEST_DIR__/test_mvt.mvt'  WITH (FORMAT GDAL, DRIVER 'MVT');

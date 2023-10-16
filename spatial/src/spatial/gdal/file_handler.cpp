@@ -40,9 +40,17 @@ static void *DuckDBOpen(void *, const char *file_name, const char *access) {
 		if (len > 1 && access[1] == '+') {
 			flags |= FileFlags::FILE_FLAGS_WRITE;
 		}
+		if (len > 2 && access[2] == '+') {
+			// might be "rb+"
+			flags |= FileFlags::FILE_FLAGS_WRITE;
+		}
 	} else if (access[0] == 'w') {
 		flags = FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_FILE_CREATE_NEW;
 		if (len > 1 && access[1] == '+') {
+			flags |= FileFlags::FILE_FLAGS_READ;
+		}
+		if (len > 2 && access[2] == '+') {
+			// might be "wb+"
 			flags |= FileFlags::FILE_FLAGS_READ;
 		}
 	} else if (access[0] == 'a') {
@@ -55,6 +63,7 @@ static void *DuckDBOpen(void *, const char *file_name, const char *access) {
 	}
 
 	try {
+		string path(file_name);
 		auto file = fs.OpenFile(file_name, flags);
 		return file.release();
 	} catch (std::exception &ex) {
@@ -180,6 +189,33 @@ static int DuckDBStatCallback(void *userData, const char *filename, VSIStatBufL 
 	auto file = fs.OpenFile(filename, FileFlags::FILE_FLAGS_READ);
 	if (!file) {
 		return -1;
+	}
+
+	auto type = file->GetType();
+	switch (type) {
+	case FileType::FILE_TYPE_REGULAR:
+		pstatbuf->st_mode = S_IFREG;
+		break;
+	case FileType::FILE_TYPE_DIR:
+		pstatbuf->st_mode = S_IFDIR;
+		break;
+	case FileType::FILE_TYPE_BLOCKDEV:
+		pstatbuf->st_mode = S_IFBLK;
+		break;
+	case FileType::FILE_TYPE_CHARDEV:
+		pstatbuf->st_mode = S_IFCHR;
+		break;
+	case FileType::FILE_TYPE_FIFO:
+		pstatbuf->st_mode = S_IFIFO;
+		break;
+	case FileType::FILE_TYPE_SOCKET:
+		pstatbuf->st_mode = S_IFSOCK;
+		break;
+	case FileType::FILE_TYPE_LINK:
+		pstatbuf->st_mode = S_IFLNK;
+		break;
+	default:
+		throw IOException("Unknown file type");
 	}
 
 	pstatbuf->st_size = static_cast<off_t>(file->GetFileSize());
