@@ -30,7 +30,9 @@ public:
 		RegisterStIntersectsExtent(db);
 		RegisterStIsEmpty(db);
 		RegisterStLength(db);
+		RegisterStMakeEnvelope(db);
 		RegisterStMakeLine(db);
+		RegisterStMakePolygon(db);
 		RegisterStNGeometries(db);
 		RegisterStNInteriorRings(db);
 		RegisterStNPoints(db);
@@ -114,8 +116,14 @@ private:
 	// ST_Length
 	static void RegisterStLength(DatabaseInstance &db);
 
+	// ST_MakeEnvelope
+	static void RegisterStMakeEnvelope(DatabaseInstance &db);
+
 	// ST_MakeLine
 	static void RegisterStMakeLine(DatabaseInstance &db);
+
+	// ST_MakePolygon
+	static void RegisterStMakePolygon(DatabaseInstance &db);
 
 	// ST_NGeometries
 	static void RegisterStNGeometries(DatabaseInstance &db);
