@@ -195,33 +195,6 @@ static int DuckDBStatCallback(void *userData, const char *filename, VSIStatBufL 
 		return -1;
 	}
 
-	auto type = file->GetType();
-	switch (type) {
-	case FileType::FILE_TYPE_REGULAR:
-		pstatbuf->st_mode = S_IFREG;
-		break;
-	case FileType::FILE_TYPE_DIR:
-		pstatbuf->st_mode = S_IFDIR;
-		break;
-	case FileType::FILE_TYPE_BLOCKDEV:
-		pstatbuf->st_mode = S_IFBLK;
-		break;
-	case FileType::FILE_TYPE_CHARDEV:
-		pstatbuf->st_mode = S_IFCHR;
-		break;
-	case FileType::FILE_TYPE_FIFO:
-		pstatbuf->st_mode = S_IFIFO;
-		break;
-	case FileType::FILE_TYPE_SOCKET:
-		pstatbuf->st_mode = S_IFSOCK;
-		break;
-	case FileType::FILE_TYPE_LINK:
-		pstatbuf->st_mode = S_IFLNK;
-		break;
-	default:
-		throw IOException("Unknown file type");
-	}
-
 	pstatbuf->st_size = static_cast<off_t>(file->GetFileSize());
 	/* DuckDB doesnt have anything equivalent to these yet... Hopefully thats ok?
 	pstatbuf->st_mtime = file->GetLastModifiedTime();
