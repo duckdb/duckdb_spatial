@@ -40,9 +40,17 @@ static void *DuckDBOpen(void *, const char *file_name, const char *access) {
 		if (len > 1 && access[1] == '+') {
 			flags |= FileFlags::FILE_FLAGS_WRITE;
 		}
+		if (len > 2 && access[2] == '+') {
+			// might be "rb+"
+			flags |= FileFlags::FILE_FLAGS_WRITE;
+		}
 	} else if (access[0] == 'w') {
 		flags = FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_FILE_CREATE_NEW;
 		if (len > 1 && access[1] == '+') {
+			flags |= FileFlags::FILE_FLAGS_READ;
+		}
+		if (len > 2 && access[2] == '+') {
+			// might be "wb+"
 			flags |= FileFlags::FILE_FLAGS_READ;
 		}
 	} else if (access[0] == 'a') {
@@ -50,11 +58,16 @@ static void *DuckDBOpen(void *, const char *file_name, const char *access) {
 		if (len > 1 && access[1] == '+') {
 			flags |= FileFlags::FILE_FLAGS_READ;
 		}
+		if (len > 2 && access[2] == '+') {
+			// might be "ab+"
+			flags |= FileFlags::FILE_FLAGS_READ;
+		}
 	} else {
 		throw InternalException("Unknown file access type");
 	}
 
 	try {
+		string path(file_name);
 		auto file = fs.OpenFile(file_name, flags);
 		return file.release();
 	} catch (std::exception &ex) {

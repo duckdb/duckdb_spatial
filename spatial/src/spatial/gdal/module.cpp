@@ -20,7 +20,12 @@ void GdalModule::Register(DatabaseInstance &db) {
 		OGRRegisterAllInternal();
 
 		// Set GDAL error handler
+
 		CPLSetErrorHandler([](CPLErr e, int code, const char *msg) {
+			// DuckDB doesnt do warnings, so we only throw on errors
+			if (e != CE_Failure && e != CE_Fatal) {
+				return;
+			}
 			switch (code) {
 			case CPLE_NoWriteAccess:
 				throw PermissionException("GDAL Error (%d): %s", code, msg);
