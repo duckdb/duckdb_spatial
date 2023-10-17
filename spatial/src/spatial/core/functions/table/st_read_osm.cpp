@@ -374,27 +374,41 @@ struct LocalState : LocalTableFunctionState {
 	}
 
 	void ScanNode(DataChunk &output, idx_t &index, idx_t capacity) {
-		// TODO: Implement this properly
-		auto node = group_reader.get_message();
-		node.next(1);
-		auto id = node.get_int64();
 
-		// Set kind
-		FlatVector::GetData<uint8_t>(output.data[0])[index] = 0;
-		// Set id
-		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+		auto node = group_reader.get_message();
+
+		pz::iterator_range<pz::const_varint_iterator<uint32_t>> key_iter;
+		pz::iterator_range<pz::const_varint_iterator<uint32_t>> val_iter;
+
+		while (node.next()) {
+			switch (node.tag()) {
+			case 1: { // ID
+				auto id = node.get_int64();
+				FlatVector::GetData<uint8_t>(output.data[0])[index] = 0;
+				FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+			} break;
+			case 2: { // Tag Keys
+				key_iter = node.get_packed_uint32();
+			} break;
+			case 3: { // Tag Vals
+				val_iter = node.get_packed_uint32();
+			} break;
+			case 8: { // Lat
+				auto lat = node.get_sint64();
+				FlatVector::GetData<double>(output.data[4])[index] = 0.000000001 * (lat_offset + (granularity * lat));
+			} break;
+			case 9: { // Lon
+				auto lon = node.get_sint64();
+				FlatVector::GetData<double>(output.data[5])[index] = 0.000000001 * (lon_offset + (granularity * lon));
+			} break;
+			default:
+				node.skip();
+			}
+		}
 
 		// Read tags
-		if (node.next(2)) {
-
-			auto key_iter = node.get_packed_uint32();
-
-			node.next(3);
-
-			auto val_iter = node.get_packed_uint32();
-
+		if (!key_iter.empty() && !val_iter.empty()) {
 			auto tag_count = key_iter.size();
-
 			auto total_tags = ListVector::GetListSize(output.data[2]);
 			ListVector::Reserve(output.data[2], total_tags + tag_count);
 			ListVector::SetListSize(output.data[2], total_tags + tag_count);
@@ -417,15 +431,6 @@ struct LocalState : LocalTableFunctionState {
 		} else {
 			FlatVector::SetNull(output.data[2], index, true);
 		}
-
-		// Read lat/lon
-		node.next(8);
-		auto lat = node.get_sint64();
-		FlatVector::GetData<double>(output.data[4])[index] = 0.000000001 * (lat_offset + (granularity * lat));
-
-		node.next(9);
-		auto lon = node.get_sint64();
-		FlatVector::GetData<double>(output.data[5])[index] = 0.000000001 * (lon_offset + (granularity * lon));
 
 		// Node has no refs, ref_roles or ref_types
 		FlatVector::SetNull(output.data[3], index, true);
@@ -444,74 +449,85 @@ struct LocalState : LocalTableFunctionState {
 		dense_node_lons.clear();
 
 		auto dense_nodes = group_reader.get_message();
-		dense_nodes.next(1);
 
-		auto ids = dense_nodes.get_packed_sint64();
-		int64_t last_id = 0;
-		for (auto id : ids) {
-			last_id += id;
-			dense_node_ids.push_back(last_id);
-		}
-
-		if (dense_nodes.next(8)) {
-			auto lats = dense_nodes.get_packed_sint64();
-			int64_t last_lat = 0;
-			for (auto lat : lats) {
-				last_lat += lat;
-				dense_node_lats.push_back(last_lat);
-			}
-		}
-
-		if (dense_nodes.next(9)) {
-			auto lons = dense_nodes.get_packed_sint64();
-			int64_t last_lon = 0;
-			for (auto lon : lons) {
-				last_lon += lon;
-				dense_node_lons.push_back(last_lon);
-			}
-		}
-
-		if (dense_nodes.next(10)) {
-			auto tags = dense_nodes.get_packed_uint32();
-
-			idx_t entry_offset = 0;
-
-			for (auto tag : tags) {
-				if (tag == 0) {
-					auto len = dense_node_tags.size() - entry_offset;
-					dense_node_tag_entries.push_back(list_entry_t {entry_offset, len});
-					entry_offset = dense_node_tags.size();
-				} else {
-					dense_node_tags.push_back(tag);
+		while (dense_nodes.next()) {
+			switch (dense_nodes.tag()) {
+			case 1: { // ID
+				auto ids = dense_nodes.get_packed_sint64();
+				int64_t last_id = 0;
+				for (auto id : ids) {
+					last_id += id;
+					dense_node_ids.push_back(last_id);
 				}
+			} break;
+			case 8: { // Lats
+				auto lats = dense_nodes.get_packed_sint64();
+				int64_t last_lat = 0;
+				for (auto lat : lats) {
+					last_lat += lat;
+					dense_node_lats.push_back(last_lat);
+				}
+			} break;
+			case 9: { // Lons
+				auto lons = dense_nodes.get_packed_sint64();
+				int64_t last_lon = 0;
+				for (auto lon : lons) {
+					last_lon += lon;
+					dense_node_lons.push_back(last_lon);
+				}
+			} break;
+			case 10: { // Tags
+				auto tags = dense_nodes.get_packed_uint32();
+				idx_t entry_offset = 0;
+				for (auto tag : tags) {
+					if (tag == 0) {
+						auto len = dense_node_tags.size() - entry_offset;
+						dense_node_tag_entries.push_back(list_entry_t {entry_offset, len});
+						entry_offset = dense_node_tags.size();
+					} else {
+						dense_node_tags.push_back(tag);
+					}
+				}
+			} break;
+			default:
+				dense_nodes.skip();
 			}
 		}
 	}
 
 	void ScanWay(DataChunk &output, idx_t &index, idx_t capacity) {
 		auto way = group_reader.get_message();
-		way.next(1);
-		auto id = way.get_int64();
 
-		FlatVector::GetData<uint8_t>(output.data[0])[index] = 1;
-		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+		pz::iterator_range<pz::const_varint_iterator<uint32_t>> key_iter;
+		pz::iterator_range<pz::const_varint_iterator<uint32_t>> val_iter;
+		pz::iterator_range<pz::const_svarint_iterator<int64_t>> ref_iter;
 
-		FlatVector::SetNull(output.data[4], index, true);
-		FlatVector::SetNull(output.data[5], index, true);
-		FlatVector::SetNull(output.data[6], index, true);
-		FlatVector::SetNull(output.data[7], index, true);
-
-		// Read tags
-		if (way.next(2)) {
-
-			auto key_iter = way.get_packed_uint32();
-
-			way.next(3);
-
-			auto val_iter = way.get_packed_uint32();
-
+		while (way.next()) {
+			switch (way.tag()) {
+			case 1: { // ID
+				auto id = way.get_int64();
+				FlatVector::GetData<uint8_t>(output.data[0])[index] = 1;
+				FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+				FlatVector::SetNull(output.data[4], index, true);
+				FlatVector::SetNull(output.data[5], index, true);
+				FlatVector::SetNull(output.data[6], index, true);
+				FlatVector::SetNull(output.data[7], index, true);
+			} break;
+			case 2: { // Tag Keys
+				key_iter = way.get_packed_uint32();
+			} break;
+			case 3: { // Tag Vals
+				val_iter = way.get_packed_uint32();
+			} break;
+			case 8: { // Refs
+				ref_iter = way.get_packed_sint64();
+			} break;
+			default:
+				way.skip();
+			}
+		}
+		if (!key_iter.empty() && !val_iter.empty()) {
 			auto tag_count = key_iter.size();
-
 			auto total_tags = ListVector::GetListSize(output.data[2]);
 			ListVector::Reserve(output.data[2], total_tags + tag_count);
 			ListVector::SetListSize(output.data[2], total_tags + tag_count);
@@ -535,11 +551,8 @@ struct LocalState : LocalTableFunctionState {
 			FlatVector::SetNull(output.data[2], index, true);
 		}
 
-		// Refs
-		if (way.next(8)) {
-			auto ref_iter = way.get_packed_sint64();
+		if (!ref_iter.empty()) {
 			auto ref_count = ref_iter.size();
-
 			auto total_refs = ListVector::GetListSize(output.data[3]);
 			ListVector::Reserve(output.data[3], total_refs + ref_count);
 			ListVector::SetListSize(output.data[3], total_refs + ref_count);
@@ -558,28 +571,50 @@ struct LocalState : LocalTableFunctionState {
 		} else {
 			FlatVector::SetNull(output.data[3], index, true);
 		}
+
 		index++;
 	}
 
 	void ScanRelation(DataChunk &output, idx_t &index, idx_t capacity) {
 		auto relation = group_reader.get_message();
-		relation.next(1);
-		auto id = relation.get_int64();
 
-		FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
-		FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+		pz::iterator_range<pz::const_varint_iterator<uint32_t>> key_iter;
+		pz::iterator_range<pz::const_varint_iterator<uint32_t>> val_iter;
+		pz::iterator_range<pz::const_varint_iterator<int32_t>> role_iter;
+		pz::iterator_range<pz::const_svarint_iterator<int64_t>> ref_iter;
+		pz::iterator_range<pz::const_varint_iterator<int32_t>> type_iter;
 
-		FlatVector::SetNull(output.data[4], index, true);
-		FlatVector::SetNull(output.data[5], index, true);
+		while (relation.next()) {
+			switch (relation.tag()) {
+			case 1: { // ID
+				auto id = relation.get_int64();
+				FlatVector::GetData<uint8_t>(output.data[0])[index] = 2;
+				FlatVector::GetData<int64_t>(output.data[1])[index] = id;
+				FlatVector::SetNull(output.data[4], index, true);
+				FlatVector::SetNull(output.data[5], index, true);
+			} break;
+			case 2: { // Tag Keys
+				key_iter = relation.get_packed_uint32();
+			} break;
+			case 3: { // Tag Vals
+				val_iter = relation.get_packed_uint32();
+			} break;
+			case 8: { // Roles
+				role_iter = relation.get_packed_int32();
+			} break;
+			case 9: { // Refs
+				ref_iter = relation.get_packed_sint64();
+			} break;
+			case 10: { // Types
+				type_iter = relation.get_packed_int32();
+			} break;
+			default:
+				relation.skip();
+			}
+		}
 
 		// Read tags
-		if (relation.next(2)) {
-
-			auto key_iter = relation.get_packed_uint32();
-
-			relation.next(3);
-			auto val_iter = relation.get_packed_uint32();
-
+		if (!key_iter.empty() && !val_iter.empty()) {
 			auto tag_count = key_iter.size();
 
 			auto total_tags = ListVector::GetListSize(output.data[2]);
@@ -606,8 +641,7 @@ struct LocalState : LocalTableFunctionState {
 		}
 
 		// Roles
-		if (relation.next(8)) {
-			auto role_iter = relation.get_packed_int32();
+		if (!role_iter.empty()) {
 			auto role_count = role_iter.size();
 
 			auto total_roles = ListVector::GetListSize(output.data[6]);
@@ -621,7 +655,7 @@ struct LocalState : LocalTableFunctionState {
 			auto roles = role_iter.begin();
 			for (idx_t i = role_entry.offset; i < role_entry.offset + role_count; i++) {
 				auto &role_str = string_table[*roles++];
-				if (role_str.size() == 0) {
+				if (role_str.empty()) {
 					FlatVector::SetNull(role_vector, i, true);
 				} else {
 					FlatVector::GetData<string_t>(role_vector)[i] = StringVector::AddString(role_vector, role_str);
@@ -632,8 +666,7 @@ struct LocalState : LocalTableFunctionState {
 		}
 
 		// Refs
-		if (relation.next(9)) {
-			auto ref_iter = relation.get_packed_sint64();
+		if (!ref_iter.empty()) {
 			auto ref_count = ref_iter.size();
 
 			auto total_refs = ListVector::GetListSize(output.data[3]);
@@ -656,8 +689,7 @@ struct LocalState : LocalTableFunctionState {
 		}
 
 		// Types
-		if (relation.next(10)) {
-			auto type_iter = relation.get_packed_int32();
+		if (!type_iter.empty()) {
 			auto type_count = type_iter.size();
 
 			auto total_types = ListVector::GetListSize(output.data[7]);
