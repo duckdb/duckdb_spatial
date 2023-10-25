@@ -1,0 +1,74 @@
+require spatial
+
+# Basic test
+query II
+SELECT UNNEST(st_dump(ST_GeomFromText('GEOMETRYCOLLECTION (POINT (1 1), POINT (2 2), GEOMETRYCOLLECTION(POINT (3 3)))')), recursive := true);
+----
+POINT (1 1)	[1]
+POINT (2 2)	[2]
+POINT (3 3)	[3, 1]
+
+query II
+SELECT UNNEST(st_dump(ST_GeomFromText('GEOMETRYCOLLECTION (POINT (1 1), GEOMETRYCOLLECTION(POINT (3 3)), POINT (2 2))')), recursive := true);
+----
+POINT (1 1)	[1]
+POINT (3 3)	[2, 1]
+POINT (2 2)	[3]
+
+# Test empty collection
+query I
+SElECT ST_Dump(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY'));
+----
+[]
+
+# Test collection with one point
+query I
+SElECT ST_Dump(ST_GeomFromText('GEOMETRYCOLLECTION (POINT (0 0))'));
+----
+[{'geom': POINT (0 0), 'path': [1]}]
+
+# Test with multipoint
+query II
+SELECT UNNEST(ST_Dump(ST_GeomFromText('MULTIPOINT ((0 0), (1 1)))')), recursive := true);
+----
+POINT (0 0)	[1]
+POINT (1 1)	[2]
+
+# Test with multilinestring
+query II
+SELECT UNNEST (ST_Dump(ST_GeomFromText('MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))')), recursive := true);
+----
+LINESTRING (0 0, 1 1)	[1]
+LINESTRING (2 2, 3 3)	[2]
+
+# Test with multipolygon
+query II
+SELECT UNNEST(ST_Dump(ST_GeomFromText('MULTIPOLYGON (((0 0, 1 1, 1 0, 0 0)), ((2 2, 3 3, 3 2, 2 2))))')), recursive := true);
+----
+POLYGON ((0 0, 1 1, 1 0, 0 0))	[1]
+POLYGON ((2 2, 3 3, 3 2, 2 2))	[2]
+
+# Test complex
+query II rowsort
+SELECT UNNEST(ST_Dump(ST_GeomFromText('GEOMETRYCOLLECTION (POINT (1 1), LINESTRING (0 0, 1 1), POLYGON ((0 0, 1 1, 1 0, 0 0)), MULTIPOLYGON (((0 0, 1 1, 1 0, 0 0)), ((2 2, 3 3, 3 2, 2 2))), GEOMETRYCOLLECTION (POINT (3 3)))')), recursive := true);
+----
+LINESTRING (0 0, 1 1)	[2]
+POINT (1 1)	[1]
+POINT (3 3)	[5, 1]
+POLYGON ((0 0, 1 1, 1 0, 0 0))	[3]
+POLYGON ((0 0, 1 1, 1 0, 0 0))	[4, 1]
+POLYGON ((2 2, 3 3, 3 2, 2 2))	[4, 2]
+
+
+# Test with intermittent nulls
+query I
+SELECT ST_Dump(geom)
+FROM (VALUES
+    (ST_GeomFromText('GEOMETRYCOLLECTION (POINT (1 1), POINT (2 2), GEOMETRYCOLLECTION(POINT (3 3)))')),
+    (NULL),
+    (ST_GeomFromText('GEOMETRYCOLLECTION (POINT (1 1), GEOMETRYCOLLECTION(POINT (3 3)), POINT (2 2))'))
+) as t(geom)
+----
+[{'geom': POINT (1 1), 'path': [1]}, {'geom': POINT (2 2), 'path': [2]}, {'geom': POINT (3 3), 'path': [3, 1]}]
+NULL
+[{'geom': POINT (1 1), 'path': [1]}, {'geom': POINT (3 3), 'path': [2, 1]}, {'geom': POINT (2 2), 'path': [3]}]

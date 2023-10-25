@@ -19,6 +19,7 @@ public:
 		RegisterStContains(db);
 		RegisterStDimension(db);
 		RegisterStDistance(db);
+		RegisterStDump(db);
 		RegisterStEndPoint(db);
 		RegisterStExtent(db);
 		RegisterStExteriorRing(db);
@@ -82,6 +83,9 @@ private:
 
 	// ST_Distance
 	static void RegisterStDistance(DatabaseInstance &db);
+
+	// ST_Dump
+	static void RegisterStDump(DatabaseInstance &db);
 
 	// ST_EndPoint
 	static void RegisterStEndPoint(DatabaseInstance &db);

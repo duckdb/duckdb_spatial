@@ -16,6 +16,8 @@ namespace spatial {
 
 namespace core {
 
+using namespace duckdb_yyjson_spatial;
+
 class JSONAllocator {
 	// Stolen from the JSON extension :)
 public:
