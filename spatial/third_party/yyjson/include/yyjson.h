@@ -8,6 +8,7 @@
 
 /** @file yyjson.h */
 
+
 #ifndef YYJSON_H
 #define YYJSON_H
 
@@ -24,6 +25,7 @@
 #include <float.h>
 
 
+namespace duckdb_yyjson_spatial {
 
 /*==============================================================================
  * Compile-time Options
@@ -6243,3 +6245,5 @@ yyjson_api_inline bool yyjson_get_str_pointer(
 #endif /* extern "C" end */
 
 #endif /* YYJSON_H */
+
+} // namespace duckdb_yyjson_spatial

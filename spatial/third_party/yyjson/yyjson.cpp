@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <math.h>
 
+namespace duckdb_yyjson_spatial {
 
 
 /*==============================================================================
@@ -8410,3 +8411,5 @@ bool yyjson_mut_write_file(const char *path,
 #elif defined(_MSC_VER)
 #   pragma warning(pop)
 #endif /* warning suppress end */
+
+} // namespace yyjson
