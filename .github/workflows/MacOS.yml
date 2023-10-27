@@ -1,5 +1,5 @@
 name: MacOS
-on: 
+on:
   push:
     paths-ignore:
       - '**/README.md'

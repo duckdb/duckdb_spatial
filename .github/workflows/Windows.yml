@@ -1,5 +1,5 @@
 name: Windows
-on: 
+on:
   push:
     paths-ignore:
       - '**/README.md'
