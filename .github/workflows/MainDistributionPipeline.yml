@@ -20,6 +20,7 @@ jobs:
       duckdb_version: v0.9.1
       extension_name: spatial
       vcpkg_commit: 9edb1b8e590cc086563301d735cae4b6e732d2d2 # TODO: remove pinned vcpkg commit when updating duckdb version
+      build_duckdb_shell: false
 
   duckdb-stable-deploy:
     name: Deploy extension binaries
