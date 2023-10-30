@@ -33,7 +33,8 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
 
 unique_ptr<GlobalTableFunctionState> GdalDriversTableFunction::Init(ClientContext &context,
                                                                     TableFunctionInitInput &input) {
-	return make_uniq<State>();
+	auto result = make_uniq<State>();
+	return std::move(result);
 }
 
 void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
