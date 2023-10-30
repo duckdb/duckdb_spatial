@@ -91,7 +91,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 
 	auto file_name = StringValue::Get(input.inputs[0]);
 	auto result = make_uniq<BindData>(file_name);
-	return result;
+	return std::move(result);
 }
 
 enum class FileBlockType { Header, Data };
