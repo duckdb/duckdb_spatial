@@ -252,7 +252,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 		throw ParserException("First blob in file is not a header");
 	}
 
-	return global_state;
+	return std::move(global_state);
 }
 
 struct LocalState : LocalTableFunctionState {
@@ -797,7 +797,8 @@ static unique_ptr<LocalTableFunctionState> InitLocal(ExecutionContext &context, 
 	}
 	auto block = DecompressBlob(context.client, *blob);
 
-	return make_uniq<LocalState>(std::move(block));
+	auto result = make_uniq<LocalState>(std::move(block));
+	return std::move(result);
 }
 
 static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
