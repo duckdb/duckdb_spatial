@@ -4,6 +4,8 @@
 name: Main Extension Distribution Pipeline
 on:
   push:
+    paths-ignore:
+      - '**/README.md'
     branches:
       - main
   workflow_dispatch:
