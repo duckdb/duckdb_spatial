@@ -196,9 +196,26 @@ static int DuckDBStatCallback(void *userData, const char *filename, VSIStatBufL 
 	}
 
 	pstatbuf->st_size = static_cast<off_t>(file->GetFileSize());
+
+	auto type = file->GetType();
+	switch (type) {
+	// Thesea re the only three types present on all platforms
+	case FileType::FILE_TYPE_REGULAR:
+		pstatbuf->st_mode = S_IFREG;
+		break;
+	case FileType::FILE_TYPE_DIR:
+		pstatbuf->st_mode = S_IFDIR;
+		break;
+	case FileType::FILE_TYPE_CHARDEV:
+		pstatbuf->st_mode = S_IFCHR;
+		break;
+	default:
+		throw IOException("Unknown file type");
+	}
+
+
 	/* DuckDB doesnt have anything equivalent to these yet... Hopefully thats ok?
 	pstatbuf->st_mtime = file->GetLastModifiedTime();
-	pstatbuf->st_mode = file->GetFileMode();
 	pstatbuf->st_uid = file->GetFileOwner();
 	pstatbuf->st_gid = file->GetFileGroup();
 	pstatbuf->st_ino = file->GetFileInode();
