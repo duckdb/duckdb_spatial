@@ -33,28 +33,22 @@ string Point::ToString() const {
 	if (IsEmpty()) {
 		return "POINT EMPTY";
 	}
-	auto &vert = vertices[0];
+	auto vert = vertices.Get(0);
 	if (std::isnan(vert.x) && std::isnan(vert.y)) {
 		// This is a special case for WKB. WKB does not support empty points,
 		// and instead writes a point with NaN coordinates. We therefore need to
 		// check for this case and return POINT EMPTY instead to round-trip safely
 		return "POINT EMPTY";
 	}
-	auto x = vertices[0].x;
-	auto y = vertices[0].y;
-	return StringUtil::Format("POINT (%s)", Utils::format_coord(x, y));
+	return StringUtil::Format("POINT (%s)", Utils::format_coord(vert.x, vert.y));
 }
 
 bool Point::IsEmpty() const {
 	return vertices.Count() == 0;
 }
 
-Vertex &Point::GetVertex() {
-	return vertices[0];
-}
-
-const Vertex &Point::GetVertex() const {
-	return vertices[0];
+Vertex Point::GetVertex() const {
+	return vertices.Get(0);
 }
 
 Point::operator Geometry() const {
@@ -85,8 +79,8 @@ string LineString::ToString() const {
 
 	string result = "LINESTRING (";
 	for (uint32_t i = 0; i < vertices.Count(); i++) {
-		auto x = vertices[i].x;
-		auto y = vertices[i].y;
+		auto x = vertices.Get(i).x;
+		auto y = vertices.Get(i).y;
 		result += Utils::format_coord(x, y);
 		if (i < vertices.Count() - 1) {
 			result += ", ";
@@ -150,8 +144,8 @@ string Polygon::ToString() const {
 	for (uint32_t i = 0; i < num_rings; i++) {
 		result += "(";
 		for (uint32_t j = 0; j < rings[i].Count(); j++) {
-			auto x = rings[i][j].x;
-			auto y = rings[i][j].y;
+			auto x = rings[i].Get(j).x;
+			auto y = rings[i].Get(j).y;
 			result += Utils::format_coord(x, y);
 			if (j < rings[i].Count() - 1) {
 				result += ", ";
@@ -187,7 +181,7 @@ string MultiPoint::ToString() const {
 		if (points[i].IsEmpty()) {
 			str += "EMPTY";
 		} else {
-			auto &vert = points[i].GetVertex();
+			auto vert = points[i].GetVertex();
 			str += Utils::format_coord(vert.x, vert.y);
 		}
 		if (i < num_points - 1) {
@@ -249,7 +243,8 @@ string MultiLineString::ToString() const {
 		}
 		str += "(";
 		bool first_vert = true;
-		for (auto &vert : line.Vertices()) {
+		for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
+			auto vert = line.Vertices().Get(i);
 			if (first_vert) {
 				first_vert = false;
 			} else {
@@ -330,7 +325,8 @@ string MultiPolygon::ToString() const {
 			}
 			str += "(";
 			bool first_vert = true;
-			for (auto &vert : ring) {
+			for (uint32_t v = 0; v < ring.Count(); v++) {
+				auto vert = ring.Get(v);
 				if (first_vert) {
 					first_vert = false;
 				} else {

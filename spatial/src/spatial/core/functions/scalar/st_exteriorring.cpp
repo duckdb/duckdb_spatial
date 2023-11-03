@@ -114,7 +114,7 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 
 		    auto line = lstate.factory.CreateLineString(num_points);
 		    for (auto i = 0; i < num_points; i++) {
-			    line.Vertices().Add(shell[i]);
+			    line.Vertices().Add(shell.Get(i));
 		    }
 		    return lstate.factory.Serialize(result, Geometry(line));
 	    });

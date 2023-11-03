@@ -85,7 +85,7 @@ static double PolygonArea(const core::Polygon &poly, GeographicLib::PolygonArea 
 		auto &ring = poly.Ring(ring_idx);
 		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
 		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
-			auto &coord = ring[coord_idx];
+			auto coord = ring.Get(coord_idx);
 			comp.AddPoint(coord.x, coord.y);
 		}
 		double ring_area;
