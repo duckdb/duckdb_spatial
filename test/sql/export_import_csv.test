@@ -1,0 +1,58 @@
+
+require spatial
+
+# Geometry
+statement ok
+CREATE TABLE tbl1 (geom GEOMETRY);
+
+statement ok
+INSERT INTO tbl1 VALUES
+    (ST_GeomFromText('POINT EMPTY')),
+    (ST_GeomFromText('POINT(0 0)')),
+    (ST_GeomFromText('LINESTRING EMPTY')),
+    (ST_GeomFromText('LINESTRING(0 0, 1 1)')),
+    (ST_GeomFromText('POLYGON EMPTY')),
+    (ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')),
+    (ST_GeomFromText('MULTIPOINT EMPTY')),
+    (ST_GeomFromText('MULTIPOINT(0 0, 1 1)')),
+    (ST_GeomFromText('MULTILINESTRING EMPTY')),
+    (ST_GeomFromText('MULTILINESTRING((0 0, 1 1), (2 2, 3 3))')),
+    (ST_GeomFromText('MULTIPOLYGON EMPTY')),
+    (ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')),
+    (ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1))'));
+
+
+# Now import and export
+statement ok
+EXPORT DATABASE '__TEST_DIR__/test_export_import_csv';
+
+statement ok
+DROP TABLE tbl1;
+
+# Sanity check, should be empty
+statement error
+SELECT ST_AsText(geom) FROM tbl1;
+----
+does not exist
+
+statement ok
+import database '__TEST_DIR__/test_export_import_csv';
+
+query I
+SELECT ST_AsText(geom) FROM tbl1;
+----
+POINT EMPTY
+POINT (0 0)
+LINESTRING EMPTY
+LINESTRING (0 0, 1 1)
+POLYGON EMPTY
+POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))
+MULTIPOINT EMPTY
+MULTIPOINT (0 0, 1 1)
+MULTILINESTRING EMPTY
+MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))
+MULTIPOLYGON EMPTY
+MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))
+GEOMETRYCOLLECTION EMPTY
+GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))
