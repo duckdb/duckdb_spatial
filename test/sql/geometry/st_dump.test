@@ -29,7 +29,7 @@ SElECT ST_Dump(ST_GeomFromText('GEOMETRYCOLLECTION (POINT (0 0))'));
 
 # Test with multipoint
 query II
-SELECT UNNEST(ST_Dump(ST_GeomFromText('MULTIPOINT ((0 0), (1 1)))')), recursive := true);
+SELECT UNNEST(ST_Dump(ST_GeomFromText('MULTIPOINT ((0 0), (1 1))')), recursive := true);
 ----
 POINT (0 0)	[1]
 POINT (1 1)	[2]
@@ -43,7 +43,7 @@ LINESTRING (2 2, 3 3)	[2]
 
 # Test with multipolygon
 query II
-SELECT UNNEST(ST_Dump(ST_GeomFromText('MULTIPOLYGON (((0 0, 1 1, 1 0, 0 0)), ((2 2, 3 3, 3 2, 2 2))))')), recursive := true);
+SELECT UNNEST(ST_Dump(ST_GeomFromText('MULTIPOLYGON (((0 0, 1 1, 1 0, 0 0)), ((2 2, 3 3, 3 2, 2 2)))')), recursive := true);
 ----
 POLYGON ((0 0, 1 1, 1 0, 0 0))	[1]
 POLYGON ((2 2, 3 3, 3 2, 2 2))	[2]
