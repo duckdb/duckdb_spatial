@@ -151,8 +151,9 @@ set(GDAL_DEPENDENCIES ${GDAL_DEPENDENCIES} EXPAT)
 # GEOS
 ExternalProject_Add(
     GEOS
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.11.2.tar.bz2
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.12.0.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
+    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/geos_distance.patch"
     CMAKE_ARGS 
     # CMake options
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
