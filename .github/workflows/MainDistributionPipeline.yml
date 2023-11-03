@@ -6,9 +6,11 @@ on:
   pull_request:
     paths-ignore:
       - '**/README.md'
+      - 'doc/**'
   push:
     paths-ignore:
       - '**/README.md'
+      - 'doc/**'
   workflow_dispatch:
 
 concurrency:
