@@ -579,7 +579,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 
 	if (!data.keep_wkb) {
 		// Find the geometry columns
-		for (auto col_idx = 0; col_idx < state.column_ids.size(); col_idx++) {
+		for (idx_t col_idx = 0; col_idx < state.column_ids.size(); col_idx++) {
 			auto mapped_idx = state.column_ids[col_idx];
 			if (data.geometry_column_ids.find(mapped_idx) != data.geometry_column_ids.end()) {
 				// Found a geometry column

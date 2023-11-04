@@ -32,7 +32,8 @@ struct ProjFunctionLocalState : public FunctionLocalState {
 
 	static unique_ptr<FunctionLocalState> Init(ExpressionState &state, const BoundFunctionExpression &expr,
 	                                           FunctionData *bind_data) {
-		return make_uniq<ProjFunctionLocalState>(state.GetContext());
+		auto result = make_uniq<ProjFunctionLocalState>(state.GetContext());
+		return std::move(result);
 	}
 
 	static ProjFunctionLocalState &ResetAndGet(ExpressionState &state) {
@@ -50,7 +51,7 @@ struct TransformFunctionData : FunctionData {
 	unique_ptr<FunctionData> Copy() const override {
 		auto result = make_uniq<TransformFunctionData>();
 		result->conventional_gis_order = conventional_gis_order;
-		return result;
+		return std::move(result);
 	}
 	bool Equals(const FunctionData &other) const override {
 		auto &data = other.Cast<TransformFunctionData>();
@@ -73,7 +74,7 @@ static unique_ptr<FunctionData> TransformBind(ClientContext &context, ScalarFunc
 		}
 		result->conventional_gis_order = BooleanValue::Get(ExpressionExecutor::EvaluateScalar(context, *arg));
 	}
-	return result;
+	return std::move(result);
 }
 
 static void Box2DTransformFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -441,7 +442,8 @@ unique_ptr<FunctionData> GenerateSpatialRefSysTable::Bind(ClientContext &context
 
 unique_ptr<GlobalTableFunctionState> GenerateSpatialRefSysTable::Init(ClientContext &context,
                                                                       TableFunctionInitInput &input) {
-	return make_uniq<State>();
+	auto result = make_uniq<State>();
+	return std::move(result);
 }
 
 void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
