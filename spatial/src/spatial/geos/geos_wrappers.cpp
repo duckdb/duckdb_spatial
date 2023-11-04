@@ -338,7 +338,7 @@ static void SerializePolygon(Cursor &writer, const GEOSGeometry *geom, const GEO
 		return;
 	}
 
-	auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
+	uint32_t num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
 	writer.Write<uint32_t>(num_holes + 1); // +1 for the shell
 
 	// Get shell
@@ -393,7 +393,7 @@ static void SerializePolygon(Cursor &writer, const GEOSGeometry *geom, const GEO
 
 static void SerializeMultiPoint(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::MULTIPOINT);
-	auto num_points = GEOSGetNumGeometries_r(ctx, geom);
+	uint32_t num_points = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_points);
 	for (uint32_t i = 0; i < num_points; i++) {
 		auto point = GEOSGetGeometryN_r(ctx, geom, i);
@@ -403,7 +403,7 @@ static void SerializeMultiPoint(Cursor &writer, const GEOSGeometry *geom, const 
 
 static void SerializeMultiLineString(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::MULTILINESTRING);
-	auto num_linestrings = GEOSGetNumGeometries_r(ctx, geom);
+	uint32_t num_linestrings = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_linestrings);
 	for (uint32_t i = 0; i < num_linestrings; i++) {
 		auto linestring = GEOSGetGeometryN_r(ctx, geom, i);
@@ -413,7 +413,7 @@ static void SerializeMultiLineString(Cursor &writer, const GEOSGeometry *geom, c
 
 static void SerializeMultiPolygon(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::MULTIPOLYGON);
-	auto num_polygons = GEOSGetNumGeometries_r(ctx, geom);
+	uint32_t num_polygons = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_polygons);
 	for (uint32_t i = 0; i < num_polygons; i++) {
 		auto polygon = GEOSGetGeometryN_r(ctx, geom, i);
@@ -423,7 +423,7 @@ static void SerializeMultiPolygon(Cursor &writer, const GEOSGeometry *geom, cons
 
 static void SerializeGeometryCollection(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::GEOMETRYCOLLECTION);
-	auto num_geometries = GEOSGetNumGeometries_r(ctx, geom);
+	uint32_t num_geometries = GEOSGetNumGeometries_r(ctx, geom);
 	writer.Write<uint32_t>(num_geometries);
 	for (uint32_t i = 0; i < num_geometries; i++) {
 		auto geometry = GEOSGetGeometryN_r(ctx, geom, i);

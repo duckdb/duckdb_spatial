@@ -81,7 +81,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 
 		    auto polygon = lstate.factory.CreatePolygon(rings_counts.size(), rings_counts.data());
 
-		    for (auto ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
+		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
 			    auto &new_ring = rings[ring_idx];
 			    auto &poly_ring = polygon.Ring(ring_idx);
 			    for (auto &v : new_ring.Vertices()) {
