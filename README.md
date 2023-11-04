@@ -336,56 +336,57 @@ We are actively working on implementing more functions, and will update this tab
 Again, please feel free to open an issue if there is a particular function you would like to see implemented. Contributions are also welcome!
 
 
-| Scalar functions            | GEOMETRY | POINT_2D   | LINESTRING_2D | POLYGON_2D | BOX_2D          |
-| --------------------------- | -------- | ---------- | ------------- | ---------- | --------------- |
-| ST_Point                    | 🦆        | 🦆        |               |            |                 |
-| ST_Area                     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_AsGeoJSON                | 🦆        | 🦆        | 🦆            | 🦆.        | 🦆              |
-| ST_AsHEXWKB                 | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_AsText                   | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              | 
-| ST_AsWKB                    | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_Boundary                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Buffer                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Centroid                 | 🧭        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_Collect                  | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_CollectionExtract        | 🦆        |           |               |            |                 |
-| ST_Contains                 | 🧭        | 🔄        | 🔄            | 🦆 or 🔄   | 🔄 (as POLYGON) |
-| ST_ContainsProperly         | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_ConvexHull               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_CoveredBy                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Covers                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Crosses                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Difference               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Dimension                | 🦆        |           |               |            |                 |
-| ST_Disjoint                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Distance                 | 🧭        | 🦆 or 🔄  | 🦆 or 🔄      | 🔄         | 🔄 (as POLYGON) |
-| ST_DWithin                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Envelope                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Equals                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_FlipCoordinates          | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_GeomFromText             | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_GeomFromWKB              | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
-| ST_GeometryType             | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
-| ST_MakeLine                 | 🦆        |           | 🦆            |            |                 |
-| ST_Perimeter                | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_Intersection             | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Intersects               | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_IsClosed                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_IsEmpty                  | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
-| ST_IsRing                   | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_IsSimple                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_IsValid                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Length                   | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
-| ST_LineMerge                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Normalize                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_NumPoints/ST_NPoints     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
-| ST_Overlaps                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_PointOnSurface           | 🧭        | 🧭        | 🧭            | 🧭         | 🔄 (as POLYGON) |
-| ST_RemoveRepeatedPoints     | 🧭        |           | 🦆            | 🔄         |                 |
-| ST_SimplifyPreserveTopology | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Simplify                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Touches                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Union                    | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Within                   | 🧭        | 🦆 or 🔄  | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_X                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
-| ST_Y                        | 🧭        | 🦆        | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| Scalar functions            | GEOMETRY | POINT_2D | LINESTRING_2D | POLYGON_2D | BOX_2D          |
+|-----------------------------|----------|----------|---------------|------------|-----------------|
+| ST_Point                    | 🦆       | 🦆       |               |            |                 |
+| ST_Area                     | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_AsGeoJSON                | 🦆       | 🦆       | 🦆            | 🦆.        | 🦆              |
+| ST_AsHEXWKB                 | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_AsText                   | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              | 
+| ST_AsWKB                    | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_Boundary                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Buffer                   | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Centroid                 | 🧭       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_Collect                  | 🦆       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_CollectionExtract        | 🦆       |          |               |            |                 |
+| ST_Contains                 | 🧭       | 🔄       | 🔄            | 🦆 or 🔄   | 🔄 (as POLYGON) |
+| ST_ContainsProperly         | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_ConvexHull               | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_CoveredBy                | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Covers                   | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Crosses                  | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Difference               | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Dimension                | 🦆       |          |               |            |                 |
+| ST_Disjoint                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Distance                 | 🧭       | 🦆 or 🔄 | 🦆 or 🔄      | 🔄         | 🔄 (as POLYGON) |
+| ST_Dump                     | 🦆       |          |               |            |                 |
+| ST_DWithin                  | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Envelope                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Equals                   | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_FlipCoordinates          | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_GeomFromText             | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_GeomFromWKB              | 🦆       | 🦆       | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_GeometryType             | 🦆       | 🦆       | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_MakeLine                 | 🦆       |          | 🦆            |            |                 |
+| ST_Perimeter                | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_Intersection             | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Intersects               | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_IsClosed                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_IsEmpty                  | 🦆       | 🦆       | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_IsRing                   | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_IsSimple                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_IsValid                  | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Length                   | 🦆       | 🦆       | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_LineMerge                | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Normalize                | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_NumPoints/ST_NPoints     | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
+| ST_Overlaps                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_PointOnSurface           | 🧭       | 🧭       | 🧭            | 🧭         | 🔄 (as POLYGON) |
+| ST_RemoveRepeatedPoints     | 🧭       |          | 🦆            | 🔄         |                 |
+| ST_SimplifyPreserveTopology | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Simplify                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Touches                  | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Union                    | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Within                   | 🧭       | 🦆 or 🔄 | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_X                        | 🧭       | 🦆       | 🔄            | 🔄         | 🔄 (as POLYGON) |
+| ST_Y                        | 🧭       | 🦆       | 🔄            | 🔄         | 🔄 (as POLYGON) |
