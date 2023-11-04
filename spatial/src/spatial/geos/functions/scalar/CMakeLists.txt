@@ -22,6 +22,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_ring.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_simple.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_valid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_linemerge.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_normalize.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_overlaps.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_pointonsurface.cpp

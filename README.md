@@ -376,6 +376,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_IsSimple                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_IsValid                  | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Length                   | 🦆        | 🦆        | 🦆            | 🦆         | 🔄 (as POLYGON) |
+| ST_LineMerge                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Normalize                | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_NumPoints/ST_NPoints     | 🦆        | 🦆        | 🦆            | 🦆         | 🦆              |
 | ST_Overlaps                 | 🧭        | 🔄        | 🔄            | 🔄         | 🔄 (as POLYGON) |

@@ -30,6 +30,7 @@ public:
 		RegisterStIsRing(db);
 		RegisterStIsSimple(db);
 		RegisterStIsValid(db);
+		RegisterStLineMerge(db);
 		RegisterStNormalize(db);
 		RegisterStOverlaps(db);
 		RegisterStPointOnSurface(db);
@@ -72,6 +73,7 @@ private:
 	static void RegisterStReducePrecision(DatabaseInstance &db);
 	static void RegisterStRemoveRepeatedPoints(DatabaseInstance &db);
 	static void RegisterStReverse(DatabaseInstance &db);
+	static void RegisterStLineMerge(DatabaseInstance &db);
 	static void RegisterStSimplifyPreserveTopology(DatabaseInstance &db);
 	static void RegisterStSimplify(DatabaseInstance &db);
 	static void RegisterStTouches(DatabaseInstance &db);
