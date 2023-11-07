@@ -66,37 +66,16 @@ class VertexVector {
 public:
 	uint32_t count;
 	uint32_t capacity;
-	Vertex *data;
+	data_ptr_t data;
 
-	explicit VertexVector(Vertex *data, uint32_t count, uint32_t capacity)
+	explicit VertexVector(data_ptr_t data, uint32_t count, uint32_t capacity)
 	    : count(count), capacity(capacity), data(data) {
 	}
 
 	// Create a VertexVector from an already existing buffer
-	static VertexVector FromBuffer(Vertex *buffer, uint32_t count) {
+	static VertexVector FromBuffer(data_ptr_t buffer, uint32_t count) {
 		VertexVector array(buffer, count, count);
 		return array;
-	}
-
-	inline Vertex &operator[](uint32_t index) const {
-		D_ASSERT(index < count);
-		return data[index];
-	}
-
-	inline Vertex *begin() {
-		return data;
-	}
-
-	inline Vertex *end() {
-		return data + count;
-	}
-
-	const Vertex *begin() const {
-		return data;
-	}
-
-	const Vertex *end() const {
-		return data + count;
 	}
 
 	inline uint32_t Count() const {
@@ -109,7 +88,18 @@ public:
 
 	inline void Add(const Vertex &v) {
 		D_ASSERT(count < capacity);
-		data[count++] = v;
+		Store<Vertex>(v, data + count * sizeof(Vertex));
+		count++;
+	}
+
+	inline void Set(uint32_t index, const Vertex &v) const {
+		D_ASSERT(index < count);
+		Store<Vertex>(v, data + index * sizeof(Vertex));
+	}
+
+	inline Vertex Get(uint32_t index) const {
+		D_ASSERT(index < count);
+		return Load<Vertex>(data + index * sizeof(Vertex));
 	}
 
 	// Returns the number of bytes that this VertexVector requires to be serialized
@@ -119,10 +109,6 @@ public:
 
 	void Serialize(Cursor &cursor) const;
 	void SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) const;
-
-	inline Vertex *Data() {
-		return data;
-	}
 
 	double Length() const;
 	double SignedArea() const;

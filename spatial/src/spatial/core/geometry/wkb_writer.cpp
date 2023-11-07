@@ -145,7 +145,7 @@ void WKBWriter::Write(const Point &point, data_ptr_t &ptr) {
 		WriteDouble(x, ptr);
 		WriteDouble(y, ptr);
 	} else {
-		auto &vertex = point.GetVertex();
+		auto vertex = point.GetVertex();
 		WriteDouble(vertex.x, ptr);
 		WriteDouble(vertex.y, ptr);
 	}
@@ -157,7 +157,8 @@ void WKBWriter::Write(const LineString &line, data_ptr_t &ptr) {
 
 	auto num_points = line.Count();
 	WriteInt(num_points, ptr);
-	for (auto &vertex : line.Vertices()) {
+	for(uint32_t i = 0; i < line.Vertices().Count(); i++) {
+		auto vertex = line.Vertices().Get(i);
 		WriteDouble(vertex.x, ptr);
 		WriteDouble(vertex.y, ptr);
 	}
@@ -170,7 +171,9 @@ void WKBWriter::Write(const Polygon &polygon, data_ptr_t &ptr) {
 	WriteInt(polygon.Count(), ptr);
 	for (auto &ring : polygon.Rings()) {
 		WriteInt(ring.Count(), ptr);
-		for (auto &vertex : ring) {
+
+		for (uint32_t i = 0; i < ring.Count(); i++) {
+			auto vertex = ring.Get(i);
 			WriteDouble(vertex.x, ptr);
 			WriteDouble(vertex.y, ptr);
 		}

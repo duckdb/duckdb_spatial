@@ -60,7 +60,7 @@ private:
 static void VerticesToGeoJSON(const VertexVector &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
 	// TODO: If the vertexvector is empty, do we null, add an empty array or a pair of NaN?
 	for (uint32_t i = 0; i < vertices.count; i++) {
-		auto &vertex = vertices[i];
+		auto vertex = vertices.Get(i);
 		auto coord = yyjson_mut_arr(doc);
 		yyjson_mut_arr_add_real(doc, coord, vertex.x);
 		yyjson_mut_arr_add_real(doc, coord, vertex.y);
@@ -75,7 +75,7 @@ static void ToGeoJSON(const Point &point, yyjson_mut_doc *doc, yyjson_mut_val *o
 	yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
 	if (!point.IsEmpty()) {
-		auto &vertex = point.GetVertex();
+		auto vertex = point.GetVertex();
 		yyjson_mut_arr_add_real(doc, coords, vertex.x);
 		yyjson_mut_arr_add_real(doc, coords, vertex.y);
 	}
