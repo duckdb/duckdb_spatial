@@ -157,7 +157,7 @@ void WKBWriter::Write(const LineString &line, data_ptr_t &ptr) {
 
 	auto num_points = line.Count();
 	WriteInt(num_points, ptr);
-	for(uint32_t i = 0; i < line.Vertices().Count(); i++) {
+	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
 		auto vertex = line.Vertices().Get(i);
 		WriteDouble(vertex.x, ptr);
 		WriteDouble(vertex.y, ptr);

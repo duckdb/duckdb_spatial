@@ -44,35 +44,32 @@ public:
 		join->conditions.push_back(std::move(cmp));
 	}
 
-
-	static bool IsTableRefsDisjoint(unordered_set<idx_t> &left_table_indexes,
-	                               unordered_set<idx_t> &right_table_indexes,
-	                               unordered_set<idx_t> &left_bindings,
-	                               unordered_set<idx_t> &right_bindings) {
+	static bool IsTableRefsDisjoint(unordered_set<idx_t> &left_table_indexes, unordered_set<idx_t> &right_table_indexes,
+	                                unordered_set<idx_t> &left_bindings, unordered_set<idx_t> &right_bindings) {
 
 		// Check that all the left-side bindings reference the left-side tables of the join,
 		// as well as that all the right-side bindings reference the right-side tables of the join.
 		// and that the left and right side bindings are disjoint.
 
-		for(auto &left_binding : left_bindings) {
-			if(right_bindings.find(left_binding) != right_bindings.end()) {
+		for (auto &left_binding : left_bindings) {
+			if (right_bindings.find(left_binding) != right_bindings.end()) {
 				// The left side bindings reference the right side tables of the join.
 				return false;
 			}
 			// Also check that the left side bindings are on the left side of the join
-			if(left_table_indexes.find(left_binding) == left_table_indexes.end()) {
+			if (left_table_indexes.find(left_binding) == left_table_indexes.end()) {
 				// The left side bindings are not on the left side of the join.
 				return false;
 			}
 		}
 
-		for(auto &right_binding : right_bindings) {
-			if(left_bindings.find(right_binding) != left_bindings.end()) {
+		for (auto &right_binding : right_bindings) {
+			if (left_bindings.find(right_binding) != left_bindings.end()) {
 				// The right side bindings reference the left side tables of the join.
 				return false;
 			}
 			// Also check that the right side bindings are on the right side of the join
-			if(right_table_indexes.find(right_binding) == right_table_indexes.end()) {
+			if (right_table_indexes.find(right_binding) == right_table_indexes.end()) {
 				// The right side bindings are not on the right side of the join.
 				return false;
 			}
@@ -128,14 +125,16 @@ public:
 					// 		a JOIN b ON st_intersects(a.geom, b.geom) 						=> OK
 					//		a JOIN b ON st_intersects(b.geom, a.geom)				 		=> OK
 					//		a JOIN b ON st_intersects(a.geom, st_union(a.geom, b.geom)) 	=> NOT OK
-					auto can_split = IsTableRefsDisjoint(left_table_indexes, right_table_indexes, left_pred_bindings, right_pred_bindings);
-					if(!can_split) {
+					auto can_split = IsTableRefsDisjoint(left_table_indexes, right_table_indexes, left_pred_bindings,
+					                                     right_pred_bindings);
+					if (!can_split) {
 						// Try again with the left and right side of the predicate swapped
 						// We can safely swap because the intersection operation we encode with the comparison join
 						// is symmetric, so the order of the arguments wont matter in the "new" join condition we're
 						// about to create.
-						can_split = IsTableRefsDisjoint(left_table_indexes, right_table_indexes, right_pred_bindings, left_pred_bindings);
-						if(!can_split) {
+						can_split = IsTableRefsDisjoint(left_table_indexes, right_table_indexes, right_pred_bindings,
+						                                left_pred_bindings);
+						if (!can_split) {
 							// We cant optimize this join
 							return;
 						}
@@ -145,35 +144,31 @@ public:
 
 					// Lookup the st_xmin, st_xmax, st_ymin, st_ymax functions in the catalog
 					auto &catalog = Catalog::GetSystemCatalog(context);
-					auto &xmin_func_set = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")
-					                          .Cast<ScalarFunctionCatalogEntry>();
-					auto &xmax_func_set = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmax")
-					                          .Cast<ScalarFunctionCatalogEntry>();
-					auto &ymin_func_set = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_ymin")
-					                          .Cast<ScalarFunctionCatalogEntry>();
-					auto &ymax_func_set = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_ymax")
-					                          .Cast<ScalarFunctionCatalogEntry>();
+					auto &xmin_func_set =
+					    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")
+					        .Cast<ScalarFunctionCatalogEntry>();
+					auto &xmax_func_set =
+					    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmax")
+					        .Cast<ScalarFunctionCatalogEntry>();
+					auto &ymin_func_set =
+					    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_ymin")
+					        .Cast<ScalarFunctionCatalogEntry>();
+					auto &ymax_func_set =
+					    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_ymax")
+					        .Cast<ScalarFunctionCatalogEntry>();
 
 					auto &left_arg_type = left_pred_expr->return_type;
 					auto &right_arg_type = right_pred_expr->return_type;
 
-					auto xmin_func_left =
-					    xmin_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
-					auto xmax_func_left =
-					    xmax_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
-					auto ymin_func_left =
-					    ymin_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
-					auto ymax_func_left =
-					    ymax_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
+					auto xmin_func_left = xmin_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
+					auto xmax_func_left = xmax_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
+					auto ymin_func_left = ymin_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
+					auto ymax_func_left = ymax_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
 
-					auto xmin_func_right =
-					    xmin_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
-					auto xmax_func_right =
-					    xmax_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
-					auto ymin_func_right =
-					    ymin_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
-					auto ymax_func_right =
-					    ymax_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
+					auto xmin_func_right = xmin_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
+					auto xmax_func_right = xmax_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
+					auto ymin_func_right = ymin_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
+					auto ymax_func_right = ymax_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
 
 					// Create the new join condition
 
@@ -231,7 +226,7 @@ public:
 					              ExpressionType::COMPARE_GREATERTHANOREQUALTO);
 
 					new_join->children = std::move(any_join.children);
-					if(any_join.has_estimated_cardinality) {
+					if (any_join.has_estimated_cardinality) {
 						new_join->estimated_cardinality = any_join.estimated_cardinality;
 						new_join->has_estimated_cardinality = true;
 					}

@@ -47,21 +47,20 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 
 	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
 	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
-			try {
-				auto geos_geom = reader.Read(wkt);
-				auto multidimensional = (GEOSHasZ_r(lstate.ctx.GetCtx(), geos_geom.get()) == 1);
-				if (multidimensional) {
-					throw InvalidInputException("3D/4D geometries are not supported");
-				}
-				return lstate.ctx.Serialize(result, geos_geom);
-			}
-			catch (InvalidInputException &error) {
-				if(!info.ignore_invalid) {
-					throw;
-				}
-				mask.SetInvalid(idx);
-				return string_t();
-			}
+		    try {
+			    auto geos_geom = reader.Read(wkt);
+			    auto multidimensional = (GEOSHasZ_r(lstate.ctx.GetCtx(), geos_geom.get()) == 1);
+			    if (multidimensional) {
+				    throw InvalidInputException("3D/4D geometries are not supported");
+			    }
+			    return lstate.ctx.Serialize(result, geos_geom);
+		    } catch (InvalidInputException &error) {
+			    if (!info.ignore_invalid) {
+				    throw;
+			    }
+			    mask.SetInvalid(idx);
+			    return string_t();
+		    }
 	    });
 }
 

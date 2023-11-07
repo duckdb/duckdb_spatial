@@ -85,7 +85,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    auto &new_ring = rings[ring_idx];
 			    auto &poly_ring = polygon.Ring(ring_idx);
 
-			    for(auto i = 0; i < new_ring.Vertices().Count(); i++) {
+			    for (auto i = 0; i < new_ring.Vertices().Count(); i++) {
 				    poly_ring.Add(new_ring.Vertices().Get(i));
 			    }
 		    }
