@@ -23,7 +23,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 	idx_t total_geom_count = 0;
 	idx_t total_path_count = 0;
 
-	for(idx_t out_row_idx = 0; out_row_idx < count; out_row_idx++) {
+	for (idx_t out_row_idx = 0; out_row_idx < count; out_row_idx++) {
 		auto in_row_idx = geom_format.sel->get_index(out_row_idx);
 
 		if (!geom_format.validity.RowIsValid(in_row_idx)) {
@@ -39,38 +39,35 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 
 		stack.emplace_back(geometry, vector<int32_t>());
 
-		while(!stack.empty()) {
+		while (!stack.empty()) {
 			auto current = stack.back();
 			auto current_geom = std::get<0>(current);
 			auto current_path = std::get<1>(current);
 
 			stack.pop_back();
 
-			if(current_geom.Type() == GeometryType::MULTIPOINT) {
+			if (current_geom.Type() == GeometryType::MULTIPOINT) {
 				auto mpoint = current_geom.GetMultiPoint();
 				for (int32_t i = 0; i < mpoint.Count(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1); // path is 1-indexed
 					stack.emplace_back(mpoint[i], path);
 				}
-			}
-			else if(current_geom.Type() == GeometryType::MULTILINESTRING) {
+			} else if (current_geom.Type() == GeometryType::MULTILINESTRING) {
 				auto mline = current_geom.GetMultiLineString();
 				for (int32_t i = 0; i < mline.Count(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(mline[i], path);
 				}
-			}
-			else if(current_geom.Type() == GeometryType::MULTIPOLYGON) {
+			} else if (current_geom.Type() == GeometryType::MULTIPOLYGON) {
 				auto mpoly = current_geom.GetMultiPolygon();
 				for (int32_t i = 0; i < mpoly.Count(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(mpoly[i], path);
 				}
-			}
-			else if (current_geom.Type() == GeometryType::GEOMETRYCOLLECTION) {
+			} else if (current_geom.Type() == GeometryType::GEOMETRYCOLLECTION) {
 				auto collection = current_geom.GetGeometryCollection();
 				for (int32_t i = 0; i < collection.Count(); i++) {
 					auto path = current_path;
@@ -105,7 +102,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 		auto &result_path_vec = result_list_children[1];
 
 		auto geom_data = FlatVector::GetData<string_t>(*result_geom_vec);
-		for(idx_t i = 0; i < geom_length; i++) {
+		for (idx_t i = 0; i < geom_length; i++) {
 			// Write the geometry
 			auto &item_blob = std::get<0>(items[i]);
 			geom_data[geom_offset + i] = lstate.factory.Serialize(*result_geom_vec, item_blob);
@@ -128,13 +125,13 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			auto &path_data_vec = ListVector::GetEntry(*result_path_vec);
 			auto path_data = FlatVector::GetData<int32_t>(path_data_vec);
 
-			for(idx_t j = 0; j < path_length; j++) {
+			for (idx_t j = 0; j < path_length; j++) {
 				path_data[path_offset + j] = path[j];
 			}
 		}
 	}
 
-	if(count == 1) {
+	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
@@ -142,10 +139,11 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 void CoreScalarFunctions::RegisterStDump(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Dump");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()},
-	                               LogicalType::LIST(LogicalType::STRUCT({{"geom", GeoTypes::GEOMETRY()}, {"path", LogicalType::LIST(LogicalType::INTEGER)}})),
-	                               DumpFunction,
-	                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()},
+	                   LogicalType::LIST(LogicalType::STRUCT(
+	                       {{"geom", GeoTypes::GEOMETRY()}, {"path", LogicalType::LIST(LogicalType::INTEGER)}})),
+	                   DumpFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 }

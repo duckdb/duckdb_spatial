@@ -76,8 +76,8 @@ static double PolygonPerimeter(const Polygon &poly) {
 	double perimeter = 0;
 	for (auto &ring : poly.Rings()) {
 		for (uint32_t i = 0; i < ring.Count() - 1; i++) {
-			auto &v1 = ring[i];
-			auto &v2 = ring[i + 1];
+			auto v1 = ring.Get(i);
+			auto v2 = ring.Get(i + 1);
 			perimeter += std::sqrt(std::pow(v1.x - v2.x, 2) + std::pow(v1.y - v2.y, 2));
 		}
 	}

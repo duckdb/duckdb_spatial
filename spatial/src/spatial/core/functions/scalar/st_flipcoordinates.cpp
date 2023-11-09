@@ -155,7 +155,9 @@ static void BoxFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 static void FlipVertexVector(VertexVector &vertices) {
 	for (idx_t i = 0; i < vertices.count; i++) {
-		std::swap(vertices[i].x, vertices[i].y);
+		auto vertex = vertices.Get(i);
+		std::swap(vertex.x, vertex.y);
+		vertices.Set(i, vertex);
 	}
 }
 static void FlipGeometry(Point &point) {

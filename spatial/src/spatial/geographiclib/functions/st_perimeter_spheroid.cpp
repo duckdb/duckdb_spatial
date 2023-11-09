@@ -77,7 +77,7 @@ static double PolygonPerimeter(const core::Polygon &poly, GeographicLib::Polygon
 		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
 		// so skip it.
 		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
-			auto &coord = ring[coord_idx];
+			auto coord = ring.Get(coord_idx);
 			comp.AddPoint(coord.x, coord.y);
 		}
 		double _ring_area;

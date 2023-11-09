@@ -90,7 +90,7 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 		    }
 
 		    auto actual_index = index < 0 ? point_count + index : index - 1;
-		    auto &point = line.Vertices()[actual_index];
+		    auto point = line.Vertices().Get(actual_index);
 		    return lstate.factory.Serialize(result, Geometry(lstate.factory.CreatePoint(point.x, point.y)));
 	    });
 }

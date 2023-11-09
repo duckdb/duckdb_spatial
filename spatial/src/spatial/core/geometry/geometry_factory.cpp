@@ -33,7 +33,7 @@ data_ptr_t GeometryFactory::ToWKB(const Geometry &geometry, uint32_t *size) {
 }
 
 VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) {
-	auto data = reinterpret_cast<Vertex *>(allocator.AllocateAligned(sizeof(Vertex) * capacity));
+	auto data = allocator.AllocateAligned(sizeof(Vertex) * capacity);
 	return VertexVector(data, 0, capacity);
 }
 
@@ -563,11 +563,11 @@ Point GeometryFactory::DeserializePoint(Cursor &reader) {
 	// Points can be empty too, in which case the count is 0
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
-		VertexVector vertex_data((Vertex *)reader.GetPtr(), 0, 0);
+		VertexVector vertex_data(reader.GetPtr(), 0, 0);
 		return Point(vertex_data);
 	} else {
 		D_ASSERT(count == 1);
-		VertexVector vertex_data((Vertex *)reader.GetPtr(), 1, 1);
+		VertexVector vertex_data(reader.GetPtr(), 1, 1);
 		// Move the pointer forward (in case we are reading from a collection type)
 		reader.Skip(sizeof(Vertex));
 		return Point(vertex_data);
@@ -581,7 +581,7 @@ LineString GeometryFactory::DeserializeLineString(Cursor &reader) {
 	// 0 if the linestring is empty
 	auto count = reader.Read<uint32_t>();
 	// read data
-	VertexVector vertex_data((Vertex *)reader.GetPtr(), count, count);
+	VertexVector vertex_data(reader.GetPtr(), count, count);
 
 	reader.Skip(count * sizeof(Vertex));
 
@@ -601,7 +601,7 @@ Polygon GeometryFactory::DeserializePolygon(Cursor &reader) {
 	auto data_ptr = reader.GetPtr() + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
 	for (uint32_t i = 0; i < num_rings; i++) {
 		auto count = reader.Read<uint32_t>();
-		rings[i] = VertexVector((Vertex *)data_ptr, count, count);
+		rings[i] = VertexVector(data_ptr, count, count);
 		data_ptr += count * sizeof(Vertex);
 	}
 	reader.SetPtr(data_ptr);
@@ -696,7 +696,7 @@ GeometryCollection GeometryFactory::DeserializeGeometryCollection(Cursor &reader
 
 VertexVector GeometryFactory::CopyVertexVector(const VertexVector &vector) {
 	auto result = VertexVector(vector);
-	result.data = (Vertex *)allocator.AllocateAligned(vector.capacity * sizeof(Vertex));
+	result.data = allocator.AllocateAligned(vector.capacity * sizeof(Vertex));
 	memcpy(result.data, vector.data, vector.capacity * sizeof(Vertex));
 	return result;
 }

@@ -104,8 +104,7 @@ public:
 	}
 	string ToString() const;
 	bool IsEmpty() const;
-	Vertex &GetVertex();
-	const Vertex &GetVertex() const;
+	Vertex GetVertex() const;
 
 	const VertexVector &Vertices() const {
 		return vertices;

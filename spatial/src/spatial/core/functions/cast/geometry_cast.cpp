@@ -46,7 +46,7 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 		if (point.IsEmpty()) {
 			throw CastException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
-		auto &vertex = point.GetVertex();
+		auto vertex = point.GetVertex();
 		return POINT_TYPE {vertex.x, vertex.y};
 	});
 	return true;
@@ -103,8 +103,8 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 		ListVector::Reserve(result, total_coords);
 
 		for (idx_t i = 0; i < line_size; i++) {
-			x_data[entry.offset + i] = line.Vertices()[i].x;
-			y_data[entry.offset + i] = line.Vertices()[i].y;
+			x_data[entry.offset + i] = line.Vertices().Get(i).x;
+			y_data[entry.offset + i] = line.Vertices().Get(i).y;
 		}
 		return entry;
 	});
@@ -182,8 +182,8 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 			ring_entries[total_rings + ring_idx] = ring_entry;
 
 			for (idx_t j = 0; j < ring_size; j++) {
-				x_data[ring_entry.offset + j] = ring.data[j].x;
-				y_data[ring_entry.offset + j] = ring.data[j].y;
+				x_data[ring_entry.offset + j] = ring.Get(j).x;
+				y_data[ring_entry.offset + j] = ring.Get(j).y;
 			}
 			total_coords += ring_size;
 		}
@@ -217,16 +217,13 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 
 		auto geom = lstate.factory.CreatePolygon(1, &capacity);
 		auto &shell = geom.Ring(0);
-		shell.data[0].x = minx;
-		shell.data[0].y = miny;
-		shell.data[1].x = maxx;
-		shell.data[1].y = miny;
-		shell.data[2].x = maxx;
-		shell.data[2].y = maxy;
-		shell.data[3].x = minx;
-		shell.data[3].y = maxy;
-		shell.data[4].x = minx;
-		shell.data[4].y = miny;
+
+		shell.Set(0, Vertex(minx, miny));
+		shell.Set(1, Vertex(maxx, miny));
+		shell.Set(2, Vertex(maxx, maxy));
+		shell.Set(3, Vertex(minx, maxy));
+		shell.Set(4, Vertex(minx, miny));
+
 		shell.count = 5;
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});

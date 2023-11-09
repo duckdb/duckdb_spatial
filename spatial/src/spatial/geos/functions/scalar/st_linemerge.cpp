@@ -27,21 +27,25 @@ static void LineMergeFunction(DataChunk &args, ExpressionState &state, Vector &r
 static void LineMergeFunctionWithDirected(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	BinaryExecutor::Execute<string_t, bool, string_t>(args.data[0], args.data[1], result, args.size(), [&](string_t &geometry_blob, bool directed) {
-		auto geometry = lstate.ctx.Deserialize(geometry_blob);
-		auto convex_hull_geometry = directed ? make_uniq_geos(ctx, GEOSLineMergeDirected_r(ctx, geometry.get()))
-		                                     : make_uniq_geos(ctx, GEOSLineMerge_r(ctx, geometry.get()));
+	BinaryExecutor::Execute<string_t, bool, string_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](string_t &geometry_blob, bool directed) {
+		    auto geometry = lstate.ctx.Deserialize(geometry_blob);
+		    auto convex_hull_geometry = directed ? make_uniq_geos(ctx, GEOSLineMergeDirected_r(ctx, geometry.get()))
+		                                         : make_uniq_geos(ctx, GEOSLineMerge_r(ctx, geometry.get()));
 
-		return lstate.ctx.Serialize(result, convex_hull_geometry);
-	});
+		    return lstate.ctx.Serialize(result, convex_hull_geometry);
+	    });
 }
 
 void GEOSScalarFunctions::RegisterStLineMerge(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_LineMerge");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), LineMergeFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::BOOLEAN}, GeoTypes::GEOMETRY(), LineMergeFunctionWithDirected, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), LineMergeFunction, nullptr, nullptr,
+	                               nullptr, GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::BOOLEAN}, GeoTypes::GEOMETRY(),
+	                               LineMergeFunctionWithDirected, nullptr, nullptr, nullptr,
+	                               GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 }
