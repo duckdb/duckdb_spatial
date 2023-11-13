@@ -72,7 +72,8 @@ void GeosCastFunctions::Register(DatabaseInstance &db) {
 	ExtensionUtil::RegisterCastFunction(db, core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
 	                                    BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
 
-	ExtensionUtil::RegisterCastFunction(db, LogicalType::VARCHAR, core::GeoTypes::GEOMETRY(), BoundCastInfo(TextToGeometryCast, nullptr, GEOSFunctionLocalState::InitCast));
+	ExtensionUtil::RegisterCastFunction(db, LogicalType::VARCHAR, core::GeoTypes::GEOMETRY(),
+	                                    BoundCastInfo(TextToGeometryCast, nullptr, GEOSFunctionLocalState::InitCast));
 };
 
 } // namespace geos

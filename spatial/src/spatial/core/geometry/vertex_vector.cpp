@@ -34,7 +34,7 @@ void VertexVector::Serialize(Cursor &cursor) const {
 
 void VertexVector::SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) const {
 	for (idx_t i = 0; i < count; i++) {
-		auto &p = data[i];
+		auto p = Get(i);
 		bbox.minx = std::min(bbox.minx, p.x);
 		bbox.miny = std::min(bbox.miny, p.y);
 		bbox.maxx = std::max(bbox.maxx, p.x);
@@ -50,8 +50,8 @@ double VertexVector::Length() const {
 		return 0.0;
 	}
 	for (uint32_t i = 0; i < count - 1; i++) {
-		auto &p1 = data[i];
-		auto &p2 = data[i + 1];
+		auto p1 = Get(i);
+		auto p2 = Get(i + 1);
 		length += std::sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
 	}
 	return length;
@@ -67,11 +67,11 @@ double VertexVector::SignedArea() const {
 	// We don't need to do this for the y coordinate because we already
 	// subtract them between consecutive vertices
 	double area = 0;
-	auto x0 = data[0].x;
+	auto x0 = Get(0).x;
 	for (uint32_t i = 1; i < count - 1; ++i) {
-		auto x1 = data[i].x;
-		auto y1 = data[i + 1].y;
-		auto y2 = data[i - 1].y;
+		auto x1 = Get(i).x;
+		auto y1 = Get(i + 1).y;
+		auto y2 = Get(i - 1).y;
 		area += (x1 - x0) * (y2 - y1);
 	}
 
@@ -152,7 +152,7 @@ bool VertexVector::IsClosed() const {
 	if (count == 1) {
 		return true;
 	}
-	return data[0] == data[count - 1];
+	return Get(0) == Get(count - 1);
 }
 
 bool VertexVector::IsEmpty() const {
@@ -177,8 +177,8 @@ bool VertexVector::IsSimple() const {
 
 Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const {
 
-	auto &p1 = data[0];
-	auto &p2 = data[count - 1];
+	auto p1 = Get(0);
+	auto p2 = Get(count - 1);
 
 	if (ensure_closed && p1 != p2) {
 		throw InternalException("VertexVector::Contains: VertexVector is not closed");
@@ -187,7 +187,7 @@ Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const
 	int winding_number = 0;
 
 	for (uint32_t i = 0; i < count; i++) {
-		p2 = data[i];
+		p2 = Get(i);
 		if (p1 == p2) {
 			p1 = p2;
 			continue;
@@ -218,9 +218,9 @@ std::tuple<uint32_t, double> VertexVector::ClosestSegment(const Vertex &p) const
 	double min_distance = std::numeric_limits<double>::max();
 	uint32_t min_index = 0;
 	// Loop over all segments and find the closest one
-	auto &p1 = data[0];
+	auto p1 = Get(0);
 	for (uint32_t i = 1; i < count; i++) {
-		auto &p2 = data[i];
+		auto p2 = Get(i);
 		auto distance = p.DistanceSquared(p1, p2);
 		if (distance < min_distance) {
 			min_distance = distance;
@@ -243,7 +243,7 @@ std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
 	// Loop over all segments and find the closest one
 
 	for (uint32_t i = 0; i < count; i++) {
-		auto &p1 = data[i];
+		auto p1 = Get(i);
 		auto distance = p.DistanceSquared(p1);
 		if (distance < min_distance) {
 
@@ -264,18 +264,18 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 		return std::make_tuple(Vertex(), 0, 0);
 	}
 	if (count == 1) {
-		auto single = data[0];
+		auto single = Get(0);
 		return std::make_tuple(single, 0, p.Distance(single));
 	}
 
 	auto min_distance = std::numeric_limits<double>::max();
 	uint32_t min_index = 0;
 
-	auto &p1 = data[0];
-	auto &p2 = data[1];
+	auto p1 = Get(0);
+	auto p2 = Get(1);
 	// Search for the closest segment
 	for (uint32_t i = 1; i < count; i++) {
-		p2 = data[i];
+		p2 = Get(i);
 		auto seg_distance = p.DistanceSquared(p1, p2);
 		if (seg_distance < min_distance) {
 			min_distance = seg_distance;
@@ -300,8 +300,8 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
 	}
 	auto Vertex_length = 0.0;
 	for (uint32_t i = 0; i < min_index; i++) {
-		p1 = data[i];
-		p2 = data[i + 1];
+		p1 = Get(i);
+		p2 = Get(i + 1);
 		Vertex_length += p1.Distance(p2);
 	}
 

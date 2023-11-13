@@ -213,7 +213,6 @@ static int DuckDBStatCallback(void *userData, const char *filename, VSIStatBufL 
 		throw IOException("Unknown file type");
 	}
 
-
 	/* DuckDB doesnt have anything equivalent to these yet... Hopefully thats ok?
 	pstatbuf->st_mtime = file->GetLastModifiedTime();
 	pstatbuf->st_uid = file->GetFileOwner();

@@ -234,26 +234,29 @@ static void TransformGeometry(PJ *crs, core::Point &point) {
 	if (point.IsEmpty()) {
 		return;
 	}
-	auto &vertex = point.GetVertex();
+	auto vertex = point.GetVertex();
 	auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-	vertex.x = transformed.x;
-	vertex.y = transformed.y;
+	point.Vertices().Set(0, core::Vertex(transformed.x, transformed.y));
 }
 
 static void TransformGeometry(PJ *crs, core::LineString &line) {
-	for (auto &vert : line.Vertices()) {
+
+	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
+		auto vert = line.Vertices().Get(i);
 		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
-		vert.x = transformed.x;
-		vert.y = transformed.y;
+
+		core::Vertex new_vert(transformed.x, transformed.y);
+		line.Vertices().Set(i, new_vert);
 	}
 }
 
 static void TransformGeometry(PJ *crs, core::Polygon &poly) {
 	for (auto &ring : poly.Rings()) {
-		for (auto &vert : ring) {
+		for (uint32_t i = 0; i < ring.Count(); i++) {
+			auto vert = ring.Get(i);
 			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
-			vert.x = transformed.x;
-			vert.y = transformed.y;
+			core::Vertex new_vert(transformed.x, transformed.y);
+			ring.Set(i, new_vert);
 		}
 	}
 }

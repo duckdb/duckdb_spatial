@@ -57,10 +57,10 @@ struct GlobalState : public GlobalFunctionData {
 //===--------------------------------------------------------------------===//
 // The parameters are const in duckdb > 0.9.1, ifdef so we can build for both versions for now.
 #if DUCKDB_PATCH_VERSION == 1
-static unique_ptr<FunctionData> Bind(ClientContext &context,  CopyInfo &info, vector<string> &names,
+static unique_ptr<FunctionData> Bind(ClientContext &context, CopyInfo &info, vector<string> &names,
                                      vector<LogicalType> &sql_types) {
 #else
-static unique_ptr<FunctionData> Bind(ClientContext &context,  const CopyInfo &info, const vector<string> &names,
+static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &info, const vector<string> &names,
                                      const vector<LogicalType> &sql_types) {
 #endif
 	GdalFileHandler::SetLocalClientContext(context);

@@ -35,7 +35,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 		    }
 
 		    auto &shell_verts = shell.Vertices();
-		    if (shell_verts[0] != shell_verts[shell_vert_count - 1]) {
+		    if (!shell_verts.IsClosed()) {
 			    throw InvalidInputException(
 			        "ST_MakePolygon shell must be closed (first and last vertex must be equal)");
 		    }
@@ -70,7 +70,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    }
 
 			    auto &ring_verts = hole.Vertices();
-			    if (ring_verts[0] != ring_verts[hole_count - 1]) {
+			    if (!ring_verts.IsClosed()) {
 				    throw InvalidInputException(StringUtil::Format(
 				        "ST_MakePolygon hole #%lu must be closed (first and last vertex must be equal)", hole_idx + 1));
 			    }
@@ -84,8 +84,9 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
 			    auto &new_ring = rings[ring_idx];
 			    auto &poly_ring = polygon.Ring(ring_idx);
-			    for (auto &v : new_ring.Vertices()) {
-				    poly_ring.Add(v);
+
+			    for (auto i = 0; i < new_ring.Vertices().Count(); i++) {
+				    poly_ring.Add(new_ring.Vertices().Get(i));
 			    }
 		    }
 
@@ -111,13 +112,13 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 		}
 
 		auto &line_verts = line.Vertices();
-		if (line_verts[0] != line_verts[line_count - 1]) {
+		if (!line_verts.IsClosed()) {
 			throw InvalidInputException("ST_MakePolygon shell must be closed (first and last vertex must be equal)");
 		}
 
 		auto polygon = lstate.factory.CreatePolygon(1, &line_count);
-		for (auto &v : line_verts) {
-			polygon.Shell().Add(v);
+		for (uint32_t i = 0; i < line_count; i++) {
+			polygon.Shell().Add(line_verts.Get(i));
 		}
 
 		return lstate.factory.Serialize(result, Geometry(polygon));
