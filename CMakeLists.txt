@@ -25,6 +25,10 @@ add_subdirectory(spatial/third_party/yyjson)
 
 include_directories(spatial/third_party/protozero/include)
 
+include_directories(duckdb/extension/parquet/include)
+include_directories(duckdb/third_party/parquet)
+include_directories(duckdb/third_party/thrift)
+
 
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
