@@ -42,14 +42,26 @@ static double Progress(ClientContext &context, const FunctionData *bind_data,
 static idx_t GetBatchIndex(ClientContext &context, const FunctionData *bind_data_p,
                            LocalTableFunctionState *local_state, GlobalTableFunctionState *global_state) = delete;
 
+static constexpr const char *const table_function_name = "ST_ReadGeoparquet";
+//! called in Binder::BindWithReplacementScan
 static unique_ptr<TableRef> ReadGeoparquetReplacementScan(ClientContext &context, const string &table_name,
-                                                          ReplacementScanData *data) = delete;
+                                                          ReplacementScanData *data) {
+    auto canReplace = ReplacementScan::CanReplace(table_name, { "gpq" });
+	if (!canReplace) {
+		return nullptr;
+	}
+	auto table_function = make_uniq<TableFunctionRef>();
+	vector<unique_ptr<ParsedExpression>> children;
+	children.push_back(make_uniq<ConstantExpression>(Value(table_name)));
+	table_function->function = make_uniq<FunctionExpression>(table_function_name, std::move(children));
+	return std::move(table_function);
+};
 
 
 void CoreTableFunctions::RegisterGeoparquetTableFunction(duckdb::DatabaseInstance &db) {
-	TableFunction read("ST_ReadGeoparquet", {LogicalType::VARCHAR}, Execute, Bind, InitGlobal, InitLocal);
-	read.get_batch_index = GetBatchIndex;
-	read.table_scan_progress = Progress;
+	TableFunction read("ST_ReadGeoparquet", {LogicalType::VARCHAR}, nullptr, nullptr, nullptr, nullptr );//Execute, Bind, InitGlobal, InitLocal);
+	read.get_batch_index = nullptr; //GetBatchIndex;
+	read.table_scan_progress = nullptr; //Progress;
 
 	ExtensionUtil::RegisterFunction(db, read);
 
