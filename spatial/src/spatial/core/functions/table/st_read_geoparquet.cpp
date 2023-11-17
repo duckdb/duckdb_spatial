@@ -1,23 +1,21 @@
 #define DUCKDB_EXTENSION_MAIN
 
-#include "parquet_extension.hpp"
-
 #include "duckdb.hpp"
-#include "parquet_metadata.hpp"
-#include "parquet_reader.hpp"
-#include "parquet_writer.hpp"
-#include "zstd_file_system.hpp"
-
-#include "duckdb/parser/parsed_data/create_table_function_info.hpp"
-#include "duckdb/storage/buffer_manager.hpp"
 #include "duckdb/function/replacement_scan.hpp"
 #include "duckdb/parser/expression/constant_expression.hpp"
 #include "duckdb/parser/expression/function_expression.hpp"
+#include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/parser/tableref/table_function_ref.hpp"
-
+#include "duckdb/storage/buffer_manager.hpp"
+#include "parquet_extension.hpp"
+#include "parquet_metadata.hpp"
+#include "parquet_reader.hpp"
+#include "parquet_writer.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/table.hpp"
+#include "spatial/core/functions/geoparquet_reader.hpp"
 #include "spatial/core/types.hpp"
+#include "zstd_file_system.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -57,7 +55,7 @@ namespace geoparquet {
 enum class ParquetFileState : uint8_t { UNOPENED, OPENING, OPEN, CLOSED };
 
 struct BindData : public TableFunctionData {
-	shared_ptr<ParquetReader> initial_reader;
+	shared_ptr<GeoparquetReader> initial_reader;
 	vector<string> files;
 	atomic<idx_t> chunk_count;
 	atomic<idx_t> cur_file;
@@ -66,7 +64,7 @@ struct BindData : public TableFunctionData {
 
 	// The union readers are created (when parquet union_by_name option is on) during binding
 	// Those readers can be re-used during ParallelStateNext
-	vector<shared_ptr<ParquetReader>> union_readers;
+	vector<shared_ptr<GeoparquetReader>> union_readers;
 
 	// These come from the initial_reader, but need to be stored in case the initial_reader is removed by a filter
 	idx_t initial_file_cardinality;
@@ -74,7 +72,7 @@ struct BindData : public TableFunctionData {
 	ParquetOptions parquet_options;
 	MultiFileReaderBindData reader_bind;
 
-	void Initialize(shared_ptr<duckdb::ParquetReader> reader) {
+	void Initialize(shared_ptr<GeoparquetReader> reader) {
 		initial_reader = std::move(reader);
 		initial_file_cardinality = initial_reader->NumRows();
 		initial_file_row_groups = initial_reader->NumRowGroups();
@@ -86,9 +84,9 @@ struct GlobalState : public GlobalTableFunctionState {
 	mutex lock;
 
 	//! The initial reader from the bind phase
-	shared_ptr<ParquetReader> initial_reader;
+	shared_ptr<GeoparquetReader> initial_reader;
 	//! Currently opened readers
-	vector<shared_ptr<ParquetReader>> readers;
+	vector<shared_ptr<GeoparquetReader>> readers;
 	//! Flag to indicate a file is being opened
 	vector<ParquetFileState> file_states;
 	//! Mutexes to wait for a file that is currently being opened
@@ -120,7 +118,7 @@ struct GlobalState : public GlobalTableFunctionState {
 };
 
 struct LocalState : public LocalTableFunctionState {
-	shared_ptr<ParquetReader> reader;
+	shared_ptr<GeoparquetReader> reader;
 	ParquetReaderScanState scan_state;
 	bool is_parallel;
 	idx_t batch_index;
@@ -397,6 +395,7 @@ static bool TryOpenNextFile(ClientContext &context, const BindData &bind_data,
 
 // This function looks for the next available row group. If not available, it will open files from bind_data.files
 // until there is a row group available for scanning or the files runs out
+
 static bool ParallelStateNext(ClientContext &context, const BindData &bind_data,
                               LocalState &scan_data, GlobalState &parallel_state) {
 	unique_lock<mutex> parallel_lock(parallel_state.lock);
@@ -500,9 +499,9 @@ static bool TryOpenNextFile(ClientContext &context, const BindData &bind_data,
 
 			unique_lock<mutex> file_lock(parallel_state.file_mutexes[i]);
 
-			shared_ptr<ParquetReader> reader;
+			shared_ptr<GeoparquetReader> reader;
 			try {
-				reader = make_shared<ParquetReader>(context, file, pq_options);
+				reader = make_shared<GeoparquetReader>(context, file, pq_options);
 				MultiFileReader::InitializeReader(*reader, bind_data.parquet_options.file_options,
 				                                  bind_data.reader_bind, bind_data.types, bind_data.names,
 				                                  parallel_state.column_ids, parallel_state.filters,
@@ -547,7 +546,7 @@ static unique_ptr<FunctionData> Bind(ClientContext& context,
 	auto result = make_uniq<BindData>();
 	result->files = std::move(files);
 	result->reader_bind =
-	    MultiFileReader::BindReader<ParquetReader>(context, result->types, result->names, *result, parquet_options);
+	    MultiFileReader::BindReader<GeoparquetReader>(context, result->types, result->names, *result, parquet_options);
 	if (return_types.empty()) {
 		// no expected types - just copy the types
 		return_types = result->types;
@@ -575,7 +574,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 	} else {
 		result->readers = std::move(bind_data.union_readers);
 		if (result->readers.size() != bind_data.files.size()) {
-			result->readers = vector<shared_ptr<ParquetReader>>(bind_data.files.size(), nullptr);
+			result->readers = vector<shared_ptr<GeoparquetReader>>(bind_data.files.size(), nullptr);
 		} else {
 			std::fill(result->file_states.begin(), result->file_states.end(), ParquetFileState::OPEN);
 		}
@@ -586,7 +585,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 			result->initial_reader = result->readers[0];
 		} else {
 			result->initial_reader =
-			    make_shared<ParquetReader>(context, bind_data.files[0], bind_data.parquet_options);
+			    make_shared<GeoparquetReader>(context, bind_data.files[0], bind_data.parquet_options);
 			result->readers[0] = result->initial_reader;
 		}
 		result->file_states[0] = ParquetFileState::OPEN;
