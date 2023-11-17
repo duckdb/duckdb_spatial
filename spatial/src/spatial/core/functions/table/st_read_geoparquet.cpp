@@ -694,7 +694,7 @@ static unique_ptr<TableRef> ReadGeoparquetReplacementScan(ClientContext &context
 
 
 
-}
+} // namespace geoparquet
 
 void CoreTableFunctions::RegisterGeoparquetTableFunction(duckdb::DatabaseInstance &db) {
 	TableFunction read("ST_ReadGeoparquet",
@@ -713,5 +713,5 @@ void CoreTableFunctions::RegisterGeoparquetTableFunction(duckdb::DatabaseInstanc
 	config.replacement_scans.emplace_back(geoparquet::ReadGeoparquetReplacementScan);
 }
 
-}
-}
+} // namespace core
+} // namespace spatial
