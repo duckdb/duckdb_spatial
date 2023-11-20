@@ -118,7 +118,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 void GeographicLibFunctions::RegisterLength(DatabaseInstance &db) {
 
 	// Length
-	ScalarFunctionSet set("st_length_spheroid");
+	ScalarFunctionSet set("ST_Length_Spheroid");
 	set.AddFunction(
 	    ScalarFunction({spatial::core::GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, GeodesicLineString2DFunction));
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction,

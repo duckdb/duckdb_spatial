@@ -36,7 +36,7 @@ static void GeodesicPoint2DFunction(DataChunk &args, ExpressionState &state, Vec
 void GeographicLibFunctions::RegisterDistance(DatabaseInstance &db) {
 
 	// Distance
-	ScalarFunctionSet set("st_distance_spheroid");
+	ScalarFunctionSet set("ST_Distance_Spheroid");
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::POINT_2D(), spatial::core::GeoTypes::POINT_2D()},
 	                               LogicalType::DOUBLE, GeodesicPoint2DFunction));
 

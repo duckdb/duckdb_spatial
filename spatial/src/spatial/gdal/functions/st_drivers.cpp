@@ -80,7 +80,7 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 }
 
 void GdalDriversTableFunction::Register(DatabaseInstance &db) {
-	TableFunction func("st_drivers", {}, Execute, Bind, Init);
+	TableFunction func("ST_Drivers", {}, Execute, Bind, Init);
 
 	ExtensionUtil::RegisterFunction(db, func);
 }

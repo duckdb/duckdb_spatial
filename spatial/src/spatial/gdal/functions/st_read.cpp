@@ -634,7 +634,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 		auto table_function = make_uniq<TableFunctionRef>();
 		vector<unique_ptr<ParsedExpression>> children;
 		children.push_back(make_uniq<ConstantExpression>(Value(table_name)));
-		table_function->function = make_uniq<FunctionExpression>("st_read", std::move(children));
+		table_function->function = make_uniq<FunctionExpression>("ST_Read", std::move(children));
 		return std::move(table_function);
 	}
 	// else not something we can replace
@@ -643,7 +643,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 
 void GdalTableFunction::Register(DatabaseInstance &db) {
 
-	TableFunctionSet set("st_read");
+	TableFunctionSet set("ST_Read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
 	                   GdalTableFunction::InitGlobal, GdalTableFunction::InitLocal);
 
