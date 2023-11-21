@@ -120,25 +120,6 @@ struct GdalScanLocalState : ArrowScanLocalState {
 
 struct GdalScanGlobalState : ArrowScanGlobalState {};
 
-struct ScopedOption {
-	string option;
-	string original_value;
-
-	ScopedOption(string option_p, const char *default_value) : option(option_p) {
-		// Save current value
-		original_value = CPLGetConfigOption(option.c_str(), default_value);
-	}
-
-	void Set(const char *new_value) {
-		CPLSetThreadLocalConfigOption(option.c_str(), new_value);
-	}
-
-	~ScopedOption() {
-		// Reset
-		CPLSetThreadLocalConfigOption(option.c_str(), original_value.c_str());
-	}
-};
-
 //------------------------------------------------------------------------------
 // Bind
 //------------------------------------------------------------------------------
@@ -149,7 +130,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	if (!config.options.enable_external_access) {
 		throw PermissionException("Scanning GDAL files is disabled through configuration");
 	}
-
 
 	// First scan for "options" parameter
 	auto gdal_open_options = vector<char const *>();
@@ -183,26 +163,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 	if (!gdal_sibling_files.empty()) {
 		gdal_sibling_files.push_back(nullptr);
-	}
-
-	// HACK: check for XLSX_HEADERS open option
-	// TODO: Remove this once GDAL 3.8 is released
-	ScopedOption xlsx_headers("OGR_XLSX_HEADERS", "AUTO");
-	ScopedOption xlsx_field_types("OGR_XLSX_FIELD_TYPES", "AUTO");
-	for (auto &option : gdal_open_options) {
-		if (option == nullptr) {
-			break;
-		} else if (strcmp(option, "HEADERS=FORCE") == 0) {
-			xlsx_headers.Set("FORCE");
-		} else if (strcmp(option, "HEADERS=DISABLE") == 0) {
-			xlsx_headers.Set("DISABLE");
-		} else if (strcmp(option, "HEADERS=AUTO") == 0) {
-			xlsx_headers.Set("AUTO");
-		} else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
-			xlsx_field_types.Set("STRING");
-		} else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
-			xlsx_field_types.Set("AUTO");
-		}
 	}
 
 	// Now we can open the dataset
