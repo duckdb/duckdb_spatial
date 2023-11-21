@@ -324,7 +324,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 		auto arrow_type = GetArrowLogicalType(attribute);
 		auto column_name = string(attribute.name);
-		if (attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
+		auto duckdb_type = arrow_type->GetDuckType();
+
+		if (duckdb_type.id() == LogicalTypeId::BLOB && attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
 			// This is a WKB geometry blob
 			result->arrow_table.AddColumn(col_idx, std::move(arrow_type));
 
@@ -332,7 +334,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				return_types.emplace_back(core::GeoTypes::WKB_BLOB());
 			} else {
 				return_types.emplace_back(core::GeoTypes::GEOMETRY());
-				column_name = "geom";
+				if(column_name == "wkb_geometry") {
+					column_name = "geom";
+				}
 			}
 			result->geometry_column_ids.insert(col_idx);
 
