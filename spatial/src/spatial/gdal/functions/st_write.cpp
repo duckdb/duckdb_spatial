@@ -58,8 +58,6 @@ struct GlobalState : public GlobalFunctionData {
 static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &info, const vector<string> &names,
                                      const vector<LogicalType> &sql_types) {
 
-	GdalFileHandler::SetLocalClientContext(context);
-
 	auto bind_data = make_uniq<BindData>(info.file_path, sql_types, names);
 
 	// check all the options in the copy info
@@ -125,7 +123,6 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &inf
 // Init Local
 //===--------------------------------------------------------------------===//
 static unique_ptr<LocalFunctionData> InitLocal(ExecutionContext &context, FunctionData &bind_data) {
-	GdalFileHandler::SetLocalClientContext(context.client);
 	auto local_data = make_uniq<LocalState>(context.client);
 	return std::move(local_data);
 }
@@ -220,9 +217,6 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, FunctionData &bind_data,
                                                  const string &file_path) {
 
-	// Set the local client context so that we can access it from the filesystem handler
-	GdalFileHandler::SetLocalClientContext(context);
-
 	auto &gdal_data = (BindData &)bind_data;
 	GDALDriver *driver = GetGDALDriverManager()->GetDriverByName(gdal_data.driver_name.c_str());
 	if (!driver) {
@@ -235,7 +229,10 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	for (auto &option : gdal_data.dataset_creation_options) {
 		dco = CSLAddString(dco, option.c_str());
 	}
-	auto dataset = GDALDatasetUniquePtr(driver->Create(file_path.c_str(), 0, 0, 0, GDT_Unknown, dco));
+
+	auto &client_ctx = GDALClientContextState::GetOrCreate(context);
+	auto prefixed_path = client_ctx.GetPrefix() + file_path;
+	auto dataset = GDALDatasetUniquePtr(driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, dco));
 	if (!dataset) {
 		throw IOException("Could not open dataset");
 	}
@@ -412,7 +409,6 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 // Finalize
 //===--------------------------------------------------------------------===//
 static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunctionData &gstate) {
-	GdalFileHandler::SetLocalClientContext(context);
 	auto &global_state = (GlobalState &)gstate;
 	global_state.dataset->FlushCache();
 }

@@ -21,11 +21,21 @@ void GdalModule::Register(DatabaseInstance &db) {
 
 		// Set GDAL error handler
 
-		CPLSetErrorHandler([](CPLErr e, int code, const char *msg) {
+		CPLSetErrorHandler([](CPLErr e, int code, const char *raw_msg) {
 			// DuckDB doesnt do warnings, so we only throw on errors
 			if (e != CE_Failure && e != CE_Fatal) {
 				return;
 			}
+
+			// If the error contains a /vsiduckdb-<uuid>/ prefix,
+			// try to strip it off to make the errors more readable
+			auto msg = string(raw_msg);
+			auto path_pos = msg.find("/vsiduckdb-");
+			if(path_pos != string::npos) {
+				// We found a path, strip it off
+				msg.erase(path_pos, 48);
+			}
+
 			switch (code) {
 			case CPLE_NoWriteAccess:
 				throw PermissionException("GDAL Error (%d): %s", code, msg);
@@ -48,9 +58,6 @@ void GdalModule::Register(DatabaseInstance &db) {
 				throw IOException("GDAL Error (%d): %s", code, msg);
 			}
 		});
-
-		// Install the duckdb file handler
-		GdalFileHandler::Register();
 	});
 
 	// Register functions

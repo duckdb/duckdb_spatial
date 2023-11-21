@@ -150,8 +150,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		throw PermissionException("Scanning GDAL files is disabled through configuration");
 	}
 
-	// Set the local client context so that we can access it from the filesystem handler
-	GdalFileHandler::SetLocalClientContext(context);
 
 	// First scan for "options" parameter
 	auto gdal_open_options = vector<char const *>();
@@ -208,16 +206,18 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Now we can open the dataset
-	auto file_name = input.inputs[0].GetValue<string>();
+	auto raw_file_name = input.inputs[0].GetValue<string>();
+	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
+	auto prefixed_file_name = ctx_state.GetPrefix() + raw_file_name;
 	auto dataset =
-	    GDALDatasetUniquePtr(GDALDataset::Open(file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
+	    GDALDatasetUniquePtr(GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
 	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
 	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
 	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
-		throw IOException("Could not open file: " + file_name + " (" + error + ")");
+		throw IOException("Could not open file: " + raw_file_name + " (" + error + ")");
 	}
 
 	// Double check that the dataset have any layers
@@ -529,7 +529,6 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 unique_ptr<LocalTableFunctionState> GdalTableFunction::InitLocal(ExecutionContext &context,
                                                                  TableFunctionInitInput &input,
                                                                  GlobalTableFunctionState *global_state_p) {
-	GdalFileHandler::SetLocalClientContext(context.client);
 
 	auto &global_state = global_state_p->Cast<ArrowScanGlobalState>();
 	auto current_chunk = make_uniq<ArrowArrayWrapper>();
