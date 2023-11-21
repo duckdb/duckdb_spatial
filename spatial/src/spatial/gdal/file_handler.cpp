@@ -207,6 +207,14 @@ public:
 		return 0;
 	}
 
+	int RmdirRecursive(const char *prefixed_dir_name) override {
+		auto dir_name = StripPrefix(prefixed_dir_name);
+		auto &fs = FileSystem::GetFileSystem(context);
+
+		fs.RemoveDirectory(dir_name);
+		return 0;
+	}
+
 	char **ReadDirEx(const char *prefixed_dir_name, int max_files) override {
 		auto dir_name = StripPrefix(prefixed_dir_name);
 		auto &fs = FileSystem::GetFileSystem(context);
@@ -239,8 +247,16 @@ public:
 		return 0;
 	}
 
-	// int Unlink(const char *pszFilename) override;
-	// int Rename(const char *oldpath, const char * newpath) override {}
+	int Unlink(const char *prefixed_file_name) override {
+		auto file_name = StripPrefix(prefixed_file_name);
+		auto &fs = FileSystem::GetFileSystem(context);
+		try {
+			fs.RemoveFile(file_name);
+			return 0;
+		} catch (std::exception &ex) {
+			return -1;
+		}
+	}
 };
 
 

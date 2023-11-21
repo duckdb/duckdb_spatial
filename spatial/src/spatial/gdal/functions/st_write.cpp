@@ -411,6 +411,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunctionData &gstate) {
 	auto &global_state = (GlobalState &)gstate;
 	global_state.dataset->FlushCache();
+	global_state.dataset->Close();
 }
 
 void GdalCopyFunction::Register(DatabaseInstance &db) {
