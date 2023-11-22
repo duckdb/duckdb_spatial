@@ -120,25 +120,6 @@ struct GdalScanLocalState : ArrowScanLocalState {
 
 struct GdalScanGlobalState : ArrowScanGlobalState {};
 
-struct ScopedOption {
-	string option;
-	string original_value;
-
-	ScopedOption(string option_p, const char *default_value) : option(option_p) {
-		// Save current value
-		original_value = CPLGetConfigOption(option.c_str(), default_value);
-	}
-
-	void Set(const char *new_value) {
-		CPLSetThreadLocalConfigOption(option.c_str(), new_value);
-	}
-
-	~ScopedOption() {
-		// Reset
-		CPLSetThreadLocalConfigOption(option.c_str(), original_value.c_str());
-	}
-};
-
 //------------------------------------------------------------------------------
 // Bind
 //------------------------------------------------------------------------------
@@ -149,9 +130,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	if (!config.options.enable_external_access) {
 		throw PermissionException("Scanning GDAL files is disabled through configuration");
 	}
-
-	// Set the local client context so that we can access it from the filesystem handler
-	GdalFileHandler::SetLocalClientContext(context);
 
 	// First scan for "options" parameter
 	auto gdal_open_options = vector<char const *>();
@@ -187,37 +165,19 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		gdal_sibling_files.push_back(nullptr);
 	}
 
-	// HACK: check for XLSX_HEADERS open option
-	// TODO: Remove this once GDAL 3.8 is released
-	ScopedOption xlsx_headers("OGR_XLSX_HEADERS", "AUTO");
-	ScopedOption xlsx_field_types("OGR_XLSX_FIELD_TYPES", "AUTO");
-	for (auto &option : gdal_open_options) {
-		if (option == nullptr) {
-			break;
-		} else if (strcmp(option, "HEADERS=FORCE") == 0) {
-			xlsx_headers.Set("FORCE");
-		} else if (strcmp(option, "HEADERS=DISABLE") == 0) {
-			xlsx_headers.Set("DISABLE");
-		} else if (strcmp(option, "HEADERS=AUTO") == 0) {
-			xlsx_headers.Set("AUTO");
-		} else if (strcmp(option, "FIELD_TYPES=STRING") == 0) {
-			xlsx_field_types.Set("STRING");
-		} else if (strcmp(option, "FIELD_TYPES=AUTO") == 0) {
-			xlsx_field_types.Set("AUTO");
-		}
-	}
-
 	// Now we can open the dataset
-	auto file_name = input.inputs[0].GetValue<string>();
+	auto raw_file_name = input.inputs[0].GetValue<string>();
+	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
+	auto prefixed_file_name = ctx_state.GetPrefix() + raw_file_name;
 	auto dataset =
-	    GDALDatasetUniquePtr(GDALDataset::Open(file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
+	    GDALDatasetUniquePtr(GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
 	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
 	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
 	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
-		throw IOException("Could not open file: " + file_name + " (" + error + ")");
+		throw IOException("Could not open file: " + raw_file_name + " (" + error + ")");
 	}
 
 	// Double check that the dataset have any layers
@@ -364,7 +324,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 		auto arrow_type = GetArrowLogicalType(attribute);
 		auto column_name = string(attribute.name);
-		if (attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
+		auto duckdb_type = arrow_type->GetDuckType();
+
+		if (duckdb_type.id() == LogicalTypeId::BLOB && attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
 			// This is a WKB geometry blob
 			result->arrow_table.AddColumn(col_idx, std::move(arrow_type));
 
@@ -372,7 +334,9 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				return_types.emplace_back(core::GeoTypes::WKB_BLOB());
 			} else {
 				return_types.emplace_back(core::GeoTypes::GEOMETRY());
-				column_name = "geom";
+				if(column_name == "wkb_geometry") {
+					column_name = "geom";
+				}
 			}
 			result->geometry_column_ids.insert(col_idx);
 
@@ -529,7 +493,6 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 unique_ptr<LocalTableFunctionState> GdalTableFunction::InitLocal(ExecutionContext &context,
                                                                  TableFunctionInitInput &input,
                                                                  GlobalTableFunctionState *global_state_p) {
-	GdalFileHandler::SetLocalClientContext(context.client);
 
 	auto &global_state = global_state_p->Cast<ArrowScanGlobalState>();
 	auto current_chunk = make_uniq<ArrowArrayWrapper>();
@@ -634,7 +597,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 		auto table_function = make_uniq<TableFunctionRef>();
 		vector<unique_ptr<ParsedExpression>> children;
 		children.push_back(make_uniq<ConstantExpression>(Value(table_name)));
-		table_function->function = make_uniq<FunctionExpression>("st_read", std::move(children));
+		table_function->function = make_uniq<FunctionExpression>("ST_Read", std::move(children));
 		return std::move(table_function);
 	}
 	// else not something we can replace
@@ -643,7 +606,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 
 void GdalTableFunction::Register(DatabaseInstance &db) {
 
-	TableFunctionSet set("st_read");
+	TableFunctionSet set("ST_Read");
 	TableFunction scan({LogicalType::VARCHAR}, GdalTableFunction::Scan, GdalTableFunction::Bind,
 	                   GdalTableFunction::InitGlobal, GdalTableFunction::InitLocal);
 

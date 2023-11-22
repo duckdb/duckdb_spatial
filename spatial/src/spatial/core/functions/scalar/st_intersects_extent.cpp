@@ -31,7 +31,7 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 }
 
 void CoreScalarFunctions::RegisterStIntersectsExtent(DatabaseInstance &db) {
-	ScalarFunction intersects_func("st_intersects_extent", {GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()},
+	ScalarFunction intersects_func("ST_Intersects_Extent", {GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()},
 	                               LogicalType::BOOLEAN, IntersectsExtentFunction);
 
 	ExtensionUtil::RegisterFunction(db, intersects_func);

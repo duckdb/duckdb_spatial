@@ -138,7 +138,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 void GeographicLibFunctions::RegisterPerimeter(DatabaseInstance &db) {
 
 	// Perimiter
-	ScalarFunctionSet set("st_perimeter_spheroid");
+	ScalarFunctionSet set("ST_Perimeter_Spheroid");
 	set.AddFunction(
 	    ScalarFunction({spatial::core::GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, GeodesicPolygon2DFunction));
 	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction,

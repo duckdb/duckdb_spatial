@@ -199,8 +199,9 @@ ExternalProject_Add(
 ExternalProject_Add(
     GDAL
     DEPENDS ${GDAL_DEPENDENCIES}
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal363.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal380.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
+    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler.patch"
     CMAKE_ARGS 
     # CMake options
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -288,6 +289,8 @@ ExternalProject_Add(
     -DOGR_ENABLE_DRIVER_LVBAG=ON
     -DOGR_ENABLE_DRIVER_VFK=ON
     -DOGR_ENABLE_DRIVER_MVT=ON
+    -DOGR_ENABLE_DRIVER_PMTILES=ON
+    -DOGR_ENABLE_DRIVER_JSONFG=ON
 
     # Drivers requiring network/curl
     -DOGR_ENABLE_DRIVER_AMIGOCLOUD=${SPATIAL_USE_NETWORK}

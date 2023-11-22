@@ -90,7 +90,7 @@ struct EnvelopeAggFunction {
 //------------------------------------------------------------------------
 void CoreAggregateFunctions::RegisterStEnvelopeAgg(DatabaseInstance &db) {
 
-	AggregateFunctionSet st_envelope_agg("st_envelope_agg");
+	AggregateFunctionSet st_envelope_agg("ST_Envelope_Agg");
 	st_envelope_agg.AddFunction(
 	    AggregateFunction::UnaryAggregate<EnvelopeAggState, string_t, string_t, EnvelopeAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));

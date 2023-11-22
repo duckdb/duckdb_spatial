@@ -131,7 +131,7 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 void CoreScalarFunctions::RegisterStPerimeter(DatabaseInstance &db) {
 
 	// Perimiter
-	ScalarFunctionSet set("st_perimeter");
+	ScalarFunctionSet set("ST_Perimeter");
 	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DPerimeterFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, Polygon2DPerimeterFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryPerimeterFunction, nullptr,

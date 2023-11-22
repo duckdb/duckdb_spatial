@@ -146,8 +146,8 @@ static void PointWithinPolygonFunction(DataChunk &args, ExpressionState &state, 
 void CoreScalarFunctions::RegisterStContains(DatabaseInstance &db) {
 
 	// ST_Within is the inverse of ST_Contains
-	ScalarFunctionSet contains_function_set("st_contains");
-	ScalarFunctionSet within_function_set("st_within");
+	ScalarFunctionSet contains_function_set("ST_Contains");
+	ScalarFunctionSet within_function_set("ST_Within");
 
 	// POLYGON_2D - POINT_2D
 	contains_function_set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D(), GeoTypes::POINT_2D()},

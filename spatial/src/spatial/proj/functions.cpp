@@ -480,7 +480,7 @@ void GenerateSpatialRefSysTable::Execute(ClientContext &context, TableFunctionIn
 }
 
 void GenerateSpatialRefSysTable::Register(DatabaseInstance &db) {
-	TableFunction func("st_list_proj_crs", {}, Execute, Bind, Init);
+	TableFunction func("ST_List_Proj_CRS", {}, Execute, Bind, Init);
 	ExtensionUtil::RegisterFunction(db, func);
 
 	// Also create a view
@@ -497,7 +497,7 @@ void GenerateSpatialRefSysTable::Register(DatabaseInstance &db) {
 }
 
 void ProjFunctions::Register(DatabaseInstance &db) {
-	ScalarFunctionSet set("st_transform");
+	ScalarFunctionSet set("ST_Transform");
 
 	using namespace spatial::core;
 

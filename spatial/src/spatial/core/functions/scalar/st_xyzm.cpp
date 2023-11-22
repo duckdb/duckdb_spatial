@@ -217,7 +217,7 @@ static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStX(DatabaseInstance &db) {
 
-	ScalarFunctionSet st_x("st_x");
+	ScalarFunctionSet st_x("ST_X");
 	st_x.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
 	st_x.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<0>));
 
@@ -226,7 +226,7 @@ void CoreScalarFunctions::RegisterStX(DatabaseInstance &db) {
 
 void CoreScalarFunctions::RegisterStXMax(DatabaseInstance &db) {
 
-	ScalarFunctionSet st_xmax("st_xmax");
+	ScalarFunctionSet st_xmax("ST_XMax");
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<2>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
 	st_xmax.AddFunction(
@@ -239,7 +239,7 @@ void CoreScalarFunctions::RegisterStXMax(DatabaseInstance &db) {
 
 void CoreScalarFunctions::RegisterStXMin(DatabaseInstance &db) {
 
-	ScalarFunctionSet st_xmin("st_xmin");
+	ScalarFunctionSet st_xmin("ST_XMin");
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<0>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
 	st_xmin.AddFunction(
@@ -252,7 +252,7 @@ void CoreScalarFunctions::RegisterStXMin(DatabaseInstance &db) {
 
 void CoreScalarFunctions::RegisterStY(DatabaseInstance &db) {
 
-	ScalarFunctionSet st_y("st_y");
+	ScalarFunctionSet st_y("ST_Y");
 	st_y.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
 	st_y.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<1>));
 
@@ -261,7 +261,7 @@ void CoreScalarFunctions::RegisterStY(DatabaseInstance &db) {
 
 void CoreScalarFunctions::RegisterStYMax(DatabaseInstance &db) {
 
-	ScalarFunctionSet st_ymax("st_ymax");
+	ScalarFunctionSet st_ymax("ST_YMax");
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<3>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
 	st_ymax.AddFunction(
@@ -274,7 +274,7 @@ void CoreScalarFunctions::RegisterStYMax(DatabaseInstance &db) {
 
 void CoreScalarFunctions::RegisterStYMin(DatabaseInstance &db) {
 
-	ScalarFunctionSet st_ymin("st_ymin");
+	ScalarFunctionSet st_ymin("ST_YMin");
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<1>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
 	st_ymin.AddFunction(
