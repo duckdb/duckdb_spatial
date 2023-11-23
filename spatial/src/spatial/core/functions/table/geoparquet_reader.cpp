@@ -228,29 +228,31 @@ static bool HasGeometryColumnName(std::string_view column_name) {
 
 class ParquetWKBVectorBuffer;
 
+string_t WKBParquetValueConversion::ConvertToSerializedGeometry(string_t str, GeometryFactory& factory) {
+	auto length = str.GetSize();
+	auto data = str.GetData();
+	auto geometry = WKBReader(factory, data, length).ReadGeometry();
+	return factory.Serialize(geometry);
+}
+
 string_t WKBParquetValueConversion::DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader) {
 	auto& w_reader = reader.Cast<WKBColumnReader>();
-//	auto l = w_reader.dict->len;
 	auto& strs = w_reader.dict_strings;
-	auto str = &strs[offset];
-//	return *str;
-	auto whole = str->GetString();
-	auto length = str->GetSize();
-	auto data = str->GetData();
-//	auto g = w_reader.factory.Deserialize(str);
-	auto g= WKBReader(reader.Cast<WKBColumnReader>().factory, data, length).ReadGeometry();
-	auto as_s_t = w_reader.factory.Serialize(g);
-	strs[offset] = as_s_t;
-	auto whole_st = as_s_t.GetString();
-//	std::cout << g.ToString() << std::endl;
-	return as_s_t;
-	//	return GeometryFactory(reader.Reader().allocator).FromWKB(g, length);
-//	auto from_geom = w_reader.factory.Serialize(to_geom);
-//	return str;
+	auto str = strs[offset];
+	return WKBParquetValueConversion::ConvertToSerializedGeometry(str, w_reader.factory);
 }
 
 string_t WKBParquetValueConversion::PlainRead(ByteBuffer &plain_data, ColumnReader &reader) {
-	auto str = StringParquetValueConversion::PlainRead(plain_data, reader);
+	auto &scr = reader.Cast<WKBColumnReader>();
+	uint32_t str_len = scr.fixed_width_string_length == 0 ? plain_data.read<uint32_t>() : scr.fixed_width_string_length;
+	plain_data.available(str_len);
+	auto plain_str = char_ptr_cast(plain_data.ptr);
+	auto actual_str_len = reader.Cast<WKBColumnReader>().VerifyString(plain_str, str_len);
+	auto ret_str = string_t(plain_str, actual_str_len);
+	plain_data.inc(str_len);
+	return ConvertToSerializedGeometry(ret_str, scr.factory);
+//	auto str = StringParquetValueConversion::PlainRead(plain_data, reader);
+//	return WKBParquetValueConversion::ConvertToSerializedGeometry(str, reader.Cast<WKBColumnReader>().factory);
 }
 
 void WKBParquetValueConversion::PlainSkip(ByteBuffer &plain_data, ColumnReader &reader) {

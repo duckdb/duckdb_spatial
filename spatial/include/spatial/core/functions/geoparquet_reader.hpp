@@ -72,6 +72,7 @@ public:
 	static string_t DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader);
 	static string_t PlainRead(ByteBuffer &plain_data, ColumnReader &reader);
 	static void PlainSkip(ByteBuffer &plain_data, ColumnReader &reader);
+	static string_t ConvertToSerializedGeometry(string_t wkb, GeometryFactory& factory);
 };
 
 class WKBColumnReader : public TemplatedColumnReader<string_t, WKBParquetValueConversion> {
