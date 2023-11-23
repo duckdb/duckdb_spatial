@@ -72,7 +72,8 @@ public:
 	static string_t DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader);
 	static string_t PlainRead(ByteBuffer &plain_data, ColumnReader &reader);
 	static void PlainSkip(ByteBuffer &plain_data, ColumnReader &reader);
-	static string_t ConvertToSerializedGeometry(string_t wkb, GeometryFactory& factory);
+	static string_t ConvertToSerializedGeometry(string_t str, GeometryFactory & factory, VectorStringBuffer& buffer);
+	static string_t ConvertToSerializedGeometry(char const* data, uint32_t length, spatial::core::GeometryFactory &factory, VectorStringBuffer& buffer);
 };
 
 class WKBColumnReader : public TemplatedColumnReader<string_t, WKBParquetValueConversion> {
@@ -85,7 +86,7 @@ public:
 	idx_t fixed_width_string_length;
 	idx_t delta_offset = 0;
 	GeometryFactory factory;
-	data_ptr_t data_p;
+	shared_ptr<VectorStringBuffer> buffer;
 
 public:
 	void Dictionary(shared_ptr<ResizeableBuffer> dictionary_data, idx_t num_entries) override;

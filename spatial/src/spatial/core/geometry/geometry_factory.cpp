@@ -159,7 +159,7 @@ enum class SerializedGeometryType : uint32_t {
 //    NumGeometries (4 bytes)
 //    Geometries (variable length)
 
-string_t GeometryFactory::Serialize(const spatial::core::Geometry &geometry) {
+string_t GeometryFactory::Serialize(VectorStringBuffer& buffer, const spatial::core::Geometry &geometry) {
 	auto geom_size = GetSerializedSize(geometry);
 
 	auto type = geometry.Type();
@@ -177,8 +177,8 @@ string_t GeometryFactory::Serialize(const spatial::core::Geometry &geometry) {
 
 	auto header_size = sizeof(GeometryHeader);
 	auto size = header_size + 4 + (has_bbox ? 16 : 0) + geom_size; // + 4 for padding, + 16 for bbox
-	auto data_p = reinterpret_cast<char*>(this->allocator.Allocate(size));
-	auto blob = string_t(data_p, size);
+//	auto data_p = reinterpret_cast<char*>(this->allocator.Allocate(size));
+	auto blob = buffer.EmptyString(size);
 	Cursor cursor(blob);
 
 	// Write the header

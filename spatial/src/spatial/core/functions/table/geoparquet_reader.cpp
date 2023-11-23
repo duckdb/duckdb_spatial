@@ -226,20 +226,22 @@ static bool HasGeometryColumnName(std::string_view column_name) {
 
 }
 
-class ParquetWKBVectorBuffer;
-
-string_t WKBParquetValueConversion::ConvertToSerializedGeometry(string_t str, GeometryFactory& factory) {
+inline string_t WKBParquetValueConversion::ConvertToSerializedGeometry(string_t str, GeometryFactory & factory, VectorStringBuffer& buffer) {
 	auto length = str.GetSize();
-	auto data = str.GetData();
-	auto geometry = WKBReader(factory, data, length).ReadGeometry();
-	return factory.Serialize(geometry);
+	auto data = str.GetDataUnsafe();
+	return WKBParquetValueConversion::ConvertToSerializedGeometry(data, length, factory, buffer);
+}
+
+inline string_t WKBParquetValueConversion::ConvertToSerializedGeometry(char const* data, uint32_t length, spatial::core::GeometryFactory &factory, VectorStringBuffer& buffer) {
+	auto geometry = factory.FromWKB(data, length);
+    return factory.Serialize(buffer, geometry);
 }
 
 string_t WKBParquetValueConversion::DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader) {
 	auto& w_reader = reader.Cast<WKBColumnReader>();
 	auto& strs = w_reader.dict_strings;
 	auto str = strs[offset];
-	return WKBParquetValueConversion::ConvertToSerializedGeometry(str, w_reader.factory);
+	return WKBParquetValueConversion::ConvertToSerializedGeometry(str, w_reader.factory, *w_reader.buffer);
 }
 
 string_t WKBParquetValueConversion::PlainRead(ByteBuffer &plain_data, ColumnReader &reader) {
@@ -247,12 +249,9 @@ string_t WKBParquetValueConversion::PlainRead(ByteBuffer &plain_data, ColumnRead
 	uint32_t str_len = scr.fixed_width_string_length == 0 ? plain_data.read<uint32_t>() : scr.fixed_width_string_length;
 	plain_data.available(str_len);
 	auto plain_str = char_ptr_cast(plain_data.ptr);
-	auto actual_str_len = reader.Cast<WKBColumnReader>().VerifyString(plain_str, str_len);
-	auto ret_str = string_t(plain_str, actual_str_len);
+//	auto actual_str_len = reader.Cast<WKBColumnReader>().VerifyString(plain_str, str_len);
 	plain_data.inc(str_len);
-	return ConvertToSerializedGeometry(ret_str, scr.factory);
-//	auto str = StringParquetValueConversion::PlainRead(plain_data, reader);
-//	return WKBParquetValueConversion::ConvertToSerializedGeometry(str, reader.Cast<WKBColumnReader>().factory);
+	return WKBParquetValueConversion::ConvertToSerializedGeometry(plain_str, str_len, scr.factory,*scr.buffer);
 }
 
 void WKBParquetValueConversion::PlainSkip(ByteBuffer &plain_data, ColumnReader &reader) {
@@ -270,25 +269,11 @@ void WKBColumnReader::DeltaByteArray(uint8_t *defines, idx_t num_values, parquet
 
 }
 
-
-class ParquetWKBVectorBuffer : public VectorBuffer {
-public:
-	ParquetWKBVectorBuffer() = default;
-	explicit ParquetWKBVectorBuffer(shared_ptr<ByteBuffer> buffer_p)
-	    : VectorBuffer(VectorBufferType::OPAQUE_BUFFER), buffer(std::move(buffer_p)) {
-	}
-
-private:
-	shared_ptr<ByteBuffer> buffer;
-};
-
-
 WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, const SchemaElement &schema_p, idx_t schema_idx_p,
 	                idx_t max_define_p, idx_t max_repeat_p)
 	    : TemplatedColumnReader<string_t, WKBParquetValueConversion>(reader, std::move(type_p), schema_p, schema_idx_p,
 	                                                                    max_define_p, max_repeat_p),
-      factory(reader.allocator),
-      data_p(nullptr)
+      factory(reader.allocator)
 {
 	fixed_width_string_length = 0;
 	if (schema_p.type == Type::FIXED_LEN_BYTE_ARRAY) {
@@ -298,9 +283,9 @@ WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, cons
 }
 
 void WKBColumnReader::DictReference(Vector &result) {
-//	StringVector::EmptyString(Vector(Value()))
-//	data_p = FlatVector::GetData(result);
-	StringVector::AddBuffer(result, make_buffer<ParquetWKBVectorBuffer>(dict));
+	auto buf = make_buffer<VectorStringBuffer>();
+	this->buffer = buf;
+	StringVector::AddBuffer(result, buf);
 }
 
 void WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) {
