@@ -17,9 +17,11 @@
 #include "parquet_file_metadata_cache.hpp"
 #include "parquet_reader.hpp"
 #include "parquet_types.h"
+#include "string_column_reader.hpp"
 #include "templated_column_reader.hpp"
 
 #include <spatial/core/geometry/geometry.hpp>
+#include <spatial/core/geometry/geometry_factory.hpp>
 #include <string>
 
 namespace spatial {
@@ -67,12 +69,12 @@ private:
 
 class WKBParquetValueConversion {
 public:
-	static Geometry DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader);
-	static Geometry PlainRead(ByteBuffer &plain_data, ColumnReader &reader);
+	static string_t DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader);
+	static string_t PlainRead(ByteBuffer &plain_data, ColumnReader &reader);
 	static void PlainSkip(ByteBuffer &plain_data, ColumnReader &reader);
 };
 
-class WKBColumnReader : public TemplatedColumnReader<Geometry, WKBParquetValueConversion> {
+class WKBColumnReader : public TemplatedColumnReader<string_t, WKBParquetValueConversion> {
 public:
 	static constexpr const PhysicalType TYPE = PhysicalType::VARCHAR;
 	explicit WKBColumnReader(ParquetReader &reader, LogicalType type_p, const SchemaElement &schema_p, idx_t schema_idx_p,
@@ -81,6 +83,8 @@ public:
 	unique_ptr<string_t[]> dict_strings;
 	idx_t fixed_width_string_length;
 	idx_t delta_offset = 0;
+	GeometryFactory factory;
+	data_ptr_t data_p;
 
 public:
 	void Dictionary(shared_ptr<ResizeableBuffer> dictionary_data, idx_t num_entries) override;
@@ -91,7 +95,7 @@ public:
 	                    Vector &result) override;
 	static uint32_t VerifyString(const char *str_data, uint32_t str_len, const bool isVarchar);
 	uint32_t VerifyString(const char *str_data, uint32_t str_len);
-
+//
 protected:
 	void DictReference(Vector &result) override;
 	void PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) override;

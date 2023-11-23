@@ -46,6 +46,7 @@ public:
 	MultiPolygon CreateEmptyMultiPolygon();
 	GeometryCollection CreateEmptyGeometryCollection();
 
+	string_t Serialize(const Geometry &geometry);
 	string_t Serialize(Vector &result, const Geometry &geometry);
 	Geometry Deserialize(const string_t &data);
 

@@ -18,6 +18,7 @@
 #include "string_column_reader.hpp"
 #include "struct_column_reader.hpp"
 #include "utf8proc_wrapper.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
 
 #include <spatial/core/geometry/geometry_factory.hpp>
 
@@ -62,8 +63,13 @@ void GeoparquetReader::InitializeSchema() {
 	auto &child_types = StructType::GetChildTypes(root_type);
 	D_ASSERT(root_type.id() == LogicalTypeId::STRUCT);
 	for (auto &type_pair : child_types) {
-		names.push_back(type_pair.first);
-		return_types.push_back(type_pair.second);
+		auto col_name = type_pair.first;
+		names.push_back(col_name);
+		if (col_name == "geometry") {
+			return_types.push_back(spatial::core::GeoTypes::GEOMETRY());
+		} else {
+			return_types.push_back(type_pair.second);
+		}
 	}
 
 	// Add generated constant column for row number
@@ -220,16 +226,30 @@ static bool HasGeometryColumnName(std::string_view column_name) {
 
 }
 
+class ParquetWKBVectorBuffer;
 
-Geometry WKBParquetValueConversion::DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader) {
-	auto& strs = reader.Cast<WKBColumnReader>().dict_strings;
-	auto str = strs[offset];
-	auto length = str.GetSize();
-	auto data = str.GetData();
-	return GeometryFactory(reader.Reader().allocator).FromWKB(data, length);
+string_t WKBParquetValueConversion::DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader) {
+	auto& w_reader = reader.Cast<WKBColumnReader>();
+//	auto l = w_reader.dict->len;
+	auto& strs = w_reader.dict_strings;
+	auto str = &strs[offset];
+//	return *str;
+	auto whole = str->GetString();
+	auto length = str->GetSize();
+	auto data = str->GetData();
+//	auto g = w_reader.factory.Deserialize(str);
+	auto g= WKBReader(reader.Cast<WKBColumnReader>().factory, data, length).ReadGeometry();
+	auto as_s_t = w_reader.factory.Serialize(g);
+	strs[offset] = as_s_t;
+	auto whole_st = as_s_t.GetString();
+//	std::cout << g.ToString() << std::endl;
+	return as_s_t;
+	//	return GeometryFactory(reader.Reader().allocator).FromWKB(g, length);
+//	auto from_geom = w_reader.factory.Serialize(to_geom);
+//	return str;
 }
 
-Geometry WKBParquetValueConversion::PlainRead(ByteBuffer &plain_data, ColumnReader &reader) {
+string_t WKBParquetValueConversion::PlainRead(ByteBuffer &plain_data, ColumnReader &reader) {
 	auto str = StringParquetValueConversion::PlainRead(plain_data, reader);
 }
 
@@ -263,8 +283,10 @@ private:
 
 WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, const SchemaElement &schema_p, idx_t schema_idx_p,
 	                idx_t max_define_p, idx_t max_repeat_p)
-	    : TemplatedColumnReader<Geometry, WKBParquetValueConversion>(reader, std::move(type_p), schema_p, schema_idx_p,
-	                                                                    max_define_p, max_repeat_p)
+	    : TemplatedColumnReader<string_t, WKBParquetValueConversion>(reader, std::move(type_p), schema_p, schema_idx_p,
+	                                                                    max_define_p, max_repeat_p),
+      factory(reader.allocator),
+      data_p(nullptr)
 {
 	fixed_width_string_length = 0;
 	if (schema_p.type == Type::FIXED_LEN_BYTE_ARRAY) {
@@ -274,6 +296,8 @@ WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, cons
 }
 
 void WKBColumnReader::DictReference(Vector &result) {
+//	StringVector::EmptyString(Vector(Value()))
+//	data_p = FlatVector::GetData(result);
 	StringVector::AddBuffer(result, make_buffer<ParquetWKBVectorBuffer>(dict));
 }
 
@@ -327,7 +351,7 @@ unique_ptr<ColumnReader> GeoparquetReader::CreateColumnReader(duckdb::ParquetRea
                                                               const duckdb_parquet::format::SchemaElement &schema_p,
                                                               idx_t file_idx_p, idx_t max_define, idx_t max_repeat) {
 	if (type_p.id() == duckdb::LogicalTypeId::BLOB && HasGeometryColumnName(schema_p.name)){
-		return make_uniq<StringColumnReader>
+		return make_uniq<WKBColumnReader>
 			(reader, type_p, schema_p, file_idx_p, max_define, max_repeat);
 	}
 	return ColumnReader::CreateReader(reader, type_p, schema_p, file_idx_p, max_define, max_repeat);
