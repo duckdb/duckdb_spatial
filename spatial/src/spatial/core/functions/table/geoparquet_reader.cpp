@@ -219,7 +219,7 @@ unique_ptr<ColumnReader> GeoparquetReader::CreateReaderRecursive(idx_t depth, id
 	}
 }
 
-static bool HasGeometryColumnName(std::string_view column_name) {
+static bool HasGeometryColumnName(const std::string& column_name) {
 	return column_name == "geometry" || column_name == "GEOMETRY"
 		  || column_name == "geom"  || column_name == "GEOM"
 		  || column_name == "wkb" 	|| column_name == "WKB";
