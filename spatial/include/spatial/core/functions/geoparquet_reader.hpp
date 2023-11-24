@@ -82,7 +82,7 @@ public:
 	explicit WKBColumnReader(ParquetReader &reader, LogicalType type_p, const SchemaElement &schema_p, idx_t schema_idx_p,
 	                         idx_t max_define_p, idx_t max_repeat_p);
 
-	unique_ptr<string_t[]> dict_strings;
+//	unique_ptr<string_t[]> dict_strings;
 	idx_t fixed_width_string_length;
 	idx_t delta_offset = 0;
 	GeometryFactory factory;
@@ -95,9 +95,6 @@ public:
 	void PrepareDeltaByteArray(ResizeableBuffer &buffer) override;
 	void DeltaByteArray(uint8_t *defines, idx_t num_values, parquet_filter_t &filter, idx_t result_offset,
 	                    Vector &result) override;
-	static uint32_t VerifyString(const char *str_data, uint32_t str_len, const bool isVarchar);
-	uint32_t VerifyString(const char *str_data, uint32_t str_len);
-//
 protected:
 	void DictReference(Vector &result) override;
 	void PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) override;

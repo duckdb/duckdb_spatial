@@ -36,4 +36,6 @@
 build
 tmp
 .vscode
-duckdb_unittest_tempdir
+duckdb_unittest_tempdirduckdb/data
+duckdb_unittest_tempdir/
+.idea
