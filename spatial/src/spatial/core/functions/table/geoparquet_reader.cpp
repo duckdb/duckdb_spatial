@@ -44,6 +44,13 @@ GeoparquetReader::GeoparquetReader(ClientContext &context, ParquetOptions parque
 	GeoparquetReader::InitializeSchema();
 }
 
+inline static bool HasGeometryColumnName(const std::string& column_name) {
+	return column_name == "geometry" || column_name == "GEOMETRY"
+	       || column_name == "geom"  || column_name == "GEOM"
+	       || column_name == "wkb" 	|| column_name == "WKB";
+
+}
+
 void GeoparquetReader::InitializeSchema() {
 	names = vector<string>();
 	return_types = vector<LogicalType>();
@@ -63,7 +70,7 @@ void GeoparquetReader::InitializeSchema() {
 	for (auto &type_pair : child_types) {
 		auto col_name = type_pair.first;
 		names.push_back(col_name);
-		if (col_name == "geometry") {
+		if (HasGeometryColumnName(col_name)) {
 			return_types.push_back(spatial::core::GeoTypes::GEOMETRY());
 		} else {
 			return_types.push_back(type_pair.second);
@@ -215,13 +222,6 @@ unique_ptr<ColumnReader> GeoparquetReader::CreateReaderRecursive(idx_t depth, id
 		return GeoparquetReader::CreateColumnReader(*this, DeriveLogicalType(s_ele, parquet_options.binary_as_string), s_ele, next_file_idx++, max_define,
 		                                  max_repeat);
 	}
-}
-
-static bool HasGeometryColumnName(const std::string& column_name) {
-	return column_name == "geometry" || column_name == "GEOMETRY"
-		  || column_name == "geom"  || column_name == "GEOM"
-		  || column_name == "wkb" 	|| column_name == "WKB";
-
 }
 
 inline string_t WKBParquetValueConversion::ConvertToSerializedGeometry(string_t str, GeometryFactory & factory, VectorStringBuffer& buffer) {
