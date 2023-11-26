@@ -45,10 +45,8 @@ GeoparquetReader::GeoparquetReader(ClientContext &context, ParquetOptions parque
 }
 
 void GeoparquetReader::InitializeSchema() {
-//	root_reader.reset();
 	names = vector<string>();
 	return_types = vector<LogicalType>();
-//	root_reader = GeoparquetReader::CreateReader();
 	auto file_meta_data = GetFileMetadata();
 
 	if (file_meta_data->__isset.encryption_algorithm) {
@@ -239,28 +237,18 @@ inline string_t WKBParquetValueConversion::ConvertToSerializedGeometry(char cons
 
 string_t WKBParquetValueConversion::DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader) {
 	auto& w_reader = reader.Cast<WKBColumnReader>();
-//	auto& strs = w_reader.dict_strings;
-//	auto dict = w_reader.dict;
-
 	auto str_len = dict.read<uint32_t>();
 	dict.available(str_len);
-
 	auto dict_str = reinterpret_cast<const char *>(dict.ptr);
-//	auto actual_str_len = w_reader.VerifyString(dict_str, str_len);
-//	auto str = string_t(dict_str, str_len);
 	dict.inc(str_len);
-
-//	auto str = strs[offset];
 	return WKBParquetValueConversion::ConvertToSerializedGeometry(dict_str, str_len, w_reader.factory, *w_reader.buffer);
 }
 
 string_t WKBParquetValueConversion::PlainRead(ByteBuffer &plain_data, ColumnReader &reader) {
 	auto &scr = reader.Cast<WKBColumnReader>();
-//	uint32_t str_len = scr.fixed_width_string_length == 0 ? plain_data.read<uint32_t>() : scr.fixed_width_string_length;
 	uint32_t str_len = plain_data.read<uint32_t>();
 	plain_data.available(str_len);
 	auto plain_str = char_ptr_cast(plain_data.ptr);
-//	auto actual_str_len = reader.Cast<WKBColumnReader>().VerifyString(plain_str, str_len);
 	plain_data.inc(str_len);
 	return WKBParquetValueConversion::ConvertToSerializedGeometry(plain_str, str_len, scr.factory,*scr.buffer);
 }
@@ -270,14 +258,14 @@ void WKBParquetValueConversion::PlainSkip(ByteBuffer &plain_data, ColumnReader &
 }
 
 void WKBColumnReader::PrepareDeltaLengthByteArray(ResizeableBuffer &buffer) {
-
+	throw NotImplementedException("WKBColumnReader::PrepareDeltaLengthByteArray(ResizeableBuffer &buffer)");
 }
 void WKBColumnReader::PrepareDeltaByteArray(ResizeableBuffer &buffer) {
-
+	throw NotImplementedException("WKBColumnReader::PrepareDeltaByteArray(ResizeableBuffer &buffer)");
 }
 void WKBColumnReader::DeltaByteArray(uint8_t *defines, idx_t num_values, parquet_filter_t &filter, idx_t result_offset,
                     Vector &result) {
-
+    throw NotImplementedException("WKBColumnReader::DeltaByteArray(uint8_t *defines, idx_t num_values, parquet_filter_t &filter, idx_t result_offset, Vector &result)");
 }
 
 WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, const SchemaElement &schema_p, idx_t schema_idx_p,
@@ -287,13 +275,8 @@ WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, cons
       factory(reader.allocator)
 {
 	if(type_p == LogicalTypeId::VARCHAR) {
-		throw InvalidInputException("");
+		throw InvalidInputException("WKBColumnReader can only read BLOBs with VARCHAR logical type");
 	}
-//	fixed_width_string_length = 0;
-//	if (schema_p.type == Type::FIXED_LEN_BYTE_ARRAY) {
-//		D_ASSERT(schema_p.__isset.type_length);
-//		fixed_width_string_length = schema_p.type_length;
-//	}
 }
 
 void WKBColumnReader::DictReference(Vector &result) {
@@ -303,27 +286,10 @@ void WKBColumnReader::DictReference(Vector &result) {
 }
 
 void WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) {
-
+	throw NotImplementedException("WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result)")
 }
 void WKBColumnReader::Dictionary(shared_ptr<ResizeableBuffer> data, idx_t num_entries) {
 	dict = std::move(data);
-//	dict_strings = unique_ptr<string_t[]>(new string_t[num_entries]);
-//	for (idx_t dict_idx = 0; dict_idx < num_entries; dict_idx++) {
-//		uint32_t str_len;
-//		if (fixed_width_string_length == 0) {
-//			// variable length string: read from dictionary
-//			str_len = dict->read<uint32_t>();
-//		} else {
-//			// fixed length string
-//			str_len = fixed_width_string_length;
-//		}
-//		dict->available(str_len);
-//
-//		auto dict_str = reinterpret_cast<const char *>(dict->ptr);
-//		auto actual_str_len = VerifyString(dict_str, str_len);
-////		dict_strings[dict_idx] = string_t(dict_str, actual_str_len);
-//		dict->inc(str_len);
-//	}
 }
 
 
@@ -343,6 +309,6 @@ void GeoparquetReader::InitializeScan(duckdb::ParquetReaderScanState &state, vec
 	state.root_reader = CreateReader();
 }
 
-}
-}
-}
+} // geoparquet
+} // core
+} // spatial
