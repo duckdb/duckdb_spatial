@@ -224,12 +224,6 @@ unique_ptr<ColumnReader> GeoparquetReader::CreateReaderRecursive(idx_t depth, id
 	}
 }
 
-inline string_t WKBParquetValueConversion::ConvertToSerializedGeometry(string_t str, GeometryFactory & factory, VectorStringBuffer& buffer) {
-	auto length = str.GetSize();
-	auto data = str.GetDataUnsafe();
-	return WKBParquetValueConversion::ConvertToSerializedGeometry(data, length, factory, buffer);
-}
-
 inline string_t WKBParquetValueConversion::ConvertToSerializedGeometry(char const* data, uint32_t length, spatial::core::GeometryFactory &factory, VectorStringBuffer& buffer) {
 	auto geometry = factory.FromWKB(data, length);
     return factory.Serialize(buffer, geometry);
@@ -275,7 +269,7 @@ WKBColumnReader::WKBColumnReader(ParquetReader &reader, LogicalType type_p, cons
       factory(reader.allocator)
 {
 	if(type_p == LogicalTypeId::VARCHAR) {
-		throw InvalidInputException("WKBColumnReader can only read BLOBs with VARCHAR logical type");
+		throw InvalidInputException("WKBColumnReader can only read WKB as BLOBs");
 	}
 }
 
@@ -285,12 +279,9 @@ void WKBColumnReader::DictReference(Vector &result) {
 	StringVector::AddBuffer(result, buf);
 }
 
-void WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) {
-	throw NotImplementedException("WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result)");
-}
-void WKBColumnReader::Dictionary(shared_ptr<ResizeableBuffer> data, idx_t num_entries) {
-	dict = std::move(data);
-}
+//void WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) {
+////	throw NotImplementedException("WKBColumnReader::PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result)");
+//}
 
 
 unique_ptr<ColumnReader> GeoparquetReader::CreateColumnReader(duckdb::ParquetReader &reader,

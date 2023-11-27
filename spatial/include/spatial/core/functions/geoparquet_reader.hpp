@@ -72,7 +72,6 @@ public:
 	static string_t DictRead(ByteBuffer &dict, uint32_t &offset, ColumnReader &reader);
 	static string_t PlainRead(ByteBuffer &plain_data, ColumnReader &reader);
 	static void PlainSkip(ByteBuffer &plain_data, ColumnReader &reader);
-	static string_t ConvertToSerializedGeometry(string_t str, GeometryFactory & factory, VectorStringBuffer& buffer);
 	static string_t ConvertToSerializedGeometry(char const* data, uint32_t length, spatial::core::GeometryFactory &factory, VectorStringBuffer& buffer);
 };
 
@@ -82,14 +81,10 @@ public:
 	explicit WKBColumnReader(ParquetReader &reader, LogicalType type_p, const SchemaElement &schema_p, idx_t schema_idx_p,
 	                         idx_t max_define_p, idx_t max_repeat_p);
 
-//	unique_ptr<string_t[]> dict_strings;
-	idx_t fixed_width_string_length;
-	idx_t delta_offset = 0;
 	GeometryFactory factory;
 	shared_ptr<VectorStringBuffer> buffer;
 
 public:
-	void Dictionary(shared_ptr<ResizeableBuffer> dictionary_data, idx_t num_entries) override;
 
 	void PrepareDeltaLengthByteArray(ResizeableBuffer &buffer) override;
 	void PrepareDeltaByteArray(ResizeableBuffer &buffer) override;
@@ -97,7 +92,6 @@ public:
 	                    Vector &result) override;
 protected:
 	void DictReference(Vector &result) override;
-	void PlainReference(shared_ptr<ByteBuffer> plain_data, Vector &result) override;
 
 };
 
