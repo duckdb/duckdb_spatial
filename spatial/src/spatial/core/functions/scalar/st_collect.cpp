@@ -30,7 +30,10 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			if (format.validity.RowIsValid(mapped_idx)) {
 				auto geometry_blob = ((string_t *)format.data)[mapped_idx];
 				auto geometry = lstate.factory.Deserialize(geometry_blob);
-				geometries.push_back(geometry);
+				// Dont add empty geometries
+				if(!geometry.IsEmpty()) {
+					geometries.push_back(geometry);
+				}
 			}
 		}
 

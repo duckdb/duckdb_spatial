@@ -64,6 +64,10 @@ static void PointToPointDistanceFunction(DataChunk &args, ExpressionState &state
 	for (idx_t i = 0; i < count; i++) {
 		out_data[i] = std::sqrt(std::pow(left_x[i] - right_x[i], 2) + std::pow(left_y[i] - right_y[i], 2));
 	}
+
+	if(count == 1) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
 }
 
 //------------------------------------------------------------------------------
