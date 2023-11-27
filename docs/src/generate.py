@@ -94,7 +94,16 @@ def main():
         # Write the header
         f.write("# DuckDB Spatial Extension\n\n")
 
+        # Write a table of contents
+        f.write("__Table of contents__\n\n")
+        f.write("- [Introduction](#introduction)\n")
+        f.write("- [Scalar Functions](#scalar-functions)\n")
+        f.write("- [Aggregate Functions](#aggregate-functions)\n")
+        f.write("- [Table Functions](#table-functions)\n")
+        f.write("- [Functions by tag](#functions-by-tag)\n")
+
         # Write the intro from the into.md file
+        f.write("# Introduction\n\n")
         with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "intro.md"), 'r') as intro:
             f.write(intro.read())
 
