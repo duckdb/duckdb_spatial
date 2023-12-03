@@ -359,6 +359,13 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto str = value.GetValueUnsafe<string_t>();
 		feature->SetField(field_idx, (int)str.GetSize(), str.GetDataUnsafe());
 	} break;
+	case LogicalTypeId::DATE: {
+		auto date = value.GetValueUnsafe<date_t>();
+		auto year = Date::ExtractYear(date);
+		auto month = Date::ExtractMonth(date);
+		auto day = Date::ExtractDay(date);
+		feature->SetField(field_idx, year, month, day, 0, 0, 0, 0);
+	} break;
 	default:
 		// TODO: Add time types
 		// TODO: Handle list types

@@ -9,10 +9,12 @@ struct CoreTableFunctions {
 public:
 	static void Register(DatabaseInstance &db) {
 		RegisterOsmTableFunction(db);
+		RegisterShapefileTableFunction(db);
 	}
 
 private:
 	static void RegisterOsmTableFunction(DatabaseInstance &db);
+	static void RegisterShapefileTableFunction(DatabaseInstance &db);
 };
 
 } // namespace core

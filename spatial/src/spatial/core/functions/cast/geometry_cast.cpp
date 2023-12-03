@@ -218,11 +218,11 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto geom = lstate.factory.CreatePolygon(1, &capacity);
 		auto &shell = geom.Ring(0);
 
-		shell.Set(0, Vertex(minx, miny));
-		shell.Set(1, Vertex(maxx, miny));
-		shell.Set(2, Vertex(maxx, maxy));
-		shell.Set(3, Vertex(minx, maxy));
-		shell.Set(4, Vertex(minx, miny));
+		shell.Add(Vertex(minx, miny));
+		shell.Add(Vertex(maxx, miny));
+		shell.Add(Vertex(maxx, maxy));
+		shell.Add(Vertex(minx, maxy));
+		shell.Add(Vertex(minx, miny));
 
 		shell.count = 5;
 		return lstate.factory.Serialize(result, Geometry(geom));

@@ -591,7 +591,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 
 	auto lower_name = StringUtil::Lower(table_name);
 	// Check if the table name ends with some common geospatial file extensions
-	if (StringUtil::EndsWith(lower_name, ".shp") || StringUtil::EndsWith(lower_name, ".gpkg") ||
+	if (StringUtil::EndsWith(lower_name, ".gpkg") ||
 	    StringUtil::EndsWith(lower_name, ".fgb")) {
 
 		auto table_function = make_uniq<TableFunctionRef>();
