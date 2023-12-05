@@ -413,6 +413,14 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 }
 
 //===--------------------------------------------------------------------===//
+// Combine
+//===--------------------------------------------------------------------===//
+
+static void Combine(ExecutionContext &context, FunctionData &bind_data, GlobalFunctionData &gstate,
+					LocalFunctionData &lstate) {
+}
+
+//===--------------------------------------------------------------------===//
 // Finalize
 //===--------------------------------------------------------------------===//
 static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunctionData &gstate) {
@@ -428,7 +436,9 @@ void GdalCopyFunction::Register(DatabaseInstance &db) {
 	info.copy_to_initialize_local = InitLocal;
 	info.copy_to_initialize_global = InitGlobal;
 	info.copy_to_sink = Sink;
+	info.copy_to_combine = Combine;
 	info.copy_to_finalize = Finalize;
+	info.extension = "gdal";
 
 	ExtensionUtil::RegisterFunction(db, info);
 }

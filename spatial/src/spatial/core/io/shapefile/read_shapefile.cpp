@@ -6,7 +6,12 @@
 #include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "duckdb/common/multi_file_reader.hpp"
 
+#include "duckdb/function/copy_function.hpp"
+#include "duckdb/parser/parsed_data/copy_info.hpp"
+#include "duckdb/parser/parsed_data/create_copy_function_info.hpp"
+
 #include "spatial/common.hpp"
+#include "spatial/core/io/shapefile.hpp"
 #include "spatial/core/functions/table.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
@@ -14,240 +19,9 @@
 #include "shapefil.h"
 #include "utf8proc_wrapper.hpp"
 
-#include <cstdlib>
-
-void SASetupDefaultHooks(SAHooks *hooks) {
-	// Should never be called, use OpenLL and pass in the hooks
-	throw duckdb::InternalException("SASetupDefaultHooks");
-}
-
 namespace spatial {
 
 namespace core {
-
-struct EncodingUtil {
-	static inline uint8_t GetUTF8ByteLength (data_t first_char) {
-		if (first_char < 0x80) return 1;
-		if (!(first_char & 0x20)) return 2;
-		if (!(first_char & 0x10)) return 3;
-		if (!(first_char & 0x08)) return 4;
-		if (!(first_char & 0x04)) return 5;
-		return 6;
-	}
-	static inline data_t UTF8ToLatin1Char (const_data_ptr_t ptr) {
-		auto len = GetUTF8ByteLength(*ptr);
-		if (len == 1) {
-			return *ptr;
-		}
-		uint32_t res = static_cast<data_t>(*ptr & (0xff >> (len + 1))) << ((len - 1) * 6);
-		while (--len) {
-			res |= (*(++ptr) - 0x80) << ((len - 1) * 6);
-		}
-		// TODO: Throw exception instead if character can't be encoded?
-		return res > 0xff ? '?' : static_cast<data_t>(res);
-	}
-
-	// Convert UTF-8 to ISO-8859-1
-	// out must be at least the size of in
-	static void UTF8ToLatin1Buffer (const_data_ptr_t in, data_ptr_t out) {
-		while (*in) {
-			*out++ = UTF8ToLatin1Char(in);
-		}
-		*out = 0;
-	}
-
-	// convert ISO-8859-1 to UTF-8
-	// mind = blown
-	// out must be at least 2x the size of in
-	static idx_t LatinToUTF8Buffer(const_data_ptr_t in, data_ptr_t out) {
-		idx_t len = 0;
-		while (*in) {
-			if (*in < 128) {
-				*out++ = *in++;
-				len += 1;
-			} else {
-				*out++ = 0xc2 + (*in > 0xbf);
-				*out++ = (*in++ & 0x3f) + 0x80;
-				len += 2;
-			}
-		}
-		return len;
-	}
-};
-
-//------------------------------------------------------------------------------
-// Shapefile filesystem abstractions
-//------------------------------------------------------------------------------
-static SAFile DuckDBShapefileOpen(void* userData, const char *filename, const char *access_mode) {
-	try {
-		auto &fs = *reinterpret_cast<FileSystem *>(userData);
-		auto file_handle = fs.OpenFile(filename, FileFlags::FILE_FLAGS_READ);
-		if (!file_handle) {
-			return nullptr;
-		}
-		return reinterpret_cast<SAFile>(file_handle.release());
-	} catch(...) {
-	    return nullptr;
-	}
-}
-
-static SAOffset DuckDBShapefileRead(void *p, SAOffset size, SAOffset nmemb, SAFile file) {
-	auto handle = reinterpret_cast<FileHandle*>(file);
-	auto read_bytes = handle->Read(p, size * nmemb);
-	return read_bytes / size;
-}
-
-static SAOffset DuckDBShapefileWrite(const void *p, SAOffset size, SAOffset nmemb, SAFile file) {
-	auto handle = reinterpret_cast<FileHandle*>(file);
-	auto written_bytes = handle->Write(const_cast<void*>(p), size * nmemb);
-	return written_bytes / size;
-}
-
-static SAOffset DuckDBShapefileSeek(SAFile file, SAOffset offset, int whence) {
-	auto file_handle = reinterpret_cast<FileHandle*>(file);
-	switch (whence) {
-	case SEEK_SET:
-		file_handle->Seek(offset);
-		break;
-	case SEEK_CUR:
-		file_handle->Seek(file_handle->SeekPosition() + offset);
-		break;
-	case SEEK_END:
-		file_handle->Seek(file_handle->GetFileSize() + offset);
-		break;
-	default:
-		throw InternalException("Unknown seek type");
-	}
-	return 0;
-}
-
-static SAOffset DuckDBShapefileTell(SAFile file) {
-	auto handle = reinterpret_cast<FileHandle*>(file);
-	return handle->SeekPosition();
-}
-
-static int DuckDBShapefileFlush(SAFile file) {
-	try {
-		auto handle = reinterpret_cast<FileHandle *>(file);
-		handle->Sync();
-		return 0;
-	} catch(...) {
-	    return -1;
-	}
-}
-
-static int DuckDBShapefileClose(SAFile file) {
-	try {
-		auto handle = reinterpret_cast<FileHandle*>(file);
-		handle->Close();
-		delete handle;
-		return 0;
-	} catch(...) {
-	    return -1;
-	}
-}
-
-static int DuckDBShapefileRemove(void *userData, const char *filename) {
-	try {
-		auto &fs = *reinterpret_cast<FileSystem *>(userData);
-		auto file = fs.OpenFile(filename, FileFlags::FILE_FLAGS_WRITE);
-		auto file_type = fs.GetFileType(*file);
-		if (file_type == FileType::FILE_TYPE_DIR) {
-			fs.RemoveDirectory(filename);
-		} else {
-			fs.RemoveFile(filename);
-		}
-		return 0;
-	} catch(...) {
-	    return -1;
-	}
-}
-
-static void DuckDBShapefileError(const char *message) {
-	// We cant throw an exception here because the shapefile library is not
-	// exception safe. Instead we should store it somewhere...
-	// Maybe another client context cache?
-
-	// Note that we need to copy the message
-
-	fprintf(stderr, "%s\n", message);
-}
-
-//------------------------------------------------------------------------------
-// RAII Wrappers
-//------------------------------------------------------------------------------
-
-static SAHooks GetDuckDBHooks(FileSystem &fs) {
-	SAHooks hooks;
-	hooks.FOpen = DuckDBShapefileOpen;
-	hooks.FRead = DuckDBShapefileRead;
-	hooks.FWrite = DuckDBShapefileWrite;
-	hooks.FSeek = DuckDBShapefileSeek;
-	hooks.FTell = DuckDBShapefileTell;
-	hooks.FFlush = DuckDBShapefileFlush;
-	hooks.FClose = DuckDBShapefileClose;
-	hooks.Remove = DuckDBShapefileRemove;
-
-	hooks.Error = DuckDBShapefileError;
-	hooks.Atof = std::atof;
-	hooks.userData = &fs;
-	return hooks;
-}
-
-struct DBFHandleDeleter {
-	void operator()(DBFInfo *info) {
-		if (info) {
-			DBFClose(info);
-		}
-	}
-};
-using DBFHandlePtr = unique_ptr<DBFInfo, DBFHandleDeleter>;
-
-DBFHandlePtr OpenDBFFile(FileSystem &fs, const string &filename) {
-	auto hooks = GetDuckDBHooks(fs);
-	auto handle = DBFOpenLL(filename.c_str(), "rb", &hooks);
-
-	if (!handle) {
-		throw IOException("Failed to open DBF file %s", filename.c_str());
-	}
-
-	return DBFHandlePtr(handle);
-}
-
-
-struct SHPHandleDeleter {
-	void operator()(SHPInfo *info) {
-		if (info) {
-			SHPClose(info);
-		}
-	}
-};
-using SHPHandlePtr = unique_ptr<SHPInfo, SHPHandleDeleter>;
-
-static SHPHandlePtr OpenSHPFile(FileSystem& fs, const char *filename) {
-	auto hooks = GetDuckDBHooks(fs);
-	auto handle = SHPOpenLL(filename, "rb", &hooks);
-	if (!handle) {
-		throw IOException("Failed to open SHP file %s", filename);
-	}
-	return SHPHandlePtr(handle);
-}
-
-struct SHPObjectDeleter {
-	void operator()(SHPObject *obj) {
-		if (obj) {
-			SHPDestroyObject(obj);
-		}
-	}
-};
-
-using SHPObjectPtr = unique_ptr<SHPObject, SHPObjectDeleter>;
-
-enum class AttributeEncoding {
-	UTF8,
-	LATIN1,
-	BLOB,
-};
 
 //------------------------------------------------------------------------------
 // Bind
@@ -264,7 +38,7 @@ struct ShapefileBindData : TableFunctionData {
 
 	explicit ShapefileBindData(string file_name_p)
 	    : file_name(std::move(file_name_p)),
-		  shape_count(0),
+	      shape_count(0),
 	      shape_type(0),
 	      min_bound{0, 0, 0, 0},
 	      max_bound{0, 0, 0, 0},
@@ -420,7 +194,7 @@ struct ShapefileGlobalState : public GlobalTableFunctionState {
 	    : shape_idx(0), factory(BufferAllocator::Get(context)), column_ids(std::move(column_ids_p)) {
 		auto &fs = FileSystem::GetFileSystem(context);
 
-		shp_handle = OpenSHPFile(fs, file_name.c_str());
+		shp_handle = OpenSHPFile(fs, file_name);
 
 		// Remove file extension and replace with .dbf
 		auto dot_idx = file_name.find_last_of('.');
@@ -556,23 +330,23 @@ static void ConvertGeomLoop(Vector &result, int record_start, idx_t count, SHPHa
 
 static void ConvertGeometryVector(Vector &result, int record_start, idx_t count, SHPHandle shp_handle, GeometryFactory &factory, int geom_type) {
 	switch(geom_type) {
-		case SHPT_NULL:
-			FlatVector::Validity(result).SetAllInvalid(count);
-			break;
-		case SHPT_POINT:
-		    ConvertGeomLoop<ConvertPoint>(result, record_start, count, shp_handle, factory);
+	case SHPT_NULL:
+		FlatVector::Validity(result).SetAllInvalid(count);
 		break;
-		case SHPT_ARC:
-			ConvertGeomLoop<ConvertLineString>(result, record_start, count, shp_handle, factory);
+	case SHPT_POINT:
+		ConvertGeomLoop<ConvertPoint>(result, record_start, count, shp_handle, factory);
 		break;
-		case SHPT_POLYGON:
-			ConvertGeomLoop<ConvertPolygon>(result, record_start, count, shp_handle, factory);
+	case SHPT_ARC:
+		ConvertGeomLoop<ConvertLineString>(result, record_start, count, shp_handle, factory);
 		break;
-		case SHPT_MULTIPOINT:
-		 	ConvertGeomLoop<ConvertMultiPoint>(result, record_start, count, shp_handle, factory);
+	case SHPT_POLYGON:
+		ConvertGeomLoop<ConvertPolygon>(result, record_start, count, shp_handle, factory);
 		break;
-	    default:
-		    throw InvalidInputException("Shape type %d not supported", geom_type);
+	case SHPT_MULTIPOINT:
+		ConvertGeomLoop<ConvertMultiPoint>(result, record_start, count, shp_handle, factory);
+		break;
+	default:
+		throw InvalidInputException("Shape type %d not supported", geom_type);
 	}
 }
 
@@ -674,29 +448,29 @@ static void ConvertStringAttributeLoop(Vector &result, int record_start, idx_t c
 static void ConvertAttributeVector(Vector &result, int record_start, idx_t count, DBFHandle dbf_handle, int field_idx,
                                    AttributeEncoding attribute_encoding) {
 	switch(result.GetType().id()) {
-		case LogicalTypeId::BLOB:
-			ConvertAttributeLoop<ConvertBlobAttribute>(result, record_start, count, dbf_handle, field_idx);
-			break;
-		case LogicalTypeId::VARCHAR:
-		    ConvertStringAttributeLoop(result, record_start, count, dbf_handle, field_idx, attribute_encoding);
-			break;
-		case LogicalTypeId::INTEGER:
-			ConvertAttributeLoop<ConvertIntegerAttribute>(result, record_start, count, dbf_handle, field_idx);
-			break;
-		case LogicalTypeId::BIGINT:
-			ConvertAttributeLoop<ConvertBigIntAttribute>(result, record_start, count, dbf_handle, field_idx);
-			break;
-		case LogicalTypeId::DOUBLE:
-			ConvertAttributeLoop<ConvertDoubleAttribute>(result, record_start, count, dbf_handle, field_idx);
-			break;
-		case LogicalTypeId::DATE:
-			ConvertAttributeLoop<ConvertDateAttribute>(result, record_start, count, dbf_handle, field_idx);
-			break;
-		case LogicalTypeId::BOOLEAN:
-			ConvertAttributeLoop<ConvertBooleanAttribute>(result, record_start, count, dbf_handle, field_idx);
-			break;
-		default:
-			throw InvalidInputException("Attribute type %s not supported", result.GetType().ToString());
+	case LogicalTypeId::BLOB:
+		ConvertAttributeLoop<ConvertBlobAttribute>(result, record_start, count, dbf_handle, field_idx);
+		break;
+	case LogicalTypeId::VARCHAR:
+		ConvertStringAttributeLoop(result, record_start, count, dbf_handle, field_idx, attribute_encoding);
+		break;
+	case LogicalTypeId::INTEGER:
+		ConvertAttributeLoop<ConvertIntegerAttribute>(result, record_start, count, dbf_handle, field_idx);
+		break;
+	case LogicalTypeId::BIGINT:
+		ConvertAttributeLoop<ConvertBigIntAttribute>(result, record_start, count, dbf_handle, field_idx);
+		break;
+	case LogicalTypeId::DOUBLE:
+		ConvertAttributeLoop<ConvertDoubleAttribute>(result, record_start, count, dbf_handle, field_idx);
+		break;
+	case LogicalTypeId::DATE:
+		ConvertAttributeLoop<ConvertDateAttribute>(result, record_start, count, dbf_handle, field_idx);
+		break;
+	case LogicalTypeId::BOOLEAN:
+		ConvertAttributeLoop<ConvertBooleanAttribute>(result, record_start, count, dbf_handle, field_idx);
+		break;
+	default:
+		throw InvalidInputException("Attribute type %s not supported", result.GetType().ToString());
 	}
 }
 
@@ -773,152 +547,8 @@ static unique_ptr<TableRef> GetReplacementScan(ClientContext &context, const str
 	return std::move(table_function);
 }
 
-
 //------------------------------------------------------------------------------
-// Shapefile Metadata Function
-//------------------------------------------------------------------------------
-struct ShapeFileMetaBindData : public TableFunctionData {
-	vector<string> files;
-};
-
-struct ShapeTypeEntry {
-	int shp_type;
-	const char* shp_name;
-};
-
-static ShapeTypeEntry shape_type_map[] = {
-	{ SHPT_NULL, "NULL" },
-	{ SHPT_POINT, "POINT" },
-	{ SHPT_ARC, "LINESTRING" },
-	{ SHPT_POLYGON, "POLYGON" },
-	{ SHPT_MULTIPOINT, "MULTIPOINT" },
-	{ SHPT_POINTZ, "POINTZ" },
-	{ SHPT_ARCZ, "LINESTRINGZ" },
-	{ SHPT_POLYGONZ, "POLYGONZ" },
-	{ SHPT_MULTIPOINTZ, "MULTIPOINTZ" },
-	{ SHPT_POINTM, "POINTM" },
-	{ SHPT_ARCM, "LINESTRINGM" },
-	{ SHPT_POLYGONM, "POLYGONM" },
-	{ SHPT_MULTIPOINTM, "MULTIPOINTM" },
-	{ SHPT_MULTIPATCH, "MULTIPATCH" },
-};
-
-static unique_ptr<FunctionData> ShapeFileMetaBind(ClientContext &context, TableFunctionBindInput &input,
-                                                  vector<LogicalType> &return_types, vector<string> &names) {
-	auto result = make_uniq<ShapeFileMetaBindData>();
-	auto files = MultiFileReader::GetFileList(context, input.inputs[0], "ShapeFiles", FileGlobOptions::ALLOW_EMPTY);
-	for (auto &file : files) {
-		if(StringUtil::EndsWith(StringUtil::Lower(file), ".shp")) {
-			result->files.push_back(file);
-		}
-	}
-
-	auto shape_type_count = sizeof(shape_type_map) / sizeof(ShapeTypeEntry);
-	auto varchar_vector = Vector(LogicalType::VARCHAR, shape_type_count);
-	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
-	for (idx_t i = 0; i < shape_type_count; i++) {
-		auto str = string_t(shape_type_map[i].shp_name);
-		varchar_data[i] = str.IsInlined() ? str : StringVector::AddString(varchar_vector, str);
-	}
-	auto shape_type_enum = LogicalType::ENUM("SHAPE_TYPE", varchar_vector, shape_type_count);
-	shape_type_enum.SetAlias("SHAPE_TYPE");
-
-	return_types.push_back(LogicalType::VARCHAR);
-	return_types.push_back(shape_type_enum);
-	return_types.push_back(GeoTypes::BOX_2D());
-	return_types.push_back(LogicalType::INTEGER);
-	names.push_back("name");
-	names.push_back("shape_type");
-	names.push_back("bounds");
-	names.push_back("count");
-	return std::move(result);
-}
-
-struct ShapeFileMetaGlobalState : public GlobalTableFunctionState {
-	ShapeFileMetaGlobalState() : current_file_idx(0) {
-	}
-	idx_t current_file_idx;
-	vector<string> files;
-};
-
-static unique_ptr<GlobalTableFunctionState> ShapeFileMetaInitGlobal(ClientContext &context, TableFunctionInitInput &input) {
-	auto &bind_data = input.bind_data->Cast<ShapeFileMetaBindData>();
-	auto result = make_uniq<ShapeFileMetaGlobalState>();
-
-	result->files = bind_data.files;
-	result->current_file_idx = 0;
-
-	return std::move(result);
-}
-
-static void ShapeFileMetaExecute(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
-	auto &bind_data = input.bind_data->Cast<ShapeFileMetaBindData>();
-	auto &state = input.global_state->Cast<ShapeFileMetaGlobalState>();
-	auto &fs = FileSystem::GetFileSystem(context);
-
-	auto &file_name_vector = output.data[0];
-	auto file_name_data = FlatVector::GetData<string_t>(file_name_vector);
-	auto &shape_type_vector = output.data[1];
-	auto shape_type_data = FlatVector::GetData<uint8_t>(shape_type_vector);
-	auto &bounds_vector = output.data[2];
-	auto &bounds_vector_children = StructVector::GetEntries(bounds_vector);
-	auto minx_data = FlatVector::GetData<double>(*bounds_vector_children[0]);
-	auto miny_data = FlatVector::GetData<double>(*bounds_vector_children[1]);
-	auto maxx_data = FlatVector::GetData<double>(*bounds_vector_children[2]);
-	auto maxy_data = FlatVector::GetData<double>(*bounds_vector_children[3]);
-	auto record_count_vector = output.data[3];
-	auto record_count_data = FlatVector::GetData<int32_t>(record_count_vector);
-
-	auto output_count = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bind_data.files.size() - state.current_file_idx);
-
-	for (idx_t out_idx = 0; out_idx < output_count; out_idx++) {
-		auto &file_name = bind_data.files[state.current_file_idx + out_idx];
-
-		auto file_handle = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ);
-		auto shp_handle = OpenSHPFile(fs, file_name.c_str());
-
-		double min_bound[4];
-		double max_bound[4];
-		int shape_type;
-		int record_count;
-		SHPGetInfo(shp_handle.get(), &record_count, &shape_type, min_bound, max_bound);
-		file_name_data[out_idx] = StringVector::AddString(file_name_vector, file_name);
-		shape_type_data[out_idx] = 0;
-		for(auto shape_type_idx = 0; shape_type_idx < sizeof(shape_type_map) / sizeof(ShapeTypeEntry); shape_type_idx++) {
-			if(shape_type_map[shape_type_idx].shp_type == shape_type) {
-				shape_type_data[out_idx] = shape_type_idx;
-				break;
-			}
-		}
-		minx_data[out_idx] = min_bound[0];
-		miny_data[out_idx] = min_bound[1];
-		maxx_data[out_idx] = max_bound[0];
-		maxy_data[out_idx] = max_bound[1];
-		record_count_data[out_idx] = record_count;
-	}
-
-	state.current_file_idx += output_count;
-	output.SetCardinality(output_count);
-}
-
-static double ShapeFileMetaProgress(ClientContext &context, const FunctionData *bind_data,
-                                    const GlobalTableFunctionState *gstate) {
-	auto &state = gstate->Cast<ShapeFileMetaGlobalState>();
-	return static_cast<double>(state.current_file_idx) / static_cast<double>(state.files.size());
-}
-
-static unique_ptr<NodeStatistics> ShapeFileMetaCardinality(ClientContext &context, const FunctionData *bind_data_p) {
-	auto &bind_data = bind_data_p->Cast<ShapeFileMetaBindData>();
-	auto result = make_uniq<NodeStatistics>();
-	result->has_max_cardinality = true;
-	result->max_cardinality = bind_data.files.size();
-	result->has_estimated_cardinality = true;
-	result->estimated_cardinality = bind_data.files.size();
-	return result;
-}
-
-//------------------------------------------------------------------------------
-// Register table function(s)
+// Register table function
 //------------------------------------------------------------------------------
 void CoreTableFunctions::RegisterShapefileTableFunction(DatabaseInstance &db) {
 	TableFunction read_func("ST_ReadSHP", {LogicalType::VARCHAR}, Execute, Bind, InitGlobal);
@@ -929,16 +559,10 @@ void CoreTableFunctions::RegisterShapefileTableFunction(DatabaseInstance &db) {
 	read_func.projection_pushdown = true;
 	ExtensionUtil::RegisterFunction(db, read_func);
 
-	TableFunction meta_func("shapefile_meta", {LogicalType::VARCHAR}, ShapeFileMetaExecute, ShapeFileMetaBind, ShapeFileMetaInitGlobal);
-	meta_func.table_scan_progress = ShapeFileMetaProgress;
-	meta_func.cardinality = ShapeFileMetaCardinality;
-	ExtensionUtil::RegisterFunction(db, MultiFileReader::CreateFunctionSet(meta_func));
-
 	// Replacement scan
 	auto &config = DBConfig::GetConfig(db);
 	config.replacement_scans.emplace_back(GetReplacementScan);
 }
-
 
 
 }
