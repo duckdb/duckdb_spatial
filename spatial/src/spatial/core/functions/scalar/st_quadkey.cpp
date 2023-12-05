@@ -5,6 +5,9 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
+
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include "math.h"
 
 namespace spatial {
