@@ -17,6 +17,10 @@ add_definitions(-DDUCKDB_PATCH_VERSION=${DUCKDB_PATCH_VERSION})
 # Enable network functionality (OpenSSL and GDAL's CURL based fs/drivers)
 option(SPATIAL_USE_NETWORK "Enable network functionality" ON)
 
+if (EMSCRIPTEN)
+  set(SPATIAL_USE_NETWORK OFF)
+endif()
+
 include_directories(spatial/include)
 add_subdirectory(spatial/src)
 
@@ -36,6 +40,8 @@ execute_process(
   # Generate project
   COMMAND
     ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR}
+    -DDUCKDB_ENABLE_DEPRECATED_API=1
+    -DWASM_LOADABLE_EXTENSIONS=1
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DOSX_BUILD_ARCH=${OSX_BUILD_ARCH}
     -DSPATIAL_USE_NETWORK=${SPATIAL_USE_NETWORK} 
@@ -62,8 +68,19 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH}
                       ${CMAKE_BINARY_DIR}/deps/local)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} MD.lib
 )# annoyingly for expat on windows
+
+list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_BINARY_DIR}/deps/local/")
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/deps/local/")
+
+message(STATUS "Find libraries path: '${CMAKE_PREFIX_PATH}'")
+
 set(ZLIB_USE_STATIC_LIBS ON)
 set(OPENSSL_USE_STATIC_LIBS ON)
+
+if (EMSCRIPTEN)
+  set(OPENSSL_USE_STATIC_LIBS OFF)
+endif()
+
 find_library(SQLITE3_MEMVFS memvfs)
 find_package(ZLIB REQUIRED)
 find_package(PROJ REQUIRED)
@@ -97,11 +114,13 @@ if(WIN32)
   list(APPEND EXTENSION_DEPENDENCIES wbemuuid.lib)
 endif()
 
-if(APPLE)
-  find_library(CoreFoundation_Library CoreFoundation)
-  find_library(SystemConfiguration_Library SystemConfiguration)
-  list(APPEND EXTENSION_DEPENDENCIES ${CoreFoundation_Library}
+if(NOT EMSCRIPTEN)
+  if(APPLE)
+    find_library(CoreFoundation_Library CoreFoundation)
+    find_library(SystemConfiguration_Library SystemConfiguration)
+    list(APPEND EXTENSION_DEPENDENCIES ${CoreFoundation_Library}
                                      ${SystemConfiguration_Library})
+  endif()
 endif()
 
 # Geographiclib is special
