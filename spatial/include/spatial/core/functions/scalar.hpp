@@ -40,6 +40,7 @@ public:
 		RegisterStPerimeter(db);
 		RegisterStPoint(db);
 		RegisterStPointN(db);
+		RegisterStQuadKey(db);
 		RegisterStRemoveRepeatedPoints(db);
 		RegisterStStartPoint(db);
 		RegisterStX(db);
@@ -149,6 +150,9 @@ private:
 
 	// ST_RemoveRepeatedPoints
 	static void RegisterStRemoveRepeatedPoints(DatabaseInstance &db);
+
+	// ST_QuadKey
+	static void RegisterStQuadKey(DatabaseInstance &db);
 
 	// ST_StartPoint
 	static void RegisterStStartPoint(DatabaseInstance &db);

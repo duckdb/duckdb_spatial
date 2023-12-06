@@ -99,6 +99,7 @@ Note that this will overwrite any existing `spatial` extension installed for the
 | [ST_PointN](##st_pointn) | Returns the n'th vertex from the input geometry as a point geometry |
 | [ST_PointOnSurface](##st_pointonsurface) | Returns a point that is guaranteed to be on the surface of the input geometry. Sometimes a useful alternative to ST_Centroid. |
 | [ST_Polygon2DFromWKB](##st_polygon2dfromwkb) | Deserialize a POLYGON_2D from a WKB encoded blob |
+| [ST_QuadKey](##st_quadkey) | Computes a quadkey from a given lon/lat point. |
 | [ST_ReducePrecision](##st_reduceprecision) | Returns the geometry with all vertices reduced to the target precision |
 | [ST_RemoveRepeatedPoints](##st_removerepeatedpoints) | Returns a new geometry with repeated points removed, optionally within a target distance of eachother. |
 | [ST_Reverse](##st_reverse) | Returns a new version of the input geometry with the order of its vertices reversed |
@@ -1208,6 +1209,31 @@ TODO
 
 TODO
 
+## ST_QuadKey
+
+_Computes a quadkey from a given lon/lat point._
+
+- __VARCHAR__ ST_QuadKey(geom __GEOMETRY__, level __INTEGER__)
+- __VARCHAR__ ST_QuadKey(longitude __DOUBLE__, latitude __DOUBLE__, level __INTEGER__)
+
+### Description
+
+Compute the [quadkey](https://learn.microsoft.com/en-us/bingmaps/articles/bing-maps-tile-system) for a given lon/lat point at a given level.
+Note that the the parameter order is __longitude__, __latitude__.
+
+`level` has to be between 1 and 23, inclusive.
+
+The input coordinates will be clamped to the lon/lat bounds of the earth (longitude between -180 and 180, latitude between -85.05112878 and 85.05112878).
+
+Throws for any geometry that is not a `POINT`
+
+### Examples
+
+```sql
+SELECT ST_QuadKey(st_point(11.08, 49.45), 10);
+-- 1333203202
+```
+
 ## ST_ReducePrecision
 
 _Returns the geometry with all vertices reduced to the target precision_
@@ -1785,6 +1811,7 @@ __property__
 - [ST_NumPoints](##st_numpoints)
 - [ST_Perimeter](##st_perimeter)
 - [ST_Perimeter_Spheroid](##st_perimeter_spheroid)
+- [ST_QuadKey](##st_quadkey)
 - [ST_X](##st_x)
 - [ST_XMax](##st_xmax)
 - [ST_XMin](##st_xmin)
