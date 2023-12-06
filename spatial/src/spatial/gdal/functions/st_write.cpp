@@ -359,6 +359,13 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto str = value.GetValueUnsafe<string_t>();
 		feature->SetField(field_idx, (int)str.GetSize(), str.GetDataUnsafe());
 	} break;
+	case LogicalTypeId::DATE: {
+		auto date = value.GetValueUnsafe<date_t>();
+		auto year = Date::ExtractYear(date);
+		auto month = Date::ExtractMonth(date);
+		auto day = Date::ExtractDay(date);
+		feature->SetField(field_idx, year, month, day, 0, 0, 0, 0);
+	} break;
 	default:
 		// TODO: Add time types
 		// TODO: Handle list types
@@ -406,6 +413,14 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 }
 
 //===--------------------------------------------------------------------===//
+// Combine
+//===--------------------------------------------------------------------===//
+
+static void Combine(ExecutionContext &context, FunctionData &bind_data, GlobalFunctionData &gstate,
+					LocalFunctionData &lstate) {
+}
+
+//===--------------------------------------------------------------------===//
 // Finalize
 //===--------------------------------------------------------------------===//
 static void Finalize(ClientContext &context, FunctionData &bind_data, GlobalFunctionData &gstate) {
@@ -421,7 +436,9 @@ void GdalCopyFunction::Register(DatabaseInstance &db) {
 	info.copy_to_initialize_local = InitLocal;
 	info.copy_to_initialize_global = InitGlobal;
 	info.copy_to_sink = Sink;
+	info.copy_to_combine = Combine;
 	info.copy_to_finalize = Finalize;
+	info.extension = "gdal";
 
 	ExtensionUtil::RegisterFunction(db, info);
 }

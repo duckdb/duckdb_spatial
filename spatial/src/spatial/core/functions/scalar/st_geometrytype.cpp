@@ -25,8 +25,9 @@ static unique_ptr<FunctionData> GeometryTypeFunctionBind(ClientContext &context,
 		auto str = enum_values[i];
 		varchar_data[i] = str.IsInlined() ? str : StringVector::AddString(varchar_vector, str);
 	}
-
-	bound_function.return_type = LogicalType::ENUM("GEOMETRY_TYPE", varchar_vector, enum_values.size());
+	auto enum_type = LogicalType::ENUM("GEOMETRY_TYPE", varchar_vector, enum_values.size());
+	enum_type.SetAlias("GEOMETRY_TYPE");
+	bound_function.return_type = enum_type;
 
 	return nullptr;
 }

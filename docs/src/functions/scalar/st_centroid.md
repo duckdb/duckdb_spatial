@@ -68,5 +68,3 @@ Calculate the centroid of the geometry
 select st_centroid('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 -- POINT(0.5 0.5)
 ```
-
-End of example

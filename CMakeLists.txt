@@ -25,6 +25,9 @@ add_subdirectory(spatial/third_party/yyjson)
 
 include_directories(spatial/third_party/protozero/include)
 
+include_directories(spatial/third_party/shapelib)
+add_subdirectory(spatial/third_party/shapelib)
+
 
 add_library(${EXTENSION_NAME} STATIC ${EXTENSION_SOURCES})
 
