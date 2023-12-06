@@ -20,12 +20,11 @@ concurrency:
 jobs:
   duckdb-stable-build:
     name: Build extension binaries
-    uses: duckdb/duckdb/.github/workflows/_extension_distribution.yml@60ddc316ca0c1585f14d55aa73f9db59d8fc05d1
+    uses: duckdb/duckdb/.github/workflows/_extension_distribution.yml@6812703823d1d66566bc7eaac2b6e4b273c85333
     with:
+      vcpkg_commit: a42af01b72c28a8e1d7b48107b33e4f286a55ef6
       duckdb_version: v0.9.2
       extension_name: spatial
-      vcpkg_commit: 9edb1b8e590cc086563301d735cae4b6e732d2d2 # TODO: remove pinned vcpkg commit when updating duckdb version
-      build_duckdb_shell: false
 
   duckdb-stable-deploy:
     name: Deploy extension binaries
