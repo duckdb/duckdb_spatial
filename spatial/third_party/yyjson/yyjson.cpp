@@ -6,6 +6,7 @@
  * https://github.com/ibireme/yyjson/blob/master/LICENSE
  *============================================================================*/
 
+#include <cstdint>
 #include "yyjson.h"
 #include <stdio.h>
 #include <math.h>
