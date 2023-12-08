@@ -54,7 +54,9 @@ ExternalProject_Add(
     -DCMAKE_TOOLCHAIN_FILE='${CMAKE_TOOLCHAIN_FILE}'
     -DVCPKG_TARGET_TRIPLET='${VCPKG_TARGET_TRIPLET}'
 )
-find_program(EXE_SQLITE3 sqlite3)
+if (EMSCRIPTEN)
+  find_program(EXE_SQLITE3 sqlite3)
+endif()
 set(GDAL_DEPENDENCIES ${GDAL_DEPENDENCIES} ZLIB)
 
 # SQLite3
