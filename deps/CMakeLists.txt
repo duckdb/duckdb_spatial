@@ -24,8 +24,10 @@ if (NOT EMSCRIPTEN)
 endif()
 
 set(CMAKE_FLAGS_POINTER_SIZE STRING '')
+set(PATCH_NAME_ENDING STRING '')
 if (EMSCRIPTEN)
   set(CMAKE_FLAGS_POINTER_SIZE STRING -DCMAKE_SIZEOF_VOID_P=4 -DCMAKE_SIZEOF_VOIDP=4)
+  set(PATCH_NAME_ENDING STRING '_wasm')
 endif()
 
 # ZLIB
@@ -109,7 +111,7 @@ ExternalProject_Add(
     DEPENDS SQLITE3 ZLIB
     URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/proj-9.1.1.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
-    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/proj.patch"
+    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/proj${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS
     # CMake options
     -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES_PACKED}
@@ -140,7 +142,7 @@ ExternalProject_Add(
     EXPAT
     URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/expat-2.5.0.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
-    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/expat.patch"
+    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/expat${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS 
     # CMake options
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -196,7 +198,7 @@ ExternalProject_Add(
     GEOGRAPHICLIB
     URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/GeographicLib-2.2.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
-    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/geographiclib.patch"
+    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/geographiclib${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -220,7 +222,7 @@ ExternalProject_Add(
     DEPENDS ${GDAL_DEPENDENCIES}
     URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal380.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
-    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler.patch"
+    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS 
     # CMake options
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
