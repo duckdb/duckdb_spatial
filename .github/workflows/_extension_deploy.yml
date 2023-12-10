@@ -68,7 +68,9 @@ jobs:
 
       - id: parse-matrices
         run: |
-          python3 ${{ inputs.matrix_parse_script }} --input ./duckdb/.github/config/distribution_matrix.json --deploy_matrix --output deploy_matrix.json --exclude "${{ inputs.exclude_archs }}" --pretty 
+          cat ./duckdb/.github/config/distribution_matrix.json > distribution_matrix.json
+          grep wasm distribution_matrix.json || (head -n -1 ./duckdb/.github/config/distribution_matrix.json > distribution_matrix.json && echo ',"wasm":{"include":[{"duckdb_arch":"wasm_mvp","vcpkg_triplet":"wasm32-emscripten"},{"duckdb_arch":"wasm_eh","vcpkg_triplet":"wasm32-emscripten"},{"duckdb_arch":"wasm_threads","vcpkg_triplet":"wasm32-emscripten"}]}}' >> distribution_matrix.json)
+          python3 ${{ inputs.matrix_parse_script }} --input distribution_matrix.json --deploy_matrix --output deploy_matrix.json --exclude "${{ inputs.exclude_archs }}" --pretty
           deploy_matrix="`cat deploy_matrix.json`"
           echo deploy_matrix=$deploy_matrix >> $GITHUB_OUTPUT
           echo `cat $GITHUB_OUTPUT`
@@ -94,18 +96,18 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name: ${{ inputs.extension_name }}-${{ inputs.duckdb_version }}-extension-${{matrix.duckdb_arch}}${{inputs.artifact_postfix}}
+          name: ${{ inputs.extension_name }}-${{ inputs.duckdb_version }}-extension-${{matrix.duckdb_arch}}${{inputs.artifact_postfix}}${{startsWith(matrix.duckdb, 'wasm') && '.wasm' || ''}}
           path: |
             /tmp/extension
 
       - name: Deploy
         shell: bash
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_DEPLOY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_DEPLOY_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.S3_REGION }}
-          BUCKET_NAME: ${{ secrets.S3_BUCKET }}
-          DUCKDB_EXTENSION_SIGNING_PK: ${{ secrets.DUCKDB_EXTENSION_SIGNING_PK }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_DUCKDB_ORG_DEPLOY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_DUCKDB_ORG_DEPLOY_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.S3_DUCKDB_ORG_REGION }}
+          BUCKET_NAME: ${{ secrets.S3_DUCKDB_ORG_BUCKET }}
+          DUCKDB_EXTENSION_SIGNING_PK: ${{ secrets.S3_DUCKDB_ORG_EXTENSION_SIGNING_PK }}
         run: |
           pwd
           python3 -m pip install pip awscli
