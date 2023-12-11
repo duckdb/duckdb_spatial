@@ -44,10 +44,19 @@ public:
 		}
 		return 0;
 	}
+
 	size_t Read(void *pBuffer, size_t nSize, size_t nCount) override {
-		auto read_bytes = file_handle->Read(pBuffer, nSize * nCount);
-		// Return the number of items read
-		return static_cast<size_t>(read_bytes / nSize);
+		auto remaining_bytes = nSize * nCount;
+		while(remaining_bytes > 0) {
+			auto read_bytes = file_handle->Read(pBuffer, remaining_bytes);
+			if(read_bytes == 0) {
+				break;
+			}
+			remaining_bytes -= read_bytes;
+			// Note we performed a cast back to void*
+			pBuffer = static_cast<uint8_t*>(pBuffer) + read_bytes;
+		}
+		return nCount - (remaining_bytes / nSize);
 	}
 
 	int Eof() override {
