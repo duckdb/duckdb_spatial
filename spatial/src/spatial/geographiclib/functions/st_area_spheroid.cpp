@@ -13,6 +13,8 @@
 #include "GeographicLib/Geodesic.hpp"
 #include "GeographicLib/PolygonArea.hpp"
 
+#include "cmath"
+
 namespace spatial {
 
 namespace geographiclib {
@@ -59,14 +61,14 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 			polygon_area.Compute(false, true, _perimeter, ring_area);
 			if (first) {
 				// Add outer ring
-				area = ring_area;
+				area += std::abs(ring_area);
 				first = false;
 			} else {
 				// Subtract holes
-				area -= ring_area;
+				area -= std::abs(ring_area);
 			}
 		}
-		return area;
+		return std::abs(area);
 	});
 
 	if (count == 1) {
@@ -78,7 +80,6 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 // GEOMETRY
 //------------------------------------------------------------------------------
 static double PolygonArea(const core::Polygon &poly, GeographicLib::PolygonArea &comp) {
-
 	double total_area = 0;
 	for (uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
 		comp.Clear();
@@ -90,16 +91,17 @@ static double PolygonArea(const core::Polygon &poly, GeographicLib::PolygonArea 
 		}
 		double ring_area;
 		double _perimeter;
+        // We use the absolute value here so that the actual winding order of the polygon rings dont matter.
 		comp.Compute(false, true, _perimeter, ring_area);
 		if (ring_idx == 0) {
 			// Add outer ring
-			total_area = ring_area;
+			total_area += std::abs(ring_area);
 		} else {
 			// Subtract holes
-			total_area -= ring_area;
+			total_area -= std::abs(ring_area);
 		}
 	}
-	return total_area;
+	return std::abs(total_area);
 }
 
 static double GeometryArea(const core::Geometry &geom, GeographicLib::PolygonArea &comp) {
