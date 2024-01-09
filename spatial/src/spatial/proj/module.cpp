@@ -35,6 +35,12 @@ PJ_CONTEXT *ProjModule::GetThreadProjContext() {
 		throw InternalException("Could not set proj.db path");
 	}
 
+    // Dont log errors to stderr
+    proj_log_level(ctx, PJ_LOG_NONE);
+
+    // Dont allow network
+    proj_context_set_enable_network(ctx, false);
+
 	return ctx;
 }
 
