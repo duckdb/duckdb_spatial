@@ -34,8 +34,8 @@ struct GEOSExecutor {
 		auto &ctx = lstate.ctx.GetCtx();
 
 		if (left.GetVectorType() == VectorType::CONSTANT_VECTOR &&
-		    right.GetVectorType() != VectorType::CONSTANT_VECTOR) {
-			auto &left_blob = FlatVector::GetData<string_t>(left)[0];
+		    right.GetVectorType() != VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(left)) {
+			auto &left_blob = ConstantVector::GetData<string_t>(left)[0];
 			auto left_geom = lstate.ctx.Deserialize(left_blob);
 			auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 
@@ -45,8 +45,8 @@ struct GEOSExecutor {
 				return ok == 1;
 			});
 		} else if (right.GetVectorType() == VectorType::CONSTANT_VECTOR &&
-		           left.GetVectorType() != VectorType::CONSTANT_VECTOR) {
-			auto &right_blob = FlatVector::GetData<string_t>(right)[0];
+		           left.GetVectorType() != VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(right)) {
+			auto &right_blob = ConstantVector::GetData<string_t>(right)[0];
 			auto right_geom = lstate.ctx.Deserialize(right_blob);
 			auto right_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, right_geom.get()));
 
@@ -75,8 +75,8 @@ struct GEOSExecutor {
 
 		// Optimize: if one of the arguments is a constant, we can prepare it once and reuse it
 		if (left.GetVectorType() == VectorType::CONSTANT_VECTOR &&
-		    right.GetVectorType() != VectorType::CONSTANT_VECTOR) {
-			auto &left_blob = FlatVector::GetData<string_t>(left)[0];
+		    right.GetVectorType() != VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(left)) {
+			auto &left_blob = ConstantVector::GetData<string_t>(left)[0];
 			auto left_geom = lstate.ctx.Deserialize(left_blob);
 			auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 

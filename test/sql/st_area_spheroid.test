@@ -1,0 +1,27 @@
+require spatial
+# belem box (lat, lon)
+# -1.475781,-48.516655,-1.403706,-48.433228
+# 'POLYGON((-1.475781 -48.516655, -1.475781 -48.433228, -1.403706 -48.433228, -1.403706 -48.516655, -1.475781 -48.516655))'
+
+statement ok
+CREATE TABLE polys (cw GEOMETRY, ccw GEOMETRY);
+
+# Store two polygons, one clockwise, one counter-clockwise, both in EPSG:4326 with lat/lon coordinate axis order
+statement ok
+INSERT INTO polys SELECT * FROM (
+	SELECT
+		'POLYGON((-1.475781 -48.516655, -1.475781 -48.433228, -1.403706 -48.433228, -1.403706 -48.516655, -1.475781 -48.516655))'::GEOMETRY as cw,
+		ST_Reverse(cw) as ccw
+);
+
+# Use the spheroid area calculation
+query II
+SELECT ST_Area_Spheroid(cw), ST_Area_Spheroid(ccw) FROM polys;
+----
+73991730	73991730
+
+# Use the planar area calculation
+query II
+SELECT ST_Area(ST_Transform(cw, 'EPSG:4326', 'EPSG:3857')), ST_Area(ST_Transform(ccw, 'EPSG:4326', 'EPSG:3857')) FROM polys;
+----
+74536819	74536819
