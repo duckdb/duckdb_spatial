@@ -1,0 +1,20 @@
+require spatial
+
+# https://github.com/duckdb/duckdb_spatial/issues/204
+
+statement ok
+DROP TABLE IF EXISTS origin;
+
+statement ok
+CREATE TABLE origin (id int, geom geometry);
+
+statement ok
+INSERT INTO origin (id, geom) VALUES (0, ST_Boundary(ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')));
+
+statement ok
+INSERT INTO origin (id, geom) VALUES (1, ST_Boundary(ST_GeomFromText('MULTILINESTRING((7 33,4 31 ,9 31 ,13 27 ,7 33))')));
+
+query I
+SELECT ST_Disjoint(a1.geom, a2.geom) FROM origin as a1, origin as a2 WHERE a1.id = 1 and a2.id = 0;
+----
+NULL
