@@ -23,6 +23,37 @@ struct GDALMetadataBindData : public TableFunctionData {
 	vector<string> file_names;
 };
 
+static LogicalType GEOMETRY_FIELD_TYPE = LogicalType::STRUCT({
+    {"name", LogicalType::VARCHAR},
+    {"type", LogicalType::VARCHAR},
+    {"nullable", LogicalType::BOOLEAN},
+    {"crs", LogicalType::STRUCT({
+		{"name", LogicalType::VARCHAR},
+		{"auth_name", LogicalType::VARCHAR},
+		{"auth_code", LogicalType::VARCHAR},
+		{"wkt", LogicalType::VARCHAR},
+		{"proj4", LogicalType::VARCHAR},
+		{"projjson", LogicalType::VARCHAR},
+	})},
+});
+
+static LogicalType STANDARD_FIELD_TYPE = LogicalType::STRUCT({
+    {"name", LogicalType::VARCHAR},
+    {"type", LogicalType::VARCHAR},
+    {"subtype", LogicalType::VARCHAR},
+    {"nullable", LogicalType::BOOLEAN},
+    {"unique", LogicalType::BOOLEAN},
+    {"width", LogicalType::BIGINT},
+    {"precision", LogicalType::BIGINT},
+});
+
+static LogicalType LAYER_TYPE = LogicalType::STRUCT({
+    {"name", LogicalType::VARCHAR},
+    {"feature_count", LogicalType::BIGINT},
+    {"geometry_fields", LogicalType::LIST(GEOMETRY_FIELD_TYPE)},
+    {"fields", LogicalType::LIST(STANDARD_FIELD_TYPE)},
+});
+
 static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
                                      vector<LogicalType> &return_types, vector<string> &names) {
 
@@ -41,32 +72,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	return_types.push_back(LogicalType::VARCHAR);
 
 	names.push_back("layers");
-	return_types.push_back(LogicalType::LIST(LogicalType::STRUCT({
-	    {"name", LogicalType::VARCHAR},
-	    {"feature_count", LogicalType::BIGINT},
-	    {"geometry_fields", LogicalType::LIST(LogicalType::STRUCT({
-			{"name", LogicalType::VARCHAR},
-			{"type", LogicalType::VARCHAR},
-			{"nullable", LogicalType::BOOLEAN},
-			{"crs", LogicalType::STRUCT({
-				{"name", LogicalType::VARCHAR},
-				{"auth_name", LogicalType::VARCHAR},
-				{"auth_code", LogicalType::VARCHAR},
-				{"wkt", LogicalType::VARCHAR},
-				{"proj4", LogicalType::VARCHAR},
-				{"projjson", LogicalType::VARCHAR},
-			})},
-		}))},
-		{"fields", LogicalType::LIST(LogicalType::STRUCT({
-			{"name", LogicalType::VARCHAR},
-			{"type", LogicalType::VARCHAR},
-			{"subtype", LogicalType::VARCHAR},
-			{"nullable", LogicalType::BOOLEAN},
-			{"unique", LogicalType::BOOLEAN},
-			{"width", LogicalType::BIGINT},
-			{"precision", LogicalType::BIGINT},
-	   	}))},
-	})));
+	return_types.push_back(LogicalType::LIST(LAYER_TYPE));
 
 	// TODO: Add metadata, domains, relationships
 	/*
@@ -146,7 +152,7 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 
 			geometry_fields.push_back(Value::STRUCT(geometry_field_value_fields));
 		}
-		layer_value_fields.emplace_back("geometry_fields", Value::LIST(std::move(geometry_fields)));
+		layer_value_fields.emplace_back("geometry_fields", Value::LIST(GEOMETRY_FIELD_TYPE, std::move(geometry_fields)));
 
 		vector<Value> standard_fields;
 		for(const auto &field : layer->GetLayerDefn()->GetFields()) {
@@ -160,12 +166,12 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 			standard_field_value_fields.emplace_back("precision", Value(field->GetPrecision()));
 			standard_fields.push_back(Value::STRUCT(standard_field_value_fields));
 		}
-		layer_value_fields.emplace_back("fields", Value::LIST(std::move(standard_fields)));
+		layer_value_fields.emplace_back("fields", Value::LIST(STANDARD_FIELD_TYPE, std::move(standard_fields)));
 
 		layer_values.push_back(Value::STRUCT(layer_value_fields));
 	}
 
-	return Value::LIST(std::move(layer_values));
+	return Value::LIST(LAYER_TYPE, std::move(layer_values));
 }
 
 static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &output) {
