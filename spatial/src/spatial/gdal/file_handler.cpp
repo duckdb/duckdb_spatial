@@ -189,11 +189,12 @@ public:
 			pstatbuf->st_mode = S_IFCHR;
 			break;
 		default:
+			// HTTPFS returns invalid type for everything basically.
 			if(FileSystem::IsRemoteFile(file_name)) {
 				pstatbuf->st_mode = S_IFREG;
 			}
 			else {
-				throw IOException("Unknown file type");
+				return -1;
 			}
 		}
 
