@@ -9,6 +9,7 @@
 #include "spatial/gdal/file_handler.hpp"
 
 #include "ogrsf_frmts.h"
+#include <cstring>
 
 namespace spatial {
 
@@ -110,7 +111,11 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 		vector<Value> geometry_fields;
 		for(const auto &field : layer->GetLayerDefn()->GetGeomFields()) {
 			child_list_t<Value> geometry_field_value_fields;
-			geometry_field_value_fields.emplace_back("name", Value(field->GetNameRef()));
+			auto field_name = field->GetNameRef();
+			if(std::strlen(field_name) == 0) {
+				field_name = "geom";
+			}
+			geometry_field_value_fields.emplace_back("name", Value(field_name));
 			geometry_field_value_fields.emplace_back("type", Value(OGRGeometryTypeToName(field->GetType())));
 			geometry_field_value_fields.emplace_back("nullable", Value(field->IsNullable()));
 
