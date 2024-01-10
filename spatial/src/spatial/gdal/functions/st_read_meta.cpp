@@ -112,7 +112,7 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 		child_list_t<Value> layer_value_fields;
 
 		layer_value_fields.emplace_back("name", Value(layer->GetName()));
-		layer_value_fields.emplace_back("feature_count", Value(layer->GetFeatureCount()));
+		layer_value_fields.emplace_back("feature_count", Value(static_cast<int64_t>(layer->GetFeatureCount())));
 
 		vector<Value> geometry_fields;
 		for(const auto &field : layer->GetLayerDefn()->GetGeomFields()) {
@@ -123,7 +123,7 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 			}
 			geometry_field_value_fields.emplace_back("name", Value(field_name));
 			geometry_field_value_fields.emplace_back("type", Value(OGRGeometryTypeToName(field->GetType())));
-			geometry_field_value_fields.emplace_back("nullable", Value(field->IsNullable()));
+			geometry_field_value_fields.emplace_back("nullable", Value(static_cast<bool>(field->IsNullable())));
 
 			auto crs = field->GetSpatialRef();
 			if(crs != nullptr) {
