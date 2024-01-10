@@ -64,6 +64,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	GdalTableFunction::Register(db);
 	GdalDriversTableFunction::Register(db);
 	GdalCopyFunction::Register(db);
+    GdalMetadataFunction::Register(db);
 }
 
 } // namespace gdal

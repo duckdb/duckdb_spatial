@@ -56,6 +56,10 @@ struct GdalCopyFunction {
 	static void Register(DatabaseInstance &db);
 };
 
+struct GdalMetadataFunction {
+    static void Register(DatabaseInstance &db);
+};
+
 } // namespace gdal
 
 } // namespace spatial
