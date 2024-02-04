@@ -33,11 +33,11 @@ Let's start by loading the spatial extension and the parquet extension so we can
 LOAD spatial;
 LOAD parquet;
 
-CREATE TABLE rides AS SELECT * 
+CREATE TABLE rides AS SELECT *
 FROM './spatial/test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet';
 
 -- Load the NYC taxi zone data from a shapefile using the gdal-based st_read function
-CREATE TABLE zones AS SELECT zone, LocationId, borough, ST_GeomFromWKB(wkb_geometry) AS geom 
+CREATE TABLE zones AS SELECT zone, LocationId, borough, ST_GeomFromWKB(wkb_geometry) AS geom
 FROM st_read('./spatial/test/data/nyc_taxi/taxi_zones/taxi_zones.shx');
 ```
 <details>
@@ -82,16 +82,16 @@ FROM st_read('./spatial/test/data/nyc_taxi/taxi_zones/taxi_zones.shx');
 
 Let's compare the trip distance to the linear distance between the pickup and dropoff points to figure out how efficient the taxi drivers are (or how dirty the data is, since some diffs seem to be negative). We transform the coordinates from WGS84 (EPSG:4326) (lat/lon) to the NAD83 / New York Long Island ftUS (ESRI:102718) projection and calculate the distance using the `ST_Distance` function, which in this case gives the distance in feet, which we then convert to miles (5280 ft/mile). Trips that are smaller than the aerial distance are likely to be erroneous, so we use this query to filter out some bad data. Although this is not entirely accurate since the distance we use does not take into account the curvature of the earth, but it is a good enough approximation for our purposes.
 ```sql
-CREATE TABLE cleaned_rides AS SELECT 
+CREATE TABLE cleaned_rides AS SELECT
     st_point(pickup_latitude, pickup_longitude) as pickup_point,
     st_point(dropoff_latitude, dropoff_longitude) as dropoff_point,
     dropoff_datetime::TIMESTAMP - pickup_datetime::TIMESTAMP as time,
     trip_distance,
     st_distance(
-        st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), 
-        st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718')) / 5280 as aerial_distance, 
-    trip_distance - aerial_distance as diff 
-FROM rides 
+        st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'),
+        st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718')) / 5280 as aerial_distance,
+    trip_distance - aerial_distance as diff
+FROM rides
 WHERE diff > 0
 ORDER BY diff DESC;
 ```
@@ -119,18 +119,18 @@ Now lets join the taxi rides with the taxi zones to get the start and end zone f
 -- Since we dont have spatial indexes yet, use a smaller dataset for the following example.
 DELETE FROM cleaned_rides WHERE rowid > 5000;
 
-CREATE TABLE joined AS 
-SELECT 
+CREATE TABLE joined AS
+SELECT
     pickup_point,
     dropoff_point,
     start_zone.zone as start_zone,
-    end_zone.zone as end_zone, 
+    end_zone.zone as end_zone,
     trip_distance,
     time,
-FROM cleaned_rides 
-JOIN zones as start_zone 
-ON ST_Within(st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), start_zone.geom) 
-JOIN zones as end_zone 
+FROM cleaned_rides
+JOIN zones as start_zone
+ON ST_Within(st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718'), start_zone.geom)
+JOIN zones as end_zone
 ON ST_Within(st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718'), end_zone.geom);
 ```
 <details>
@@ -152,18 +152,18 @@ ON ST_Within(st_transform(dropoff_point, 'EPSG:4326', 'ESRI:102718'), end_zone.g
 | POINT (40.738408 -73.980345)         | POINT (40.696038 -73.955493)         | Gramercy                 | Bedford                       | 16.4          | 00:21:47 |
 </details>
 
-We can export the joined table to a GeoJSONSeq file using the GDAL copy function, passing in a GDAL layer creation option. 
+We can export the joined table to a GeoJSONSeq file using the GDAL copy function, passing in a GDAL layer creation option.
 Since GeoJSON only supports a single geometry per feature, we can use the `ST_MakeLine` function to combine the pickup and dropoff points into a single line geometry. The default coordinate reference system for GeoJSON is WGS84, but the coordinates are expected to be in longitude/latitude, so we need to flip the geometry using the `ST_FlipCoordinates` function.
 
 ```sql
 COPY (
-    SELECT 
+    SELECT
         ST_AsWKB(ST_FlipCoordinates(ST_MakeLine(pickup_point, dropoff_point))) as wkb_geometry,
         start_zone,
         end_zone,
-        time::VARCHAR as trip_time 
-    FROM joined) 
-TO 'joined.geojsonseq' 
+        time::VARCHAR as trip_time
+    FROM joined)
+TO 'joined.geojsonseq'
 WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES');
 ```
 <details>
@@ -184,6 +184,16 @@ WITH (FORMAT GDAL, DRIVER 'GeoJSONSeq', LAYER_CREATION_OPTIONS 'WRITE_BBOX=YES')
 { "type": "Feature", "properties": { "start_zone": "JFK Airport", "end_zone": "Park Slope", "trip_time": "00:35:45" }, "geometry": { "type": "LineString", "coordinates": [ [ -73.776643, 40.645272 ], [ -73.978873, 40.66723 ] ] } }
 ```
 </details>
+
+## GDAL Layer creation option
+
+If you need to set some "Layer creation option" (format specific), i.e. those options that you set via CLI with `-lco`, you can use this kind of syntax, in which the `WRITE_BBOX` and `RFC7946` - available in [`GeoJSON` format](https://gdal.org/drivers/vector/geojson.html#layer-creation-options) - options are set:
+
+```
+COPY (SELECT * from st_read('input.shp'))
+TO 'output.geojson'
+WITH (FORMAT GDAL, DRIVER 'GeoJSON',LAYER_CREATION_OPTIONS ('WRITE_BBOX=YES', 'RFC7946=YES'))
+```
 
 
 # How do I get it?
@@ -253,7 +263,7 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 [PROJ](https://proj.org/#) is a generic coordinate transformation library that transforms geospatial coordinates from one projected coordinate reference system (CRS) to another. This extension experiments with including an embedded version of the PROJ database inside the extension binary itself so that you don't have to worry about installing the PROJ library separately. This also opens up the possibility to use this functionality in WASM.
 
 ## Embedded GDAL based Input/Output Functions
-[GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `COPY ... TO ... WITH (FORMAT GDAL)` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats - check for yourself by running 
+[GDAL](https://github.com/OSGeo/gdal) is a translator library for raster and vector geospatial data formats. This extension includes and exposes a subset of the GDAL vector drivers through the `ST_Read` and `COPY ... TO ... WITH (FORMAT GDAL)` table and copy functions respectively to read and write geometry data from and to a variety of file formats as if they were DuckDB tables. We currently support the over 50 GDAL formats - check for yourself by running
 <details>
 <summary>
     SELECT * FROM st_drivers();
@@ -318,8 +328,8 @@ When materializing the `GEOMETRY` type objects from the internal binary format w
 Note that far from all of these formats have been tested properly, if you run into any issues please first [consult the GDAL docs](https://gdal.org/drivers/vector/index.html), or open an issue here on GitHub.
 
 
-`ST_Read` also supports limited support for predicate pushdown and spatial filtering (if the underlying GDAL driver supports it), but column pruning (projection pushdown) while technically feasible is not yet implemented. 
-`ST_Read` also allows using GDAL's virtual filesystem abstractions to read data from remote sources such as S3, or from compressed archives such as zip files. 
+`ST_Read` also supports limited support for predicate pushdown and spatial filtering (if the underlying GDAL driver supports it), but column pruning (projection pushdown) while technically feasible is not yet implemented.
+`ST_Read` also allows using GDAL's virtual filesystem abstractions to read data from remote sources such as S3, or from compressed archives such as zip files.
 
 **Note**: This functionality does not make full use of parallelism due to GDAL not being thread-safe, so you should expect this to be slower than using e.g. the DuckDB Parquet extension to read the same GeoParquet or DuckDBs native csv reader to read csv files. Once we implement support for reading more vector formats natively through this extension (e.g. GeoJSON, GeoBuf, ShapeFile) we will probably split this entire GDAL part into a separate extension.
 
@@ -342,7 +352,7 @@ Again, please feel free to open an issue if there is a particular function you w
 | ST_Area                     | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
 | ST_AsGeoJSON                | 🦆       | 🦆       | 🦆            | 🦆.        | 🦆              |
 | ST_AsHEXWKB                 | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
-| ST_AsText                   | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              | 
+| ST_AsText                   | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
 | ST_AsWKB                    | 🦆       | 🦆       | 🦆            | 🦆         | 🦆              |
 | ST_Boundary                 | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
 | ST_Buffer                   | 🧭       | 🔄       | 🔄            | 🔄         | 🔄 (as POLYGON) |
