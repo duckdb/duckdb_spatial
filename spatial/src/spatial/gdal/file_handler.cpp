@@ -151,6 +151,16 @@ public:
 
 		try {
 			string path(file_name);
+			// Check if the file is a directory
+
+#ifdef _WIN32
+			if (fs.DirectoryExists(path) && (flags & FileFlags::FILE_FLAGS_READ)) {
+				// We can't open a directory for reading on windows without special flags
+				// so just open nul instead, gdal will reject it when it tries to read
+				auto file = fs.OpenFile("nul", flags);
+				return new DuckDBFileHandle(std::move(file));
+			}
+#endif
 			auto file = fs.OpenFile(file_name, flags);
 			return new DuckDBFileHandle(std::move(file));
 		} catch (std::exception &ex) {
