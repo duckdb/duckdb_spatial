@@ -31,7 +31,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 				auto geometry_blob = ((string_t *)format.data)[mapped_idx];
 				auto geometry = lstate.factory.Deserialize(geometry_blob);
 				// Dont add empty geometries
-				if(!geometry.IsEmpty()) {
+				if (!geometry.IsEmpty()) {
 					geometries.push_back(geometry);
 				}
 			}

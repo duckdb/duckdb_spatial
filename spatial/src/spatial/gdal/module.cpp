@@ -31,7 +31,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 			// try to strip it off to make the errors more readable
 			auto msg = string(raw_msg);
 			auto path_pos = msg.find("/vsiduckdb-");
-			if(path_pos != string::npos) {
+			if (path_pos != string::npos) {
 				// We found a path, strip it off
 				msg.erase(path_pos, 48);
 			}
@@ -64,7 +64,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	GdalTableFunction::Register(db);
 	GdalDriversTableFunction::Register(db);
 	GdalCopyFunction::Register(db);
-    GdalMetadataFunction::Register(db);
+	GdalMetadataFunction::Register(db);
 }
 
 } // namespace gdal

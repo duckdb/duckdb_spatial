@@ -95,26 +95,29 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &inf
 				}
 				bind_data->dataset_creation_options.push_back(s.GetValue<string>());
 			}
-		} else if(StringUtil::Upper(option.first) == "GEOMETRY_TYPE") {
+		} else if (StringUtil::Upper(option.first) == "GEOMETRY_TYPE") {
 			auto &set = option.second.front();
-			if(set.type().id() == LogicalTypeId::VARCHAR) {
+			if (set.type().id() == LogicalTypeId::VARCHAR) {
 				auto type = set.GetValue<string>();
-				if(StringUtil::CIEquals(type, "POINT")) {
+				if (StringUtil::CIEquals(type, "POINT")) {
 					bind_data->geometry_type = wkbPoint;
-				} else if(StringUtil::CIEquals(type, "LINESTRING")) {
+				} else if (StringUtil::CIEquals(type, "LINESTRING")) {
 					bind_data->geometry_type = wkbLineString;
-				} else if(StringUtil::CIEquals(type, "POLYGON")) {
+				} else if (StringUtil::CIEquals(type, "POLYGON")) {
 					bind_data->geometry_type = wkbPolygon;
-				} else if(StringUtil::CIEquals(type, "MULTIPOINT")) {
+				} else if (StringUtil::CIEquals(type, "MULTIPOINT")) {
 					bind_data->geometry_type = wkbMultiPoint;
-				} else if(StringUtil::CIEquals(type, "MULTILINESTRING")) {
+				} else if (StringUtil::CIEquals(type, "MULTILINESTRING")) {
 					bind_data->geometry_type = wkbMultiLineString;
-				} else if(StringUtil::CIEquals(type, "MULTIPOLYGON")) {
+				} else if (StringUtil::CIEquals(type, "MULTIPOLYGON")) {
 					bind_data->geometry_type = wkbMultiPolygon;
-				} else if(StringUtil::CIEquals(type, "GEOMETRYCOLLECTION")) {
+				} else if (StringUtil::CIEquals(type, "GEOMETRYCOLLECTION")) {
 					bind_data->geometry_type = wkbGeometryCollection;
 				} else {
-					throw BinderException("Unknown geometry type '%s', expected one of 'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION'", type);
+					throw BinderException(
+					    "Unknown geometry type '%s', expected one of 'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', "
+					    "'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION'",
+					    type);
 				}
 			} else {
 				throw BinderException("Geometry type must be a string");
@@ -143,7 +146,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &inf
 	}
 
 	// Driver specific checks
-	if(bind_data->driver_name == "OpenFileGDB" && bind_data->geometry_type == wkbUnknown) {
+	if (bind_data->driver_name == "OpenFileGDB" && bind_data->geometry_type == wkbUnknown) {
 		throw BinderException("OpenFileGDB requires 'GEOMETRY_TYPE' parameter to be set when writing!");
 	}
 
@@ -404,8 +407,9 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 	case LogicalTypeId::TIME: {
 		auto time = value.GetValueUnsafe<dtime_t>();
 		auto hour = static_cast<int>(time.micros / Interval::MICROS_PER_HOUR);
-		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) /Interval::MICROS_PER_MINUTE);
-		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) /
+		                                 static_cast<double>(Interval::MICROS_PER_SEC));
 		feature->SetField(field_idx, 0, 0, 0, hour, minute, second, 0);
 	} break;
 	case LogicalTypeId::TIMESTAMP: {
@@ -417,7 +421,8 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto day = Date::ExtractDay(date);
 		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
 		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
-		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) /
+		                                 static_cast<double>(Interval::MICROS_PER_SEC));
 		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
 	} break;
 	case LogicalTypeId::TIMESTAMP_NS: {
@@ -430,7 +435,8 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto day = Date::ExtractDay(date);
 		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
 		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
-		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) /
+		                                 static_cast<double>(Interval::MICROS_PER_SEC));
 		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
 	} break;
 	case LogicalTypeId::TIMESTAMP_MS: {
@@ -443,7 +449,8 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto day = Date::ExtractDay(date);
 		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
 		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
-		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) /
+		                                 static_cast<double>(Interval::MICROS_PER_SEC));
 		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
 	} break;
 	case LogicalTypeId::TIMESTAMP_SEC: {
@@ -456,7 +463,8 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto day = Date::ExtractDay(date);
 		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
 		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
-		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) /
+		                                 static_cast<double>(Interval::MICROS_PER_SEC));
 		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
 	} break;
 	case LogicalTypeId::TIMESTAMP_TZ: {
@@ -496,10 +504,13 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 			if (IsGeometryType(type)) {
 				// TODO: check how many geometry fields there are and use the correct one.
 				auto geom = OGRGeometryFromValue(type, value, local_state.factory);
-				if(bind_data.geometry_type != wkbUnknown && geom->getGeometryType() != bind_data.geometry_type) {
-					auto got_name = StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(geom->getGeometryType())), " ", "");
-					auto expected_name = StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(bind_data.geometry_type)), " ", "");
-					throw InvalidInputException("Expected all geometries to be of type '%s', but got one of type '%s'", expected_name, got_name);
+				if (bind_data.geometry_type != wkbUnknown && geom->getGeometryType() != bind_data.geometry_type) {
+					auto got_name =
+					    StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(geom->getGeometryType())), " ", "");
+					auto expected_name =
+					    StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(bind_data.geometry_type)), " ", "");
+					throw InvalidInputException("Expected all geometries to be of type '%s', but got one of type '%s'",
+					                            expected_name, got_name);
 				}
 
 				if (feature->SetGeometry(geom.get()) != OGRERR_NONE) {
@@ -521,7 +532,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 //===--------------------------------------------------------------------===//
 
 static void Combine(ExecutionContext &context, FunctionData &bind_data, GlobalFunctionData &gstate,
-					LocalFunctionData &lstate) {
+                    LocalFunctionData &lstate) {
 }
 
 //===--------------------------------------------------------------------===//

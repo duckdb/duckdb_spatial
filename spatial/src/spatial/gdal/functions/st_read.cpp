@@ -53,8 +53,8 @@ static string FilterToGdal(const TableFilter &filter, const string &column_name)
 	switch (filter.filter_type) {
 	case TableFilterType::CONSTANT_COMPARISON: {
 		auto &constant_filter = filter.Cast<ConstantFilter>();
-		return KeywordHelper::WriteOptionallyQuoted(column_name) + ExpressionTypeToOperator(constant_filter.comparison_type) +
-		       constant_filter.constant.ToSQLString();
+		return KeywordHelper::WriteOptionallyQuoted(column_name) +
+		       ExpressionTypeToOperator(constant_filter.comparison_type) + constant_filter.constant.ToSQLString();
 	}
 	case TableFilterType::CONJUNCTION_AND: {
 		auto &and_filter = filter.Cast<ConjunctionAndFilter>();
@@ -326,7 +326,8 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		auto column_name = string(attribute.name);
 		auto duckdb_type = arrow_type->GetDuckType();
 
-		if (duckdb_type.id() == LogicalTypeId::BLOB && attribute.metadata != nullptr && strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
+		if (duckdb_type.id() == LogicalTypeId::BLOB && attribute.metadata != nullptr &&
+		    strncmp(attribute.metadata, ogc_flag, sizeof(ogc_flag)) == 0) {
 			// This is a WKB geometry blob
 			result->arrow_table.AddColumn(col_idx, std::move(arrow_type));
 
@@ -334,7 +335,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				return_types.emplace_back(core::GeoTypes::WKB_BLOB());
 			} else {
 				return_types.emplace_back(core::GeoTypes::GEOMETRY());
-				if(column_name == "wkb_geometry") {
+				if (column_name == "wkb_geometry") {
 					column_name = "geom";
 				}
 			}
@@ -591,8 +592,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 
 	auto lower_name = StringUtil::Lower(table_name);
 	// Check if the table name ends with some common geospatial file extensions
-	if (StringUtil::EndsWith(lower_name, ".gpkg") ||
-	    StringUtil::EndsWith(lower_name, ".fgb")) {
+	if (StringUtil::EndsWith(lower_name, ".gpkg") || StringUtil::EndsWith(lower_name, ".fgb")) {
 
 		auto table_function = make_uniq<TableFunctionRef>();
 		vector<unique_ptr<ParsedExpression>> children;

@@ -219,23 +219,21 @@ static Point PointFromGeoJSON(yyjson_val *coord_array, GeometryFactory &factory,
 		// empty point
 		return factory.CreateEmptyPoint();
 	}
-    if(len < 2) {
-        throw InvalidInputException("GeoJSON input coordinates field is not an array of at least length 2: %s",
-                                raw.GetString());
-    }
-    auto x_val = yyjson_arr_get_first(coord_array);
-    if (!yyjson_is_num(x_val)) {
-        throw InvalidInputException("GeoJSON input coordinates field is not an array of numbers: %s",
-                                    raw.GetString());
-    }
-    auto y_val = len == 2 ? yyjson_arr_get_last(coord_array) : yyjson_arr_get(coord_array, 1);
-    if (!yyjson_is_num(y_val)) {
-        throw InvalidInputException("GeoJSON input coordinates field is not an array of numbers: %s",
-                                    raw.GetString());
-    }
-    auto x = yyjson_get_num(x_val);
-    auto y = yyjson_get_num(y_val);
-    return factory.CreatePoint(x, y);
+	if (len < 2) {
+		throw InvalidInputException("GeoJSON input coordinates field is not an array of at least length 2: %s",
+		                            raw.GetString());
+	}
+	auto x_val = yyjson_arr_get_first(coord_array);
+	if (!yyjson_is_num(x_val)) {
+		throw InvalidInputException("GeoJSON input coordinates field is not an array of numbers: %s", raw.GetString());
+	}
+	auto y_val = len == 2 ? yyjson_arr_get_last(coord_array) : yyjson_arr_get(coord_array, 1);
+	if (!yyjson_is_num(y_val)) {
+		throw InvalidInputException("GeoJSON input coordinates field is not an array of numbers: %s", raw.GetString());
+	}
+	auto x = yyjson_get_num(x_val);
+	auto y = yyjson_get_num(y_val);
+	return factory.CreatePoint(x, y);
 }
 
 static VertexVector VerticesFromGeoJSON(yyjson_val *coord_array, GeometryFactory &factory, const string_t &raw) {
@@ -253,8 +251,8 @@ static VertexVector VerticesFromGeoJSON(yyjson_val *coord_array, GeometryFactory
 			}
 			auto coord_len = yyjson_arr_size(coord_val);
 			if (coord_len < 2) {
-				throw InvalidInputException("GeoJSON input coordinates field is not an array of arrays of length >= 2: %s",
-				                            raw.GetString());
+				throw InvalidInputException(
+				    "GeoJSON input coordinates field is not an array of arrays of length >= 2: %s", raw.GetString());
 			}
 			auto x_val = yyjson_arr_get_first(coord_val);
 			if (!yyjson_is_num(x_val)) {
@@ -316,8 +314,8 @@ static MultiPoint MultiPointFromGeoJSON(yyjson_val *coord_array, GeometryFactory
 				                            raw.GetString());
 			}
 			if (yyjson_arr_size(point_val) < 2) {
-				throw InvalidInputException("GeoJSON input coordinates field is not an array of arrays of length >= 2: %s",
-				                            raw.GetString());
+				throw InvalidInputException(
+				    "GeoJSON input coordinates field is not an array of arrays of length >= 2: %s", raw.GetString());
 			}
 			multi_point[idx] = PointFromGeoJSON(point_val, factory, raw);
 		}
