@@ -167,7 +167,7 @@ public:
 
 		memset(pstatbuf, 0, sizeof(VSIStatBufL));
 
-		if(!fs.FileExists(file_name)) {
+		if(!(fs.FileExists(file_name) || fs.DirectoryExists(file_name))) {
 			return -1;
 		}
 
