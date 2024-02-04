@@ -167,6 +167,10 @@ public:
 
 		memset(pstatbuf, 0, sizeof(VSIStatBufL));
 
+		if(!fs.FileExists(file_name)) {
+			return -1;
+		}
+
 		unique_ptr<FileHandle> file;
 		try {
 			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ);
