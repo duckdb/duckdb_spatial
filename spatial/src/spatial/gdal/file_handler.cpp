@@ -47,15 +47,17 @@ public:
 
 	size_t Read(void *pBuffer, size_t nSize, size_t nCount) override {
 		auto remaining_bytes = nSize * nCount;
-		while(remaining_bytes > 0) {
-			auto read_bytes = file_handle->Read(pBuffer, remaining_bytes);
-			if(read_bytes == 0) {
-				break;
+		try {
+			while (remaining_bytes > 0) {
+				auto read_bytes = file_handle->Read(pBuffer, remaining_bytes);
+				if (read_bytes == 0) {
+					break;
+				}
+				remaining_bytes -= read_bytes;
+				// Note we performed a cast back to void*
+				pBuffer = static_cast<uint8_t *>(pBuffer) + read_bytes;
 			}
-			remaining_bytes -= read_bytes;
-			// Note we performed a cast back to void*
-			pBuffer = static_cast<uint8_t*>(pBuffer) + read_bytes;
-		}
+		} catch (...) {}
 		return nCount - (remaining_bytes / nSize);
 	}
 
@@ -65,7 +67,10 @@ public:
 
 
 	size_t Write(const void *pBuffer, size_t nSize, size_t nCount) override {
-		auto written_bytes = file_handle->Write(const_cast<void *>(pBuffer), nSize * nCount);
+		size_t written_bytes = 0;
+		try {
+			written_bytes = file_handle->Write(const_cast<void *>(pBuffer), nSize * nCount);
+		} catch (...) {}
 		// Return the number of items written
 		return static_cast<size_t>(written_bytes / nSize);
 	}

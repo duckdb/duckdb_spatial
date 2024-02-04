@@ -9,6 +9,7 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/gdal/functions.hpp"
 #include "spatial/gdal/file_handler.hpp"
 
@@ -28,6 +29,7 @@ struct BindData : public TableFunctionData {
 	vector<string> dataset_creation_options;
 	vector<string> layer_creation_options;
 	string target_srs;
+	OGRwkbGeometryType geometry_type = wkbUnknown;
 
 	BindData(string file_path, vector<LogicalType> field_sql_types, vector<string> field_names)
 	    : file_path(std::move(file_path)), field_sql_types(std::move(field_sql_types)),
@@ -93,8 +95,32 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &inf
 				}
 				bind_data->dataset_creation_options.push_back(s.GetValue<string>());
 			}
+		} else if(StringUtil::Upper(option.first) == "GEOMETRY_TYPE") {
+			auto &set = option.second.front();
+			if(set.type().id() == LogicalTypeId::VARCHAR) {
+				auto type = set.GetValue<string>();
+				if(StringUtil::CIEquals(type, "POINT")) {
+					bind_data->geometry_type = wkbPoint;
+				} else if(StringUtil::CIEquals(type, "LINESTRING")) {
+					bind_data->geometry_type = wkbLineString;
+				} else if(StringUtil::CIEquals(type, "POLYGON")) {
+					bind_data->geometry_type = wkbPolygon;
+				} else if(StringUtil::CIEquals(type, "MULTIPOINT")) {
+					bind_data->geometry_type = wkbMultiPoint;
+				} else if(StringUtil::CIEquals(type, "MULTILINESTRING")) {
+					bind_data->geometry_type = wkbMultiLineString;
+				} else if(StringUtil::CIEquals(type, "MULTIPOLYGON")) {
+					bind_data->geometry_type = wkbMultiPolygon;
+				} else if(StringUtil::CIEquals(type, "GEOMETRYCOLLECTION")) {
+					bind_data->geometry_type = wkbGeometryCollection;
+				} else {
+					throw BinderException("Unknown geometry type '%s', expected one of 'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING', 'MULTIPOLYGON', 'GEOMETRYCOLLECTION'", type);
+				}
+			} else {
+				throw BinderException("Geometry type must be a string");
+			}
 		} else if (StringUtil::Upper(option.first) == "SRS") {
-			auto set = option.second.front();
+			auto &set = option.second.front();
 			if (set.type().id() == LogicalTypeId::VARCHAR) {
 				bind_data->target_srs = set.GetValue<string>();
 			} else {
@@ -114,6 +140,11 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &inf
 		// Default to the base name of the file
 		auto &fs = FileSystem::GetFileSystem(context);
 		bind_data->layer_name = fs.ExtractBaseName(bind_data->file_path);
+	}
+
+	// Driver specific checks
+	if(bind_data->driver_name == "OpenFileGDB" && bind_data->geometry_type == wkbUnknown) {
+		throw BinderException("OpenFileGDB requires 'GEOMETRY_TYPE' parameter to be set when writing!");
 	}
 
 	return std::move(bind_data);
@@ -217,7 +248,7 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, FunctionData &bind_data,
                                                  const string &file_path) {
 
-	auto &gdal_data = (BindData &)bind_data;
+	auto &gdal_data = bind_data.Cast<BindData>();
 	GDALDriver *driver = GetGDALDriverManager()->GetDriverByName(gdal_data.driver_name.c_str());
 	if (!driver) {
 		throw IOException("Could not open driver");
@@ -252,7 +283,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	// so we have to pass nullptr if we want the default behavior.
 	OGRSpatialReference *srs_ptr = gdal_data.target_srs.empty() ? nullptr : &srs;
 
-	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, wkbUnknown, lco);
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, gdal_data.geometry_type, lco);
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
@@ -375,9 +406,9 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 
 static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionData &gstate, LocalFunctionData &lstate,
                  DataChunk &input) {
-	auto &bind_data = (BindData &)bdata;
-	auto &global_state = (GlobalState &)gstate;
-	auto &local_state = (LocalState &)lstate;
+	auto &bind_data = bdata.Cast<BindData>();
+	auto &global_state = gstate.Cast<GlobalState>();
+	auto &local_state = lstate.Cast<LocalState>();
 	local_state.factory.allocator.Reset();
 
 	lock_guard<mutex> d_lock(global_state.lock);
@@ -398,6 +429,12 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 			if (IsGeometryType(type)) {
 				// TODO: check how many geometry fields there are and use the correct one.
 				auto geom = OGRGeometryFromValue(type, value, local_state.factory);
+				if(bind_data.geometry_type != wkbUnknown && geom->getGeometryType() != bind_data.geometry_type) {
+					auto got_name = StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(geom->getGeometryType())), " ", "");
+					auto expected_name = StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(bind_data.geometry_type)), " ", "");
+					throw InvalidInputException("Expected all geometries to be of type '%s', but got one of type '%s'", expected_name, got_name);
+				}
+
 				if (feature->SetGeometry(geom.get()) != OGRERR_NONE) {
 					throw IOException("Could not set geometry");
 				}
