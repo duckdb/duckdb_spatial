@@ -52,12 +52,12 @@ static string FilterToGdal(const TableFilter &filter, const string &column_name)
 
 	switch (filter.filter_type) {
 	case TableFilterType::CONSTANT_COMPARISON: {
-		auto &constant_filter = (const ConstantFilter &)filter;
-		return column_name + ExpressionTypeToOperator(constant_filter.comparison_type) +
+		auto &constant_filter = filter.Cast<ConstantFilter>();
+		return KeywordHelper::WriteOptionallyQuoted(column_name) + ExpressionTypeToOperator(constant_filter.comparison_type) +
 		       constant_filter.constant.ToSQLString();
 	}
 	case TableFilterType::CONJUNCTION_AND: {
-		auto &and_filter = (const ConjunctionAndFilter &)filter;
+		auto &and_filter = filter.Cast<ConjunctionAndFilter>();
 		vector<string> filters;
 		for (const auto &child_filter : and_filter.child_filters) {
 			filters.push_back(FilterToGdal(*child_filter, column_name));
@@ -65,7 +65,7 @@ static string FilterToGdal(const TableFilter &filter, const string &column_name)
 		return StringUtil::Join(filters, " AND ");
 	}
 	case TableFilterType::CONJUNCTION_OR: {
-		auto &or_filter = (const ConjunctionOrFilter &)filter;
+		auto &or_filter = filter.Cast<ConjunctionOrFilter>();
 		vector<string> filters;
 		for (const auto &child_filter : or_filter.child_filters) {
 			filters.push_back(FilterToGdal(*child_filter, column_name));
@@ -73,10 +73,10 @@ static string FilterToGdal(const TableFilter &filter, const string &column_name)
 		return StringUtil::Join(filters, " OR ");
 	}
 	case TableFilterType::IS_NOT_NULL: {
-		return column_name + " IS NOT NULL";
+		return KeywordHelper::WriteOptionallyQuoted(column_name) + " IS NOT NULL";
 	}
 	case TableFilterType::IS_NULL: {
-		return column_name + " IS NULL";
+		return KeywordHelper::WriteOptionallyQuoted(column_name) + " IS NULL";
 	}
 	default:
 		throw NotImplementedException("FilterToGdal: filter type not implemented");
