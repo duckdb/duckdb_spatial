@@ -17,21 +17,19 @@ using namespace spatial::core;
 static void MakeValidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	UnaryExecutor::Execute<string_t, string_t>(
-	    args.data[0], result, args.size(), [&](string_t input) {
-		    auto geom = lstate.ctx.Deserialize(input);
-		    auto valid = make_uniq_geos(ctx, GEOSMakeValid_r(ctx, geom.get()));
-		    return lstate.ctx.Serialize(result, valid);
-	    });
+	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t input) {
+		auto geom = lstate.ctx.Deserialize(input);
+		auto valid = make_uniq_geos(ctx, GEOSMakeValid_r(ctx, geom.get()));
+		return lstate.ctx.Serialize(result, valid);
+	});
 }
 
 void GEOSScalarFunctions::RegisterStMakeValid(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_MakeValid");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(),
-	                               MakeValidFunction, nullptr, nullptr, nullptr,
-	                               GEOSFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), MakeValidFunction, nullptr, nullptr,
+	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 }

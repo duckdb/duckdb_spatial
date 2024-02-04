@@ -20,10 +20,10 @@ namespace gdal {
 class DuckDBFileHandle : public VSIVirtualHandle {
 private:
 	unique_ptr<FileHandle> file_handle;
+
 public:
-	explicit DuckDBFileHandle(unique_ptr<FileHandle> file_handle_p)
-	    : file_handle(std::move(file_handle_p))
-	{ }
+	explicit DuckDBFileHandle(unique_ptr<FileHandle> file_handle_p) : file_handle(std::move(file_handle_p)) {
+	}
 
 	vsi_l_offset Tell() override {
 		return static_cast<vsi_l_offset>(file_handle->SeekPosition());
@@ -47,14 +47,17 @@ public:
 
 	size_t Read(void *pBuffer, size_t nSize, size_t nCount) override {
 		auto remaining_bytes = nSize * nCount;
-		while(remaining_bytes > 0) {
-			auto read_bytes = file_handle->Read(pBuffer, remaining_bytes);
-			if(read_bytes == 0) {
-				break;
+		try {
+			while (remaining_bytes > 0) {
+				auto read_bytes = file_handle->Read(pBuffer, remaining_bytes);
+				if (read_bytes == 0) {
+					break;
+				}
+				remaining_bytes -= read_bytes;
+				// Note we performed a cast back to void*
+				pBuffer = static_cast<uint8_t *>(pBuffer) + read_bytes;
 			}
-			remaining_bytes -= read_bytes;
-			// Note we performed a cast back to void*
-			pBuffer = static_cast<uint8_t*>(pBuffer) + read_bytes;
+		} catch (...) {
 		}
 		return nCount - (remaining_bytes / nSize);
 	}
@@ -63,9 +66,12 @@ public:
 		return file_handle->SeekPosition() == file_handle->GetFileSize() ? TRUE : FALSE;
 	}
 
-
 	size_t Write(const void *pBuffer, size_t nSize, size_t nCount) override {
-		auto written_bytes = file_handle->Write(const_cast<void *>(pBuffer), nSize * nCount);
+		size_t written_bytes = 0;
+		try {
+			written_bytes = file_handle->Write(const_cast<void *>(pBuffer), nSize * nCount);
+		} catch (...) {
+		}
 		// Return the number of items written
 		return static_cast<size_t>(written_bytes / nSize);
 	}
@@ -88,25 +94,24 @@ public:
 	// VSIRangeStatus GetRangeStatus(vsi_l_offset nOffset, vsi_l_offset nLength) override;
 };
 
-
 //--------------------------------------------------------------------------
 // GDAL DuckDB File system wrapper
 //--------------------------------------------------------------------------
 class DuckDBFileSystemHandler : public VSIFilesystemHandler {
 private:
 	string client_prefix;
-	ClientContext& context;
-public:
-	DuckDBFileSystemHandler(string client_prefix, ClientContext& context)
-	    : client_prefix(std::move(client_prefix)), context(context) { };
+	ClientContext &context;
 
-	const char* StripPrefix(const char *pszFilename)
-	{
+public:
+	DuckDBFileSystemHandler(string client_prefix, ClientContext &context)
+	    : client_prefix(std::move(client_prefix)), context(context) {};
+
+	const char *StripPrefix(const char *pszFilename) {
 		return pszFilename + client_prefix.size();
 	}
 
-	VSIVirtualHandle *Open(const char *prefixed_file_name, const char *access,
-	                       bool bSetError, CSLConstList /* papszOptions */) override {
+	VSIVirtualHandle *Open(const char *prefixed_file_name, const char *access, bool bSetError,
+	                       CSLConstList /* papszOptions */) override {
 		auto file_name = StripPrefix(prefixed_file_name);
 		auto &fs = FileSystem::GetFileSystem(context);
 
@@ -146,10 +151,20 @@ public:
 
 		try {
 			string path(file_name);
+			// Check if the file is a directory
+
+#ifdef _WIN32
+			if (fs.DirectoryExists(path) && (flags & FileFlags::FILE_FLAGS_READ)) {
+				// We can't open a directory for reading on windows without special flags
+				// so just open nul instead, gdal will reject it when it tries to read
+				auto file = fs.OpenFile("nul", flags);
+				return new DuckDBFileHandle(std::move(file));
+			}
+#endif
 			auto file = fs.OpenFile(file_name, flags);
 			return new DuckDBFileHandle(std::move(file));
 		} catch (std::exception &ex) {
-			if(bSetError) {
+			if (bSetError) {
 				VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
 			}
 			return nullptr;
@@ -162,6 +177,17 @@ public:
 
 		memset(pstatbuf, 0, sizeof(VSIStatBufL));
 
+		if (!(fs.FileExists(file_name) || fs.DirectoryExists(file_name))) {
+			return -1;
+		}
+
+#ifdef _WIN32
+		if(fs.DirectoryExists(file_name)) {
+			pstatbuf->st_mode = S_IFDIR;
+			return 0;
+		}
+#endif
+
 		unique_ptr<FileHandle> file;
 		try {
 			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ);
@@ -169,7 +195,7 @@ public:
 			return -1;
 		}
 
-		if(!file) {
+		if (!file) {
 			return -1;
 		}
 
@@ -190,10 +216,9 @@ public:
 			break;
 		default:
 			// HTTPFS returns invalid type for everything basically.
-			if(FileSystem::IsRemoteFile(file_name)) {
+			if (FileSystem::IsRemoteFile(file_name)) {
 				pstatbuf->st_mode = S_IFREG;
-			}
-			else {
+			} else {
 				return -1;
 			}
 		}
@@ -269,7 +294,6 @@ public:
 	}
 };
 
-
 //--------------------------------------------------------------------------
 // GDALClientContextState
 //--------------------------------------------------------------------------
@@ -278,7 +302,7 @@ public:
 // use their own attached file systems. This is necessary because GDAL is
 // not otherwise aware of the connection context.
 //
-GDALClientContextState::GDALClientContextState(ClientContext& context) {
+GDALClientContextState::GDALClientContextState(ClientContext &context) {
 
 	// Create a new random prefix for this client
 	client_prefix = StringUtil::Format("/vsiduckdb-%s/", UUID::ToString(UUID::GenerateRandomUUID()));
@@ -298,19 +322,19 @@ GDALClientContextState::~GDALClientContextState() {
 	delete fs_handler;
 }
 
-void GDALClientContextState::QueryEnd(){
+void GDALClientContextState::QueryEnd() {
 
 };
 
-const string& GDALClientContextState::GetPrefix() const {
+const string &GDALClientContextState::GetPrefix() const {
 	return client_prefix;
 }
 
-GDALClientContextState& GDALClientContextState::GetOrCreate(ClientContext& context) {
-	if(!context.registered_state["gdal"]) {
+GDALClientContextState &GDALClientContextState::GetOrCreate(ClientContext &context) {
+	if (!context.registered_state["gdal"]) {
 		context.registered_state["gdal"] = make_uniq<GDALClientContextState>(context);
 	}
-	return *dynamic_cast<GDALClientContextState*>(context.registered_state["gdal"].get());
+	return *dynamic_cast<GDALClientContextState *>(context.registered_state["gdal"].get());
 }
 
 } // namespace gdal

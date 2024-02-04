@@ -28,13 +28,13 @@ static LogicalType GEOMETRY_FIELD_TYPE = LogicalType::STRUCT({
     {"type", LogicalType::VARCHAR},
     {"nullable", LogicalType::BOOLEAN},
     {"crs", LogicalType::STRUCT({
-		{"name", LogicalType::VARCHAR},
-		{"auth_name", LogicalType::VARCHAR},
-		{"auth_code", LogicalType::VARCHAR},
-		{"wkt", LogicalType::VARCHAR},
-		{"proj4", LogicalType::VARCHAR},
-		{"projjson", LogicalType::VARCHAR},
-	})},
+                {"name", LogicalType::VARCHAR},
+                {"auth_name", LogicalType::VARCHAR},
+                {"auth_code", LogicalType::VARCHAR},
+                {"wkt", LogicalType::VARCHAR},
+                {"proj4", LogicalType::VARCHAR},
+                {"projjson", LogicalType::VARCHAR},
+            })},
 });
 
 static LogicalType STANDARD_FIELD_TYPE = LogicalType::STRUCT({
@@ -60,7 +60,8 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	auto file_name = input.inputs[0].GetValue<string>();
 	auto result = make_uniq<GDALMetadataBindData>();
 
-	result->file_names = MultiFileReader::GetFileList(context, input.inputs[0], "gdal metadata", FileGlobOptions::ALLOW_EMPTY);
+	result->file_names =
+	    MultiFileReader::GetFileList(context, input.inputs[0], "gdal metadata", FileGlobOptions::ALLOW_EMPTY);
 
 	names.push_back("file_name");
 	return_types.push_back(LogicalType::VARCHAR);
@@ -108,17 +109,17 @@ static unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFu
 static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 	vector<Value> layer_values;
 
-	for(const auto &layer : dataset->GetLayers()) {
+	for (const auto &layer : dataset->GetLayers()) {
 		child_list_t<Value> layer_value_fields;
 
 		layer_value_fields.emplace_back("name", Value(layer->GetName()));
 		layer_value_fields.emplace_back("feature_count", Value(static_cast<int64_t>(layer->GetFeatureCount())));
 
 		vector<Value> geometry_fields;
-		for(const auto &field : layer->GetLayerDefn()->GetGeomFields()) {
+		for (const auto &field : layer->GetLayerDefn()->GetGeomFields()) {
 			child_list_t<Value> geometry_field_value_fields;
 			auto field_name = field->GetNameRef();
-			if(std::strlen(field_name) == 0) {
+			if (std::strlen(field_name) == 0) {
 				field_name = "geom";
 			}
 			geometry_field_value_fields.emplace_back("name", Value(field_name));
@@ -126,23 +127,23 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 			geometry_field_value_fields.emplace_back("nullable", Value(static_cast<bool>(field->IsNullable())));
 
 			auto crs = field->GetSpatialRef();
-			if(crs != nullptr) {
+			if (crs != nullptr) {
 				child_list_t<Value> crs_value_fields;
 				crs_value_fields.emplace_back("name", Value(crs->GetName()));
 				crs_value_fields.emplace_back("auth_name", Value(crs->GetAuthorityName(nullptr)));
 				crs_value_fields.emplace_back("auth_code", Value(crs->GetAuthorityCode(nullptr)));
 
-				char* wkt_ptr = nullptr;
+				char *wkt_ptr = nullptr;
 				crs->exportToWkt(&wkt_ptr);
 				crs_value_fields.emplace_back("wkt", wkt_ptr ? Value(wkt_ptr) : Value());
 				CPLFree(wkt_ptr);
 
-				char* proj4_ptr = nullptr;
+				char *proj4_ptr = nullptr;
 				crs->exportToProj4(&proj4_ptr);
 				crs_value_fields.emplace_back("proj4", proj4_ptr ? Value(proj4_ptr) : Value());
 				CPLFree(proj4_ptr);
 
-				char* projjson_ptr = nullptr;
+				char *projjson_ptr = nullptr;
 				crs->exportToPROJJSON(&projjson_ptr, nullptr);
 				crs_value_fields.emplace_back("projjson", projjson_ptr ? Value(projjson_ptr) : Value());
 				CPLFree(projjson_ptr);
@@ -152,10 +153,11 @@ static Value GetLayerData(GDALDatasetUniquePtr &dataset) {
 
 			geometry_fields.push_back(Value::STRUCT(geometry_field_value_fields));
 		}
-		layer_value_fields.emplace_back("geometry_fields", Value::LIST(GEOMETRY_FIELD_TYPE, std::move(geometry_fields)));
+		layer_value_fields.emplace_back("geometry_fields",
+		                                Value::LIST(GEOMETRY_FIELD_TYPE, std::move(geometry_fields)));
 
 		vector<Value> standard_fields;
-		for(const auto &field : layer->GetLayerDefn()->GetFields()) {
+		for (const auto &field : layer->GetLayerDefn()->GetFields()) {
 			child_list_t<Value> standard_field_value_fields;
 			standard_field_value_fields.emplace_back("name", Value(field->GetNameRef()));
 			standard_field_value_fields.emplace_back("type", Value(OGR_GetFieldTypeName(field->GetType())));
@@ -180,7 +182,7 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 
 	auto out_size = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bind_data.file_names.size() - state.current_file_idx);
 
-	for(idx_t out_idx = 0; out_idx < out_size; out_idx++, state.current_file_idx++) {
+	for (idx_t out_idx = 0; out_idx < out_size; out_idx++, state.current_file_idx++) {
 		auto file_name = bind_data.file_names[state.current_file_idx];
 		auto prefixed_file_name = GDALClientContextState::GetOrCreate(context).GetPrefix() + file_name;
 

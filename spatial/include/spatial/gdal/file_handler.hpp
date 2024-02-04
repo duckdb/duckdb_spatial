@@ -11,13 +11,14 @@ class DuckDBFileSystemHandler;
 
 class GDALClientContextState : public ClientContextState {
 	string client_prefix;
-	DuckDBFileSystemHandler* fs_handler;
+	DuckDBFileSystemHandler *fs_handler;
+
 public:
-	explicit GDALClientContextState(ClientContext& context);
+	explicit GDALClientContextState(ClientContext &context);
 	~GDALClientContextState() override;
 	void QueryEnd() override;
-	const string& GetPrefix() const;
-	static GDALClientContextState& GetOrCreate(ClientContext& context);
+	const string &GetPrefix() const;
+	static GDALClientContextState &GetOrCreate(ClientContext &context);
 };
 
 } // namespace gdal

@@ -57,7 +57,7 @@ struct GdalCopyFunction {
 };
 
 struct GdalMetadataFunction {
-    static void Register(DatabaseInstance &db);
+	static void Register(DatabaseInstance &db);
 };
 
 } // namespace gdal

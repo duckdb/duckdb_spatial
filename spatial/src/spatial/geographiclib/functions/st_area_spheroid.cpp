@@ -91,7 +91,7 @@ static double PolygonArea(const core::Polygon &poly, GeographicLib::PolygonArea 
 		}
 		double ring_area;
 		double _perimeter;
-        // We use the absolute value here so that the actual winding order of the polygon rings dont matter.
+		// We use the absolute value here so that the actual winding order of the polygon rings dont matter.
 		comp.Compute(false, true, _perimeter, ring_area);
 		if (ring_idx == 0) {
 			// Add outer ring
