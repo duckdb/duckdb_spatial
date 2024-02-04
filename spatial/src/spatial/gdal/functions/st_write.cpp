@@ -206,6 +206,10 @@ static unique_ptr<OGRFieldDefn> OGRFieldTypeFromLogicalType(const string &name, 
 	case LogicalTypeId::TIME:
 		return make_uniq<OGRFieldDefn>(name.c_str(), OFTTime);
 	case LogicalTypeId::TIMESTAMP:
+	case LogicalTypeId::TIMESTAMP_NS:
+	case LogicalTypeId::TIMESTAMP_MS:
+	case LogicalTypeId::TIMESTAMP_SEC:
+	case LogicalTypeId::TIMESTAMP_TZ:
 		return make_uniq<OGRFieldDefn>(name.c_str(), OFTDateTime);
 	case LogicalTypeId::LIST: {
 		auto child_type = ListType::GetChildType(type);
@@ -397,8 +401,71 @@ static void SetOgrFieldFromValue(OGRFeature *feature, int field_idx, const Logic
 		auto day = Date::ExtractDay(date);
 		feature->SetField(field_idx, year, month, day, 0, 0, 0, 0);
 	} break;
+	case LogicalTypeId::TIME: {
+		auto time = value.GetValueUnsafe<dtime_t>();
+		auto hour = static_cast<int>(time.micros / Interval::MICROS_PER_HOUR);
+		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) /Interval::MICROS_PER_MINUTE);
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		feature->SetField(field_idx, 0, 0, 0, hour, minute, second, 0);
+	} break;
+	case LogicalTypeId::TIMESTAMP: {
+		auto timestamp = value.GetValueUnsafe<timestamp_t>();
+		auto date = Timestamp::GetDate(timestamp);
+		auto time = Timestamp::GetTime(timestamp);
+		auto year = Date::ExtractYear(date);
+		auto month = Date::ExtractMonth(date);
+		auto day = Date::ExtractDay(date);
+		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
+		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
+	} break;
+	case LogicalTypeId::TIMESTAMP_NS: {
+		auto timestamp = value.GetValueUnsafe<timestamp_t>();
+		timestamp = Timestamp::FromEpochNanoSeconds(timestamp.value);
+		auto date = Timestamp::GetDate(timestamp);
+		auto time = Timestamp::GetTime(timestamp);
+		auto year = Date::ExtractYear(date);
+		auto month = Date::ExtractMonth(date);
+		auto day = Date::ExtractDay(date);
+		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
+		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
+	} break;
+	case LogicalTypeId::TIMESTAMP_MS: {
+		auto timestamp = value.GetValueUnsafe<timestamp_t>();
+		timestamp = Timestamp::FromEpochMs(timestamp.value);
+		auto date = Timestamp::GetDate(timestamp);
+		auto time = Timestamp::GetTime(timestamp);
+		auto year = Date::ExtractYear(date);
+		auto month = Date::ExtractMonth(date);
+		auto day = Date::ExtractDay(date);
+		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
+		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
+	} break;
+	case LogicalTypeId::TIMESTAMP_SEC: {
+		auto timestamp = value.GetValueUnsafe<timestamp_t>();
+		timestamp = Timestamp::FromEpochSeconds(timestamp.value);
+		auto date = Timestamp::GetDate(timestamp);
+		auto time = Timestamp::GetTime(timestamp);
+		auto year = Date::ExtractYear(date);
+		auto month = Date::ExtractMonth(date);
+		auto day = Date::ExtractDay(date);
+		auto hour = static_cast<int>((time.micros % Interval::MICROS_PER_DAY) / Interval::MICROS_PER_HOUR);
+		auto minute = static_cast<int>((time.micros % Interval::MICROS_PER_HOUR) / Interval::MICROS_PER_MINUTE);
+		auto second = static_cast<float>(static_cast<double>(time.micros % Interval::MICROS_PER_MINUTE) / static_cast<double>(Interval::MICROS_PER_SEC));
+		feature->SetField(field_idx, year, month, day, hour, minute, second, 0);
+	} break;
+	case LogicalTypeId::TIMESTAMP_TZ: {
+		// Not sure what to with the timezone, just let GDAL parse it?
+		auto timestamp = value.GetValueUnsafe<timestamp_t>();
+		auto time_str = Timestamp::ToString(timestamp);
+		feature->SetField(field_idx, time_str.c_str());
+	} break;
 	default:
-		// TODO: Add time types
 		// TODO: Handle list types
 		throw NotImplementedException("Unsupported field type");
 	}
