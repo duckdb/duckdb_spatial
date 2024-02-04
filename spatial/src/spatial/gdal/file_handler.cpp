@@ -181,6 +181,13 @@ public:
 			return -1;
 		}
 
+#ifdef _WIN32
+		if(fs.DirectoryExists(file_name)) {
+			pstatbuf->st_mode = S_IFDIR;
+			return 0;
+		}
+#endif
+
 		unique_ptr<FileHandle> file;
 		try {
 			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ);
