@@ -39,7 +39,7 @@ struct WKBSpatialFilter : SpatialFilter {
 	explicit WKBSpatialFilter(const string &wkb_p) : SpatialFilter(SpatialFilterType::Wkb), geom(nullptr) {
 		auto ok = OGR_G_CreateFromWkb(wkb_p.c_str(), nullptr, &geom, (int)wkb_p.size());
 		if (ok != OGRERR_NONE) {
-			throw Exception("WKBSpatialFilter: could not create geometry from WKB");
+			throw InvalidInputException("WKBSpatialFilter: could not create geometry from WKB");
 		}
 	}
 	~WKBSpatialFilter() {

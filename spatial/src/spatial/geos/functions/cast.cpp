@@ -6,6 +6,7 @@
 
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/operator/cast_operators.hpp"
+#include "duckdb/common/error_data.hpp"
 
 namespace spatial {
 
@@ -54,9 +55,10 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 				    throw InvalidInputException("3D/4D geometries are not supported");
 			    }
 			    return lstate.ctx.Serialize(result, geos_geom);
-		    } catch (InvalidInputException &error) {
+		    } catch (InvalidInputException &e) {
 			    if (success) {
 				    success = false;
+				    ErrorData error(e);
 				    HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
 			    }
 			    mask.SetInvalid(idx);

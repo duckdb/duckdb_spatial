@@ -57,14 +57,14 @@ struct GlobalState : public GlobalFunctionData {
 //===--------------------------------------------------------------------===//
 // Bind
 //===--------------------------------------------------------------------===//
-static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &info, const vector<string> &names,
+static unique_ptr<FunctionData> Bind(ClientContext &context, CopyFunctionBindInput &input, const vector<string> &names,
                                      const vector<LogicalType> &sql_types) {
 
-	auto bind_data = make_uniq<BindData>(info.file_path, sql_types, names);
+	auto bind_data = make_uniq<BindData>(input.info.file_path, sql_types, names);
 
 	// check all the options in the copy info
 	// and set
-	for (auto &option : info.options) {
+	for (auto &option : input.info.options) {
 		if (StringUtil::Upper(option.first) == "DRIVER") {
 			auto set = option.second.front();
 			if (set.type().id() == LogicalTypeId::VARCHAR) {
