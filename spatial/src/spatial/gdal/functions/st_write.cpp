@@ -57,14 +57,14 @@ struct GlobalState : public GlobalFunctionData {
 //===--------------------------------------------------------------------===//
 // Bind
 //===--------------------------------------------------------------------===//
-static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &info, const vector<string> &names,
+static unique_ptr<FunctionData> Bind(ClientContext &context, CopyFunctionBindInput &input, const vector<string> &names,
                                      const vector<LogicalType> &sql_types) {
 
-	auto bind_data = make_uniq<BindData>(info.file_path, sql_types, names);
+	auto bind_data = make_uniq<BindData>(input.info.file_path, sql_types, names);
 
 	// check all the options in the copy info
 	// and set
-	for (auto &option : info.options) {
+	for (auto &option : input.info.options) {
 		if (StringUtil::Upper(option.first) == "DRIVER") {
 			auto set = option.second.front();
 			if (set.type().id() == LogicalTypeId::VARCHAR) {
@@ -143,6 +143,26 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, const CopyInfo &inf
 		// Default to the base name of the file
 		auto &fs = FileSystem::GetFileSystem(context);
 		bind_data->layer_name = fs.ExtractBaseName(bind_data->file_path);
+	}
+
+	auto driver = GetGDALDriverManager()->GetDriverByName(bind_data->driver_name.c_str());
+	if (!driver) {
+		throw BinderException("Unknown driver '%s'", bind_data->driver_name);
+	}
+
+	// Try get the file extension from the driver
+	auto file_ext = driver->GetMetadataItem(GDAL_DMD_EXTENSION);
+	if (file_ext) {
+		input.file_extension = file_ext;
+	} else {
+		// Space separated list of file extensions
+		auto file_exts = driver->GetMetadataItem(GDAL_DMD_EXTENSIONS);
+		if (file_exts) {
+			auto exts = StringUtil::Split(file_exts, ' ');
+			if (!exts.empty()) {
+				input.file_extension = exts[0];
+			}
+		}
 	}
 
 	// Driver specific checks

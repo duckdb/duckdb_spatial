@@ -182,7 +182,7 @@ public:
 		}
 
 #ifdef _WIN32
-		if(fs.DirectoryExists(file_name)) {
+		if (fs.DirectoryExists(file_name)) {
 			pstatbuf->st_mode = S_IFDIR;
 			return 0;
 		}
