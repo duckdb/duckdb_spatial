@@ -1,17 +1,17 @@
 #
 # This workflow calls the main distribution pipeline from DuckDB to build, test and (optionally) release the extension
 #
-name: Main Extension Distribution Pipeline
+name: Stable Extension Distribution Pipeline
 on:
   pull_request:
     branches:
-      - main
+      - v0.10.0
     paths-ignore:
       - '**/README.md'
       - 'doc/**'
   push:
     branches:
-      - main
+      - v0.10.0
     paths-ignore:
       - '**/README.md'
       - 'doc/**'
@@ -27,7 +27,7 @@ jobs:
     uses: duckdb/duckdb/.github/workflows/_extension_distribution.yml@4145ec87294a4df8fee72e3cdb52f5b0ed02153b
     with:
       vcpkg_commit: a42af01b72c28a8e1d7b48107b33e4f286a55ef6
-      duckdb_version: main
+      duckdb_version: v0.10.0
       extension_name: spatial
 
   duckdb-stable-deploy:
@@ -36,6 +36,6 @@ jobs:
     uses: ./.github/workflows/_extension_deploy.yml
     secrets: inherit
     with:
-      duckdb_version: main
+      duckdb_version: v0.10.0
       extension_name: spatial
       deploy_latest: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
