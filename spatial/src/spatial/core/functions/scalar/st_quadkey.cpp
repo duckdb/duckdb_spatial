@@ -1,14 +1,13 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/common/constants.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
 
-#define _USE_MATH_DEFINES
 #include <cmath>
-#include "math.h"
 
 namespace spatial {
 
@@ -19,10 +18,10 @@ static void GetQuadKey(double lon, double lat, int32_t level, char *buffer) {
 	lat = std::max(-85.05112878, std::min(85.05112878, lat));
 	lon = std::max(-180.0, std::min(180.0, lon));
 
-	double lat_rad = lat * M_PI / 180.0;
+	double lat_rad = lat * PI / 180.0;
 	auto x = static_cast<int32_t>((lon + 180.0) / 360.0 * (1 << level));
 	auto y =
-	    static_cast<int32_t>((1.0 - std::log(std::tan(lat_rad) + 1.0 / std::cos(lat_rad)) / M_PI) / 2.0 * (1 << level));
+	    static_cast<int32_t>((1.0 - std::log(std::tan(lat_rad) + 1.0 / std::cos(lat_rad)) / PI) / 2.0 * (1 << level));
 
 	for (int i = level; i > 0; --i) {
 		char digit = '0';
