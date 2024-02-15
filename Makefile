@@ -5,10 +5,15 @@ all: release
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJ_DIR := $(dir $(MKFILE_PATH))
 
+TEST_PATH="/test/unittest"
+DUCKDB_PATH="/duckdb"
+
+# For non-MinGW windows the path is slightly different
 ifeq ($(OS),Windows_NT)
+ifneq ($(CXX),g++)
 	TEST_PATH="/test/Release/unittest.exe"
-else
-	TEST_PATH="/test/unittest"
+	DUCKDB_PATH="/Release/duckdb.exe"
+endif
 endif
 
 #### OSX config
