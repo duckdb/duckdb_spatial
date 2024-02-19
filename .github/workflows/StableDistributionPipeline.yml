@@ -38,4 +38,4 @@ jobs:
     with:
       duckdb_version: v0.10.0
       extension_name: spatial
-      deploy_latest: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
+      deploy_latest: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/v0.10.0' }}
