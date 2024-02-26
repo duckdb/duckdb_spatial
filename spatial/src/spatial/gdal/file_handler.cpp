@@ -164,11 +164,23 @@ public:
 			auto file = fs.OpenFile(file_name, flags);
 			return new DuckDBFileHandle(std::move(file));
 		} catch (std::exception &ex) {
-			if (bSetError) {
-				VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
+			// Failed to open file via DuckDB File System. If this doesnt have a VSI prefix we can return an error here.
+			if (strncmp(file_name, "/vsi", 4) != 0) {
+				if (bSetError) {
+					VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
+				}
+				return nullptr;
 			}
-			return nullptr;
 		}
+
+		VSIFilesystemHandler *poFSHandler =
+			VSIFileManager::GetHandler(file_name);
+
+		VSIVirtualHandle *poVirtualHandle =
+			poFSHandler->Open(file_name, access);
+
+		return poVirtualHandle;
+
 	}
 
 	int Stat(const char *prefixed_file_name, VSIStatBufL *pstatbuf, int n_flags) override {
