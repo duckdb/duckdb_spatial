@@ -2,7 +2,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/types.hpp"
 
@@ -14,20 +13,12 @@ static unique_ptr<FunctionData> GeometryTypeFunctionBind(ClientContext &context,
                                                          vector<unique_ptr<Expression>> &arguments) {
 	// Create an enum type for all geometry types
 	// Ensure that these are in the same order as the GeometryType enum
-	vector<string_t> enum_values = {"POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
+	vector<string> enum_values = {"POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
 	                                "GEOMETRYCOLLECTION",
 	                                // or...
 	                                "UNKNOWN"};
 
-	auto varchar_vector = Vector(LogicalType::VARCHAR, enum_values.size());
-	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
-	for (idx_t i = 0; i < enum_values.size(); i++) {
-		auto str = enum_values[i];
-		varchar_data[i] = str.IsInlined() ? str : StringVector::AddString(varchar_vector, str);
-	}
-	auto enum_type = LogicalType::ENUM("GEOMETRY_TYPE", varchar_vector, enum_values.size());
-	enum_type.SetAlias("GEOMETRY_TYPE");
-	bound_function.return_type = enum_type;
+	bound_function.return_type = GeoTypes::CreateEnumType("GEOMETRY_TYPE", enum_values);
 
 	return nullptr;
 }
