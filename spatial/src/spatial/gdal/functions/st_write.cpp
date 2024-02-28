@@ -26,8 +26,8 @@ struct BindData : public TableFunctionData {
 	vector<string> field_names;
 	string driver_name;
 	string layer_name;
-	vector<string> dataset_creation_options;
-	vector<string> layer_creation_options;
+	CPLStringList dataset_creation_options;
+    CPLStringList layer_creation_options;
 	string target_srs;
 	OGRwkbGeometryType geometry_type = wkbUnknown;
 
@@ -85,7 +85,8 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyFunctionBindInp
 				if (s.type().id() != LogicalTypeId::VARCHAR) {
 					throw BinderException("Layer creation options must be strings");
 				}
-				bind_data->layer_creation_options.push_back(s.GetValue<string>());
+                auto str = s.GetValue<string>();
+                bind_data->layer_creation_options.AddString(str.c_str());
 			}
 		} else if (StringUtil::Upper(option.first) == "DATASET_CREATION_OPTIONS") {
 			auto set = option.second;
@@ -93,7 +94,8 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyFunctionBindInp
 				if (s.type().id() != LogicalTypeId::VARCHAR) {
 					throw BinderException("Dataset creation options must be strings");
 				}
-				bind_data->dataset_creation_options.push_back(s.GetValue<string>());
+                auto str = s.GetValue<string>();
+				bind_data->dataset_creation_options.AddString(str.c_str());
 			}
 		} else if (StringUtil::Upper(option.first) == "GEOMETRY_TYPE") {
 			auto &set = option.second.front();
@@ -282,23 +284,11 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	}
 
 	// Create the dataset
-	auto data_creation_options = vector<char const *>();
-	char **dco = nullptr;
-	for (auto &option : gdal_data.dataset_creation_options) {
-		dco = CSLAddString(dco, option.c_str());
-	}
-
 	auto &client_ctx = GDALClientContextState::GetOrCreate(context);
 	auto prefixed_path = client_ctx.GetPrefix() + file_path;
-	auto dataset = GDALDatasetUniquePtr(driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, dco));
+	auto dataset = GDALDatasetUniquePtr(driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, gdal_data.dataset_creation_options));
 	if (!dataset) {
 		throw IOException("Could not open dataset");
-	}
-	CSLDestroy(dco);
-
-	char **lco = nullptr;
-	for (auto &option : gdal_data.layer_creation_options) {
-		lco = CSLAddString(lco, option.c_str());
 	}
 
 	// Set the SRS if provided
@@ -310,11 +300,10 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	// so we have to pass nullptr if we want the default behavior.
 	OGRSpatialReference *srs_ptr = gdal_data.target_srs.empty() ? nullptr : &srs;
 
-	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, gdal_data.geometry_type, lco);
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, gdal_data.geometry_type, gdal_data.layer_creation_options);
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
-	CSLDestroy(lco);
 
 	// Create the layer field definitions
 	idx_t geometry_field_count = 0;
