@@ -177,16 +177,17 @@ public:
 				}
 				return nullptr;
 			}
+            // Fall back to GDAL instead
+            auto handler = VSIFileManager::GetHandler(file_name);
+            if(handler) {
+                return handler->Open(file_name, access);
+            } else {
+                if (bSetError) {
+                    VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
+                }
+                return nullptr;
+            }
 		}
-
-		VSIFilesystemHandler *poFSHandler =
-			VSIFileManager::GetHandler(file_name);
-
-		VSIVirtualHandle *poVirtualHandle =
-			poFSHandler->Open(file_name, access);
-
-		return poVirtualHandle;
-
 	}
 
 	int Stat(const char *prefixed_file_name, VSIStatBufL *pstatbuf, int n_flags) override {
