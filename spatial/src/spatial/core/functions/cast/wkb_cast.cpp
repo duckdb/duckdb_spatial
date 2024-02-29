@@ -17,7 +17,7 @@ namespace core {
 static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<string_t, geometry_t>(source, result, count, [&](string_t input) {
 		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
 		return lstate.factory.Serialize(result, geometry);
 	});
@@ -31,7 +31,7 @@ static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastP
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		auto size = WKBWriter::GetRequiredSize(geometry);
 		auto str = StringVector::EmptyString(result, size);

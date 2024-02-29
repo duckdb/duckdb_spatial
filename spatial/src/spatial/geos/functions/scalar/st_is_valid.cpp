@@ -63,7 +63,7 @@ static bool IsValidForGeos(Geometry &geometry) {
 
 static void IsValidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
-	UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(), [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, bool>(args.data[0], result, args.size(), [&](geometry_t input) {
 		auto geom = lstate.factory.Deserialize(input);
 
 		// double check before calling into geos

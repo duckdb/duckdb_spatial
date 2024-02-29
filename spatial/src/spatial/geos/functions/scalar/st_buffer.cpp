@@ -21,8 +21,8 @@ static void BufferFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &left = args.data[0];
 	auto &right = args.data[1];
 
-	BinaryExecutor::Execute<string_t, double, string_t>(
-	    left, right, result, args.size(), [&](string_t &geometry_blob, double radius) {
+	BinaryExecutor::Execute<geometry_t, double, geometry_t>(
+	    left, right, result, args.size(), [&](geometry_t &geometry_blob, double radius) {
 		    auto geos_geom = lstate.ctx.Deserialize(geometry_blob);
 		    auto boundary =
 		        make_uniq_geos(lstate.ctx.GetCtx(), GEOSBuffer_r(lstate.ctx.GetCtx(), geos_geom.get(), radius, 8));
@@ -37,8 +37,8 @@ static void BufferFunctionWithSegments(DataChunk &args, ExpressionState &state, 
 	auto &right = args.data[1];
 	auto &segments = args.data[2];
 
-	TernaryExecutor::Execute<string_t, double, int32_t, string_t>(
-	    left, right, segments, result, args.size(), [&](string_t &geometry_blob, double radius, int32_t segments) {
+	TernaryExecutor::Execute<geometry_t, double, int32_t, geometry_t>(
+	    left, right, segments, result, args.size(), [&](geometry_t &geometry_blob, double radius, int32_t segments) {
 		    auto geos_geom = lstate.ctx.Deserialize(geometry_blob);
 		    auto boundary = make_uniq_geos(lstate.ctx.GetCtx(),
 		                                   GEOSBuffer_r(lstate.ctx.GetCtx(), geos_geom.get(), radius, segments));
@@ -62,9 +62,9 @@ static T TryParseStringArgument(const char* name, const vector<string> &keys, co
 static void BufferFunctionWithArgs(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 
-    SenaryExecutor::Execute<string_t, double, int32_t, string_t, string_t, double, string_t>(
+    SenaryExecutor::Execute<geometry_t, double, int32_t, string_t, string_t, double, geometry_t>(
             args, result,
-            [&](const string_t &geometry_blob, double radius, int32_t segments, const string_t &cap_style_str, const string_t &join_style_str, double mitre_limit) {
+            [&](const geometry_t &geometry_blob, double radius, int32_t segments, const string_t &cap_style_str, const string_t &join_style_str, double mitre_limit) {
                 auto geos_geom = lstate.ctx.Deserialize(geometry_blob);
 
                 auto cap_style = TryParseStringArgument<GEOSBufCapStyles>("cap style",
@@ -82,7 +82,6 @@ static void BufferFunctionWithArgs(DataChunk &args, ExpressionState &state, Vect
                 return lstate.ctx.Serialize(result, buffer_ptr);
             });
 }
-
 
 
 void GEOSScalarFunctions::RegisterStBuffer(DatabaseInstance &db) {

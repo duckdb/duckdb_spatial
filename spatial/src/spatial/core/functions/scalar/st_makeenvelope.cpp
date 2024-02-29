@@ -21,7 +21,7 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &max_y_vec = args.data[3];
 
 	using DOUBLE_TYPE = PrimitiveType<double>;
-	using GEOMETRY_TYPE = PrimitiveType<string_t>;
+	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 
 	GenericExecutor::ExecuteQuaternary<DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, GEOMETRY_TYPE>(
 	    min_x_vec, min_y_vec, max_x_vec, max_y_vec, result, count,

@@ -20,19 +20,19 @@ static void ExecuteContainsProperlyPrepared(GEOSFunctionLocalState &lstate, Vect
 	auto &ctx = lstate.ctx.GetCtx();
 
 	if (left.GetVectorType() == VectorType::CONSTANT_VECTOR && right.GetVectorType() != VectorType::CONSTANT_VECTOR) {
-		auto &left_blob = FlatVector::GetData<string_t>(left)[0];
+		auto &left_blob = FlatVector::GetData<geometry_t>(left)[0];
 		auto left_geom = lstate.ctx.Deserialize(left_blob);
 		auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 
-		UnaryExecutor::Execute<string_t, bool>(right, result, count, [&](string_t &right_blob) {
+		UnaryExecutor::Execute<geometry_t, bool>(right, result, count, [&](geometry_t &right_blob) {
 			auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			auto ok = GEOSPreparedContainsProperly_r(ctx, left_prepared.get(), right_geometry.get());
 			return ok == 1;
 		});
 	} else {
 		// ContainsProperly only has a prepared version, so we just prepare the left one always
-		BinaryExecutor::Execute<string_t, string_t, bool>(
-		    left, right, result, count, [&](string_t &left_blob, string_t &right_blob) {
+		BinaryExecutor::Execute<geometry_t, geometry_t, bool>(
+		    left, right, result, count, [&](geometry_t &left_blob, geometry_t &right_blob) {
 			    auto left_geometry = lstate.ctx.Deserialize(left_blob);
 			    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 

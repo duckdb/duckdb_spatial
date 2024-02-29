@@ -16,7 +16,7 @@ namespace core {
 //------------------------------------------------------------------------------
 static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	using POINT_TYPE = StructTypeBinary<double, double>;
-	using GEOMETRY_TYPE = PrimitiveType<string_t>;
+	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
@@ -33,7 +33,7 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 //------------------------------------------------------------------------------
 static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	using POINT_TYPE = StructTypeBinary<double, double>;
-	using GEOMETRY_TYPE = PrimitiveType<string_t>;
+	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
@@ -89,12 +89,12 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	idx_t total_coords = 0;
-	UnaryExecutor::Execute<string_t, list_entry_t>(source, result, count, [&](string_t &geom) {
-		auto geometry = lstate.factory.Deserialize(geom);
-		if (geometry.Type() != GeometryType::LINESTRING) {
-			throw ConversionException("Cannot cast non-linestring GEOMETRY to LINESTRING_2D");
-		}
+	UnaryExecutor::Execute<geometry_t, list_entry_t>(source, result, count, [&](geometry_t &geom) {
+        if (geom.GetType() != GeometryType::LINESTRING) {
+            throw ConversionException("Cannot cast non-linestring GEOMETRY to LINESTRING_2D");
+        }
 
+		auto geometry = lstate.factory.Deserialize(geom);
 		auto &line = geometry.GetLineString();
 		auto line_size = line.Count();
 
@@ -154,12 +154,11 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 	idx_t total_rings = 0;
 	idx_t total_coords = 0;
 
-	UnaryExecutor::Execute<string_t, list_entry_t>(source, result, count, [&](string_t &geom) {
+	UnaryExecutor::Execute<geometry_t, list_entry_t>(source, result, count, [&](geometry_t &geom) {
+        if(geom.GetType() != GeometryType::POLYGON) {
+            throw ConversionException("Cannot cast non-polygon GEOMETRY to POLYGON_2D");
+        }
 		auto geometry = lstate.factory.Deserialize(geom);
-		if (geometry.Type() != GeometryType::POLYGON) {
-			throw ConversionException("Cannot cast non-linestring GEOMETRY to POLYGON_2D");
-		}
-
 		auto &poly = geometry.GetPolygon();
 		auto poly_size = poly.Count();
 		auto poly_entry = list_entry_t(total_rings, poly_size);
@@ -206,7 +205,7 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
 
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
-	using GEOMETRY_TYPE = PrimitiveType<string_t>;
+	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 	uint32_t capacity = 5; // 4 vertices + 1 for closing the polygon
 	GenericExecutor::ExecuteUnary<BOX_TYPE, GEOMETRY_TYPE>(source, result, count, [&](BOX_TYPE &box) {
 		// Don't bother resetting the allocator, boxes take up a fixed amount of space anyway

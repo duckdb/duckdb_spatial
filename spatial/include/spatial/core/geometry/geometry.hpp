@@ -10,6 +10,30 @@ namespace spatial {
 
 namespace core {
 
+// A serialized geometry
+class geometry_t {
+private:
+    string_t data;
+public:
+
+    geometry_t() = default;
+    // NOLINTNEXTLINE
+    explicit geometry_t(string_t data) : data(data) { }
+
+    // NOLINTNEXTLINE
+    operator string_t() const { return data; }
+
+    GeometryType GetType() const { return Load<GeometryType>(const_data_ptr_cast(data.GetPrefix())); }
+    GeometryProperties GetProperties() const { return Load<GeometryProperties>(const_data_ptr_cast(data.GetPrefix() + 1)); }
+    uint16_t GetHash() const { return Load<uint16_t>(const_data_ptr_cast(data.GetPrefix() + 2)); }
+};
+
+static_assert(sizeof(geometry_t) == sizeof(string_t), "geometry_t should be the same size as string_t");
+
+//------------------------------------------------------------------------------
+// Geometry Objects
+//------------------------------------------------------------------------------
+
 template <class T>
 class IteratorPair {
 	T *begin_ptr;
@@ -428,41 +452,6 @@ RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
 	return result;
 }
 
-class GeometryHeader {
-public:
-	GeometryType type;
-	GeometryProperties properties;
-	uint16_t hash;
-	explicit GeometryHeader() : type(GeometryType::POINT), properties(GeometryProperties()), hash(0) {
-	}
-
-	explicit GeometryHeader(GeometryType type, GeometryProperties properties, uint16_t hash)
-	    : type(type), properties(properties), hash(hash) {
-	}
-
-	void Serialize(data_ptr_t &dst) const {
-		Store<GeometryType>(type, dst);
-		dst += sizeof(GeometryType);
-		Store<GeometryProperties>(properties, dst);
-		dst += sizeof(GeometryProperties);
-		Store<uint16_t>(hash, dst);
-		dst += sizeof(uint16_t);
-	}
-
-	// Deserialize a GeometryHeader from a string prefix
-	static GeometryHeader Get(const string_t &blob) {
-		auto prefix = const_data_ptr_cast(blob.GetPrefix());
-		auto header = Load<GeometryHeader>(prefix);
-		return header;
-	}
-
-	// Deserialize a GeometryHeader from a Cursor
-	static GeometryHeader Deserialize(Cursor &cursor) {
-		return cursor.Read<GeometryHeader>();
-	}
-};
-static_assert(sizeof(GeometryHeader) == 4, "GeometryHeader should be 4 bytes");
-static_assert(sizeof(GeometryHeader) == string_t::PREFIX_BYTES, "GeometryHeader should fit in string_t prefix");
 } // namespace core
 
 } // namespace spatial

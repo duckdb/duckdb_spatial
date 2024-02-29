@@ -125,7 +125,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, false);
 
-	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<core::geometry_t, double>(input, result, count, [&](core::geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		return GeometryPerimeter(geometry, comp);
 	});

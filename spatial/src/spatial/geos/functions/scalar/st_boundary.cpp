@@ -18,12 +18,12 @@ static void BoundaryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-	    args.data[0], result, args.size(), [&](string_t &geometry_blob, ValidityMask &mask, idx_t i) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, geometry_t>(
+	    args.data[0], result, args.size(), [&](geometry_t &geometry_blob, ValidityMask &mask, idx_t i) {
 		    auto geom = lstate.ctx.Deserialize(geometry_blob);
 		    if (GEOSGeomTypeId_r(lstate.ctx.GetCtx(), geom.get()) == GEOS_GEOMETRYCOLLECTION) {
 			    mask.SetInvalid(i);
-			    return string_t();
+			    return geometry_t { };
 		    }
 
 		    auto boundary = make_uniq_geos(lstate.ctx.GetCtx(), GEOSBoundary_r(lstate.ctx.GetCtx(), geom.get()));

@@ -25,7 +25,7 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input_hex) {
+	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input_hex) {
 		auto hex_size = input_hex.GetSize();
 		auto hex_ptr = const_data_ptr_cast(input_hex.GetData());
 

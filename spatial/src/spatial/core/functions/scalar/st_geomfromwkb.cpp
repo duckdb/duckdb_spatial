@@ -271,7 +271,7 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
 		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
 		return lstate.factory.Serialize(result, geometry);
 	});

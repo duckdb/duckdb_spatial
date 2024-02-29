@@ -17,8 +17,8 @@ using namespace spatial::core;
 static void EnvelopeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-	    args.data[0], result, args.size(), [&](string_t &geometry_blob, ValidityMask &mask, idx_t i) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, geometry_t>(
+	    args.data[0], result, args.size(), [&](geometry_t &geometry_blob, ValidityMask &mask, idx_t i) {
 		    auto geometry = lstate.ctx.Deserialize(geometry_blob);
 		    auto envelope = make_uniq_geos(ctx, GEOSEnvelope_r(ctx, geometry.get()));
 		    return lstate.ctx.Serialize(result, envelope);

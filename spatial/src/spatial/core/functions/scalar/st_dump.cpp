@@ -31,7 +31,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			continue;
 		}
 
-		auto geometry_blob = UnifiedVectorFormat::GetData<string_t>(geom_format)[in_row_idx];
+		auto geometry_blob = UnifiedVectorFormat::GetData<geometry_t>(geom_format)[in_row_idx];
 		auto geometry = lstate.factory.Deserialize(geometry_blob);
 
 		vector<std::tuple<Geometry, vector<int32_t>>> stack;
@@ -101,7 +101,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 		auto &result_geom_vec = result_list_children[0];
 		auto &result_path_vec = result_list_children[1];
 
-		auto geom_data = FlatVector::GetData<string_t>(*result_geom_vec);
+		auto geom_data = FlatVector::GetData<geometry_t>(*result_geom_vec);
 		for (idx_t i = 0; i < geom_length; i++) {
 			// Write the geometry
 			auto &item_blob = std::get<0>(items[i]);

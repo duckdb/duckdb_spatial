@@ -95,12 +95,11 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-	    input, result, count, [&](string_t input, ValidityMask &validity, idx_t idx) {
-		    auto header = GeometryHeader::Get(input);
-		    if (header.type != GeometryType::POLYGON) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, geometry_t>(
+	    input, result, count, [&](geometry_t input, ValidityMask &validity, idx_t idx) {
+		    if (input.GetType() != GeometryType::POLYGON) {
 			    validity.SetInvalid(idx);
-			    return string_t();
+			    return geometry_t {};
 		    }
 
 		    auto polygon = lstate.factory.Deserialize(input);

@@ -20,9 +20,8 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, int32_t>(input, result, count, [&](string_t input) {
-		auto header = GeometryHeader::Get(input);
-		switch (header.type) {
+	UnaryExecutor::Execute<geometry_t, int32_t>(input, result, count, [&](geometry_t input) {
+		switch (input.GetType()) {
 		case GeometryType::MULTIPOINT: {
 			auto mpoint = ctx.factory.Deserialize(input).GetMultiPoint();
 			return static_cast<int32_t>(mpoint.Count());

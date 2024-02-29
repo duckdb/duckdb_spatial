@@ -21,7 +21,7 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		auto size = WKBWriter::GetRequiredSize(geometry);
 		auto str = StringVector::EmptyString(result, size);

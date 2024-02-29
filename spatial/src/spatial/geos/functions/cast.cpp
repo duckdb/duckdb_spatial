@@ -32,8 +32,8 @@ static bool GeometryToTextCast(Vector &source, Vector &result, idx_t count, Cast
 	auto writer = lstate.ctx.CreateWKTWriter();
 	writer.SetTrim(true);
 
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t &wkt) {
-		auto geom = lstate.ctx.Deserialize(wkt);
+	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t &input) {
+		auto geom = lstate.ctx.Deserialize(input);
 		return writer.Write(geom, result);
 	});
 
@@ -46,7 +46,7 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 	auto reader = lstate.ctx.CreateWKTReader();
 
 	bool success = true;
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    source, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
 			    auto geos_geom = reader.Read(wkt);
@@ -62,7 +62,7 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 				    HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
 			    }
 			    mask.SetInvalid(idx);
-			    return string_t();
+			    return geometry_t { };
 		    }
 	    });
 	return success;

@@ -148,8 +148,8 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
 	BoundingBox bbox;
 
-	UnaryExecutor::ExecuteWithNulls<string_t, double>(
-	    input, result, count, [&](string_t blob, ValidityMask &mask, idx_t idx) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, double>(
+	    input, result, count, [&](geometry_t blob, ValidityMask &mask, idx_t idx) {
 		    if (GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
 			    if (MIN && N == 0) {
 				    return static_cast<double>(bbox.minx);
@@ -185,10 +185,9 @@ static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vect
 
 	BoundingBox bbox;
 
-	UnaryExecutor::ExecuteWithNulls<string_t, double>(
-	    input, result, count, [&](string_t blob, ValidityMask &mask, idx_t idx) {
-		    auto header = GeometryHeader::Get(blob);
-		    if (header.type != GeometryType::POINT) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, double>(
+	    input, result, count, [&](geometry_t blob, ValidityMask &mask, idx_t idx) {
+		    if (blob.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_X/ST_Y only supports POINT geometries");
 		    }
 		    if (!GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {

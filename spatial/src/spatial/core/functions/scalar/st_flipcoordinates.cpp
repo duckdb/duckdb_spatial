@@ -234,7 +234,7 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		auto geom = lstate.factory.Deserialize(input);
 		auto copy = lstate.factory.CopyGeometry(geom);
 		FlipGeometry(copy);

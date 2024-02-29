@@ -33,10 +33,9 @@ static void GeometryInteriorRingsFunction(DataChunk &args, ExpressionState &stat
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::ExecuteWithNulls<string_t, uint32_t>(
-	    input, result, count, [&](string_t input, ValidityMask &validity, idx_t idx) {
-		    auto header = GeometryHeader::Get(input);
-		    if (header.type != GeometryType::POLYGON) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, uint32_t>(
+	    input, result, count, [&](geometry_t input, ValidityMask &validity, idx_t idx) {
+		    if (input.GetType() != GeometryType::POLYGON) {
 			    validity.SetInvalid(idx);
 			    return 0;
 		    }

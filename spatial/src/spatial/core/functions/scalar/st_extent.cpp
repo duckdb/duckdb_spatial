@@ -26,7 +26,7 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 
 	UnifiedVectorFormat input_vdata;
 	input.ToUnifiedFormat(count, input_vdata);
-	auto input_data = reinterpret_cast<string_t *>(input_vdata.data);
+	auto input_data = reinterpret_cast<geometry_t *>(input_vdata.data);
 
 	BoundingBox bbox;
 

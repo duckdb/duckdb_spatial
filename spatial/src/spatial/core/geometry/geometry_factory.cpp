@@ -159,7 +159,7 @@ enum class SerializedGeometryType : uint32_t {
 //    NumGeometries (4 bytes)
 //    Geometries (variable length)
 
-string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
+geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	auto geom_size = GetSerializedSize(geometry);
 
 	auto type = geometry.Type();
@@ -173,15 +173,16 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 	for (uint32_t i = 0; i < sizeof(uint32_t); i++) {
 		hash ^= (geom_size >> (i * 8)) & 0xFF;
 	}
-	GeometryHeader header(type, properties, hash);
 
-	auto header_size = sizeof(GeometryHeader);
+	auto header_size = 4;
 	auto size = header_size + 4 + (has_bbox ? 16 : 0) + geom_size; // + 4 for padding, + 16 for bbox
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor cursor(blob);
 
 	// Write the header
-	cursor.Write(header);
+	cursor.Write<GeometryType>(type);
+    cursor.Write<GeometryProperties>(properties);
+    cursor.Write<uint16_t>(hash);
 	// Pad with 4 bytes (we might want to use this to store SRID in the future)
 	cursor.Write<uint32_t>(0);
 
@@ -246,7 +247,7 @@ string_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
 		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxy));
 	}
 	blob.Finalize();
-	return blob;
+	return geometry_t(blob);
 }
 
 void GeometryFactory::SerializePoint(Cursor &cursor, const Point &point, BoundingBox &bbox) {
@@ -379,12 +380,16 @@ void GeometryFactory::SerializeGeometryCollection(Cursor &cursor, const Geometry
 	}
 }
 
-bool GeometryFactory::TryGetSerializedBoundingBox(const string_t &data, BoundingBox &bbox) {
+bool GeometryFactory::TryGetSerializedBoundingBox(const geometry_t &data, BoundingBox &bbox) {
 	Cursor cursor(data);
 
 	// Read the header
-	auto header = cursor.Read<GeometryHeader>();
-	if (header.properties.HasBBox()) {
+    auto header_type = cursor.Read<GeometryType>();
+    auto properties = cursor.Read<GeometryProperties>();
+    auto hash = cursor.Read<uint16_t>();
+    (void)hash;
+
+	if (properties.HasBBox()) {
 		cursor.Skip(4); // skip padding
 
 		// Now set the bounding box
@@ -395,7 +400,7 @@ bool GeometryFactory::TryGetSerializedBoundingBox(const string_t &data, Bounding
 		return true;
 	}
 
-	if (header.type == GeometryType::POINT) {
+	if (header_type == GeometryType::POINT) {
 		cursor.Skip(4); // skip padding
 
 		// Read the point
@@ -523,12 +528,16 @@ uint32_t GeometryFactory::GetSerializedSize(const Geometry &geometry) {
 //----------------------------------------------------------------------
 // Deserialization
 //----------------------------------------------------------------------
-Geometry GeometryFactory::Deserialize(const string_t &data) {
+Geometry GeometryFactory::Deserialize(const geometry_t &data) {
 	Cursor cursor(data);
-	GeometryHeader header = cursor.Read<GeometryHeader>();
+    auto header_type = cursor.Read<GeometryType>();
+    (void)header_type;
+    auto properties = cursor.Read<GeometryProperties>();
+    auto hash = cursor.Read<uint16_t>();
+    (void)hash;
 	cursor.Skip(4); // Skip padding
 
-	if (header.properties.HasBBox()) {
+	if (properties.HasBBox()) {
 		cursor.Skip(16); // Skip bounding box
 	}
 

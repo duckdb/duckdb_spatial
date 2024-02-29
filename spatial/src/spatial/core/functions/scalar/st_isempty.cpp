@@ -53,7 +53,7 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, bool>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, bool>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::POINT:

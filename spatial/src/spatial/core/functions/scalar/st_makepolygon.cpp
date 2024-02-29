@@ -20,14 +20,13 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 	UnifiedVectorFormat format;
 	child_vec.ToUnifiedFormat(count, format);
 
-	BinaryExecutor::Execute<string_t, list_entry_t, string_t>(
-	    args.data[0], args.data[1], result, count, [&](string_t line_blob, list_entry_t &rings_list) {
+	BinaryExecutor::Execute<geometry_t, list_entry_t, geometry_t>(
+	    args.data[0], args.data[1], result, count, [&](geometry_t line_blob, list_entry_t &rings_list) {
 		    // First, setup the shell
+            if (line_blob.GetType() != GeometryType::LINESTRING) {
+                throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
+            }
 		    auto shell_geom = lstate.factory.Deserialize(line_blob);
-		    if (shell_geom.Type() != GeometryType::LINESTRING) {
-			    throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
-		    }
-
 		    auto &shell = shell_geom.GetLineString();
 		    auto shell_vert_count = shell.Count();
 		    if (shell_vert_count < 4) {
@@ -55,7 +54,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 				    continue;
 			    }
 
-			    auto geometry_blob = UnifiedVectorFormat::GetData<string_t>(format)[mapped_idx];
+			    auto geometry_blob = UnifiedVectorFormat::GetData<geometry_t>(format)[mapped_idx];
 			    auto hole_geometry = lstate.factory.Deserialize(geometry_blob);
 
 			    if (hole_geometry.Type() != GeometryType::LINESTRING) {
@@ -98,14 +97,14 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, count, [&](string_t &line_blob) {
+	UnaryExecutor::Execute<geometry_t, geometry_t>(args.data[0], result, count, [&](geometry_t &line_blob) {
+        if (line_blob.GetType() != GeometryType::LINESTRING) {
+            throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
+        }
+
 		auto line_geom = lstate.factory.Deserialize(line_blob);
-
-		if (line_geom.Type() != GeometryType::LINESTRING) {
-			throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
-		}
-
 		auto &line = line_geom.GetLineString();
+
 		auto line_count = line.Count();
 		if (line_count < 4) {
 			throw InvalidInputException("ST_MakePolygon shell requires at least 4 vertices");

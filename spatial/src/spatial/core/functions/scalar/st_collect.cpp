@@ -19,7 +19,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 	UnifiedVectorFormat format;
 	child_vec.ToUnifiedFormat(count, format);
 
-	UnaryExecutor::Execute<list_entry_t, string_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
+	UnaryExecutor::Execute<list_entry_t, geometry_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
@@ -28,7 +28,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		for (idx_t i = offset; i < offset + length; i++) {
 			auto mapped_idx = format.sel->get_index(i);
 			if (format.validity.RowIsValid(mapped_idx)) {
-				auto geometry_blob = ((string_t *)format.data)[mapped_idx];
+				auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
 				auto geometry = lstate.factory.Deserialize(geometry_blob);
 				// Dont add empty geometries
 				if (!geometry.IsEmpty()) {

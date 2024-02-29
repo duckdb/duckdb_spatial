@@ -20,31 +20,31 @@ static void ExecutePreparedDistanceWithin(GEOSFunctionLocalState &lstate, Vector
 
 	// Optimize: if one of the arguments is a constant, we can prepare it once and reuse it
 	if (left.GetVectorType() == VectorType::CONSTANT_VECTOR && right.GetVectorType() != VectorType::CONSTANT_VECTOR) {
-		auto &left_blob = FlatVector::GetData<string_t>(left)[0];
+		auto &left_blob = FlatVector::GetData<geometry_t>(left)[0];
 		auto left_geom = lstate.ctx.Deserialize(left_blob);
 		auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 
-		BinaryExecutor::Execute<string_t, double, bool>(
-		    right, distance_vec, result, count, [&](string_t &right_blob, double distance) {
+		BinaryExecutor::Execute<geometry_t, double, bool>(
+		    right, distance_vec, result, count, [&](geometry_t &right_blob, double distance) {
 			    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			    auto ok = GEOSPreparedDistanceWithin_r(ctx, left_prepared.get(), right_geometry.get(), distance);
 			    return ok == 1;
 		    });
 	} else if (right.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 	           left.GetVectorType() != VectorType::CONSTANT_VECTOR) {
-		auto &right_blob = FlatVector::GetData<string_t>(right)[0];
+		auto &right_blob = FlatVector::GetData<geometry_t>(right)[0];
 		auto right_geom = lstate.ctx.Deserialize(right_blob);
 		auto right_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, right_geom.get()));
 
-		BinaryExecutor::Execute<string_t, double, bool>(
-		    left, distance_vec, result, count, [&](string_t &left_blob, double distance) {
+		BinaryExecutor::Execute<geometry_t, double, bool>(
+		    left, distance_vec, result, count, [&](geometry_t &left_blob, double distance) {
 			    auto left_geometry = lstate.ctx.Deserialize(left_blob);
 			    auto ok = GEOSPreparedDistanceWithin_r(ctx, right_prepared.get(), left_geometry.get(), distance);
 			    return ok == 1;
 		    });
 	} else {
-		TernaryExecutor::Execute<string_t, string_t, double, bool>(
-		    left, right, distance_vec, result, count, [&](string_t &left_blob, string_t &right_blob, double distance) {
+		TernaryExecutor::Execute<geometry_t, geometry_t, double, bool>(
+		    left, right, distance_vec, result, count, [&](geometry_t &left_blob, geometry_t &right_blob, double distance) {
 			    auto left_geometry = lstate.ctx.Deserialize(left_blob);
 			    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			    auto ok = GEOSDistanceWithin_r(ctx, left_geometry.get(), right_geometry.get(), distance);

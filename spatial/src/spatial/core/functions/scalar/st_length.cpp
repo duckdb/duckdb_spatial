@@ -54,7 +54,7 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::LINESTRING:

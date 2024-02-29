@@ -118,7 +118,7 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 // GEOMETRY -> VARCHAR
 //------------------------------------------------------------------------------
 void CoreVectorOperations::GeometryToVarchar(Vector &source, Vector &result, idx_t count, GeometryFactory &factory) {
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t &input) {
+	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t &input) {
 		auto geometry = factory.Deserialize(input);
 		return StringVector::AddString(result, geometry.ToString());
 	});

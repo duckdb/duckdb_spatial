@@ -46,10 +46,10 @@ public:
 	MultiPolygon CreateEmptyMultiPolygon();
 	GeometryCollection CreateEmptyGeometryCollection();
 
-	string_t Serialize(Vector &result, const Geometry &geometry);
-	Geometry Deserialize(const string_t &data);
+	geometry_t Serialize(Vector &result, const Geometry &geometry);
+	Geometry Deserialize(const geometry_t &data);
 
-	static bool TryGetSerializedBoundingBox(const string_t &data, BoundingBox &bbox);
+	static bool TryGetSerializedBoundingBox(const geometry_t &data, BoundingBox &bbox);
 
 	// Deep Copy
 	VertexVector CopyVertexVector(const VertexVector &vector);

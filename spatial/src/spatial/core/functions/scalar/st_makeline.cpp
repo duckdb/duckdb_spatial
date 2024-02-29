@@ -19,7 +19,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 	UnifiedVectorFormat format;
 	child_vec.ToUnifiedFormat(count, format);
 
-	UnaryExecutor::Execute<list_entry_t, string_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
+	UnaryExecutor::Execute<list_entry_t, geometry_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
@@ -31,7 +31,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (!format.validity.RowIsValid(mapped_idx)) {
 				continue;
 			}
-			auto geometry_blob = ((string_t *)format.data)[mapped_idx];
+			auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
 			auto geometry = lstate.factory.Deserialize(geometry_blob);
 
 			if (geometry.Type() != GeometryType::POINT) {
@@ -56,14 +56,14 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 	auto count = args.size();
 
-	BinaryExecutor::Execute<string_t, string_t, string_t>(
-	    args.data[0], args.data[1], result, count, [&](string_t &geom_blob_left, string_t &geom_blob_right) {
+	BinaryExecutor::Execute<geometry_t, geometry_t, geometry_t>(
+	    args.data[0], args.data[1], result, count, [&](geometry_t &geom_blob_left, geometry_t &geom_blob_right) {
+            if (geom_blob_left.GetType() != GeometryType::POINT || geom_blob_right.GetType() != GeometryType::POINT) {
+                throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+            }
+
 		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
 		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
-
-		    if (geometry_left.Type() != GeometryType::POINT || geometry_right.Type() != GeometryType::POINT) {
-			    throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
-		    }
 
 		    auto &point_left = geometry_left.GetPoint();
 		    auto &point_right = geometry_right.GetPoint();

@@ -360,7 +360,7 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			// otherwise fall back to the original CRS
 		}
 
-		UnaryExecutor::Execute<string_t, string_t>(geom_vec, result, count, [&](string_t input_geom) {
+		UnaryExecutor::Execute<core::geometry_t, core::geometry_t>(geom_vec, result, count, [&](core::geometry_t input_geom) {
 			auto geom = factory.Deserialize(input_geom);
 			auto copy = factory.CopyGeometry(geom);
 			TransformGeometry(crs.get(), copy);
@@ -369,9 +369,9 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 	} else {
 		// General case: projections are not constant
 		// we need to create a projection for each geometry
-		TernaryExecutor::Execute<string_t, string_t, string_t, string_t>(
+		TernaryExecutor::Execute<core::geometry_t, string_t, string_t, core::geometry_t>(
 		    geom_vec, proj_from_vec, proj_to_vec, result, count,
-		    [&](string_t input_geom, string_t proj_from, string_t proj_to) {
+		    [&](core::geometry_t input_geom, string_t proj_from, string_t proj_to) {
 			    auto from_str = proj_from.GetString();
 			    auto to_str = proj_to.GetString();
 			    auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));

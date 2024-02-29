@@ -92,7 +92,7 @@ void CoreAggregateFunctions::RegisterStEnvelopeAgg(DatabaseInstance &db) {
 
 	AggregateFunctionSet st_envelope_agg("ST_Envelope_Agg");
 	st_envelope_agg.AddFunction(
-	    AggregateFunction::UnaryAggregate<EnvelopeAggState, string_t, string_t, EnvelopeAggFunction>(
+	    AggregateFunction::UnaryAggregate<EnvelopeAggState, geometry_t, geometry_t, EnvelopeAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_envelope_agg);

@@ -17,7 +17,7 @@ using namespace spatial::core;
 static void LineMergeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t &geometry_blob) {
+	UnaryExecutor::Execute<geometry_t, geometry_t>(args.data[0], result, args.size(), [&](geometry_t &geometry_blob) {
 		auto geometry = lstate.ctx.Deserialize(geometry_blob);
 		auto convex_hull_geometry = make_uniq_geos(ctx, GEOSLineMerge_r(ctx, geometry.get()));
 		return lstate.ctx.Serialize(result, convex_hull_geometry);
@@ -27,8 +27,8 @@ static void LineMergeFunction(DataChunk &args, ExpressionState &state, Vector &r
 static void LineMergeFunctionWithDirected(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	BinaryExecutor::Execute<string_t, bool, string_t>(
-	    args.data[0], args.data[1], result, args.size(), [&](string_t &geometry_blob, bool directed) {
+	BinaryExecutor::Execute<geometry_t, bool, geometry_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](geometry_t &geometry_blob, bool directed) {
 		    auto geometry = lstate.ctx.Deserialize(geometry_blob);
 		    auto convex_hull_geometry = directed ? make_uniq_geos(ctx, GEOSLineMergeDirected_r(ctx, geometry.get()))
 		                                         : make_uniq_geos(ctx, GEOSLineMerge_r(ctx, geometry.get()));

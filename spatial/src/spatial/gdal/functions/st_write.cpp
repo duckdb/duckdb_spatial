@@ -351,7 +351,7 @@ static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const 
 		return OGRGeometryUniquePtr(ptr);
 	} else if (type == core::GeoTypes::GEOMETRY()) {
 		auto blob = value.GetValueUnsafe<string_t>();
-		auto geom = factory.Deserialize(blob);
+		auto geom = factory.Deserialize(core::geometry_t(blob));
 
 		uint32_t size;
 		auto wkb = factory.ToWKB(geom, &size);

@@ -193,7 +193,7 @@ static void GeometryToGeoJSONFragmentFunction(DataChunk &args, ExpressionState &
 
 	JSONAllocator json_allocator(lstate.factory.allocator);
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 
 		auto doc = yyjson_mut_doc_new(json_allocator.GetYYJSONAllocator());

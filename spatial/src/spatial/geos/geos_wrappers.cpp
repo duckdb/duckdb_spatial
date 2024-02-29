@@ -174,19 +174,22 @@ GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx) {
 	}
 }
 
-GEOSGeometry *DeserializeGEOSGeometry(const string_t &blob, GEOSContextHandle_t ctx) {
+GEOSGeometry *DeserializeGEOSGeometry(const geometry_t &blob, GEOSContextHandle_t ctx) {
 	Cursor reader(blob);
-	auto header = reader.Read<GeometryHeader>();
+    auto type = reader.Read<GeometryType>();
+    (void)type;
+    auto properties = reader.Read<GeometryProperties>();
+    auto hash = reader.Read<uint16_t>();
+    (void)hash;
 	reader.Skip(4); // Skip padding
-
-	if (header.properties.HasBBox()) {
+	if (properties.HasBBox()) {
 		reader.Skip(16); // Skip bbox
 	}
 
 	return DeserializeGeometry(reader, ctx);
 }
 
-GeometryPtr GeosContextWrapper::Deserialize(const string_t &blob) {
+GeometryPtr GeosContextWrapper::Deserialize(const geometry_t &blob) {
 	return GeometryPtr(DeserializeGEOSGeometry(blob, ctx));
 }
 
@@ -460,7 +463,7 @@ static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GE
 	}
 }
 
-string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSContextHandle_t ctx) {
+geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSContextHandle_t ctx) {
 
 	GeometryType type;
 	auto geos_type = GEOSGeomTypeId_r(ctx, geom);
@@ -494,7 +497,7 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 	bool has_bbox = type != GeometryType::POINT && GEOSisEmpty_r(ctx, geom) == 0;
 
 	auto size = GetSerializedSize(geom, ctx);
-	size += sizeof(GeometryHeader); // Header
+	size += 4; // Header
 	size += sizeof(uint32_t);       // Padding
 	size += has_bbox ? 16 : 0;      // BBox
 
@@ -506,13 +509,12 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 		hash ^= (size >> (i * 8)) & 0xFF;
 	}
 
-	GeometryHeader header;
-	header.type = type;
-	header.hash = hash;
-	header.properties = GeometryProperties();
-	header.properties.SetBBox(has_bbox);
 
-	writer.Write<GeometryHeader>(header); // Header
+    GeometryProperties properties;
+	properties.SetBBox(has_bbox);
+    writer.Write<GeometryType>(type);    // Type
+    writer.Write<GeometryProperties>(properties); // Properties
+    writer.Write<uint16_t>(hash);         // Hash
 	writer.Write<uint32_t>(0);            // Padding
 
 	// If the geom is not a point, write the bounding box
@@ -529,10 +531,10 @@ string_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSCon
 
 	blob.Finalize();
 
-	return blob;
+	return geometry_t(blob);
 }
 
-string_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) {
+geometry_t GeosContextWrapper::Serialize(Vector &result, const GeometryPtr &geom) {
 	return SerializeGEOSGeometry(result, geom.get(), ctx);
 }
 

@@ -25,7 +25,7 @@ void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &r
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		auto wkb_size = WKBWriter::GetRequiredSize(geometry);
 		unique_ptr<data_t[]> wkb_blob(new data_t[wkb_size]);

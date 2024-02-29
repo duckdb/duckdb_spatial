@@ -16,7 +16,7 @@ unique_ptr<FunctionLocalState> GEOSFunctionLocalState::Init(ExpressionState &sta
 }
 
 unique_ptr<FunctionLocalState> GEOSFunctionLocalState::InitCast(CastLocalStateParameters &parameters) {
-	return make_uniq<GEOSFunctionLocalState>(*parameters.context.get());
+	return make_uniq<GEOSFunctionLocalState>(*parameters.context);
 }
 
 GEOSFunctionLocalState &GEOSFunctionLocalState::ResetAndGet(CastParameters &parameters) {

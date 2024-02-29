@@ -19,7 +19,7 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 	auto &right = args.data[1];
 	auto count = args.size();
 
-	BinaryExecutor::Execute<string_t, string_t, bool>(left, right, result, count, [&](string_t left, string_t right) {
+	BinaryExecutor::Execute<geometry_t, geometry_t, bool>(left, right, result, count, [&](geometry_t left, geometry_t right) {
 		BoundingBox left_bbox;
 		BoundingBox right_bbox;
 		if (GeometryFactory::TryGetSerializedBoundingBox(left, left_bbox) &&

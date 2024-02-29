@@ -14,8 +14,6 @@ namespace spatial {
 
 namespace geos {
 
-using namespace spatial::core;
-
 struct GeometryFromWKTBindData : public FunctionData {
 	bool ignore_invalid = false;
 
@@ -36,8 +34,8 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 	auto count = args.size();
 	auto input = args.data[0];
 
-	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	const auto &info = (GeometryFromWKTBindData &)*func_expr.bind_info;
+	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
+	const auto &info = func_expr.bind_info->Cast<GeometryFromWKTBindData>();
 
 	auto ctx = GeosContextWrapper();
 
@@ -45,7 +43,7 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
 			    auto geos_geom = reader.Read(wkt);
@@ -59,7 +57,7 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 				    throw;
 			    }
 			    mask.SetInvalid(idx);
-			    return string_t();
+			    return geometry_t { };
 		    }
 	    });
 }

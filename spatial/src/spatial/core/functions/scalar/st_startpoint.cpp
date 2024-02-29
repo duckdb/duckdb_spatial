@@ -64,12 +64,11 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 	auto &geom_vec = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-	    geom_vec, result, count, [&](string_t input, ValidityMask &mask, idx_t row_idx) {
-		    auto header = GeometryHeader::Get(input);
-		    if (header.type != GeometryType::LINESTRING) {
+	UnaryExecutor::ExecuteWithNulls<geometry_t, geometry_t>(
+	    geom_vec, result, count, [&](geometry_t input, ValidityMask &mask, idx_t row_idx) {
+		    if (input.GetType() != GeometryType::LINESTRING) {
 			    mask.SetInvalid(row_idx);
-			    return string_t();
+			    return geometry_t { };
 		    }
 
 		    auto line = lstate.factory.Deserialize(input).GetLineString();
@@ -77,7 +76,7 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 
 		    if (point_count == 0) {
 			    mask.SetInvalid(row_idx);
-			    return string_t();
+			    return geometry_t { };
 		    }
 
 		    auto point = line.Vertices().Get(0);

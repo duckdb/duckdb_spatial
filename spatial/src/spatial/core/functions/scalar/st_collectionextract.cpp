@@ -98,8 +98,8 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 	auto &input = args.data[0];
 	auto &dim = args.data[1];
 
-	BinaryExecutor::Execute<string_t, int32_t, string_t>(
-	    input, dim, result, count, [&](string_t input, int32_t requested_type) {
+	BinaryExecutor::Execute<geometry_t, int32_t, geometry_t>(
+	    input, dim, result, count, [&](geometry_t input, int32_t requested_type) {
 		    auto geometry = lstate.factory.Deserialize(input);
 		    switch (requested_type) {
 		    case 1: {
@@ -191,11 +191,12 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 	auto count = args.size();
 	auto &input = args.data[0];
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
+	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 
-		if (geometry.Type() == GeometryType::GEOMETRYCOLLECTION) {
-			auto &collection = geometry.GetGeometryCollection();
+		if (input.GetType() == GeometryType::GEOMETRYCOLLECTION) {
+            auto geometry = lstate.factory.Deserialize(input);
+
+            auto &collection = geometry.GetGeometryCollection();
 			if (collection.IsEmpty()) {
 				return input;
 			}
