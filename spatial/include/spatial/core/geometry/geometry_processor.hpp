@@ -623,6 +623,273 @@ public:
     }
 };
 
+//------------------------------------------------------------------------
+// Helper so that we can return void from functions generically
+//------------------------------------------------------------------------
+template<class RESULT>
+class ResultHolder {
+private:
+    RESULT tmp;
+public:
+    template<class F>
+    explicit ResultHolder(F &&f) : tmp(std::move(f())) { }
+    ResultHolder(const ResultHolder &other) = delete;
+    ResultHolder &operator=(const ResultHolder &other) = delete;
+    ResultHolder(ResultHolder &&other) = delete;
+    ResultHolder &operator=(ResultHolder &&other) = delete;
+    RESULT && ReturnAndDestroy( ) { return std::move( tmp ); }
+};
+
+template<>
+class ResultHolder<void> {
+public:
+    template<class F>
+    explicit ResultHolder(F &&f) { f(); }
+    ResultHolder(const ResultHolder &other) = delete;
+    ResultHolder &operator=(const ResultHolder &other) = delete;
+    ResultHolder(ResultHolder &&other) = delete;
+    ResultHolder &operator=(ResultHolder &&other) = delete;
+    void ReturnAndDestroy() { }
+};
+
+template<class RESULT = void, class ... ARGS>
+class GeomP {
+private:
+    bool has_z = false;
+    bool has_m = false;
+    uint32_t nesting_level = 0;
+protected:
+    bool IsNested() const { return nesting_level > 0; }
+    bool HasZ() const { return false; }
+    bool HasM() const { return false; }
+
+    class CollectionState {
+    private:
+        friend class GeomP<RESULT, ARGS...>;
+        uint32_t item_count;
+        uint32_t current_item;
+        GeomP<RESULT, ARGS...> &processor;
+        Cursor &cursor;
+        CollectionState(uint32_t item_count, GeomP<RESULT, ARGS...> &processor, Cursor &cursor)
+            : item_count(item_count), current_item(0), processor(processor), cursor(cursor) {}
+    public:
+        CollectionState(const CollectionState &other) = delete;
+        CollectionState &operator=(const CollectionState &other) = delete;
+        CollectionState(CollectionState &&other) = delete;
+        CollectionState &operator=(CollectionState &&other) = delete;
+
+        uint32_t ItemCount() const { return item_count; }
+        bool IsDone() const { return current_item == item_count;}
+
+        //NOLINTNEXTLINE
+        RESULT Next(ARGS... args) {
+            processor.nesting_level++;
+            //NOLINTNEXTLINE
+            ResultHolder<RESULT> result([&]() {
+                return processor.ReadGeometry(cursor, args...);
+            });
+            processor.nesting_level--;
+            current_item++;
+            return result.ReturnAndDestroy();
+        }
+    };
+
+    class PolygonState {
+    private:
+        friend class GeomP<RESULT, ARGS...>;
+        uint32_t ring_count;
+        uint32_t current_ring;
+        const_data_ptr_t count_ptr;
+        const_data_ptr_t data_ptr;
+        explicit PolygonState(uint32_t ring_count, const_data_ptr_t count_ptr, const_data_ptr_t data_ptr)
+            : ring_count(ring_count), current_ring(0), count_ptr(count_ptr), data_ptr(data_ptr) {}
+    public:
+        PolygonState(const PolygonState &other) = delete;
+        PolygonState &operator=(const PolygonState &other) = delete;
+        PolygonState(PolygonState &&other) = delete;
+        PolygonState &operator=(PolygonState &&other) = delete;
+
+        uint32_t RingCount() const { return ring_count; }
+        bool IsDone() const { return current_ring == ring_count; }
+        VertexData Next() {
+            auto count = Load<uint32_t>(count_ptr);
+            VertexData data(data_ptr, count, false, false);
+            current_ring++;
+            count_ptr += sizeof(uint32_t);
+            return data;
+        }
+    };
+
+    virtual RESULT ProcessPoint(const VertexData &vertices, ARGS... args) = 0;
+    virtual RESULT ProcessLineString(const VertexData& vertices, ARGS... args) = 0;
+    virtual RESULT ProcessPolygon(PolygonState &state, ARGS... args) = 0;
+    virtual RESULT ProcessCollection(CollectionState &state, ARGS ...args) = 0;
+
+public:
+    RESULT Process(const geometry_t &geom, ARGS ...args) {
+
+        has_z = geom.GetProperties().HasZ();
+        has_m = geom.GetProperties().HasM();
+        nesting_level = 0;
+
+        Cursor cursor(geom);
+
+        cursor.Skip<GeometryType>();
+        cursor.Skip<GeometryProperties>();
+        cursor.Skip<uint16_t>();
+        cursor.Skip(4);
+
+        if (geom.GetProperties().HasBBox()) {
+            cursor.Skip(sizeof(float) * 4);
+        }
+        return ReadGeometry(cursor, args...);
+    }
+private:
+    RESULT ReadGeometry(Cursor &cursor, ARGS... args) {
+        auto type = cursor.Peek<SerializedGeometryType>();
+        switch (type) {
+            case SerializedGeometryType::POINT:
+                return ReadPoint(cursor, args...);
+            case SerializedGeometryType::LINESTRING:
+                return ReadLineString(cursor, args...);
+            case SerializedGeometryType::POLYGON:
+                return ReadPolygon(cursor, args...);
+            case SerializedGeometryType::MULTIPOINT:
+            case SerializedGeometryType::MULTILINESTRING:
+            case SerializedGeometryType::MULTIPOLYGON:
+            case SerializedGeometryType::GEOMETRYCOLLECTION:
+                return ReadCollection(cursor, args...);
+            default:
+                throw SerializationException("Unknown geometry type (%ud)", static_cast<uint32_t>(type));
+        }
+    }
+
+    RESULT ReadPoint(Cursor &cursor, ARGS... args) {
+        auto type = cursor.Read<SerializedGeometryType>();
+        D_ASSERT(type == SerializedGeometryType::POINT);
+        (void)type;
+        auto count = cursor.Read<uint32_t>();
+        VertexData data(cursor.GetPtr(), count, HasZ(), HasM());
+        cursor.Skip(data.ByteSize());
+        return ProcessPoint(data, args...);
+    }
+
+    RESULT ReadLineString(Cursor &cursor, ARGS... args) {
+        auto type = cursor.Read<SerializedGeometryType>();
+        D_ASSERT(type == SerializedGeometryType::LINESTRING);
+        (void)type;
+        auto count = cursor.Read<uint32_t>();
+        VertexData data(cursor.GetPtr(), count, HasZ(), HasM());
+        cursor.Skip(data.ByteSize());
+        return ProcessLineString(data, args...);
+    }
+
+    RESULT ReadPolygon(Cursor &cursor, ARGS... args) {
+        auto type = cursor.Read<SerializedGeometryType>();
+        D_ASSERT(type == SerializedGeometryType::POLYGON);
+        (void)type;
+        auto ring_count = cursor.Read<uint32_t>();
+        auto count_ptr = cursor.GetPtr();
+        cursor.Skip(ring_count * sizeof(uint32_t) + ((ring_count % 2) * sizeof(uint32_t)));
+        PolygonState state(ring_count, count_ptr, cursor.GetPtr());
+
+        ResultHolder<RESULT> result([&]() {
+            return ProcessPolygon(state, args...);
+        });
+
+        if(IsNested()) {
+            while (!state.IsDone()) {
+                // Consume the rest of the polygon so we can continue processing the parent
+                state.Next();
+            }
+            cursor.SetPtr(const_cast<data_ptr_t>(state.data_ptr));
+        }
+
+        return result.ReturnAndDestroy();
+    }
+
+    //NOLINTNEXTLINE
+    RESULT ReadCollection(Cursor &cursor, ARGS ...args) {
+        auto type = cursor.Read<SerializedGeometryType>();
+        (void)type;
+        auto count = cursor.Read<uint32_t>();
+        CollectionState state(count, *this, cursor);
+
+        ResultHolder<RESULT> result([&]() {
+            return ProcessCollection(state, args...);
+        });
+
+        if(IsNested()) {
+            // Consume the rest of the collection so we can continue processing the parent
+            while (!state.IsDone()) {
+                state.Next(args...);
+            }
+        }
+
+        return result.ReturnAndDestroy();
+    }
+};
+
+class GeomV : public GeomP<> {
+    void ProcessPoint(const VertexData &vertices) override {
+        // Do something
+    }
+
+    void ProcessLineString(const VertexData &vertices) override {
+        // Do something
+    }
+
+    void ProcessPolygon(PolygonState &state) override {
+        // Do something
+        while(!state.IsDone()) {
+            state.Next();
+        }
+    }
+
+    void ProcessCollection(CollectionState &state) override {
+        // Do something
+        while(!state.IsDone()) {
+            state.Next();
+        }
+    }
+};
+
+class GeomI : public GeomP<int> {
+    int ProcessPoint(const VertexData &vertices) override {
+        return 0;
+    }
+
+    int ProcessLineString(const VertexData &vertices) override {
+        return 0;
+    }
+
+    int ProcessPolygon(PolygonState &state) override {
+        while(!state.IsDone()) {
+            // Do something
+            auto vertices = state.Next();
+        }
+        return 0;
+    }
+
+    int ProcessCollection(CollectionState &state) override {
+        auto sum = 0;
+        while(!state.IsDone()) {
+            sum += state.Next();
+        }
+        return sum;
+    }
+};
+
+
+static void foo() {
+    GeomI i;
+    GeomV v;
+
+    auto sum = i.Process(geometry_t());
+    v.Process(geometry_t());
+}
+
+
 /*
 class Sub : public Parent<Sub, int> {
     friend class Parent<Sub, int>;
