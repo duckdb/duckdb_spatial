@@ -59,6 +59,44 @@ private:
 // GEOMETRY -> GEOJSON Fragment
 //------------------------------------------------------------------------------
 
+class GeoJSONWriter final : public GeometryProcessor<GeoJSONWriter, yyjson_mut_val*> {
+    JSONAllocator allocator;
+    yyjson_mut_doc *doc;
+    yyjson_mut_val *root;
+public:
+
+    void Execute(const geometry_t &geom) {
+        Process(geom, nullptr);
+    }
+
+    void HandleVertexData(const VertexData &data, yyjson_mut_val *obj) {
+
+    }
+
+    void OnPoint(const VertexData &data, yyjson_mut_val *obj) {
+
+    }
+
+    void OnLineString(const VertexData &data, yyjson_mut_val *obj) {
+
+    }
+
+    void OnPolygon(const PolygonRings &rings, yyjson_mut_val *obj) {
+
+    }
+
+    template<class F>
+    void OnCollection(uint32_t item_count, F &&f, yyjson_mut_val *obj) {
+        for (uint32_t i = 0; i < item_count; i++) {
+            f(obj);
+        }
+    }
+
+};
+
+
+
+/*
 class GeoJSONWriter final : public GeometryProcessor {
     JSONAllocator allocator;
     yyjson_mut_doc *doc;
@@ -111,6 +149,7 @@ public:
         }
     }
 };
+ */
 
 static void VerticesToGeoJSON(const VertexVector &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
 	// TODO: If the vertexvector is empty, do we null, add an empty array or a pair of NaN?

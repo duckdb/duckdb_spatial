@@ -14,13 +14,103 @@ using namespace core;
 //------------------------------------------------------------------------------
 // Deserialize
 //------------------------------------------------------------------------------
-// TODO: Replace this with a GeometryProcessor instead of a recursive function
 
 template<class T>
 bool IsPointerAligned(const void *ptr) {
     auto uintptr = reinterpret_cast<uintptr_t>(ptr);
     return (uintptr % alignof(T)) == 0;
 }
+
+class GEOSDeserializer final : public GeometryProcessor<GEOSDeserializer, GEOSGeometry*> {
+    friend class GeometryProcessor<GEOSDeserializer, GEOSGeometry*>;
+private:
+    GEOSContextHandle_t ctx;
+    vector<double> aligned_buffer;
+private:
+    GEOSCoordSeq_t* HandleVertexData(const VertexData &vertices) {
+        auto n_dims = 2 + (HasZ() ? 1 : 0) + (HasM() ? 1 : 0);
+        auto vertex_size = sizeof(double) * n_dims;
+
+        // We know that the data is interleaved :^)
+        auto data = vertices.vertex_data[0];
+        auto count = vertices.vertex_count;
+
+        if(HasZ()) {
+            // GEOS does a memcpy in this case, so we can pass the buffer directly even if it's not aligned
+            return GEOSCoordSeq_copyFromBuffer_r(ctx, reinterpret_cast<const double *>(data), count, HasZ(), HasM());
+        }
+        else {
+            auto data_ptr = data;
+            auto vertex_data = reinterpret_cast<const double *>(data_ptr);
+            if (!IsPointerAligned<double>(data_ptr)) {
+                // If the pointer is not aligned we need to copy the data to an aligned buffer before passing it to GEOS
+                aligned_buffer.clear();
+                aligned_buffer.resize(count * n_dims);
+                memcpy(aligned_buffer.data(), data_ptr, count * vertex_size);
+                vertex_data = aligned_buffer.data();
+            }
+
+            return GEOSCoordSeq_copyFromBuffer_r(ctx, vertex_data, count, HasZ(), HasM());
+        }
+    }
+
+    void OnPoint(const VertexData &data, GEOSGeometry *&result) {
+        if (data.IsEmpty()) {
+            result = GEOSGeom_createEmptyPoint_r(ctx);
+        } else {
+            auto seq = HandleVertexData(data);
+            result = GEOSGeom_createPoint_r(ctx, seq);
+        }
+    }
+
+    void OnLineString(const VertexData &data, GEOSGeometry *&result) {
+        if (data.IsEmpty()) {
+            result = GEOSGeom_createEmptyLineString_r(ctx);
+        } else {
+            auto seq = HandleVertexData(data);
+            result = GEOSGeom_createLineString_r(ctx, seq);
+        }
+    }
+
+    void OnPolygon(const PolygonRings &rings, GEOSGeometry *&result) {
+        auto num_rings = rings.Count();
+        if (num_rings == 0) {
+            result = GEOSGeom_createEmptyPolygon_r(ctx);
+        } else {
+            auto geoms = new GEOSGeometry *[num_rings];
+            uint32_t i = 0;
+            for (const auto &data : rings) {
+                auto seq = HandleVertexData(data);
+                geoms[i++] = GEOSGeom_createLinearRing_r(ctx, seq);
+            }
+            result = GEOSGeom_createPolygon_r(ctx, geoms[0], geoms + 1, num_rings - 1);
+            delete[] geoms;
+        }
+    }
+
+    template<class F>
+    void OnCollection(uint32_t item_count, F&& item, GEOSGeometry *result) {
+        auto geoms = new GEOSGeometry *[item_count];
+        for (uint32_t i = 0; i < item_count; i++) {
+            item(geoms[i]);
+        }
+        result = GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, geoms, item_count);
+        delete[] geoms;
+    }
+
+public:
+    explicit GEOSDeserializer(GEOSContextHandle_t ctx) : ctx(ctx) {
+    }
+
+    GeometryPtr Execute(const geometry_t &geom) {
+        aligned_buffer.clear();
+        GEOSGeometry *result = nullptr;
+        Process(geom, result);
+        return GeometryPtr { result };
+    }
+
+};
+
 
 template<bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx);

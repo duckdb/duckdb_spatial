@@ -4,7 +4,7 @@ namespace spatial {
 
 namespace core {
 
-constexpr double GeometryProcessor::EMPTY_DATA;
+constexpr double VertexData::EMPTY_DATA;
 
 } // namespace core
 

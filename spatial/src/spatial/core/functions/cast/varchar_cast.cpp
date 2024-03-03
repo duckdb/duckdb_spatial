@@ -120,18 +120,15 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 //------------------------------------------------------------------------------
 // GEOMETRY -> VARCHAR
 //------------------------------------------------------------------------------
-class GeometryTextProcessor final : public GeometryProcessor {
+class GeometryTextProcessor final : public GeometryProcessor<GeometryTextProcessor> {
+private:
     string text;
 public:
-    const string& GetText() {
-        return text;
-    }
+    void OnVertexData(const VertexData &data) {
+        auto &dims = data.vertex_data;
+        auto &strides = data.vertex_stride;
+        auto count = data.vertex_count;
 
-    void OnBegin() override {
-        text.clear();
-    }
-
-    void OnVertexData(const_data_ptr_t dims[4], ptrdiff_t strides[4], uint32_t count) override {
         if(HasZ() && HasM()) {
             for(uint32_t i = 0; i < count; i++) {
                 auto x = Load<double>(dims[0] + i * strides[0]);
@@ -166,6 +163,132 @@ public:
         }
     }
 
+    void OnPoint(const VertexData &data) {
+        if(ParentType() != GeometryType::MULTIPOINT) {
+            text += "POINT";
+            if(HasZ() && HasM()) {
+                text += " ZM";
+            } else if(HasZ()) {
+                text += " Z";
+            } else if(HasM()) {
+                text += " M";
+            }
+            text += " ";
+        }
+
+        if(data.vertex_count == 0) {
+            text += "EMPTY";
+        } else if(ParentType() != GeometryType::MULTIPOINT) {
+            text += "(";
+            OnVertexData(data);
+            text += ")";
+        } else {
+            OnVertexData(data);
+        }
+    }
+
+    void OnLineString(const VertexData &data) {
+        if(ParentType() != GeometryType::MULTILINESTRING) {
+            text += "LINESTRING";
+            if(HasZ() && HasM()) {
+                text += " ZM";
+            } else if(HasZ()) {
+                text += " Z";
+            } else if(HasM()) {
+                text += " M";
+            }
+            text += " ";
+        }
+
+        if(data.vertex_count == 0) {
+            text += "EMPTY";
+        } else {
+            text += "(";
+            OnVertexData(data);
+            text += ")";
+        }
+    }
+
+    void OnPolygon(const PolygonRings &rings) {
+        if(ParentType() != GeometryType::MULTIPOLYGON) {
+            text += "POLYGON";
+            if(HasZ() && HasM()) {
+                text += " ZM";
+            } else if(HasZ()) {
+                text += " Z";
+            } else if(HasM()) {
+                text += " M";
+            }
+            text += " ";
+        }
+
+        if(rings.Count() == 0) {
+            text += "EMPTY";
+        } else {
+            text += "(";
+            bool first = true;
+            for(const auto &data : rings ) {
+                if(!first) {
+                    text += ", ";
+                }
+                first = false;
+                text += "(";
+                OnVertexData(data);
+                text += ")";
+            }
+            text += ")";
+        }
+    }
+
+    template<class F>
+    void OnCollection(uint32_t count, F &&item) {
+
+        switch(CurrentType()) {
+            case GeometryType::MULTIPOINT:
+                text += "MULTIPOINT";
+                break;
+            case GeometryType::MULTILINESTRING:
+                text += "MULTILINESTRING";
+                break;
+            case GeometryType::MULTIPOLYGON:
+                text += "MULTIPOLYGON";
+                break;
+            case GeometryType::GEOMETRYCOLLECTION:
+                text += "GEOMETRYCOLLECTION";
+                break;
+            default:
+                throw InvalidInputException("Invalid geometry type");
+        }
+
+        if(HasZ() && HasM()) {
+            text += " ZM";
+        } else if(HasZ()) {
+            text += " Z";
+        } else if(HasM()) {
+            text += " M";
+        }
+
+        if (count == 0) {
+            text += " EMPTY";
+        } else {
+            text += " (";
+            for(uint32_t i = 0; i < count; i++) {
+                if(i > 0) {
+                    text += ", ";
+                }
+                item();
+            }
+            text += ")";
+        }
+    }
+
+    const string& Execute(const geometry_t &geom) {
+        text.clear();
+        Process(geom);
+        return text;
+    }
+
+    /*
     void OnPointBegin(bool is_empty) override {
         if(ParentType() != GeometryType::MULTIPOINT) {
             text += "POINT";
@@ -295,14 +418,14 @@ public:
         if (count != 0) {
             text += ")";
         }
-    }
+    }*/
 };
 
 void CoreVectorOperations::GeometryToVarchar(Vector &source, Vector &result, idx_t count, GeometryFactory &factory) {
     GeometryTextProcessor processor;
 	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t &input) {
-        processor.Execute(input);
-		return StringVector::AddString(result, processor.GetText());
+        auto text = processor.Execute(input);
+		return StringVector::AddString(result, text);
 	});
 }
 
