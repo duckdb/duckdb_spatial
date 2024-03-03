@@ -121,16 +121,6 @@ GeometryCollection GeometryFactory::CreateEmptyGeometryCollection() {
 	return GeometryCollection(nullptr, 0);
 }
 
-enum class SerializedGeometryType : uint32_t {
-	POINT,
-	LINESTRING,
-	POLYGON,
-	MULTIPOINT,
-	MULTILINESTRING,
-	MULTIPOLYGON,
-	GEOMETRYCOLLECTION
-};
-
 //----------------------------------------------------------------------
 // Serialization
 //----------------------------------------------------------------------

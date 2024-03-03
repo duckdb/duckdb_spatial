@@ -12,6 +12,8 @@
 
 #include "yyjson.h"
 
+#include "spatial/core/geometry/geometry_processor.hpp"
+
 namespace spatial {
 
 namespace core {
