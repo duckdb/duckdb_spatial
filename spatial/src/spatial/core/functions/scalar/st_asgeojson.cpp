@@ -59,6 +59,59 @@ private:
 // GEOMETRY -> GEOJSON Fragment
 //------------------------------------------------------------------------------
 
+class GeoJSONWriter final : public GeometryProcessor {
+    JSONAllocator allocator;
+    yyjson_mut_doc *doc;
+    yyjson_mut_val *root;
+    vector<yyjson_mut_val *> stack;
+public:
+    GeoJSONWriter(JSONAllocator allocator) : allocator(allocator) { }
+
+    void OnBegin() override {
+        stack.clear();
+        doc = yyjson_mut_doc_new(allocator.GetYYJSONAllocator());
+        root = yyjson_mut_obj(doc);
+    }
+
+    void OnPointBegin(bool is_empty) {
+        auto obj = yyjson_mut_obj(doc);
+        yyjson_mut_obj_add_str(doc, obj, "type", "Point");
+        if(is_empty) {
+            yyjson_mut_obj_add_val(doc, obj, "coordinates", yyjson_mut_null(doc));
+        } else {
+            stack.push_back(obj);
+        }
+    }
+
+    void OnPointEnd() {
+        auto obj = stack.back();
+        stack.pop_back();
+        yyjson_mut_obj_add_val(doc, obj, "coordinates", stack.back());
+    }
+
+    void OnVertexData(const_data_ptr_t dims[4], ptrdiff_t strides[4], uint32_t count) override {
+        auto coords = yyjson_mut_arr(doc);
+        yyjson_mut_obj_add_val(doc, root, "coordinates", coords);
+        if(HasZ()) {
+            for (uint32_t i = 0; i < count; i++) {
+                auto coord = yyjson_mut_arr(doc);
+                yyjson_mut_arr_add_real(doc, coord, Load<double>(dims[0] + i * strides[0]));
+                yyjson_mut_arr_add_real(doc, coord, Load<double>(dims[1] + i * strides[1]));
+                yyjson_mut_arr_add_real(doc, coord, Load<double>(dims[2] + i * strides[2]));
+                yyjson_mut_arr_append(coords, coord);
+            }
+        }
+        else {
+            for (uint32_t i = 0; i < count; i++) {
+                auto coord = yyjson_mut_arr(doc);
+                yyjson_mut_arr_add_real(doc, coord, Load<double>(dims[0] + i * strides[0]));
+                yyjson_mut_arr_add_real(doc, coord, Load<double>(dims[1] + i * strides[1]));
+                yyjson_mut_arr_append(coords, coord);
+            }
+        }
+    }
+};
+
 static void VerticesToGeoJSON(const VertexVector &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
 	// TODO: If the vertexvector is empty, do we null, add an empty array or a pair of NaN?
 	for (uint32_t i = 0; i < vertices.count; i++) {

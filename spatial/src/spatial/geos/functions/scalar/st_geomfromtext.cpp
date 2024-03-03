@@ -30,6 +30,7 @@ public:
 };
 
 // TODO: we should implement our own WKT parser asap. This is a temporary and really inefficient solution.
+// TODO: Ignore_invalid doesnt make sense here, we should just use a try_cast instead.
 static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();
 	auto input = args.data[0];
@@ -37,20 +38,13 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
 	const auto &info = func_expr.bind_info->Cast<GeometryFromWKTBindData>();
 
-	auto ctx = GeosContextWrapper();
-
-	auto reader = ctx.CreateWKTReader();
-
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
+    auto reader = lstate.ctx.CreateWKTReader();
 
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
 			    auto geos_geom = reader.Read(wkt);
-			    auto multidimensional = (GEOSHasZ_r(lstate.ctx.GetCtx(), geos_geom.get()) == 1);
-			    if (multidimensional) {
-				    throw InvalidInputException("3D/4D geometries are not supported");
-			    }
 			    return lstate.ctx.Serialize(result, geos_geom);
 		    } catch (InvalidInputException &error) {
 			    if (!info.ignore_invalid) {

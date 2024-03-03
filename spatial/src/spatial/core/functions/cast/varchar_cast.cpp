@@ -4,8 +4,11 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
+#include "spatial/core/geometry/geometry_processor.hpp"
+
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+
 
 namespace spatial {
 
@@ -117,10 +120,189 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 //------------------------------------------------------------------------------
 // GEOMETRY -> VARCHAR
 //------------------------------------------------------------------------------
+class GeometryTextProcessor final : public GeometryProcessor {
+    string text;
+public:
+    const string& GetText() {
+        return text;
+    }
+
+    void OnBegin() override {
+        text.clear();
+    }
+
+    void OnVertexData(const_data_ptr_t dims[4], ptrdiff_t strides[4], uint32_t count) override {
+        if(HasZ() && HasM()) {
+            for(uint32_t i = 0; i < count; i++) {
+                auto x = Load<double>(dims[0] + i * strides[0]);
+                auto y = Load<double>(dims[1] + i * strides[1]);
+                auto z = Load<double>(dims[2] + i * strides[2]);
+                auto m = Load<double>(dims[3] + i * strides[3]);
+                text += Utils::format_coord(x, y, z, m);
+                if(i < count - 1) {
+                    text += ", ";
+                }
+            }
+        } else if(HasZ() || HasM()) {
+            for(uint32_t i = 0; i < count; i++) {
+                auto x = Load<double>(dims[0] + i * strides[0]);
+                auto y = Load<double>(dims[1] + i * strides[1]);
+                auto zm = Load<double>(dims[2] + i * strides[2]);
+                text += Utils::format_coord(x, y, zm);
+                if(i < count - 1) {
+                    text += ", ";
+                }
+            }
+        } else {
+            for(uint32_t i = 0; i < count; i++) {
+                auto x = Load<double>(dims[0] + i * strides[0]);
+                auto y = Load<double>(dims[1] + i * strides[1]);
+                text += Utils::format_coord(x, y);
+
+                if(i < count - 1) {
+                    text += ", ";
+                }
+            }
+        }
+    }
+
+    void OnPointBegin(bool is_empty) override {
+        if(ParentType() != GeometryType::MULTIPOINT) {
+            text += "POINT";
+            if (HasZ() && HasM()) {
+                text += " ZM";
+            } else if (HasZ()) {
+                text += " Z";
+            } else if (HasM()) {
+                text += " M";
+            }
+            text += " ";
+        }
+
+        if(is_empty) {
+            text += "EMPTY";
+        } else if(ParentType() != GeometryType::MULTIPOINT) {
+            text += "(";
+        }
+    }
+    void OnPointEnd(bool is_empty) override {
+        if (!is_empty && ParentType() != GeometryType::MULTIPOINT) {
+            text += ")";
+        }
+    }
+
+    void OnLineStringBegin(uint32_t count) override {
+        if(ParentType() != GeometryType::MULTILINESTRING) {
+            text += "LINESTRING";
+            if (HasZ() && HasM()) {
+                text += " ZM";
+            } else if (HasZ()) {
+                text += " Z";
+            } else if (HasM()) {
+                text += " M";
+            }
+            text += " ";
+        }
+        if (count == 0) {
+            text += "EMPTY";
+        } else {
+            text += "(";
+        }
+    }
+
+    void OnLineStringEnd(uint32_t count) override {
+        if (count != 0) {
+            text += ")";
+        }
+    }
+
+    void OnPolygonBegin(uint32_t count) override {
+        if(ParentType() != GeometryType::MULTIPOLYGON) {
+            text += "POLYGON";
+            if (HasZ() && HasM()) {
+                text += " ZM";
+            } else if (HasZ()) {
+                text += " Z";
+            } else if (HasM()) {
+                text += " M";
+            }
+            text += " ";
+        }
+        if (count == 0) {
+            text += "EMPTY";
+        } else {
+            text += "(";
+        }
+    }
+
+    void OnPolygonEnd(uint32_t count) override {
+        if (count != 0) {
+            text += ")";
+        }
+    }
+
+    void OnPolygonRingBegin(uint32_t ring_idx, bool is_last) override {
+        text += "(";
+    }
+
+    void OnPolygonRingEnd(uint32_t ring_idx, bool is_last) override {
+        text += ")";
+        if(!is_last) {
+            text += ", ";
+        }
+    }
+
+    void OnCollectionBegin(uint32_t count) override {
+        switch(CurrentType()) {
+            case GeometryType::MULTIPOINT:
+                text += "MULTIPOINT";
+                break;
+            case GeometryType::MULTILINESTRING:
+                text += "MULTILINESTRING";
+                break;
+            case GeometryType::MULTIPOLYGON:
+                text += "MULTIPOLYGON";
+                break;
+            case GeometryType::GEOMETRYCOLLECTION:
+                text += "GEOMETRYCOLLECTION";
+                break;
+            default:
+                throw InvalidInputException("Invalid geometry type");
+        }
+
+        if(HasZ() && HasM()) {
+            text += " ZM";
+        } else if(HasZ()) {
+            text += " Z";
+        } else if(HasM()) {
+            text += " M";
+        }
+
+        if (count == 0) {
+            text += " EMPTY";
+        } else {
+            text += " (";
+        }
+    }
+
+    void OnCollectionItemEnd(uint32_t item_idx, bool is_last) override {
+        if(!is_last) {
+            text += ", ";
+        }
+    }
+
+    void OnCollectionEnd(uint32_t count) override {
+        if (count != 0) {
+            text += ")";
+        }
+    }
+};
+
 void CoreVectorOperations::GeometryToVarchar(Vector &source, Vector &result, idx_t count, GeometryFactory &factory) {
+    GeometryTextProcessor processor;
 	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t &input) {
-		auto geometry = factory.Deserialize(input);
-		return StringVector::AddString(result, geometry.ToString());
+        processor.Execute(input);
+		return StringVector::AddString(result, processor.GetText());
 	});
 }
 
