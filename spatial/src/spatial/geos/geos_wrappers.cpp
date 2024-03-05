@@ -4,7 +4,6 @@
 #include "spatial/core/geometry/cursor.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
 
-
 namespace spatial {
 
 namespace geos {
@@ -15,163 +14,176 @@ using namespace core;
 // Deserialize
 //------------------------------------------------------------------------------
 
-template<class T>
+template <class T>
 bool IsPointerAligned(const void *ptr) {
-    auto uintptr = reinterpret_cast<uintptr_t>(ptr);
-    return (uintptr % alignof(T)) == 0;
+	auto uintptr = reinterpret_cast<uintptr_t>(ptr);
+	return (uintptr % alignof(T)) == 0;
 }
 
-class GEOSDeserializer final : public GeometryProcessor<GEOSDeserializer, GEOSGeometry*> {
-    friend class GeometryProcessor<GEOSDeserializer, GEOSGeometry*>;
+class GEOSDeserializer final : GeometryProcessor<GEOSGeometry *> {
 private:
-    GEOSContextHandle_t ctx;
-    vector<double> aligned_buffer;
+	GEOSContextHandle_t ctx;
+	vector<double> aligned_buffer;
+
 private:
-    GEOSCoordSeq_t* HandleVertexData(const VertexData &vertices) {
-        auto n_dims = 2 + (HasZ() ? 1 : 0) + (HasM() ? 1 : 0);
-        auto vertex_size = sizeof(double) * n_dims;
+	GEOSCoordSeq_t *HandleVertexData(const VertexData &vertices) {
+		auto n_dims = 2 + (HasZ() ? 1 : 0) + (HasM() ? 1 : 0);
+		auto vertex_size = sizeof(double) * n_dims;
 
-        // We know that the data is interleaved :^)
-        auto data = vertices.vertex_data[0];
-        auto count = vertices.vertex_count;
+		// We know that the data is interleaved :^)
+		auto data = vertices.data[0];
+		auto count = vertices.count;
 
-        if(HasZ()) {
-            // GEOS does a memcpy in this case, so we can pass the buffer directly even if it's not aligned
-            return GEOSCoordSeq_copyFromBuffer_r(ctx, reinterpret_cast<const double *>(data), count, HasZ(), HasM());
-        }
-        else {
-            auto data_ptr = data;
-            auto vertex_data = reinterpret_cast<const double *>(data_ptr);
-            if (!IsPointerAligned<double>(data_ptr)) {
-                // If the pointer is not aligned we need to copy the data to an aligned buffer before passing it to GEOS
-                aligned_buffer.clear();
-                aligned_buffer.resize(count * n_dims);
-                memcpy(aligned_buffer.data(), data_ptr, count * vertex_size);
-                vertex_data = aligned_buffer.data();
-            }
+		if (HasZ()) {
+			// GEOS does a memcpy in this case, so we can pass the buffer directly even if it's not aligned
+			return GEOSCoordSeq_copyFromBuffer_r(ctx, reinterpret_cast<const double *>(data), count, HasZ(), HasM());
+		} else {
+			auto data_ptr = data;
+			auto vertex_data = reinterpret_cast<const double *>(data_ptr);
+			if (!IsPointerAligned<double>(data_ptr)) {
+				// If the pointer is not aligned we need to copy the data to an aligned buffer before passing it to GEOS
+				aligned_buffer.clear();
+				aligned_buffer.resize(count * n_dims);
+				memcpy(aligned_buffer.data(), data_ptr, count * vertex_size);
+				vertex_data = aligned_buffer.data();
+			}
 
-            return GEOSCoordSeq_copyFromBuffer_r(ctx, vertex_data, count, HasZ(), HasM());
-        }
-    }
+			return GEOSCoordSeq_copyFromBuffer_r(ctx, vertex_data, count, HasZ(), HasM());
+		}
+	}
 
-    void OnPoint(const VertexData &data, GEOSGeometry *&result) {
-        if (data.IsEmpty()) {
-            result = GEOSGeom_createEmptyPoint_r(ctx);
-        } else {
-            auto seq = HandleVertexData(data);
-            result = GEOSGeom_createPoint_r(ctx, seq);
-        }
-    }
+	GEOSGeometry *ProcessPoint(const VertexData &data) override {
+		if (data.IsEmpty()) {
+			return GEOSGeom_createEmptyPoint_r(ctx);
+		} else {
+			auto seq = HandleVertexData(data);
+			return GEOSGeom_createPoint_r(ctx, seq);
+		}
+	}
 
-    void OnLineString(const VertexData &data, GEOSGeometry *&result) {
-        if (data.IsEmpty()) {
-            result = GEOSGeom_createEmptyLineString_r(ctx);
-        } else {
-            auto seq = HandleVertexData(data);
-            result = GEOSGeom_createLineString_r(ctx, seq);
-        }
-    }
+	GEOSGeometry *ProcessLineString(const VertexData &data) override {
+		if (data.IsEmpty()) {
+			return GEOSGeom_createEmptyLineString_r(ctx);
+		} else {
+			auto seq = HandleVertexData(data);
+			return GEOSGeom_createLineString_r(ctx, seq);
+		}
+	}
 
-    void OnPolygon(const PolygonRings &rings, GEOSGeometry *&result) {
-        auto num_rings = rings.Count();
-        if (num_rings == 0) {
-            result = GEOSGeom_createEmptyPolygon_r(ctx);
-        } else {
-            auto geoms = new GEOSGeometry *[num_rings];
-            uint32_t i = 0;
-            for (const auto &data : rings) {
-                auto seq = HandleVertexData(data);
-                geoms[i++] = GEOSGeom_createLinearRing_r(ctx, seq);
-            }
-            result = GEOSGeom_createPolygon_r(ctx, geoms[0], geoms + 1, num_rings - 1);
-            delete[] geoms;
-        }
-    }
+	GEOSGeometry *ProcessPolygon(PolygonState &state) override {
+		auto num_rings = state.RingCount();
+		if (num_rings == 0) {
+			return GEOSGeom_createEmptyPolygon_r(ctx);
+		} else {
+			// TODO: Make a vector here instead of using new
+			auto geoms = new GEOSGeometry *[num_rings];
+			for (uint32_t i = 0; i < num_rings; i++) {
+				auto vertices = state.Next();
+				auto seq = HandleVertexData(vertices);
+				geoms[i] = GEOSGeom_createLinearRing_r(ctx, seq);
+			}
+			auto result = GEOSGeom_createPolygon_r(ctx, geoms[0], geoms + 1, num_rings - 1);
+			delete[] geoms;
+			return result;
+		}
+	}
 
-    template<class F>
-    void OnCollection(uint32_t item_count, F&& item, GEOSGeometry *result) {
-        auto geoms = new GEOSGeometry *[item_count];
-        for (uint32_t i = 0; i < item_count; i++) {
-            item(geoms[i]);
-        }
-        result = GEOSGeom_createCollection_r(ctx, GEOS_GEOMETRYCOLLECTION, geoms, item_count);
-        delete[] geoms;
-    }
+	GEOSGeometry *ProcessCollection(CollectionState &state) override {
+		GEOSGeomTypes collection_type = GEOS_GEOMETRYCOLLECTION;
+		switch (CurrentType()) {
+		case GeometryType::MULTIPOINT:
+			collection_type = GEOS_MULTIPOINT;
+			break;
+		case GeometryType::MULTILINESTRING:
+			collection_type = GEOS_MULTILINESTRING;
+			break;
+		case GeometryType::MULTIPOLYGON:
+			collection_type = GEOS_MULTIPOLYGON;
+			break;
+		default:
+			break;
+		}
+		auto item_count = state.ItemCount();
+		if (item_count == 0) {
+			return GEOSGeom_createEmptyCollection_r(ctx, collection_type);
+		} else {
+			auto geoms = new GEOSGeometry *[item_count];
+			for (uint32_t i = 0; i < item_count; i++) {
+				geoms[i] = state.Next();
+			}
+			auto result = GEOSGeom_createCollection_r(ctx, collection_type, geoms, item_count);
+			delete[] geoms;
+			return result;
+		}
+	}
 
 public:
-    explicit GEOSDeserializer(GEOSContextHandle_t ctx) : ctx(ctx) {
-    }
+	explicit GEOSDeserializer(GEOSContextHandle_t ctx) : ctx(ctx) {
+	}
 
-    GeometryPtr Execute(const geometry_t &geom) {
-        aligned_buffer.clear();
-        GEOSGeometry *result = nullptr;
-        Process(geom, result);
-        return GeometryPtr { result };
-    }
-
+	GeometryPtr Execute(const geometry_t &geom) {
+		return GeometryPtr {Process(geom)};
+	}
 };
 
-
-template<bool HAS_Z, bool HAS_M>
+/*
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx);
 
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSCoordSeq_t *DeserializeCoordSeq(Cursor &reader, uint32_t count, GEOSContextHandle_t ctx) {
-    auto dims = 2 + (HAS_Z ? 1 : 0) + (HAS_M ? 1 : 0);
-    auto vertex_size = sizeof(double) * dims;
-    if(HAS_Z) {
-        // GEOS does a memcpy in this case, so we can pass the buffer directly even if it's not aligned
-        auto data = reader.GetPtr();
-        auto seq = GEOSCoordSeq_copyFromBuffer_r(ctx, reinterpret_cast<const double *>(data), count, HAS_Z, HAS_M);
-        reader.Skip(count * vertex_size);
-        D_ASSERT(seq != nullptr);
-        return seq;
-    }
-    else {
-        auto data_ptr = reader.GetPtr();
-        auto vertex_data = reinterpret_cast<const double *>(data_ptr);
-        unsafe_unique_array<double> aligned_buffer;
-        if (!IsPointerAligned<double>(data_ptr)) {
-            // If the pointer is not aligned we need to copy the data to an aligned buffer before passing it to GEOS
-            aligned_buffer = make_unsafe_uniq_array<double>(count * dims);
-            memcpy(aligned_buffer.get(), data_ptr, count * vertex_size);
-            vertex_data = aligned_buffer.get();
-        }
+	auto dims = 2 + (HAS_Z ? 1 : 0) + (HAS_M ? 1 : 0);
+	auto vertex_size = sizeof(double) * dims;
+	if (HAS_Z) {
+		// GEOS does a memcpy in this case, so we can pass the buffer directly even if it's not aligned
+		auto data = reader.GetPtr();
+		auto seq = GEOSCoordSeq_copyFromBuffer_r(ctx, reinterpret_cast<const double *>(data), count, HAS_Z, HAS_M);
+		reader.Skip(count * vertex_size);
+		D_ASSERT(seq != nullptr);
+		return seq;
+	} else {
+		auto data_ptr = reader.GetPtr();
+		auto vertex_data = reinterpret_cast<const double *>(data_ptr);
+		unsafe_unique_array<double> aligned_buffer;
+		if (!IsPointerAligned<double>(data_ptr)) {
+			// If the pointer is not aligned we need to copy the data to an aligned buffer before passing it to GEOS
+			aligned_buffer = make_unsafe_uniq_array<double>(count * dims);
+			memcpy(aligned_buffer.get(), data_ptr, count * vertex_size);
+			vertex_data = aligned_buffer.get();
+		}
 
-        auto seq = GEOSCoordSeq_copyFromBuffer_r(ctx, vertex_data, count, HAS_Z, HAS_M);
-        reader.Skip(count * vertex_size);
-        D_ASSERT(seq != nullptr);
-        return seq;
-    }
+		auto seq = GEOSCoordSeq_copyFromBuffer_r(ctx, vertex_data, count, HAS_Z, HAS_M);
+		reader.Skip(count * vertex_size);
+		D_ASSERT(seq != nullptr);
+		return seq;
+	}
 }
 
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializePoint(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
 		return GEOSGeom_createEmptyPoint_r(ctx);
 	} else {
-        auto seq = DeserializeCoordSeq<HAS_Z, HAS_M>(reader, count, ctx);
+		auto seq = DeserializeCoordSeq<HAS_Z, HAS_M>(reader, count, ctx);
 		return GEOSGeom_createPoint_r(ctx, seq);
 	}
 }
 
-
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeLineString(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
 		return GEOSGeom_createEmptyLineString_r(ctx);
 	} else {
-        auto seq = DeserializeCoordSeq<HAS_Z, HAS_M>(reader, count, ctx);
+		auto seq = DeserializeCoordSeq<HAS_Z, HAS_M>(reader, count, ctx);
 		return GEOSGeom_createLineString_r(ctx, seq);
 	}
 }
 
-
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializePolygon(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_rings = reader.Read<uint32_t>();
@@ -180,21 +192,21 @@ static GEOSGeometry *DeserializePolygon(Cursor &reader, GEOSContextHandle_t ctx)
 	} else {
 		// TODO: This doesnt handle the offset properly
 		auto rings = new GEOSGeometry *[num_rings];
-        auto data_reader = reader;
-        data_reader.Skip(sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t)));
+		auto data_reader = reader;
+		data_reader.Skip(sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t)));
 		for (uint32_t i = 0; i < num_rings; i++) {
 			auto count = reader.Read<uint32_t>();
 			auto seq = DeserializeCoordSeq<HAS_Z, HAS_M>(data_reader, count, ctx);
 			rings[i] = GEOSGeom_createLinearRing_r(ctx, seq);
 		}
-        reader.SetPtr(data_reader.GetPtr());
+		reader.SetPtr(data_reader.GetPtr());
 		auto poly = GEOSGeom_createPolygon_r(ctx, rings[0], rings + 1, num_rings - 1);
 		delete[] rings;
 		return poly;
 	}
 }
 
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeMultiPoint(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_points = reader.Read<uint32_t>();
@@ -211,8 +223,7 @@ static GEOSGeometry *DeserializeMultiPoint(Cursor &reader, GEOSContextHandle_t c
 	}
 }
 
-
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeMultiLineString(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_lines = reader.Read<uint32_t>();
@@ -229,8 +240,7 @@ static GEOSGeometry *DeserializeMultiLineString(Cursor &reader, GEOSContextHandl
 	}
 }
 
-
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeMultiPolygon(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_polygons = reader.Read<uint32_t>();
@@ -247,13 +257,12 @@ static GEOSGeometry *DeserializeMultiPolygon(Cursor &reader, GEOSContextHandle_t
 	}
 }
 
-
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 static GEOSGeometry *DeserializeGeometryCollection(Cursor &reader, GEOSContextHandle_t ctx) {
 	reader.Skip(4); // skip type
 	auto num_geoms = reader.Read<uint32_t>();
 	if (num_geoms == 0) {
-        // TODO: Set Z and M?
+		// TODO: Set Z and M?
 		return GEOSGeom_createEmptyCollection_r(ctx, GEOS_GEOMETRYCOLLECTION);
 	} else {
 		auto geoms = new GEOSGeometry *[num_geoms];
@@ -266,8 +275,7 @@ static GEOSGeometry *DeserializeGeometryCollection(Cursor &reader, GEOSContextHa
 	}
 }
 
-
-template<bool HAS_Z, bool HAS_M>
+template <bool HAS_Z, bool HAS_M>
 GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx) {
 	auto type = reader.Peek<GeometryType>();
 	switch (type) {
@@ -301,31 +309,38 @@ GEOSGeometry *DeserializeGeometry(Cursor &reader, GEOSContextHandle_t ctx) {
 
 GEOSGeometry *DeserializeGEOSGeometry(const geometry_t &blob, GEOSContextHandle_t ctx) {
 	Cursor reader(blob);
-    auto type = reader.Read<GeometryType>();
-    (void)type;
-    auto properties = reader.Read<GeometryProperties>();
-    auto hash = reader.Read<uint16_t>();
-    (void)hash;
+	auto type = reader.Read<GeometryType>();
+	(void)type;
+	auto properties = reader.Read<GeometryProperties>();
+	auto hash = reader.Read<uint16_t>();
+	(void)hash;
 	reader.Skip(4); // Skip padding
 	if (properties.HasBBox()) {
 		reader.Skip(16); // Skip bbox
 	}
 
-    auto has_z = properties.HasZ();
-    auto has_m = properties.HasM();
-    if (has_z && has_m) {
-        return DeserializeGeometry<true, true>(reader, ctx);
-    } else if (has_z) {
-        return DeserializeGeometry<true, false>(reader, ctx);
-    } else if (has_m) {
-        return DeserializeGeometry<false, true>(reader, ctx);
-    } else {
-        return DeserializeGeometry<false, false>(reader, ctx);
-    }
+	auto has_z = properties.HasZ();
+	auto has_m = properties.HasM();
+	if (has_z && has_m) {
+		return DeserializeGeometry<true, true>(reader, ctx);
+	} else if (has_z) {
+		return DeserializeGeometry<true, false>(reader, ctx);
+	} else if (has_m) {
+		return DeserializeGeometry<false, true>(reader, ctx);
+	} else {
+		return DeserializeGeometry<false, false>(reader, ctx);
+	}
+}
+*/
+
+GEOSGeometry *DeserializeGEOSGeometry(const geometry_t &blob, GEOSContextHandle_t ctx) {
+    GEOSDeserializer deserializer(ctx);
+    return deserializer.Execute(blob).release();
 }
 
 GeometryPtr GeosContextWrapper::Deserialize(const geometry_t &blob) {
-	return GeometryPtr(DeserializeGEOSGeometry(blob, ctx));
+    GEOSDeserializer deserializer(ctx);
+    return deserializer.Execute(blob);
 }
 
 //-------------------------------------------------------------------
@@ -333,10 +348,10 @@ GeometryPtr GeosContextWrapper::Deserialize(const geometry_t &blob) {
 //-------------------------------------------------------------------
 static uint32_t GetSerializedSize(const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	auto type = GEOSGeomTypeId_r(ctx, geom);
-    bool has_z = GEOSHasZ_r(ctx, geom);
-    bool has_m = GEOSHasM_r(ctx, geom);
+	bool has_z = GEOSHasZ_r(ctx, geom);
+	bool has_m = GEOSHasM_r(ctx, geom);
 
-    auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
+	auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
 
 	switch (type) {
 	case GEOS_POINT: {
@@ -439,15 +454,13 @@ static uint32_t GetSerializedSize(const GEOSGeometry *geom, const GEOSContextHan
 	}
 }
 
-
-
 static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx);
 
-
-static void SerializeCoordSeq(Cursor &writer, const GEOSCoordSequence *seq, bool has_z, bool has_m, uint32_t count, const GEOSContextHandle_t ctx) {
-    GEOSCoordSeq_copyToBuffer_r(ctx, seq, reinterpret_cast<double *>(writer.GetPtr()), has_z, has_m);
-    auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
-    writer.Skip(count * vertex_size);
+static void SerializeCoordSeq(Cursor &writer, const GEOSCoordSequence *seq, bool has_z, bool has_m, uint32_t count,
+                              const GEOSContextHandle_t ctx) {
+	GEOSCoordSeq_copyToBuffer_r(ctx, seq, reinterpret_cast<double *>(writer.GetPtr()), has_z, has_m);
+	auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
+	writer.Skip(count * vertex_size);
 }
 
 static void SerializePoint(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
@@ -457,28 +470,28 @@ static void SerializePoint(Cursor &writer, const GEOSGeometry *geom, const GEOSC
 		writer.Write<uint32_t>(0);
 		return;
 	}
-    auto has_z = GEOSHasZ_r(ctx, geom);
-    auto has_m = GEOSHasM_r(ctx, geom);
-    auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
-    uint32_t count;
-    GEOSCoordSeq_getSize_r(ctx, seq, &count);
-    writer.Write<uint32_t>(count);
-    SerializeCoordSeq(writer, seq, has_z, has_m, count, ctx);
+	auto has_z = GEOSHasZ_r(ctx, geom);
+	auto has_m = GEOSHasM_r(ctx, geom);
+	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
+	uint32_t count;
+	GEOSCoordSeq_getSize_r(ctx, seq, &count);
+	writer.Write<uint32_t>(count);
+	SerializeCoordSeq(writer, seq, has_z, has_m, count, ctx);
 }
 
 static void SerializeLineString(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
 	writer.Write<uint32_t>((uint32_t)GeometryType::LINESTRING);
-    if(GEOSisEmpty_r(ctx, geom)) {
-        writer.Write<uint32_t>(0);
-        return;
-    }
-    auto has_z = GEOSHasZ_r(ctx, geom);
-    auto has_m = GEOSHasM_r(ctx, geom);
-    auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
-    uint32_t count;
-    GEOSCoordSeq_getSize_r(ctx, seq, &count);
-    writer.Write<uint32_t>(count);
-    SerializeCoordSeq(writer, seq, has_z, has_m, count, ctx);
+	if (GEOSisEmpty_r(ctx, geom)) {
+		writer.Write<uint32_t>(0);
+		return;
+	}
+	auto has_z = GEOSHasZ_r(ctx, geom);
+	auto has_m = GEOSHasM_r(ctx, geom);
+	auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
+	uint32_t count;
+	GEOSCoordSeq_getSize_r(ctx, seq, &count);
+	writer.Write<uint32_t>(count);
+	SerializeCoordSeq(writer, seq, has_z, has_m, count, ctx);
 }
 
 static void SerializePolygon(Cursor &writer, const GEOSGeometry *geom, const GEOSContextHandle_t ctx) {
@@ -519,10 +532,10 @@ static void SerializePolygon(Cursor &writer, const GEOSGeometry *geom, const GEO
 	}
 
 	// Second pass, write data for each ring
-    bool has_z = GEOSHasZ_r(ctx, geom);
-    bool has_m = GEOSHasM_r(ctx, geom);
+	bool has_z = GEOSHasZ_r(ctx, geom);
+	bool has_m = GEOSHasM_r(ctx, geom);
 	// Start with shell
-    SerializeCoordSeq(writer, shell_seq, has_z, has_m, shell_count, ctx);
+	SerializeCoordSeq(writer, shell_seq, has_z, has_m, shell_count, ctx);
 
 	// Then write each hole
 	for (uint32_t i = 0; i < num_holes; i++) {
@@ -530,8 +543,8 @@ static void SerializePolygon(Cursor &writer, const GEOSGeometry *geom, const GEO
 		auto ring_seq = GEOSGeom_getCoordSeq_r(ctx, ring);
 		uint32_t ring_count;
 
-        GEOSCoordSeq_getSize_r(ctx, ring_seq, &ring_count);
-        SerializeCoordSeq(writer, ring_seq, has_z, has_m, ring_count, ctx);
+		GEOSCoordSeq_getSize_r(ctx, ring_seq, &ring_count);
+		SerializeCoordSeq(writer, ring_seq, has_z, has_m, ring_count, ctx);
 	}
 }
 
@@ -638,9 +651,9 @@ geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSC
 	bool has_bbox = type != GeometryType::POINT && GEOSisEmpty_r(ctx, geom) == 0;
 
 	auto size = GetSerializedSize(geom, ctx);
-	size += 4; // Header
-	size += sizeof(uint32_t);       // Padding
-	size += has_bbox ? 16 : 0;      // BBox
+	size += 4;                 // Header
+	size += sizeof(uint32_t);  // Padding
+	size += has_bbox ? 16 : 0; // BBox
 
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor writer(blob);
@@ -650,15 +663,14 @@ geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSC
 		hash ^= (size >> (i * 8)) & 0xFF;
 	}
 
-
-    GeometryProperties properties;
+	GeometryProperties properties;
 	properties.SetBBox(has_bbox);
-    properties.SetZ(GEOSHasZ_r(ctx, geom));
-    properties.SetM(GEOSHasM_r(ctx, geom));
-    writer.Write<GeometryType>(type);    // Type
-    writer.Write<GeometryProperties>(properties); // Properties
-    writer.Write<uint16_t>(hash);         // Hash
-	writer.Write<uint32_t>(0);            // Padding
+	properties.SetZ(GEOSHasZ_r(ctx, geom));
+	properties.SetM(GEOSHasM_r(ctx, geom));
+	writer.Write<GeometryType>(type);             // Type
+	writer.Write<GeometryProperties>(properties); // Properties
+	writer.Write<uint16_t>(hash);                 // Hash
+	writer.Write<uint32_t>(0);                    // Padding
 
 	// If the geom is not a point, write the bounding box
 	if (has_bbox) {

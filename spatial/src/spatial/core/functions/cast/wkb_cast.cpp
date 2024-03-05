@@ -29,15 +29,8 @@ static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastP
 //------------------------------------------------------------------------------
 static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
 	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		auto size = WKBWriter::GetRequiredSize(geometry);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (data_ptr_t)(str.GetDataUnsafe());
-		WKBWriter::Write(geometry, ptr);
-		return str;
+		return WKBWriter::Write(input, result);
 	});
 
 	return true;
@@ -48,9 +41,7 @@ static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastP
 //------------------------------------------------------------------------------
 void CoreCastFunctions::RegisterWKBCasts(DatabaseInstance &db) {
 	// Geometry <-> WKB is explicitly castable
-	ExtensionUtil::RegisterCastFunction(
-	    db, GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
-	    BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(), BoundCastInfo(GeometryToWKBCast));
 
 	ExtensionUtil::RegisterCastFunction(
 	    db, GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),

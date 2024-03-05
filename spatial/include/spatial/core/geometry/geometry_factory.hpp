@@ -17,10 +17,7 @@ public:
 	explicit GeometryFactory(Allocator &allocator) : allocator(allocator) {
 	}
 
-	Geometry FromWKT(const char *wkt, uint32_t length);
 	Geometry FromWKB(const char *wkb, uint32_t length);
-	string ToWKT(const Geometry &geometry);
-	data_ptr_t ToWKB(const Geometry &geometry, uint32_t *size);
 
 	VertexVector AllocateVertexVector(uint32_t capacity);
 

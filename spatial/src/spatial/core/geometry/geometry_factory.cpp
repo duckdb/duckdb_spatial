@@ -10,26 +10,10 @@ namespace spatial {
 
 namespace core {
 
-Geometry GeometryFactory::FromWKT(const char *wkt, uint32_t length) {
-	throw NotImplementedException("WKT not implemented yet");
-}
-
-string GeometryFactory::ToWKT(const Geometry &geometry) {
-	throw NotImplementedException("WKT not implemented yet");
-}
 // Parse "standard" WKB format
 Geometry GeometryFactory::FromWKB(const char *wkb, uint32_t length) {
 	WKBReader reader(*this, wkb, length);
 	return reader.ReadGeometry();
-}
-
-data_ptr_t GeometryFactory::ToWKB(const Geometry &geometry, uint32_t *size) {
-	auto required_size = WKBWriter::GetRequiredSize(geometry);
-	auto ptr = allocator.AllocateAligned(required_size);
-	auto cursor = ptr;
-	WKBWriter::Write(geometry, cursor);
-	*size = required_size;
-	return ptr;
 }
 
 VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) {
@@ -171,8 +155,8 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) 
 
 	// Write the header
 	cursor.Write<GeometryType>(type);
-    cursor.Write<GeometryProperties>(properties);
-    cursor.Write<uint16_t>(hash);
+	cursor.Write<GeometryProperties>(properties);
+	cursor.Write<uint16_t>(hash);
 	// Pad with 4 bytes (we might want to use this to store SRID in the future)
 	cursor.Write<uint32_t>(0);
 
@@ -374,10 +358,10 @@ bool GeometryFactory::TryGetSerializedBoundingBox(const geometry_t &data, Boundi
 	Cursor cursor(data);
 
 	// Read the header
-    auto header_type = cursor.Read<GeometryType>();
-    auto properties = cursor.Read<GeometryProperties>();
-    auto hash = cursor.Read<uint16_t>();
-    (void)hash;
+	auto header_type = cursor.Read<GeometryType>();
+	auto properties = cursor.Read<GeometryProperties>();
+	auto hash = cursor.Read<uint16_t>();
+	(void)hash;
 
 	if (properties.HasBBox()) {
 		cursor.Skip(4); // skip padding
@@ -520,11 +504,11 @@ uint32_t GeometryFactory::GetSerializedSize(const Geometry &geometry) {
 //----------------------------------------------------------------------
 Geometry GeometryFactory::Deserialize(const geometry_t &data) {
 	Cursor cursor(data);
-    auto header_type = cursor.Read<GeometryType>();
-    (void)header_type;
-    auto properties = cursor.Read<GeometryProperties>();
-    auto hash = cursor.Read<uint16_t>();
-    (void)hash;
+	auto header_type = cursor.Read<GeometryType>();
+	(void)header_type;
+	auto properties = cursor.Read<GeometryProperties>();
+	auto hash = cursor.Read<uint16_t>();
+	(void)hash;
 	cursor.Skip(4); // Skip padding
 
 	if (properties.HasBBox()) {

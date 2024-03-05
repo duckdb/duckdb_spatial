@@ -13,19 +13,28 @@ namespace core {
 // A serialized geometry
 class geometry_t {
 private:
-    string_t data;
+	string_t data;
+
 public:
+	geometry_t() = default;
+	// NOLINTNEXTLINE
+	explicit geometry_t(string_t data) : data(data) {
+	}
 
-    geometry_t() = default;
-    // NOLINTNEXTLINE
-    explicit geometry_t(string_t data) : data(data) { }
+	// NOLINTNEXTLINE
+	operator string_t() const {
+		return data;
+	}
 
-    // NOLINTNEXTLINE
-    operator string_t() const { return data; }
-
-    GeometryType GetType() const { return Load<GeometryType>(const_data_ptr_cast(data.GetPrefix())); }
-    GeometryProperties GetProperties() const { return Load<GeometryProperties>(const_data_ptr_cast(data.GetPrefix() + 1)); }
-    uint16_t GetHash() const { return Load<uint16_t>(const_data_ptr_cast(data.GetPrefix() + 2)); }
+	GeometryType GetType() const {
+		return Load<GeometryType>(const_data_ptr_cast(data.GetPrefix()));
+	}
+	GeometryProperties GetProperties() const {
+		return Load<GeometryProperties>(const_data_ptr_cast(data.GetPrefix() + 1));
+	}
+	uint16_t GetHash() const {
+		return Load<uint16_t>(const_data_ptr_cast(data.GetPrefix() + 2));
+	}
 };
 
 static_assert(sizeof(geometry_t) == sizeof(string_t), "geometry_t should be the same size as string_t");
@@ -73,8 +82,8 @@ public:
 struct Utils {
 	static string format_coord(double d);
 	static string format_coord(double x, double y);
-    static string format_coord(double x, double y, double z);
-    static string format_coord(double x, double y, double z, double m);
+	static string format_coord(double x, double y, double z);
+	static string format_coord(double x, double y, double z, double m);
 
 	static inline float DoubleToFloatDown(double d) {
 		if (d > static_cast<double>(std::numeric_limits<float>::max())) {

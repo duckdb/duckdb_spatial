@@ -192,11 +192,10 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 	auto &input = args.data[0];
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
-
 		if (input.GetType() == GeometryType::GEOMETRYCOLLECTION) {
-            auto geometry = lstate.factory.Deserialize(input);
+			auto geometry = lstate.factory.Deserialize(input);
 
-            auto &collection = geometry.GetGeometryCollection();
+			auto &collection = geometry.GetGeometryCollection();
 			if (collection.IsEmpty()) {
 				return input;
 			}

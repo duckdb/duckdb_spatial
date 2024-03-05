@@ -44,7 +44,8 @@ static void ExecutePreparedDistanceWithin(GEOSFunctionLocalState &lstate, Vector
 		    });
 	} else {
 		TernaryExecutor::Execute<geometry_t, geometry_t, double, bool>(
-		    left, right, distance_vec, result, count, [&](geometry_t &left_blob, geometry_t &right_blob, double distance) {
+		    left, right, distance_vec, result, count,
+		    [&](geometry_t &left_blob, geometry_t &right_blob, double distance) {
 			    auto left_geometry = lstate.ctx.Deserialize(left_blob);
 			    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 			    auto ok = GEOSDistanceWithin_r(ctx, left_geometry.get(), right_geometry.get(), distance);

@@ -90,9 +90,9 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 
 	idx_t total_coords = 0;
 	UnaryExecutor::Execute<geometry_t, list_entry_t>(source, result, count, [&](geometry_t &geom) {
-        if (geom.GetType() != GeometryType::LINESTRING) {
-            throw ConversionException("Cannot cast non-linestring GEOMETRY to LINESTRING_2D");
-        }
+		if (geom.GetType() != GeometryType::LINESTRING) {
+			throw ConversionException("Cannot cast non-linestring GEOMETRY to LINESTRING_2D");
+		}
 
 		auto geometry = lstate.factory.Deserialize(geom);
 		auto &line = geometry.GetLineString();
@@ -155,9 +155,9 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 	idx_t total_coords = 0;
 
 	UnaryExecutor::Execute<geometry_t, list_entry_t>(source, result, count, [&](geometry_t &geom) {
-        if(geom.GetType() != GeometryType::POLYGON) {
-            throw ConversionException("Cannot cast non-polygon GEOMETRY to POLYGON_2D");
-        }
+		if (geom.GetType() != GeometryType::POLYGON) {
+			throw ConversionException("Cannot cast non-polygon GEOMETRY to POLYGON_2D");
+		}
 		auto geometry = lstate.factory.Deserialize(geom);
 		auto &poly = geometry.GetPolygon();
 		auto poly_size = poly.Count();

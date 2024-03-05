@@ -76,7 +76,7 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 	    geom_vec, index_vec, result, count, [&](geometry_t input, int32_t index, ValidityMask &mask, idx_t row_idx) {
 		    if (input.GetType() != GeometryType::LINESTRING) {
 			    mask.SetInvalid(row_idx);
-			    return geometry_t { };
+			    return geometry_t {};
 		    }
 
 		    auto line = lstate.factory.Deserialize(input).GetLineString();
@@ -85,7 +85,7 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 		    if (point_count == 0 || index == 0 || index < -static_cast<int64_t>(point_count) ||
 		        index > static_cast<int64_t>(point_count)) {
 			    mask.SetInvalid(row_idx);
-			    return geometry_t { };
+			    return geometry_t {};
 		    }
 
 		    auto actual_index = index < 0 ? point_count + index : index - 1;

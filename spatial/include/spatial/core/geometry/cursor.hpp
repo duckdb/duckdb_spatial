@@ -61,11 +61,11 @@ public:
 		return Load<T>(ptr);
 	}
 
-    template <class T>
-    void Skip() {
-        static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
-        Skip(sizeof(T));
-    }
+	template <class T>
+	void Skip() {
+		static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
+		Skip(sizeof(T));
+	}
 
 	void Skip(uint32_t bytes) {
 		if (ptr + bytes > end) {

@@ -22,12 +22,7 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		auto size = WKBWriter::GetRequiredSize(geometry);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (data_ptr_t)(str.GetDataUnsafe());
-		WKBWriter::Write(geometry, ptr);
-		return str;
+        return WKBWriter::Write(input, result);
 	});
 }
 
@@ -37,8 +32,7 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 void CoreScalarFunctions::RegisterStAsWKB(DatabaseInstance &db) {
 	ScalarFunctionSet as_wkb_function_set("ST_AsWKB");
 
-	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction,
-	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_wkb_function_set);
 }

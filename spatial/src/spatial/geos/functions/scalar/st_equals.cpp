@@ -18,11 +18,11 @@ static void EqualsFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
 	BinaryExecutor::Execute<geometry_t, geometry_t, bool>(args.data[0], args.data[1], result, args.size(),
-	                                                  [&](geometry_t &left_blob, geometry_t &right_blob) {
-		                                                  auto left = lstate.ctx.Deserialize(left_blob);
-		                                                  auto right = lstate.ctx.Deserialize(right_blob);
-		                                                  return GEOSEquals_r(ctx, left.get(), right.get());
-	                                                  });
+	                                                      [&](geometry_t &left_blob, geometry_t &right_blob) {
+		                                                      auto left = lstate.ctx.Deserialize(left_blob);
+		                                                      auto right = lstate.ctx.Deserialize(right_blob);
+		                                                      return GEOSEquals_r(ctx, left.get(), right.get());
+	                                                      });
 }
 
 void GEOSScalarFunctions::RegisterStEquals(DatabaseInstance &db) {

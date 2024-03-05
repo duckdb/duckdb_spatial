@@ -16,13 +16,13 @@ enum class GeometryType : uint8_t {
 };
 
 enum class SerializedGeometryType : uint32_t {
-    POINT = 0,
-    LINESTRING,
-    POLYGON,
-    MULTIPOINT,
-    MULTILINESTRING,
-    MULTIPOLYGON,
-    GEOMETRYCOLLECTION
+	POINT = 0,
+	LINESTRING,
+	POLYGON,
+	MULTIPOINT,
+	MULTILINESTRING,
+	MULTIPOLYGON,
+	GEOMETRYCOLLECTION
 };
 
 } // namespace core

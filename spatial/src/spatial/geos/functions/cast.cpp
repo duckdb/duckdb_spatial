@@ -62,7 +62,7 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 				    HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
 			    }
 			    mask.SetInvalid(idx);
-			    return geometry_t { };
+			    return geometry_t {};
 		    }
 	    });
 	return success;

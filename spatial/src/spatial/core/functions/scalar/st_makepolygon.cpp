@@ -23,9 +23,9 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 	BinaryExecutor::Execute<geometry_t, list_entry_t, geometry_t>(
 	    args.data[0], args.data[1], result, count, [&](geometry_t line_blob, list_entry_t &rings_list) {
 		    // First, setup the shell
-            if (line_blob.GetType() != GeometryType::LINESTRING) {
-                throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
-            }
+		    if (line_blob.GetType() != GeometryType::LINESTRING) {
+			    throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
+		    }
 		    auto shell_geom = lstate.factory.Deserialize(line_blob);
 		    auto &shell = shell_geom.GetLineString();
 		    auto shell_vert_count = shell.Count();
@@ -98,9 +98,9 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 	auto count = args.size();
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(args.data[0], result, count, [&](geometry_t &line_blob) {
-        if (line_blob.GetType() != GeometryType::LINESTRING) {
-            throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
-        }
+		if (line_blob.GetType() != GeometryType::LINESTRING) {
+			throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
+		}
 
 		auto line_geom = lstate.factory.Deserialize(line_blob);
 		auto &line = line_geom.GetLineString();

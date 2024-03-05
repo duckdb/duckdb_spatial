@@ -23,7 +23,7 @@ static void BoundaryFunction(DataChunk &args, ExpressionState &state, Vector &re
 		    auto geom = lstate.ctx.Deserialize(geometry_blob);
 		    if (GEOSGeomTypeId_r(lstate.ctx.GetCtx(), geom.get()) == GEOS_GEOMETRYCOLLECTION) {
 			    mask.SetInvalid(i);
-			    return geometry_t { };
+			    return geometry_t {};
 		    }
 
 		    auto boundary = make_uniq_geos(lstate.ctx.GetCtx(), GEOSBoundary_r(lstate.ctx.GetCtx(), geom.get()));

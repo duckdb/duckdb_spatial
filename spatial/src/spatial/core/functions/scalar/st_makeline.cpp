@@ -58,9 +58,9 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 
 	BinaryExecutor::Execute<geometry_t, geometry_t, geometry_t>(
 	    args.data[0], args.data[1], result, count, [&](geometry_t &geom_blob_left, geometry_t &geom_blob_right) {
-            if (geom_blob_left.GetType() != GeometryType::POINT || geom_blob_right.GetType() != GeometryType::POINT) {
-                throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
-            }
+		    if (geom_blob_left.GetType() != GeometryType::POINT || geom_blob_right.GetType() != GeometryType::POINT) {
+			    throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+		    }
 
 		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
 		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);

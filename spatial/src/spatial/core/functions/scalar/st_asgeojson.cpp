@@ -59,42 +59,96 @@ private:
 // GEOMETRY -> GEOJSON Fragment
 //------------------------------------------------------------------------------
 
-class GeoJSONWriter final : public GeometryProcessor<GeoJSONWriter, yyjson_mut_val*> {
-    JSONAllocator allocator;
-    yyjson_mut_doc *doc;
-    yyjson_mut_val *root;
+class GeoJSONWriter final : public GeometryProcessor<void, yyjson_mut_val *> {
+	JSONAllocator allocator;
+	yyjson_mut_doc *doc;
+	yyjson_mut_val *root;
+
 public:
+	void Execute(const geometry_t &geom) {
+		Process(geom, nullptr);
+	}
 
-    void Execute(const geometry_t &geom) {
-        Process(geom, nullptr);
-    }
+	void HandleVertexData(const VertexData &vertices, yyjson_mut_val *arr) {
+		if (vertices.IsEmpty()) {
+			return;
+		}
 
-    void HandleVertexData(const VertexData &data, yyjson_mut_val *obj) {
+		auto data = vertices.data;
+		auto stride = vertices.stride;
+		if (HasZ()) {
+			for (uint32_t i = 0; i < vertices.count; i++) {
+				auto x = Load<double>(data[0] + i * stride[0]);
+				auto y = Load<double>(data[1] + i * stride[1]);
+				auto z = Load<double>(data[2] + i * stride[2]);
 
-    }
+				auto coord = yyjson_mut_arr(doc);
 
-    void OnPoint(const VertexData &data, yyjson_mut_val *obj) {
+				yyjson_mut_arr_add_real(doc, coord, x);
+				yyjson_mut_arr_add_real(doc, coord, y);
+				yyjson_mut_arr_add_real(doc, coord, z);
+				yyjson_mut_arr_append(arr, coord);
+			}
+		} else {
+			for (uint32_t i = 0; i < vertices.count; i++) {
+				auto x = Load<double>(data[0] + i * stride[0]);
+				auto y = Load<double>(data[1] + i * stride[1]);
 
-    }
+				auto coord = yyjson_mut_arr(doc);
 
-    void OnLineString(const VertexData &data, yyjson_mut_val *obj) {
+				yyjson_mut_arr_add_real(doc, coord, x);
+				yyjson_mut_arr_add_real(doc, coord, y);
+				yyjson_mut_arr_append(arr, coord);
+			}
+		}
+	}
 
-    }
+	void ProcessPoint(const VertexData &vertices, yyjson_mut_val *obj) override {
+		yyjson_mut_obj_add_str(doc, obj, "type", "Point");
 
-    void OnPolygon(const PolygonRings &rings, yyjson_mut_val *obj) {
+		auto coords = yyjson_mut_arr(doc);
+		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-    }
+		HandleVertexData(vertices, coords);
+	}
 
-    template<class F>
-    void OnCollection(uint32_t item_count, F &&f, yyjson_mut_val *obj) {
-        for (uint32_t i = 0; i < item_count; i++) {
-            f(obj);
-        }
-    }
+	void ProcessLineString(const VertexData &data, yyjson_mut_val *obj) override {
+		yyjson_mut_obj_add_str(doc, obj, "type", "LineString");
 
+		auto coords = yyjson_mut_arr(doc);
+		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
+	}
+
+	void ProcessPolygon(PolygonState &state, yyjson_mut_val *obj) override {
+		yyjson_mut_obj_add_str(doc, obj, "type", "Polygon");
+
+		auto coords = yyjson_mut_arr(doc);
+		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
+		while (!state.IsDone()) {
+			auto vertices = state.Next();
+			auto ring = yyjson_mut_arr(doc);
+			HandleVertexData(vertices, ring);
+			yyjson_mut_arr_append(coords, ring);
+		}
+	}
+
+	void ProcessCollection(CollectionState &state, yyjson_mut_val *obj) override {
+		switch (CurrentType()) {
+		case GeometryType::MULTIPOINT: {
+
+		} break;
+		case GeometryType::MULTILINESTRING: {
+
+		} break;
+		case GeometryType::MULTIPOLYGON: {
+
+		} break;
+		case GeometryType::GEOMETRYCOLLECTION: {
+
+		} break;
+		}
+	}
 };
-
-
 
 /*
 class GeoJSONWriter final : public GeometryProcessor {

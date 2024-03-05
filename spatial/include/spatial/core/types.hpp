@@ -17,7 +17,7 @@ struct GeoTypes {
 
 	static void Register(DatabaseInstance &db);
 
-    static LogicalType CreateEnumType(const string &name, const vector<string> &members);
+	static LogicalType CreateEnumType(const string &name, const vector<string> &members);
 };
 
 enum class Side { LEFT, RIGHT, ON };
