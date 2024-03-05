@@ -205,9 +205,9 @@ public:
 };
  */
 
-static void VerticesToGeoJSON(const VertexVector &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
+static void VerticesToGeoJSON(const VertexArray &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
 	// TODO: If the vertexvector is empty, do we null, add an empty array or a pair of NaN?
-	for (uint32_t i = 0; i < vertices.count; i++) {
+	for (uint32_t i = 0; i < vertices.Count(); i++) {
 		auto vertex = vertices.Get(i);
 		auto coord = yyjson_mut_arr(doc);
 		yyjson_mut_arr_add_real(doc, coord, vertex.x);
@@ -223,7 +223,7 @@ static void ToGeoJSON(const Point &point, yyjson_mut_doc *doc, yyjson_mut_val *o
 	yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
 	if (!point.IsEmpty()) {
-		auto vertex = point.GetVertex();
+		auto vertex = point.Vertices().Get(0);
 		yyjson_mut_arr_add_real(doc, coords, vertex.x);
 		yyjson_mut_arr_add_real(doc, coords, vertex.y);
 	}
@@ -384,13 +384,13 @@ static Point PointFromGeoJSON(yyjson_val *coord_array, GeometryFactory &factory,
 	return factory.CreatePoint(x, y);
 }
 
-static VertexVector VerticesFromGeoJSON(yyjson_val *coord_array, GeometryFactory &factory, const string_t &raw) {
+static VertexArray VerticesFromGeoJSON(yyjson_val *coord_array, GeometryFactory &factory, const string_t &raw) {
 	auto len = yyjson_arr_size(coord_array);
 	if (len == 0) {
 		// Empty
-		return factory.AllocateVertexVector(0);
+		return VertexArray::CreateEmpty(factory.allocator.GetAllocator(), false, false);
 	} else {
-		VertexVector vertices = factory.AllocateVertexVector(len);
+		VertexArray vertices = factory.AllocateVertexArray(len, false, false);
 		for (idx_t i = 0; i < len; i++) {
 			auto coord_val = yyjson_arr_get(coord_array, i);
 			if (!yyjson_is_arr(coord_val)) {
@@ -414,7 +414,7 @@ static VertexVector VerticesFromGeoJSON(yyjson_val *coord_array, GeometryFactory
 			}
 			auto x = yyjson_get_num(x_val);
 			auto y = yyjson_get_num(y_val);
-			vertices.Add(Vertex(x, y));
+			vertices.Append({x, y});
 		}
 		return vertices;
 	}

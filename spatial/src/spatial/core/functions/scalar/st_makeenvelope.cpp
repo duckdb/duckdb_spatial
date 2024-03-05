@@ -27,13 +27,13 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	    min_x_vec, min_y_vec, max_x_vec, max_y_vec, result, count,
 	    [&](DOUBLE_TYPE x_min, DOUBLE_TYPE y_min, DOUBLE_TYPE x_max, DOUBLE_TYPE y_max) {
 		    uint32_t capacity = 5;
-		    auto envelope_geom = lstate.factory.CreatePolygon(1, &capacity);
+		    auto envelope_geom = lstate.factory.CreatePolygon(1, &capacity, false, false);
 		    // Create the exterior ring in CCW order
-		    envelope_geom.Shell().Add(Vertex(x_min.val, y_min.val));
-		    envelope_geom.Shell().Add(Vertex(x_min.val, y_max.val));
-		    envelope_geom.Shell().Add(Vertex(x_max.val, y_max.val));
-		    envelope_geom.Shell().Add(Vertex(x_max.val, y_min.val));
-		    envelope_geom.Shell().Add(Vertex(x_min.val, y_min.val));
+		    envelope_geom.Shell().Append({x_min.val, y_min.val});
+		    envelope_geom.Shell().Append({x_min.val, y_max.val});
+		    envelope_geom.Shell().Append({x_max.val, y_max.val});
+		    envelope_geom.Shell().Append({x_max.val, y_min.val});
+		    envelope_geom.Shell().Append({x_min.val, y_min.val});
 
 		    return lstate.factory.Serialize(result, Geometry(envelope_geom));
 	    });

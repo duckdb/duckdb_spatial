@@ -46,7 +46,7 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 		if (point.IsEmpty()) {
 			throw ConversionException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
-		auto vertex = point.GetVertex();
+		auto vertex = point.Vertices().Get(0);
 		return POINT_TYPE {vertex.x, vertex.y};
 	});
 	return true;
@@ -65,11 +65,11 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &line) {
-		auto geom = lstate.factory.CreateLineString(line.length);
+		auto geom = lstate.factory.CreateLineString(line.length, false, false);
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.Vertices().Add(Vertex(x, y));
+			geom.Vertices().Append({x, y});
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
@@ -126,21 +126,23 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &poly) {
+
 		auto geom = lstate.factory.CreatePolygon(poly.length);
 
 		for (idx_t i = 0; i < poly.length; i++) {
 			auto ring = ring_entries[poly.offset + i];
-			auto ring_array = lstate.factory.AllocateVertexVector(ring.length);
+			auto ring_array = lstate.factory.AllocateVertexArray(ring.length, false, false);
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-				ring_array.Add(Vertex(x, y));
+				ring_array.Append({x, y});
 			}
 			geom.Ring(i) = ring_array;
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
+
 	});
-	return true;
+    return true;
 }
 
 //------------------------------------------------------------------------------
@@ -214,16 +216,13 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto maxx = box.c_val;
 		auto maxy = box.d_val;
 
-		auto geom = lstate.factory.CreatePolygon(1, &capacity);
+		auto geom = lstate.factory.CreatePolygon(1, &capacity, false, false);
 		auto &shell = geom.Ring(0);
-
-		shell.Add(Vertex(minx, miny));
-		shell.Add(Vertex(maxx, miny));
-		shell.Add(Vertex(maxx, maxy));
-		shell.Add(Vertex(minx, maxy));
-		shell.Add(Vertex(minx, miny));
-
-		shell.count = 5;
+        shell.Append({minx, miny});
+        shell.Append({maxx, miny});
+        shell.Append({maxx, maxy});
+        shell.Append({minx, maxy});
+        shell.Append({minx, miny});
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
 	return true;

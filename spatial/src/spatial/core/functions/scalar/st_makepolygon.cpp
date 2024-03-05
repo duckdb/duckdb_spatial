@@ -78,14 +78,14 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    rings.push_back(hole);
 		    }
 
-		    auto polygon = lstate.factory.CreatePolygon(rings_counts.size(), rings_counts.data());
+		    auto polygon = lstate.factory.CreatePolygon(rings_counts.size(), rings_counts.data(), false, false);
 
 		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
 			    auto &new_ring = rings[ring_idx];
 			    auto &poly_ring = polygon.Ring(ring_idx);
 
 			    for (auto i = 0; i < new_ring.Vertices().Count(); i++) {
-				    poly_ring.Add(new_ring.Vertices().Get(i));
+				    poly_ring.Append(new_ring.Vertices().Get(i));
 			    }
 		    }
 
@@ -115,9 +115,9 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 			throw InvalidInputException("ST_MakePolygon shell must be closed (first and last vertex must be equal)");
 		}
 
-		auto polygon = lstate.factory.CreatePolygon(1, &line_count);
+		auto polygon = lstate.factory.CreatePolygon(1, &line_count, false, false);
 		for (uint32_t i = 0; i < line_count; i++) {
-			polygon.Shell().Add(line_verts.Get(i));
+			polygon.Shell().Append(line_verts.Get(i));
 		}
 
 		return lstate.factory.Serialize(result, Geometry(polygon));

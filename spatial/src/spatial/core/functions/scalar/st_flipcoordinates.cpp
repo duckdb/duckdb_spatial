@@ -153,24 +153,26 @@ static void BoxFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static void FlipVertexVector(VertexVector &vertices) {
-	for (idx_t i = 0; i < vertices.count; i++) {
+static void FlipVertexArray(VertexArray &vertices) {
+    vertices.MakeOwning();
+	for (idx_t i = 0; i < vertices.Count(); i++) {
 		auto vertex = vertices.Get(i);
 		std::swap(vertex.x, vertex.y);
-		vertices.Set(i, vertex);
+        // We can use SetUnsafe here because we know the vector is owning
+		vertices.SetUnsafe(i, vertex);
 	}
 }
 static void FlipGeometry(Point &point) {
-	FlipVertexVector(point.Vertices());
+    FlipVertexArray(point.Vertices());
 }
 
 static void FlipGeometry(LineString &line) {
-	FlipVertexVector(line.Vertices());
+    FlipVertexArray(line.Vertices());
 }
 
 static void FlipGeometry(Polygon &poly) {
 	for (auto &ring : poly.Rings()) {
-		FlipVertexVector(ring);
+        FlipVertexArray(ring);
 	}
 }
 
@@ -236,9 +238,8 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		auto geom = lstate.factory.Deserialize(input);
-		auto copy = lstate.factory.CopyGeometry(geom);
-		FlipGeometry(copy);
-		return lstate.factory.Serialize(result, copy);
+		FlipGeometry(geom);
+		return lstate.factory.Serialize(result, geom);
 	});
 }
 

@@ -91,7 +91,7 @@ class WKBSerializer final : GeometryProcessor<void, Cursor&> {
                 cursor.Write(Load<double>(vertices.data[2]));
                 cursor.Write(Load<double>(vertices.data[3]));
             }
-            if(HasZ() || HasM()) {
+            else if(HasZ() || HasM()) {
                 cursor.Write(Load<double>(vertices.data[2]));
             }
         }
@@ -106,7 +106,7 @@ class WKBSerializer final : GeometryProcessor<void, Cursor&> {
                 cursor.Write(Load<double>(vertices.data[2] + i * vertices.stride[2]));
                 cursor.Write(Load<double>(vertices.data[3] + i * vertices.stride[3]));
             }
-            if(HAS_Z || HAS_M) {
+            else if(HAS_Z || HAS_M) {
                 cursor.Write(Load<double>(vertices.data[2] + i * vertices.stride[2]));
             }
         }
@@ -153,9 +153,10 @@ public:
         Cursor cursor(start, end);
         Process(geometry, cursor);
     }
-    void Execute(const geometry_t &geometry, string_t blob) {
+    void Execute(const geometry_t &geometry, string_t &blob) {
         Cursor cursor(blob);
         Process(geometry, cursor);
+        blob.Finalize();
     }
 };
 

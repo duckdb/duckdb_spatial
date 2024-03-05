@@ -75,7 +75,7 @@ static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vec
 		    if (point.IsEmpty()) {
 			    throw InvalidInputException("ST_QuadKey: Empty geometries are not supported");
 		    }
-		    auto vertex = point.GetPoint().GetVertex();
+		    auto vertex = point.GetPoint().Vertices().Get(0);
 		    auto x = vertex.x;
 		    auto y = vertex.y;
 

@@ -127,24 +127,140 @@ struct BoundingBox {
 	}
 };
 
+
 struct Geometry;
 struct GeometryFactory;
 
 class Point {
+    VertexArray vertices;
+public:
+    explicit Point(Allocator &allocator, bool has_z, bool has_m) : vertices(allocator, has_z, has_m) { }
+};
+
+class LineString {
+    VertexArray vertices;
+public:
+    explicit LineString(Allocator &allocator, bool has_z, bool has_m) : vertices(allocator, has_z, has_m) { }
+};
+
+class Polygon {
+    reference<Allocator> alloc;
+    VertexArray *rings;
+    uint32_t num_rings;
+public:
+    explicit Polygon(Allocator &allocator, uint32_t num_rings, bool has_z, bool has_m) : alloc(allocator), num_rings(num_rings) {
+        rings = reinterpret_cast<VertexArray*>(alloc.get().AllocateData(num_rings * sizeof(VertexArray)));
+        for(uint32_t i = 0; i < num_rings; i++) {
+            new (&rings[i]) VertexArray(allocator, has_z, has_m);
+        }
+    }
+
+    VertexArray& operator[](uint32_t index) {
+        D_ASSERT(index < num_rings);
+        return rings[index];
+    }
+
+    const VertexArray& operator[](uint32_t index) const {
+        D_ASSERT(index < num_rings);
+        return rings[index];
+    }
+
+    VertexArray* begin() {
+        return rings;
+    }
+
+    VertexArray* end() {
+        return rings + num_rings;
+    }
+
+    const VertexArray* begin() const {
+        return rings;
+    }
+
+    const VertexArray* end() const {
+        return rings + num_rings;
+    }
+
+    // Copy Constructors and Assignment Operators
+    Polygon(const Polygon &other) : alloc(other.alloc), num_rings(other.num_rings) {
+        rings = reinterpret_cast<VertexArray*>(alloc.get().AllocateData(num_rings * sizeof(VertexArray)));
+        for(uint32_t i = 0; i < num_rings; i++) {
+            new (&rings[i]) VertexArray(other.rings[i]);
+        }
+    }
+
+    Polygon &operator=(const Polygon &other) {
+        if (this == &other) {
+            return *this;
+        }
+        for(uint32_t i = 0; i < num_rings; i++) {
+            rings[i].~VertexArray();
+        }
+        alloc.get().FreeData(reinterpret_cast<data_ptr_t>(rings), num_rings * sizeof(VertexArray));
+        num_rings = other.num_rings;
+        rings = reinterpret_cast<VertexArray*>(alloc.get().AllocateData(num_rings * sizeof(VertexArray)));
+        for(uint32_t i = 0; i < num_rings; i++) {
+            new (&rings[i]) VertexArray(other.rings[i]);
+        }
+        return *this;
+    }
+
+    // Move Constructors and Assignment Operators
+    Polygon(Polygon &&other) noexcept : alloc(other.alloc), rings(other.rings), num_rings(other.num_rings) {
+        other.rings = nullptr;
+    }
+
+    Polygon &operator=(Polygon &&other) noexcept {
+        if (this == &other) {
+            return *this;
+        }
+        for(uint32_t i = 0; i < num_rings; i++) {
+            rings[i].~VertexArray();
+        }
+        alloc.get().FreeData(reinterpret_cast<data_ptr_t>(rings), num_rings * sizeof(VertexArray));
+        num_rings = other.num_rings;
+        rings = other.rings;
+        other.rings = nullptr;
+        return *this;
+    }
+
+    ~Polygon() {
+        if(rings == nullptr) {
+            return;
+        }
+        for(uint32_t i = 0; i < num_rings; i++) {
+            rings[i].~VertexArray();
+        }
+        alloc.get().FreeData(reinterpret_cast<data_ptr_t>(rings), num_rings * sizeof(VertexArray));
+    }
+};
+
+class GeomCollection {
+    Geometry *items;
+    uint32_t item_count;
+};
+
+
+
+
+
+
+// TODO: This is all crap, we need to re-implement this and add proper move semantics smh.
+
+class Point {
 	friend GeometryFactory;
-	VertexVector vertices;
+	VertexArray vertices;
 
 public:
-	explicit Point(VertexVector vertices) : vertices(vertices) {
+	explicit Point(VertexArray vertices) : vertices(vertices) {
 	}
 	string ToString() const;
 	bool IsEmpty() const;
-	Vertex GetVertex() const;
 
-	const VertexVector &Vertices() const {
+	const VertexArray &Vertices() const {
 		return vertices;
 	}
-	VertexVector &Vertices() {
+    VertexArray &Vertices() {
 		return vertices;
 	}
 
@@ -153,15 +269,15 @@ public:
 
 class LineString {
 	friend GeometryFactory;
-	VertexVector vertices;
+    VertexArray vertices;
 
 public:
-	explicit LineString(VertexVector vertices) : vertices(vertices) {
+	explicit LineString(VertexArray vertices) : vertices(vertices) {
 	}
-	VertexVector &Vertices() {
+    VertexArray &Vertices() {
 		return vertices;
 	}
-	const VertexVector &Vertices() const {
+	const VertexArray &Vertices() const {
 		return vertices;
 	}
 	// Common Methods
@@ -171,49 +287,51 @@ public:
 	double Length() const;
 	Geometry Centroid() const;
 	uint32_t Count() const;
-
 	operator Geometry() const;
 };
 
 class Polygon {
 	friend GeometryFactory;
-	VertexVector *rings;
+    VertexArray *rings;
 	uint32_t num_rings;
 
 public:
-	explicit Polygon(VertexVector *rings, uint32_t num_rings) : rings(rings), num_rings(num_rings) {
+	explicit Polygon(VertexArray *rings, uint32_t num_rings) : rings(rings), num_rings(num_rings) {
 	}
 
-	VertexVector &Ring(uint32_t index) {
+    ~Polygon() {
+        for(uint32_t i = 0; i < num_rings; i++) {
+            rings[i].~VertexArray();
+        }
+    }
+
+    VertexArray &Ring(uint32_t index) {
 		D_ASSERT(index < num_rings);
 		return rings[index];
 	}
-	const VertexVector &Ring(uint32_t index) const {
+	const VertexArray &Ring(uint32_t index) const {
 		D_ASSERT(index < num_rings);
 		return rings[index];
 	}
-	const VertexVector &Shell() const {
+	const VertexArray &Shell() const {
 		return rings[0];
 	}
-	VertexVector &Shell() {
+    VertexArray &Shell() {
 		return rings[0];
 	}
 
-	IteratorPair<VertexVector> Rings() {
-		return IteratorPair<VertexVector>(rings, rings + num_rings);
+	IteratorPair<VertexArray> Rings() {
+		return IteratorPair<VertexArray>(rings, rings + num_rings);
 	}
 
-	ConstIteratorPair<VertexVector> Rings() const {
-		return ConstIteratorPair<VertexVector>(rings, rings + num_rings);
+	ConstIteratorPair<VertexArray> Rings() const {
+		return ConstIteratorPair<VertexArray>(rings, rings + num_rings);
 	}
 
 	// Common Methods
 	string ToString() const;
 	// Geometry Methods
-	double Area() const;
 	bool IsEmpty() const;
-	double Perimiter() const;
-	Geometry Centroid() const;
 	uint32_t Count() const;
 
 	operator Geometry() const;
@@ -227,6 +345,12 @@ class MultiPoint {
 public:
 	explicit MultiPoint(Point *points, uint32_t num_points) : points(points), num_points(num_points) {
 	}
+    ~MultiPoint() {
+        for(uint32_t i = 0; i < num_points; i++) {
+            points[i].~Point();
+        }
+    }
+
 	string ToString() const;
 
 	// Collection Methods
@@ -252,6 +376,13 @@ class MultiLineString {
 public:
 	explicit MultiLineString(LineString *lines, uint32_t count) : lines(lines), count(count) {
 	}
+
+    ~MultiLineString() {
+        for(uint32_t i = 0; i < count; i++) {
+            lines[i].~LineString();
+        }
+    }
+
 	string ToString() const;
 
 	// Geometry Methods
@@ -280,7 +411,13 @@ class MultiPolygon {
 public:
 	explicit MultiPolygon(Polygon *polygons, uint32_t count) : polygons(polygons), count(count) {
 	}
-	double Area() const;
+
+    ~MultiPolygon() {
+        for(uint32_t i = 0; i < count; i++) {
+            polygons[i].~Polygon();
+        }
+    }
+
 	string ToString() const;
 
 	// Collection Methods
@@ -306,6 +443,9 @@ class GeometryCollection {
 public:
 	explicit GeometryCollection(Geometry *geometries, uint32_t count) : geometries(geometries), count(count) {
 	}
+
+    ~GeometryCollection();
+
 	string ToString() const;
 
 	// Collection Methods
@@ -343,9 +483,9 @@ private:
 	};
 
 public:
-	explicit Geometry(Point point) : type(GeometryType::POINT), point(point) {
+	explicit Geometry(Point point) : type(GeometryType::POINT), point(std::move(point)) {
 	}
-	explicit Geometry(LineString linestring) : type(GeometryType::LINESTRING), linestring(linestring) {
+	explicit Geometry(LineString linestring) : type(GeometryType::LINESTRING), linestring(std::move(linestring)) {
 	}
 	explicit Geometry(Polygon polygon) : type(GeometryType::POLYGON), polygon(polygon) {
 	}
@@ -359,6 +499,84 @@ public:
 	explicit Geometry(GeometryCollection geometrycollection)
 	    : type(GeometryType::GEOMETRYCOLLECTION), geometrycollection(geometrycollection) {
 	}
+
+    //--------------------------------------------------------------------------------
+    // Copy Constructors and Assignment Operators
+    //--------------------------------------------------------------------------------
+    Geometry(const Geometry &other) : type(other.type), properties(other.properties) {
+        if (type == GeometryType::POINT) {
+            new (&point) Point(other.point);
+        } else if (type == GeometryType::LINESTRING) {
+            new (&linestring) LineString(other.linestring);
+        } else if (type == GeometryType::POLYGON) {
+            new (&polygon) Polygon(other.polygon);
+        } else if (type == GeometryType::MULTIPOINT) {
+            new (&multipoint) MultiPoint(other.multipoint);
+        } else if (type == GeometryType::MULTILINESTRING) {
+            new (&multilinestring) MultiLineString(other.multilinestring);
+        } else if (type == GeometryType::MULTIPOLYGON) {
+            new (&multipolygon) MultiPolygon(other.multipolygon);
+        } else if (type == GeometryType::GEOMETRYCOLLECTION) {
+            new (&geometrycollection) GeometryCollection(other.geometrycollection);
+        }
+    }
+
+    Geometry &operator=(const Geometry &other) {
+        if (this == &other) {
+            return *this;
+        }
+        if (type == GeometryType::POINT) {
+            point.~Point();
+        } else if (type == GeometryType::LINESTRING) {
+            linestring.~LineString();
+        } else if (type == GeometryType::POLYGON) {
+            polygon.~Polygon();
+        } else if (type == GeometryType::MULTIPOINT) {
+            multipoint.~MultiPoint();
+        } else if (type == GeometryType::MULTILINESTRING) {
+            multilinestring.~MultiLineString();
+        } else if (type == GeometryType::MULTIPOLYGON) {
+            multipolygon.~MultiPolygon();
+        } else if (type == GeometryType::GEOMETRYCOLLECTION) {
+            geometrycollection.~GeometryCollection();
+        }
+        type = other.type;
+        properties = other.properties;
+        if (type == GeometryType::POINT) {
+            new (&point) Point(other.point);
+        } else if (type == GeometryType::LINESTRING) {
+            new (&linestring) LineString(other.linestring);
+        } else if (type == GeometryType::POLYGON) {
+            new (&polygon) Polygon(other.polygon);
+        } else if (type == GeometryType::MULTIPOINT) {
+            new (&multipoint) MultiPoint(other.multipoint);
+        } else if (type == GeometryType::MULTILINESTRING) {
+            new (&multilinestring) MultiLineString(other.multilinestring);
+        } else if (type == GeometryType::MULTIPOLYGON) {
+            new (&multipolygon) MultiPolygon(other.multipolygon);
+        } else if (type == GeometryType::GEOMETRYCOLLECTION) {
+            new (&geometrycollection) GeometryCollection(other.geometrycollection);
+        }
+        return *this;
+    }
+
+    ~Geometry() {
+        if (type == GeometryType::POINT) {
+            point.~Point();
+        } else if (type == GeometryType::LINESTRING) {
+            linestring.~LineString();
+        } else if (type == GeometryType::POLYGON) {
+            polygon.~Polygon();
+        } else if (type == GeometryType::MULTIPOINT) {
+            multipoint.~MultiPoint();
+        } else if (type == GeometryType::MULTILINESTRING) {
+            multilinestring.~MultiLineString();
+        } else if (type == GeometryType::MULTIPOLYGON) {
+            multipolygon.~MultiPolygon();
+        } else if (type == GeometryType::GEOMETRYCOLLECTION) {
+            geometrycollection.~GeometryCollection();
+        }
+    }
 
 	// Accessor methods
 	inline GeometryType Type() const {

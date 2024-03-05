@@ -71,10 +71,6 @@ bool Point::IsEmpty() const {
 	return vertices.Count() == 0;
 }
 
-Vertex Point::GetVertex() const {
-	return vertices.Get(0);
-}
-
 Point::operator Geometry() const {
 	return Geometry(*this);
 }
@@ -126,32 +122,12 @@ LineString::operator Geometry() const {
 // Polygon
 //------------------------------------------------------------------------------
 
-double Polygon::Area() const {
-	double area = 0;
-	for (uint32_t i = 0; i < num_rings; i++) {
-		if (i == 0) {
-			area += rings[i].Area();
-		} else {
-			area -= rings[i].Area();
-		}
-	}
-	return std::abs(area);
-}
 
 bool Polygon::IsEmpty() const {
 	return num_rings == 0;
 }
 
-double Polygon::Perimiter() const {
-	if (IsEmpty()) {
-		return 0;
-	}
-	return rings[0].Length();
-}
 
-Geometry Polygon::Centroid() const {
-	throw NotImplementedException("Polygon::Centroid()");
-}
 
 string Polygon::ToString() const {
 
@@ -205,7 +181,7 @@ string MultiPoint::ToString() const {
 		if (points[i].IsEmpty()) {
 			str += "EMPTY";
 		} else {
-			auto vert = points[i].GetVertex();
+			auto vert = points[i].Vertices().Get(0);
 			str += Utils::format_coord(vert.x, vert.y);
 		}
 		if (i < num_points - 1) {
@@ -365,13 +341,6 @@ string MultiPolygon::ToString() const {
 
 	return str + ")";
 }
-double MultiPolygon::Area() const {
-	double area = 0;
-	for (uint32_t i = 0; i < count; i++) {
-		area += polygons[i].Area();
-	}
-	return area;
-}
 
 bool MultiPolygon::IsEmpty() const {
 	return count == 0;
@@ -463,6 +432,12 @@ Geometry *GeometryCollection::end() {
 
 GeometryCollection::operator Geometry() const {
 	return Geometry(*this);
+}
+
+GeometryCollection::~GeometryCollection() {
+    for (uint32_t i = 0; i < count; i++) {
+        geometries[i].~Geometry();
+    }
 }
 
 //------------------------------------------------------------------------------

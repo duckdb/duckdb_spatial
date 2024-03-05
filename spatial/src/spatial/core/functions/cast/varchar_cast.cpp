@@ -326,8 +326,7 @@ static bool Box2DToVarcharCast(Vector &source, Vector &result, idx_t count, Cast
 }
 
 static bool GeometryToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-	CoreVectorOperations::GeometryToVarchar(source, result, count, lstate.factory);
+	CoreVectorOperations::GeometryToVarchar(source, result, count);
 	return true;
 }
 
@@ -342,12 +341,9 @@ void CoreCastFunctions::RegisterVarcharCasts(DatabaseInstance &db) {
 	ExtensionUtil::RegisterCastFunction(db, GeoTypes::POLYGON_2D(), LogicalType::VARCHAR,
 	                                    BoundCastInfo(Polygon2DToVarcharCast), 1);
 
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast),
-	                                    1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast), 1);
 
-	ExtensionUtil::RegisterCastFunction(
-	    db, GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
-	    BoundCastInfo(GeometryToVarcharCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), LogicalType::VARCHAR, BoundCastInfo(GeometryToVarcharCast), 1);
 }
 
 } // namespace core

@@ -230,34 +230,31 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 	}
 }
 
+static void TransformVertexArray(PJ *crs, core::VertexArray &array) {
+    // Make sure we own the array
+    array.MakeOwning();
+    for (uint32_t i = 0; i < array.Count(); i++) {
+        auto vertex = array.Get(i);
+        auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
+        // we own the array, so we can use SetUnsafe
+        array.SetUnsafe(i, { transformed.x, transformed.y });
+    }
+}
+
 static void TransformGeometry(PJ *crs, core::Point &point) {
 	if (point.IsEmpty()) {
 		return;
 	}
-	auto vertex = point.GetVertex();
-	auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-	point.Vertices().Set(0, core::Vertex(transformed.x, transformed.y));
+    TransformVertexArray(crs, point.Vertices());
 }
 
 static void TransformGeometry(PJ *crs, core::LineString &line) {
-
-	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
-		auto vert = line.Vertices().Get(i);
-		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
-
-		core::Vertex new_vert(transformed.x, transformed.y);
-		line.Vertices().Set(i, new_vert);
-	}
+    TransformVertexArray(crs, line.Vertices());
 }
 
 static void TransformGeometry(PJ *crs, core::Polygon &poly) {
 	for (auto &ring : poly.Rings()) {
-		for (uint32_t i = 0; i < ring.Count(); i++) {
-			auto vert = ring.Get(i);
-			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
-			core::Vertex new_vert(transformed.x, transformed.y);
-			ring.Set(i, new_vert);
-		}
+        TransformVertexArray(crs, ring);
 	}
 }
 
@@ -363,9 +360,8 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 		UnaryExecutor::Execute<core::geometry_t, core::geometry_t>(geom_vec, result, count,
 		                                                           [&](core::geometry_t input_geom) {
 			                                                           auto geom = factory.Deserialize(input_geom);
-			                                                           auto copy = factory.CopyGeometry(geom);
-			                                                           TransformGeometry(crs.get(), copy);
-			                                                           return factory.Serialize(result, copy);
+			                                                           TransformGeometry(crs.get(), geom);
+			                                                           return factory.Serialize(result, geom);
 		                                                           });
 	} else {
 		// General case: projections are not constant
@@ -390,9 +386,8 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			    }
 
 			    auto geom = factory.Deserialize(input_geom);
-			    auto copy = factory.CopyGeometry(geom);
-			    TransformGeometry(crs.get(), copy);
-			    return factory.Serialize(result, copy);
+			    TransformGeometry(crs.get(), geom);
+			    return factory.Serialize(result, geom);
 		    });
 	}
 }

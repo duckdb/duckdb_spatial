@@ -23,7 +23,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
-		auto line_geom = lstate.factory.CreateLineString(length);
+		auto line_geom = lstate.factory.CreateLineString(length, false, false);
 
 		for (idx_t i = offset; i < offset + length; i++) {
 
@@ -41,7 +41,8 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (point.IsEmpty()) {
 				continue;
 			}
-			line_geom.Vertices().Add(point.GetVertex());
+            auto vertex = point.Vertices().Get(0);
+			line_geom.Vertices().Append({vertex.x, vertex.y});
 		}
 
 		if (line_geom.Count() == 1) {
@@ -69,12 +70,14 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto &point_right = geometry_right.GetPoint();
 
 		    // TODO: we should add proper abstractions to append/concat VertexVectors
-		    auto line_geom = lstate.factory.CreateLineString(2);
+		    auto line_geom = lstate.factory.CreateLineString(2, false, false);
 		    if (!point_left.IsEmpty()) {
-			    line_geom.Vertices().Add(point_left.GetVertex());
+                auto vertex = point_left.Vertices().Get(0);
+			    line_geom.Vertices().Append({vertex.x, vertex.y});
 		    }
 		    if (!point_right.IsEmpty()) {
-			    line_geom.Vertices().Add(point_right.GetVertex());
+                auto vertex = point_right.Vertices().Get(0);
+			    line_geom.Vertices().Append({vertex.x, vertex.y});
 		    }
 
 		    if (line_geom.Count() == 1) {

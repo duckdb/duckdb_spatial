@@ -19,12 +19,12 @@ public:
 
 	Geometry FromWKB(const char *wkb, uint32_t length);
 
-	VertexVector AllocateVertexVector(uint32_t capacity);
+    VertexArray AllocateVertexArray(uint32_t capacity, bool has_z, bool has_m);
 
 	Point CreatePoint(double x, double y);
-	LineString CreateLineString(uint32_t capacity);
-	Polygon CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities);
-	// Create a polygon, but leave the ring arrays uninitialized
+	LineString CreateLineString(uint32_t capacity, bool has_z, bool has_m);
+	Polygon CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities, bool has_z, bool has_m);
+	// Create a polygon, but leave the ring arrays empty
 	Polygon CreatePolygon(uint32_t num_rings);
 
 	MultiPoint CreateMultiPoint(uint32_t capacity);
@@ -49,7 +49,8 @@ public:
 	static bool TryGetSerializedBoundingBox(const geometry_t &data, BoundingBox &bbox);
 
 	// Deep Copy
-	VertexVector CopyVertexVector(const VertexVector &vector);
+    /*
+    VertexArray CopyVertexArray(const VertexArray &vector);
 	Point CopyPoint(const Point &point);
 	LineString CopyLineString(const LineString &linestring);
 	Polygon CopyPolygon(const Polygon &polygon);
@@ -58,9 +59,11 @@ public:
 	MultiPolygon CopyMultiPolygon(const MultiPolygon &multipolygon);
 	GeometryCollection CopyGeometryCollection(const GeometryCollection &collection);
 	Geometry CopyGeometry(const Geometry &geometry);
+     */
 
 private:
 	// Serialize
+    void SerializeVertexArray(Cursor &cursor, const VertexArray &vector, bool update_bounds, BoundingBox &bbox);
 	void SerializePoint(Cursor &cursor, const Point &point, BoundingBox &bbox);
 	void SerializeLineString(Cursor &cursor, const LineString &linestring, BoundingBox &bbox);
 	void SerializePolygon(Cursor &cursor, const Polygon &polygon, BoundingBox &bbox);

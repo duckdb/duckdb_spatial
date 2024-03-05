@@ -19,8 +19,6 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-
 	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
         return WKBWriter::Write(input, result);
 	});

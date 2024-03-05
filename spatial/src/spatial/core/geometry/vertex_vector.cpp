@@ -8,6 +8,7 @@ namespace spatial {
 
 namespace core {
 
+/*
 double Vertex::Distance(const Vertex &other) const {
 	return std::sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
 }
@@ -328,6 +329,7 @@ Vertex ClosestPointOnSegment(const Vertex &p, const Vertex &p1, const Vertex &p2
 	// Interpolate between p1 and p2
 	return Vertex(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
 }
+*/
 
 } // namespace core
 

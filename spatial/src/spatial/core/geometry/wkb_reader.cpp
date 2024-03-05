@@ -209,11 +209,11 @@ Point WKBReader::ReadPointBody() {
 	auto x = ReadDouble<ORDER>();
 	auto y = ReadDouble<ORDER>();
 	if (std::isnan(x) && std::isnan(y)) {
-		auto point_data = factory.AllocateVertexVector(0);
+		auto point_data = VertexArray::CreateEmpty(factory.allocator.GetAllocator(), false, false);
 		return Point(point_data);
 	}
-	auto point_data = factory.AllocateVertexVector(1);
-	point_data.Add(Vertex(x, y));
+	auto point_data = factory.AllocateVertexArray(1, false, false);
+	point_data.Append({x, y});
 	return Point(point_data);
 }
 
@@ -224,11 +224,11 @@ LineString WKBReader::ReadLineStringBody() {
 		throw InvalidInputException("Expected LINESTRING, got %u", flags.type);
 	}
 	auto num_points = ReadInt<ORDER>();
-	auto line_data = factory.AllocateVertexVector(num_points);
+	auto line_data = factory.AllocateVertexArray(num_points, false, false);
 	for (uint32_t i = 0; i < num_points; i++) {
 		auto x = ReadDouble<ORDER>();
 		auto y = ReadDouble<ORDER>();
-		line_data.Add(Vertex(x, y));
+		line_data.Append({x, y});
 	}
 	return LineString(line_data);
 }
@@ -240,20 +240,21 @@ Polygon WKBReader::ReadPolygonBody() {
 		throw InvalidInputException("Expected POLYGON, got %u", flags.type);
 	}
 	auto num_rings = ReadInt<ORDER>();
-	auto rings = reinterpret_cast<VertexVector *>(factory.allocator.Allocate(sizeof(VertexVector) * num_rings));
+    auto polygon = factory.CreatePolygon(num_rings);
 
 	for (uint32_t i = 0; i < num_rings; i++) {
 		auto num_points = ReadInt<ORDER>();
-		rings[i] = factory.AllocateVertexVector(num_points);
-		auto &ring = rings[i];
+        auto ring = factory.AllocateVertexArray(num_points, false, false);
 
 		for (uint32_t j = 0; j < num_points; j++) {
 			auto x = ReadDouble<ORDER>();
 			auto y = ReadDouble<ORDER>();
-			ring.Add(Vertex(x, y));
+			ring.Append({x, y});
 		}
+
+        polygon.Ring(i) = ring;
 	}
-	return Polygon(rings, num_rings);
+    return polygon;
 }
 
 // TODO: Break after reading order instead. Peek type for GEOMETRY and GEOMETRYCOLLECTION
@@ -265,9 +266,12 @@ MultiPoint WKBReader::ReadMultiPointBody() {
 		throw InvalidInputException("Expected MULTIPOINT, got %u", flags.type);
 	}
 	auto num_points = ReadInt<ORDER>();
+
+    // TODO: This is all super UB now that the geometries are no longer PODs
 	auto points = reinterpret_cast<Point *>(factory.allocator.Allocate(sizeof(Point) * num_points));
 	for (uint32_t i = 0; i < num_points; i++) {
-		points[i] = ReadPoint();
+        // Points are not PODs anymore, so we need to construct them in place
+        new (&points[i]) Point(ReadPoint());
 	}
 	return MultiPoint(points, num_points);
 }
@@ -281,7 +285,7 @@ MultiLineString WKBReader::ReadMultiLineStringBody() {
 	auto num_lines = ReadInt<ORDER>();
 	auto lines = reinterpret_cast<LineString *>(factory.allocator.Allocate(sizeof(LineString) * num_lines));
 	for (uint32_t i = 0; i < num_lines; i++) {
-		lines[i] = ReadLineString();
+        new (&lines[i]) LineString(ReadLineString());
 	}
 	return MultiLineString(lines, num_lines);
 }
@@ -295,7 +299,7 @@ MultiPolygon WKBReader::ReadMultiPolygonBody() {
 	auto num_polygons = ReadInt<ORDER>();
 	auto polygons = reinterpret_cast<Polygon *>(factory.allocator.Allocate(sizeof(Polygon) * num_polygons));
 	for (uint32_t i = 0; i < num_polygons; i++) {
-		polygons[i] = ReadPolygon();
+        new (&polygons[i]) Polygon(ReadPolygon());
 	}
 	return MultiPolygon(polygons, num_polygons);
 }
@@ -309,7 +313,7 @@ GeometryCollection WKBReader::ReadGeometryCollectionBody() {
 	auto num_geometries = ReadInt<ORDER>();
 	auto geometries = reinterpret_cast<Geometry *>(factory.allocator.Allocate(sizeof(Geometry) * num_geometries));
 	for (uint32_t i = 0; i < num_geometries; i++) {
-		geometries[i] = ReadGeometry();
+        new (&geometries[i]) Geometry(ReadGeometry());
 	}
 	return GeometryCollection(geometries, num_geometries);
 }

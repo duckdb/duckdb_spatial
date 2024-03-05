@@ -16,73 +16,94 @@ Geometry GeometryFactory::FromWKB(const char *wkb, uint32_t length) {
 	return reader.ReadGeometry();
 }
 
-VertexVector GeometryFactory::AllocateVertexVector(uint32_t capacity) {
-	auto data = allocator.AllocateAligned(sizeof(Vertex) * capacity);
-	return VertexVector(data, 0, capacity);
+VertexArray GeometryFactory::AllocateVertexArray(uint32_t capacity, bool has_z, bool has_m) {
+	return VertexArray { allocator.GetAllocator(), capacity, has_z, has_m };
 }
 
 Point GeometryFactory::CreatePoint(double x, double y) {
-	auto data = AllocateVertexVector(1);
-	data.Add(Vertex(x, y));
+	auto data = AllocateVertexArray(1, false, false);
+	data.Append({ x, y });
 	return Point(data);
 }
 
-LineString GeometryFactory::CreateLineString(uint32_t num_points) {
-	return LineString(AllocateVertexVector(num_points));
+LineString GeometryFactory::CreateLineString(uint32_t num_points, bool has_z, bool has_m) {
+	return LineString(AllocateVertexArray(num_points, has_z, has_m));
 }
 
-Polygon GeometryFactory::CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities) {
-	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
+Polygon GeometryFactory::CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities, bool has_z, bool has_m) {
+	auto rings = reinterpret_cast<VertexArray *>(allocator.AllocateAligned(sizeof(VertexArray) * num_rings));
 	for (uint32_t i = 0; i < num_rings; i++) {
-		rings[i] = AllocateVertexVector(ring_capacities[i]);
+        // Placement new to initialize the VertexArray
+        new (&rings[i]) VertexArray(allocator.GetAllocator(), ring_capacities[i], has_z, has_m);
 	}
 	return Polygon(rings, num_rings);
 }
 
+
 Polygon GeometryFactory::CreatePolygon(uint32_t num_rings) {
-	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
+	auto rings = reinterpret_cast<VertexArray *>(allocator.AllocateAligned(sizeof(VertexArray) * num_rings));
+    for(uint32_t i = 0; i < num_rings; i++) {
+        // Placement new to initialize the VertexArray
+        new (&rings[i]) VertexArray(allocator.GetAllocator(), nullptr, 0, false, false);
+    }
 	return Polygon(rings, num_rings);
 }
 
 MultiPoint GeometryFactory::CreateMultiPoint(uint32_t num_points) {
 	auto points = reinterpret_cast<Point *>(allocator.AllocateAligned(sizeof(Point) * num_points));
+    for(uint32_t i = 0; i < num_points; i++) {
+        // Placement new to initialize the Point
+        new (&points[i]) Point(VertexArray(allocator.GetAllocator(), nullptr, 0, false, false));
+    }
 	return MultiPoint(points, num_points);
 }
 
 MultiLineString GeometryFactory::CreateMultiLineString(uint32_t num_linestrings) {
 	auto line_strings = reinterpret_cast<LineString *>(allocator.AllocateAligned(sizeof(LineString) * num_linestrings));
+    for(uint32_t i = 0; i < num_linestrings; i++) {
+        // Placement new to initialize the LineString
+        new (&line_strings[i]) LineString(VertexArray(allocator.GetAllocator(), nullptr, 0, false, false));
+    }
 	return MultiLineString(line_strings, num_linestrings);
 }
 
 MultiPolygon GeometryFactory::CreateMultiPolygon(uint32_t num_polygons) {
 	auto polygons = reinterpret_cast<Polygon *>(allocator.AllocateAligned(sizeof(Polygon) * num_polygons));
+    for(uint32_t i = 0; i < num_polygons; i++) {
+        // Placement new to initialize the Polygon
+        new (&polygons[i]) Polygon(nullptr, 0);
+    }
 	return MultiPolygon(polygons, num_polygons);
 }
 
 GeometryCollection GeometryFactory::CreateGeometryCollection(uint32_t num_geometries) {
 	auto geometries = reinterpret_cast<Geometry *>(allocator.AllocateAligned(sizeof(Geometry) * num_geometries));
+    for(uint32_t i = 0; i < num_geometries; i++) {
+        // Placement new to initialize the Geometry
+        new (&geometries[i]) Geometry(Point(VertexArray(allocator.GetAllocator(), nullptr, 0, false, false)));
+    }
 	return GeometryCollection(geometries, num_geometries);
 }
 
 Polygon GeometryFactory::CreateBox(double xmin, double ymin, double xmax, double ymax) {
-	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * 1));
+	auto rings = reinterpret_cast<VertexArray *>(allocator.AllocateAligned(sizeof(VertexArray) * 1));
+    new (&rings[0]) VertexArray(allocator.GetAllocator(), 5, false, false);
 	auto &shell = rings[0];
-	shell = AllocateVertexVector(5);
-	shell.Add(Vertex(xmin, ymin));
-	shell.Add(Vertex(xmin, ymax));
-	shell.Add(Vertex(xmax, ymax));
-	shell.Add(Vertex(xmax, ymin));
-	shell.Add(Vertex(xmin, ymin)); // close the ring
-	return Polygon(rings, 1);
+    shell.Append({ xmin, ymin });
+    shell.Append({ xmin, ymax });
+    shell.Append({ xmax, ymax });
+    shell.Append({ xmax, ymin });
+    shell.Append({ xmin, ymin }); // close the ring
+    return Polygon(rings, 1);
 }
 
 // Empty
 Point GeometryFactory::CreateEmptyPoint() {
-	return Point(AllocateVertexVector(0));
+	return Point(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
 }
 
 LineString GeometryFactory::CreateEmptyLineString() {
-	return LineString(AllocateVertexVector(0));
+	return LineString(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
 }
 
 Polygon GeometryFactory::CreateEmptyPolygon() {
@@ -224,6 +245,26 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) 
 	return geometry_t(blob);
 }
 
+void GeometryFactory::SerializeVertexArray(Cursor &cursor, const VertexArray &vector, bool update_bounds, BoundingBox &bbox) {
+    // TODO: Fixme: we iterate twice here, not great :))
+    // Write the vertex data
+    auto byte_size = vector.ByteSize();
+    memcpy(cursor.GetPtr(), vector.GetData(), byte_size);
+    // Move the cursor forward
+    cursor.Skip(byte_size);
+
+    // Also update the bounds real quick
+    if(update_bounds) {
+        for (uint32_t i = 0; i < vector.Count(); i++) {
+            auto vertex = vector.Get(i);
+            bbox.maxx = std::max(bbox.maxx, vertex.x);
+            bbox.maxy = std::max(bbox.maxy, vertex.y);
+            bbox.minx = std::min(bbox.minx, vertex.x);
+            bbox.miny = std::min(bbox.miny, vertex.y);
+        }
+    }
+}
+
 void GeometryFactory::SerializePoint(Cursor &cursor, const Point &point, BoundingBox &bbox) {
 	// Write type (4 bytes)
 	cursor.Write(SerializedGeometryType::POINT);
@@ -232,7 +273,7 @@ void GeometryFactory::SerializePoint(Cursor &cursor, const Point &point, Boundin
 	cursor.Write<uint32_t>(point.vertices.Count());
 
 	// write data
-	point.vertices.SerializeAndUpdateBounds(cursor, bbox);
+    SerializeVertexArray(cursor, point.vertices, true, bbox);
 }
 
 void GeometryFactory::SerializeLineString(Cursor &cursor, const LineString &linestring, BoundingBox &bbox) {
@@ -243,7 +284,7 @@ void GeometryFactory::SerializeLineString(Cursor &cursor, const LineString &line
 	cursor.Write<uint32_t>(linestring.vertices.Count());
 
 	// write data
-	linestring.vertices.SerializeAndUpdateBounds(cursor, bbox);
+    SerializeVertexArray(cursor, linestring.vertices, true, bbox);
 }
 
 void GeometryFactory::SerializePolygon(Cursor &cursor, const Polygon &polygon, BoundingBox &bbox) {
@@ -268,9 +309,9 @@ void GeometryFactory::SerializePolygon(Cursor &cursor, const Polygon &polygon, B
 		if (i == 0) {
 			// The first ring is always the shell, and must be the only ring contributing to the bounding box
 			// or the geometry is invalid.
-			polygon.rings[i].SerializeAndUpdateBounds(cursor, bbox);
+            SerializeVertexArray(cursor, polygon.rings[i], true, bbox);
 		} else {
-			polygon.rings[i].Serialize(cursor);
+            SerializeVertexArray(cursor, polygon.rings[i], false, bbox);
 		}
 	}
 }
@@ -407,14 +448,14 @@ uint32_t GeometryFactory::GetSerializedSize(const Point &point) {
 	// 4 bytes for the type
 	// 4 bytes for the length
 	// sizeof(vertex) * count (either 0 or 16)
-	return 4 + 4 + (point.vertices.count * sizeof(Vertex));
+	return 4 + 4 + (point.vertices.ByteSize());
 }
 
 uint32_t GeometryFactory::GetSerializedSize(const LineString &linestring) {
 	// 4 bytes for the type
 	// 4 bytes for the length
 	// sizeof(vertex) * count)
-	return 4 + 4 + (linestring.vertices.count * sizeof(Vertex));
+	return 4 + 4 + (linestring.vertices.ByteSize());
 }
 
 uint32_t GeometryFactory::GetSerializedSize(const Polygon &polygon) {
@@ -426,7 +467,7 @@ uint32_t GeometryFactory::GetSerializedSize(const Polygon &polygon) {
 	uint32_t size = 4 + 4;
 	for (uint32_t i = 0; i < polygon.num_rings; i++) {
 		size += 4;
-		size += polygon.rings[i].count * sizeof(Vertex);
+		size += polygon.rings[i].ByteSize();
 	}
 	if (polygon.num_rings % 2 == 1) {
 		size += 4;
@@ -546,13 +587,12 @@ Point GeometryFactory::DeserializePoint(Cursor &reader) {
 	// Points can be empty too, in which case the count is 0
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
-		VertexVector vertex_data(reader.GetPtr(), 0, 0);
-		return Point(vertex_data);
+		return Point(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
 	} else {
 		D_ASSERT(count == 1);
-		VertexVector vertex_data(reader.GetPtr(), 1, 1);
+        VertexArray vertex_data(allocator.GetAllocator(), reader.GetPtr(), 1, false, false);
 		// Move the pointer forward (in case we are reading from a collection type)
-		reader.Skip(sizeof(Vertex));
+		reader.Skip(vertex_data.ByteSize());
 		return Point(vertex_data);
 	}
 }
@@ -564,9 +604,9 @@ LineString GeometryFactory::DeserializeLineString(Cursor &reader) {
 	// 0 if the linestring is empty
 	auto count = reader.Read<uint32_t>();
 	// read data
-	VertexVector vertex_data(reader.GetPtr(), count, count);
+	VertexArray vertex_data(allocator.GetAllocator(), reader.GetPtr(), count, false, false);
 
-	reader.Skip(count * sizeof(Vertex));
+	reader.Skip(vertex_data.ByteSize());
 
 	return LineString(vertex_data);
 }
@@ -578,14 +618,15 @@ Polygon GeometryFactory::DeserializePolygon(Cursor &reader) {
 	// read num rings
 	auto num_rings = reader.Read<uint32_t>();
 
-	auto rings = reinterpret_cast<VertexVector *>(allocator.AllocateAligned(sizeof(VertexVector) * num_rings));
+	auto rings = reinterpret_cast<VertexArray *>(allocator.AllocateAligned(sizeof(VertexArray) * num_rings));
 
 	// Read the count and corresponding ring in parallel
 	auto data_ptr = reader.GetPtr() + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
 	for (uint32_t i = 0; i < num_rings; i++) {
 		auto count = reader.Read<uint32_t>();
-		rings[i] = VertexVector(data_ptr, count, count);
-		data_ptr += count * sizeof(Vertex);
+        // Placement new
+        new (&rings[i]) VertexArray(allocator.GetAllocator(), data_ptr, count, false, false);
+		data_ptr += rings[i].ByteSize();
 	}
 	reader.SetPtr(data_ptr);
 	return Polygon(rings, num_rings);
@@ -600,6 +641,8 @@ MultiPoint GeometryFactory::DeserializeMultiPoint(Cursor &reader) {
 
 	auto points = reinterpret_cast<Point *>(allocator.AllocateAligned(sizeof(Point) * num_points));
 	for (uint32_t i = 0; i < num_points; i++) {
+        // Placement new to initialize the Point
+        new (&points[i]) Point(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
 		points[i] = DeserializePoint(reader);
 	}
 	return MultiPoint(points, num_points);
@@ -614,6 +657,8 @@ MultiLineString GeometryFactory::DeserializeMultiLineString(Cursor &reader) {
 
 	auto linestrings = reinterpret_cast<LineString *>(allocator.AllocateAligned(sizeof(LineString) * num_linestrings));
 	for (uint32_t i = 0; i < num_linestrings; i++) {
+        // Placement new to initialize the LineString
+        new (&linestrings[i]) LineString(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
 		linestrings[i] = DeserializeLineString(reader);
 	}
 	return MultiLineString(linestrings, num_linestrings);
@@ -628,6 +673,8 @@ MultiPolygon GeometryFactory::DeserializeMultiPolygon(Cursor &reader) {
 
 	auto polygons = reinterpret_cast<Polygon *>(allocator.AllocateAligned(sizeof(Polygon) * num_polygons));
 	for (uint32_t i = 0; i < num_polygons; i++) {
+        // Placement new to initialize the Polygon
+        new (&polygons[i]) Polygon(nullptr, 0);
 		polygons[i] = DeserializePolygon(reader);
 	}
 	return MultiPolygon(polygons, num_polygons);
@@ -641,6 +688,9 @@ GeometryCollection GeometryFactory::DeserializeGeometryCollection(Cursor &reader
 	auto num_geometries = reader.Read<uint32_t>();
 	auto geometries = reinterpret_cast<Geometry *>(allocator.AllocateAligned(sizeof(Geometry) * num_geometries));
 	for (uint32_t i = 0; i < num_geometries; i++) {
+        // Placement new to initialize the Geometry
+        new (&geometries[i]) Geometry(Point(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false)));
+
 		// peek at the type
 		auto geometry_type = reader.Peek<SerializedGeometryType>();
 		switch (geometry_type) {
@@ -676,9 +726,9 @@ GeometryCollection GeometryFactory::DeserializeGeometryCollection(Cursor &reader
 //----------------------------------------------------------------------
 // Copy
 //----------------------------------------------------------------------
-
-VertexVector GeometryFactory::CopyVertexVector(const VertexVector &vector) {
-	auto result = VertexVector(vector);
+/*
+VertexArray GeometryFactory::CopyVertexArray(const VertexArray &vector) {
+	auto result = VertexArray(vector);
 	result.data = allocator.AllocateAligned(vector.capacity * sizeof(Vertex));
 	memcpy(result.data, vector.data, vector.capacity * sizeof(Vertex));
 	return result;
@@ -686,21 +736,21 @@ VertexVector GeometryFactory::CopyVertexVector(const VertexVector &vector) {
 
 Point GeometryFactory::CopyPoint(const Point &point) {
 	auto result = Point(point);
-	result.vertices = CopyVertexVector(point.vertices);
+	result.vertices = CopyVertexArray(point.vertices);
 	return result;
 }
 
 LineString GeometryFactory::CopyLineString(const LineString &linestring) {
 	auto result = LineString(linestring);
-	result.vertices = CopyVertexVector(linestring.vertices);
+	result.vertices = CopyVertexArray(linestring.vertices);
 	return result;
 }
 
 Polygon GeometryFactory::CopyPolygon(const Polygon &polygon) {
 	auto result = Polygon(polygon);
-	result.rings = (VertexVector *)allocator.AllocateAligned(sizeof(VertexVector) * polygon.num_rings);
+	result.rings = (VertexArray *)allocator.AllocateAligned(sizeof(VertexArray) * polygon.num_rings);
 	for (idx_t i = 0; i < polygon.num_rings; i++) {
-		result.rings[i] = CopyVertexVector(polygon.rings[i]);
+		result.rings[i] = CopyVertexArray(polygon.rings[i]);
 	}
 	return result;
 }
@@ -761,6 +811,7 @@ Geometry GeometryFactory::CopyGeometry(const Geometry &geometry) {
 		throw NotImplementedException("Unimplemented geometry type for copy");
 	}
 }
+ */
 
 } // namespace core
 

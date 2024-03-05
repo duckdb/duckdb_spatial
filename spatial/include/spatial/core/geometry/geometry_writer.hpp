@@ -214,11 +214,6 @@ public:
     }
 };
 
-static void foo() {
-    auto &alloc = Allocator::DefaultAllocator();
-    ArenaAllocator arena(alloc);
-    GeometryWriter writer(arena);
-}
 
 } // namespace core
 
