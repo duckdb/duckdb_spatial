@@ -278,15 +278,15 @@ public:
 	// Reserve
 	//-------------------------------------------------------------------------
 	void Reserve(uint32_t count) {
-        if (count > owned_capacity) {
-            if (owned_capacity == 0) {
-                // TODO: Optimize this, we can allocate the exact amount of memory we need
-                MakeOwning();
-            }
-            auto vertex_size = properties.VertexSize();
-            vertex_data = alloc.get().ReallocateData(vertex_data, owned_capacity * vertex_size, count * vertex_size);
-            owned_capacity = count;
-        }
+		if (count > owned_capacity) {
+			if (owned_capacity == 0) {
+				// TODO: Optimize this, we can allocate the exact amount of memory we need
+				MakeOwning();
+			}
+			auto vertex_size = properties.VertexSize();
+			vertex_data = alloc.get().ReallocateData(vertex_data, owned_capacity * vertex_size, count * vertex_size);
+			owned_capacity = count;
+		}
 	}
 
 	//-------------------------------------------------------------------------

@@ -47,6 +47,7 @@ public:
 	Geometry Deserialize(const geometry_t &data);
 
 	static bool TryGetSerializedBoundingBox(const geometry_t &data, BoundingBox &bbox);
+
 private:
 	// Serialize
 	void SerializeVertexArray(Cursor &cursor, const VertexArray &vector, bool update_bounds, BoundingBox &bbox);

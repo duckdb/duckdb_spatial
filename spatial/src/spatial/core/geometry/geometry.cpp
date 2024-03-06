@@ -259,11 +259,11 @@ uint32_t GeometryCollection::Dimension() const {
 }
 
 GeometryCollection GeometryCollection::DeepCopy() const {
-    GeometryCollection copy(*this);
-    for (auto &item : copy.Items()) {
-        item = item.DeepCopy();
-    }
-    return copy;
+	GeometryCollection copy(*this);
+	for (auto &item : copy.Items()) {
+		item = item.DeepCopy();
+	}
+	return copy;
 }
 
 //------------------------------------------------------------------------------
