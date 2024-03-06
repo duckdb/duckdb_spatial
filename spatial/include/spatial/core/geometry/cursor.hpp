@@ -18,8 +18,10 @@ public:
 	explicit Cursor(data_ptr_t start, data_ptr_t end) : start(start), ptr(start), end(end) {
 	}
 
-    // Be really careful with passing string_ts here, if we accidentally copy we may end up writing to the inlined data of a temporary
-	explicit Cursor(const string_t &blob) : start((data_ptr_t)blob.GetDataWriteable()), ptr(start), end(start + blob.GetSize()) {
+	// Be really careful with passing string_ts here, if we accidentally copy we may end up writing to the inlined data
+	// of a temporary
+	explicit Cursor(const string_t &blob)
+	    : start((data_ptr_t)blob.GetDataWriteable()), ptr(start), end(start + blob.GetSize()) {
 	}
 
 	data_ptr_t GetPtr() {

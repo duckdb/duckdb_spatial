@@ -47,29 +47,29 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			stack.pop_back();
 
 			if (current_geom.Type() == GeometryType::MULTIPOINT) {
-				auto mpoint = current_geom.GetMultiPoint();
-				for (int32_t i = 0; i < mpoint.Count(); i++) {
+				auto mpoint = current_geom.As<MultiPoint>();
+				for (int32_t i = 0; i < mpoint.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1); // path is 1-indexed
 					stack.emplace_back(mpoint[i], path);
 				}
 			} else if (current_geom.Type() == GeometryType::MULTILINESTRING) {
-				auto mline = current_geom.GetMultiLineString();
-				for (int32_t i = 0; i < mline.Count(); i++) {
+				auto mline = current_geom.As<MultiLineString>();
+				for (int32_t i = 0; i < mline.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(mline[i], path);
 				}
 			} else if (current_geom.Type() == GeometryType::MULTIPOLYGON) {
-				auto mpoly = current_geom.GetMultiPolygon();
-				for (int32_t i = 0; i < mpoly.Count(); i++) {
+				auto mpoly = current_geom.As<MultiPolygon>();
+				for (int32_t i = 0; i < mpoly.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(mpoly[i], path);
 				}
 			} else if (current_geom.Type() == GeometryType::GEOMETRYCOLLECTION) {
-				auto collection = current_geom.GetGeometryCollection();
-				for (int32_t i = 0; i < collection.Count(); i++) {
+				auto collection = current_geom.As<GeometryCollection>();
+				for (int32_t i = 0; i < collection.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(collection[i], path);

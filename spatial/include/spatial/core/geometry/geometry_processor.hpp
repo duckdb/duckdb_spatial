@@ -35,7 +35,7 @@ public:
 
 		// TODO: Maybe we should always keep the z in the 3rd position and the m in the 4th position?
 		// TODO: These calculations are all constant, we could move it to Execute() instead.
-        // TODO: Add GetX, GetY, GetZ, GetM methods
+		// TODO: Add GetX, GetY, GetZ, GetM methods
 		data[0] = data_ptr;
 		data[1] = data_ptr + sizeof(double);
 		data[2] = (has_z || has_m) ? data_ptr + 2 * sizeof(double) : const_data_ptr_cast(&EMPTY_DATA);
@@ -50,8 +50,8 @@ public:
 	}
 
 	bool IsEmpty() const {
-        return count == 0;
-    }
+		return count == 0;
+	}
 
 	uint32_t ByteSize() const {
 		return count * sizeof(double) * (2 + (stride[2] != 0) + (stride[3] != 0));

@@ -242,7 +242,7 @@ static void ToGeoJSON(const Polygon &poly, yyjson_mut_doc *doc, yyjson_mut_val *
 
 	auto coords = yyjson_mut_arr(doc);
 	yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-	for (auto &ring : poly.Rings()) {
+	for (const auto &ring : poly) {
 		auto ring_coords = yyjson_mut_arr(doc);
 		VerticesToGeoJSON(ring, doc, ring_coords);
 		yyjson_mut_arr_append(coords, ring_coords);
@@ -254,7 +254,7 @@ static void ToGeoJSON(const MultiPoint &mpoint, yyjson_mut_doc *doc, yyjson_mut_
 
 	auto coords = yyjson_mut_arr(doc);
 	yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-	for (auto &point : mpoint) {
+	for (const auto &point : mpoint) {
 		VerticesToGeoJSON(point.Vertices(), doc, coords);
 	}
 }
@@ -265,7 +265,7 @@ static void ToGeoJSON(const MultiLineString &mline, yyjson_mut_doc *doc, yyjson_
 	auto coords = yyjson_mut_arr(doc);
 	yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-	for (auto &line : mline) {
+	for (const auto &line : mline) {
 		auto line_coords = yyjson_mut_arr(doc);
 		VerticesToGeoJSON(line.Vertices(), doc, line_coords);
 		yyjson_mut_arr_append(coords, line_coords);
@@ -278,9 +278,9 @@ static void ToGeoJSON(const MultiPolygon &mpoly, yyjson_mut_doc *doc, yyjson_mut
 	auto coords = yyjson_mut_arr(doc);
 	yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-	for (auto &poly : mpoly) {
+	for (const auto &poly : mpoly) {
 		auto poly_coords = yyjson_mut_arr(doc);
-		for (auto &ring : poly.Rings()) {
+		for (const auto &ring : poly) {
 			auto ring_coords = yyjson_mut_arr(doc);
 			VerticesToGeoJSON(ring, doc, ring_coords);
 			yyjson_mut_arr_append(poly_coords, ring_coords);
@@ -302,34 +302,15 @@ static void ToGeoJSON(const GeometryCollection &collection, yyjson_mut_doc *doc,
 	}
 }
 
+struct ToGeoJSONB {
+	template <class T>
+	static void Apply(const T &geom, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+		ToGeoJSON(geom, doc, obj);
+	}
+};
+
 static void ToGeoJSON(const Geometry &geom, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
-	switch (geom.Type()) {
-	case GeometryType::POINT:
-		ToGeoJSON(geom.GetPoint(), doc, obj);
-		break;
-	case GeometryType::LINESTRING:
-		ToGeoJSON(geom.GetLineString(), doc, obj);
-		break;
-	case GeometryType::POLYGON:
-		ToGeoJSON(geom.GetPolygon(), doc, obj);
-		break;
-	case GeometryType::MULTIPOINT:
-		ToGeoJSON(geom.GetMultiPoint(), doc, obj);
-		break;
-	case GeometryType::MULTILINESTRING:
-		ToGeoJSON(geom.GetMultiLineString(), doc, obj);
-		break;
-	case GeometryType::MULTIPOLYGON:
-		ToGeoJSON(geom.GetMultiPolygon(), doc, obj);
-		break;
-	case GeometryType::GEOMETRYCOLLECTION:
-		ToGeoJSON(geom.GetGeometryCollection(), doc, obj);
-		break;
-	default: {
-		throw NotImplementedException(
-		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geom.Type())));
-	}
-	}
+	geom.Dispatch<ToGeoJSONB>(doc, obj);
 }
 
 static void GeometryToGeoJSONFragmentFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -439,7 +420,7 @@ static Polygon PolygonFromGeoJSON(yyjson_val *coord_array, GeometryFactory &fact
 				throw InvalidInputException("GeoJSON input coordinates field is not an array of arrays: %s",
 				                            raw.GetString());
 			}
-			polygon.Ring(idx) = VerticesFromGeoJSON(ring_val, factory, raw);
+			polygon[idx] = VerticesFromGeoJSON(ring_val, factory, raw);
 		}
 
 		return polygon;

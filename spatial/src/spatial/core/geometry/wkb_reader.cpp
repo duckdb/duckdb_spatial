@@ -8,9 +8,6 @@ namespace spatial {
 
 namespace core {
 
-
-
-
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
 	if (cursor + sizeof(uint32_t) > length) {
@@ -209,12 +206,11 @@ Point WKBReader::ReadPointBody() {
 	auto x = ReadDouble<ORDER>();
 	auto y = ReadDouble<ORDER>();
 	if (std::isnan(x) && std::isnan(y)) {
-		auto point_data = VertexArray::CreateEmpty(factory.allocator.GetAllocator(), false, false);
-		return Point(point_data);
+		return Point(factory.allocator.GetAllocator(), false, false);
 	}
-	auto point_data = factory.AllocateVertexArray(1, false, false);
-	point_data.Append({x, y});
-	return Point(point_data);
+	Point point(factory.allocator.GetAllocator(), false, false);
+	point.Vertices().Append({x, y});
+	return point;
 }
 
 template <WKBByteOrder ORDER>
@@ -224,13 +220,14 @@ LineString WKBReader::ReadLineStringBody() {
 		throw InvalidInputException("Expected LINESTRING, got %u", flags.type);
 	}
 	auto num_points = ReadInt<ORDER>();
-	auto line_data = factory.AllocateVertexArray(num_points, false, false);
+	LineString line(factory.allocator.GetAllocator(), false, false);
+	line.Vertices().Reserve(num_points);
 	for (uint32_t i = 0; i < num_points; i++) {
 		auto x = ReadDouble<ORDER>();
 		auto y = ReadDouble<ORDER>();
-		line_data.Append({x, y});
+		line.Vertices().AppendUnsafe({x, y});
 	}
-	return LineString(line_data);
+	return line;
 }
 
 template <WKBByteOrder ORDER>
@@ -240,21 +237,19 @@ Polygon WKBReader::ReadPolygonBody() {
 		throw InvalidInputException("Expected POLYGON, got %u", flags.type);
 	}
 	auto num_rings = ReadInt<ORDER>();
-    auto polygon = factory.CreatePolygon(num_rings);
+	auto polygon = factory.CreatePolygon(num_rings);
 
 	for (uint32_t i = 0; i < num_rings; i++) {
 		auto num_points = ReadInt<ORDER>();
-        auto ring = factory.AllocateVertexArray(num_points, false, false);
-
+		auto &ring = polygon[i];
+		ring.Reserve(num_points);
 		for (uint32_t j = 0; j < num_points; j++) {
 			auto x = ReadDouble<ORDER>();
 			auto y = ReadDouble<ORDER>();
-			ring.Append({x, y});
+			ring.AppendUnsafe({x, y});
 		}
-
-        polygon.Ring(i) = ring;
 	}
-    return polygon;
+	return polygon;
 }
 
 // TODO: Break after reading order instead. Peek type for GEOMETRY and GEOMETRYCOLLECTION
@@ -267,13 +262,12 @@ MultiPoint WKBReader::ReadMultiPointBody() {
 	}
 	auto num_points = ReadInt<ORDER>();
 
-    // TODO: This is all super UB now that the geometries are no longer PODs
-	auto points = reinterpret_cast<Point *>(factory.allocator.Allocate(sizeof(Point) * num_points));
+	MultiPoint multi_point(factory.allocator.GetAllocator(), num_points);
 	for (uint32_t i = 0; i < num_points; i++) {
-        // Points are not PODs anymore, so we need to construct them in place
-        new (&points[i]) Point(ReadPoint());
+		// Points are not PODs anymore, so we need to construct them in place
+		multi_point[i] = ReadPoint();
 	}
-	return MultiPoint(points, num_points);
+	return multi_point;
 }
 
 template <WKBByteOrder ORDER>
@@ -283,11 +277,11 @@ MultiLineString WKBReader::ReadMultiLineStringBody() {
 		throw InvalidInputException("Expected MULTILINESTRING, got %u", flags.type);
 	}
 	auto num_lines = ReadInt<ORDER>();
-	auto lines = reinterpret_cast<LineString *>(factory.allocator.Allocate(sizeof(LineString) * num_lines));
+	MultiLineString multi_linestring(factory.allocator.GetAllocator(), num_lines);
 	for (uint32_t i = 0; i < num_lines; i++) {
-        new (&lines[i]) LineString(ReadLineString());
+		multi_linestring[i] = ReadLineString();
 	}
-	return MultiLineString(lines, num_lines);
+	return multi_linestring;
 }
 
 template <WKBByteOrder ORDER>
@@ -297,11 +291,11 @@ MultiPolygon WKBReader::ReadMultiPolygonBody() {
 		throw InvalidInputException("Expected MULTIPOLYGON, got %u", flags.type);
 	}
 	auto num_polygons = ReadInt<ORDER>();
-	auto polygons = reinterpret_cast<Polygon *>(factory.allocator.Allocate(sizeof(Polygon) * num_polygons));
+	MultiPolygon multi_polygon(factory.allocator.GetAllocator(), num_polygons);
 	for (uint32_t i = 0; i < num_polygons; i++) {
-        new (&polygons[i]) Polygon(ReadPolygon());
+		multi_polygon[i] = ReadPolygon();
 	}
-	return MultiPolygon(polygons, num_polygons);
+	return multi_polygon;
 }
 
 template <WKBByteOrder ORDER>
@@ -311,11 +305,11 @@ GeometryCollection WKBReader::ReadGeometryCollectionBody() {
 		throw InvalidInputException("Expected GEOMETRYCOLLECTION, got %u", flags.type);
 	}
 	auto num_geometries = ReadInt<ORDER>();
-	auto geometries = reinterpret_cast<Geometry *>(factory.allocator.Allocate(sizeof(Geometry) * num_geometries));
+	GeometryCollection geometry_collection(factory.allocator.GetAllocator(), num_geometries);
 	for (uint32_t i = 0; i < num_geometries; i++) {
-        new (&geometries[i]) Geometry(ReadGeometry());
+		geometry_collection[i] = ReadGeometry();
 	}
-	return GeometryCollection(geometries, num_geometries);
+	return geometry_collection;
 }
 
 } // namespace core

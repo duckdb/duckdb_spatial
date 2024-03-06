@@ -58,16 +58,25 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 		auto geometry = lstate.factory.Deserialize(input);
 		switch (geometry.Type()) {
 		case GeometryType::LINESTRING:
-			return geometry.GetLineString().Length();
-		case GeometryType::MULTILINESTRING:
-			return geometry.GetMultiLineString().Length();
+			return geometry.As<LineString>().Vertices().Length();
+		case GeometryType::MULTILINESTRING: {
+			double sum = 0.0;
+			for (const auto &line : geometry.As<MultiLineString>()) {
+				sum += line.Vertices().Length();
+			}
+			return sum;
+		}
 		case GeometryType::GEOMETRYCOLLECTION:
-			return geometry.GetGeometryCollection().Aggregate(
-			    [](Geometry &geom, double state) {
+			return geometry.As<GeometryCollection>().Aggregate(
+			    [](const Geometry &geom, double state) {
 				    if (geom.Type() == GeometryType::LINESTRING) {
-					    return state + geom.GetLineString().Length();
+					    return state + geom.As<LineString>().Vertices().Length();
 				    } else if (geom.Type() == GeometryType::MULTILINESTRING) {
-					    return state + geom.GetMultiLineString().Length();
+					    auto sum = 0.0;
+					    for (const auto &line : geom.As<MultiLineString>()) {
+						    sum += line.Vertices().Length();
+					    }
+					    return state + sum;
 				    } else {
 					    return state;
 				    }

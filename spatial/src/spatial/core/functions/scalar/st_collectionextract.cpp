@@ -18,18 +18,18 @@ namespace core {
 static void CollectPoints(Geometry &geom, vector<Point> &points) {
 	switch (geom.Type()) {
 	case GeometryType::POINT: {
-		points.push_back(geom.GetPoint());
+		points.push_back(geom.As<Point>());
 		break;
 	}
 	case GeometryType::MULTIPOINT: {
-		auto &multipoint = geom.GetMultiPoint();
+		auto &multipoint = geom.As<MultiPoint>();
 		for (auto &point : multipoint) {
 			points.push_back(point);
 		}
 		break;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &col = geom.GetGeometryCollection();
+		auto &col = geom.As<GeometryCollection>();
 		for (auto &g : col) {
 			CollectPoints(g, points);
 		}
@@ -43,18 +43,18 @@ static void CollectPoints(Geometry &geom, vector<Point> &points) {
 static void CollectLines(Geometry &geom, vector<LineString> &lines) {
 	switch (geom.Type()) {
 	case GeometryType::LINESTRING: {
-		lines.push_back(geom.GetLineString());
+		lines.push_back(geom.As<LineString>());
 		break;
 	}
 	case GeometryType::MULTILINESTRING: {
-		auto &multilines = geom.GetMultiLineString();
+		auto &multilines = geom.As<MultiLineString>();
 		for (auto &line : multilines) {
 			lines.push_back(line);
 		}
 		break;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &col = geom.GetGeometryCollection();
+		auto &col = geom.As<GeometryCollection>();
 		for (auto &g : col) {
 			CollectLines(g, lines);
 		}
@@ -68,18 +68,18 @@ static void CollectLines(Geometry &geom, vector<LineString> &lines) {
 static void CollectPolygons(Geometry &geom, vector<Polygon> &polys) {
 	switch (geom.Type()) {
 	case GeometryType::POLYGON: {
-		polys.push_back(geom.GetPolygon());
+		polys.push_back(geom.As<Polygon>());
 		break;
 	}
 	case GeometryType::MULTIPOLYGON: {
-		auto &multipolys = geom.GetMultiPolygon();
+		auto &multipolys = geom.As<MultiPolygon>();
 		for (auto &poly : multipolys) {
 			polys.push_back(poly);
 		}
 		break;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &col = geom.GetGeometryCollection();
+		auto &col = geom.As<GeometryCollection>();
 		for (auto &g : col) {
 			CollectPolygons(g, polys);
 		}
@@ -195,14 +195,21 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 		if (input.GetType() == GeometryType::GEOMETRYCOLLECTION) {
 			auto geometry = lstate.factory.Deserialize(input);
 
-			auto &collection = geometry.GetGeometryCollection();
+			auto &collection = geometry.As<GeometryCollection>();
 			if (collection.IsEmpty()) {
 				return input;
 			}
 			// Find the highest dimension of the geometries in the collection
 			// Empty geometries are ignored
 			auto dim = collection.Aggregate(
-			    [](Geometry &geom, int32_t d) { return geom.IsEmpty() ? d : std::max(geom.Dimension(), d); }, 0);
+			    [](const Geometry &geom, uint32_t d) {
+				    if (geom.IsEmpty()) {
+					    return d;
+				    } else {
+					    return std::max(geom.Dimension(), d);
+				    }
+			    },
+			    0);
 
 			switch (dim) {
 			// Point case

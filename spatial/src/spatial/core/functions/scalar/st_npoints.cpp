@@ -67,59 +67,40 @@ static void BoxNumPointsFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static uint32_t GetVertexCount(const Geometry &geometry) {
-	switch (geometry.Type()) {
-	case GeometryType::POINT:
-		return geometry.GetPoint().IsEmpty() ? 0U : 1U;
-	case GeometryType::LINESTRING:
-		return geometry.GetLineString().Count();
-	case GeometryType::POLYGON: {
-		auto &polygon = geometry.GetPolygon();
+struct GetVertexCountFunctor {
+	static uint32_t Apply(const Point &point) {
+		return point.IsEmpty() ? 0U : 1U;
+	}
+	static uint32_t Apply(const LineString &linestring) {
+		return linestring.Vertices().Count();
+	}
+
+	static uint32_t Apply(const Polygon &polygon) {
 		uint32_t count = 0;
-		for (auto &ring : polygon.Rings()) {
+		for (const auto &ring : polygon) {
 			count += ring.Count();
 		}
 		return count;
 	}
-	case GeometryType::MULTIPOINT: {
+
+	static uint32_t Apply(const GeometryCollection &collection) {
 		uint32_t count = 0;
-		for (auto &point : geometry.GetMultiPoint()) {
-			if (!point.IsEmpty()) {
-				count++;
-			}
+		for (const auto &geom : collection) {
+			count += geom.Dispatch<GetVertexCountFunctor>();
 		}
 		return count;
 	}
-	case GeometryType::MULTILINESTRING: {
+
+	template <class T>
+	static uint32_t Apply(const MultiGeometry<T> &multi) {
 		uint32_t count = 0;
-		for (auto &linestring : geometry.GetMultiLineString()) {
-			if (!linestring.IsEmpty()) {
-				count += linestring.Count();
-			}
+		for (const auto &geom : multi) {
+			count += Apply(geom);
 		}
 		return count;
 	}
-	case GeometryType::MULTIPOLYGON: {
-		uint32_t count = 0;
-		for (auto &polygon : geometry.GetMultiPolygon()) {
-			for (auto &ring : polygon.Rings()) {
-				count += ring.Count();
-			}
-		}
-		return count;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		uint32_t count = 0;
-		for (auto &geom : geometry.GetGeometryCollection()) {
-			count += GetVertexCount(geom);
-		}
-		return count;
-	}
-	default:
-		throw NotImplementedException(
-		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geometry.Type())));
-	}
-}
+};
+
 static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
 	auto &ctx = GeometryFunctionLocalState::ResetAndGet(state);
@@ -129,7 +110,7 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 
 	UnaryExecutor::Execute<geometry_t, uint32_t>(input, result, count, [&](geometry_t input) {
 		auto geometry = ctx.factory.Deserialize(input);
-		return GetVertexCount(geometry);
+		return geometry.Dispatch<GetVertexCountFunctor>();
 	});
 }
 

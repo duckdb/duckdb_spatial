@@ -23,10 +23,10 @@ void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto &input = args.data[0];
 	auto count = args.size();
 
-    vector<data_t> buffer;
+	vector<data_t> buffer;
 	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
-        buffer.clear();
-        WKBWriter::Write(input, buffer);
+		buffer.clear();
+		WKBWriter::Write(input, buffer);
 
 		auto blob_size = buffer.size() * 2; // every byte is rendered as two characters
 		auto blob_str = StringVector::EmptyString(result, blob_size);

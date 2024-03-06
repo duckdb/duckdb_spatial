@@ -19,9 +19,8 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
-        return WKBWriter::Write(input, result);
-	});
+	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count,
+	                                             [&](geometry_t input) { return WKBWriter::Write(input, result); });
 }
 
 //------------------------------------------------------------------------------
@@ -30,7 +29,8 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 void CoreScalarFunctions::RegisterStAsWKB(DatabaseInstance &db) {
 	ScalarFunctionSet as_wkb_function_set("ST_AsWKB");
 
-	as_wkb_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction));
+	as_wkb_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_wkb_function_set);
 }

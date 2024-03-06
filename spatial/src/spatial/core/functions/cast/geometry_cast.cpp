@@ -42,7 +42,7 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 		if (geom.Type() != GeometryType::POINT) {
 			throw ConversionException("Cannot cast non-point GEOMETRY to POINT_2D");
 		}
-		auto &point = geom.GetPoint();
+		auto &point = geom.As<Point>();
 		if (point.IsEmpty()) {
 			throw ConversionException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
@@ -95,8 +95,8 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 		}
 
 		auto geometry = lstate.factory.Deserialize(geom);
-		auto &line = geometry.GetLineString();
-		auto line_size = line.Count();
+		auto &line = geometry.As<LineString>();
+		auto line_size = line.Vertices().Count();
 
 		auto entry = list_entry_t(total_coords, line_size);
 		total_coords += line_size;
@@ -126,23 +126,21 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &poly) {
-
 		auto geom = lstate.factory.CreatePolygon(poly.length);
 
 		for (idx_t i = 0; i < poly.length; i++) {
 			auto ring = ring_entries[poly.offset + i];
-			auto ring_array = lstate.factory.AllocateVertexArray(ring.length, false, false);
+			auto &ring_array = geom[i];
+			ring_array.Reserve(ring.length);
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-				ring_array.Append({x, y});
+				ring_array.AppendUnsafe({x, y});
 			}
-			geom.Ring(i) = ring_array;
 		}
 		return lstate.factory.Serialize(result, Geometry(geom));
-
 	});
-    return true;
+	return true;
 }
 
 //------------------------------------------------------------------------------
@@ -161,14 +159,14 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 			throw ConversionException("Cannot cast non-polygon GEOMETRY to POLYGON_2D");
 		}
 		auto geometry = lstate.factory.Deserialize(geom);
-		auto &poly = geometry.GetPolygon();
-		auto poly_size = poly.Count();
+		auto &poly = geometry.As<Polygon>();
+		auto poly_size = poly.RingCount();
 		auto poly_entry = list_entry_t(total_rings, poly_size);
 
 		ListVector::Reserve(result, total_rings + poly_size);
 
 		for (idx_t ring_idx = 0; ring_idx < poly_size; ring_idx++) {
-			auto ring = poly.Ring(ring_idx);
+			auto ring = poly[ring_idx];
 			auto ring_size = ring.Count();
 			auto ring_entry = list_entry_t(total_coords, ring_size);
 
@@ -183,8 +181,9 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 			ring_entries[total_rings + ring_idx] = ring_entry;
 
 			for (idx_t j = 0; j < ring_size; j++) {
-				x_data[ring_entry.offset + j] = ring.Get(j).x;
-				y_data[ring_entry.offset + j] = ring.Get(j).y;
+				auto vert = ring.Get(j);
+				x_data[ring_entry.offset + j] = vert.x;
+				y_data[ring_entry.offset + j] = vert.y;
 			}
 			total_coords += ring_size;
 		}
@@ -217,12 +216,12 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto maxy = box.d_val;
 
 		auto geom = lstate.factory.CreatePolygon(1, &capacity, false, false);
-		auto &shell = geom.Ring(0);
-        shell.Append({minx, miny});
-        shell.Append({maxx, miny});
-        shell.Append({maxx, maxy});
-        shell.Append({minx, maxy});
-        shell.Append({minx, miny});
+		auto &shell = geom[0];
+		shell.AppendUnsafe({minx, miny});
+		shell.AppendUnsafe({maxx, miny});
+		shell.AppendUnsafe({maxx, maxy});
+		shell.AppendUnsafe({minx, maxy});
+		shell.AppendUnsafe({minx, miny});
 		return lstate.factory.Serialize(result, Geometry(geom));
 	});
 	return true;

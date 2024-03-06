@@ -17,12 +17,14 @@ namespace spatial {
 
 namespace proj {
 
+using namespace core;
+
 struct ProjFunctionLocalState : public FunctionLocalState {
 
 	PJ_CONTEXT *proj_ctx;
-	core::GeometryFactory factory;
+	GeometryFactory factory;
 
-	ProjFunctionLocalState(ClientContext &context)
+	explicit ProjFunctionLocalState(ClientContext &context)
 	    : proj_ctx(ProjModule::GetThreadProjContext()), factory(BufferAllocator::Get(context)) {
 	}
 
@@ -230,82 +232,82 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 	}
 }
 
-static void TransformVertexArray(PJ *crs, core::VertexArray &array) {
-    // Make sure we own the array
-    array.MakeOwning();
-    for (uint32_t i = 0; i < array.Count(); i++) {
-        auto vertex = array.Get(i);
-        auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-        // we own the array, so we can use SetUnsafe
-        array.SetUnsafe(i, { transformed.x, transformed.y });
-    }
+static void TransformVertexArray(PJ *crs, VertexArray &array) {
+	// Make sure we own the array
+	array.MakeOwning();
+	for (uint32_t i = 0; i < array.Count(); i++) {
+		auto vertex = array.Get(i);
+		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
+		// we own the array, so we can use SetUnsafe
+		array.SetUnsafe(i, {transformed.x, transformed.y});
+	}
 }
 
-static void TransformGeometry(PJ *crs, core::Point &point) {
+static void TransformGeometry(PJ *crs, Point &point) {
 	if (point.IsEmpty()) {
 		return;
 	}
-    TransformVertexArray(crs, point.Vertices());
+	TransformVertexArray(crs, point.Vertices());
 }
 
-static void TransformGeometry(PJ *crs, core::LineString &line) {
-    TransformVertexArray(crs, line.Vertices());
+static void TransformGeometry(PJ *crs, LineString &line) {
+	TransformVertexArray(crs, line.Vertices());
 }
 
-static void TransformGeometry(PJ *crs, core::Polygon &poly) {
-	for (auto &ring : poly.Rings()) {
-        TransformVertexArray(crs, ring);
+static void TransformGeometry(PJ *crs, Polygon &poly) {
+	for (auto &ring : poly) {
+		TransformVertexArray(crs, ring);
 	}
 }
 
-static void TransformGeometry(PJ *crs, core::MultiPoint &multi_point) {
+static void TransformGeometry(PJ *crs, MultiPoint &multi_point) {
 	for (auto &point : multi_point) {
 		TransformGeometry(crs, point);
 	}
 }
 
-static void TransformGeometry(PJ *crs, core::MultiLineString &multi_line) {
+static void TransformGeometry(PJ *crs, MultiLineString &multi_line) {
 	for (auto &line : multi_line) {
 		TransformGeometry(crs, line);
 	}
 }
 
-static void TransformGeometry(PJ *crs, core::MultiPolygon &multi_poly) {
+static void TransformGeometry(PJ *crs, MultiPolygon &multi_poly) {
 	for (auto &poly : multi_poly) {
 		TransformGeometry(crs, poly);
 	}
 }
 
-static void TransformGeometry(PJ *crs, core::Geometry &geom);
+static void TransformGeometry(PJ *crs, Geometry &geom);
 
-static void TransformGeometry(PJ *crs, core::GeometryCollection &geom) {
+static void TransformGeometry(PJ *crs, GeometryCollection &geom) {
 	for (auto &child : geom) {
 		TransformGeometry(crs, child);
 	}
 }
 
-static void TransformGeometry(PJ *crs, core::Geometry &geom) {
+static void TransformGeometry(PJ *crs, Geometry &geom) {
 	switch (geom.Type()) {
-	case core::GeometryType::POINT:
-		TransformGeometry(crs, geom.GetPoint());
+	case GeometryType::POINT:
+		TransformGeometry(crs, geom.As<Point>());
 		break;
-	case core::GeometryType::LINESTRING:
-		TransformGeometry(crs, geom.GetLineString());
+	case GeometryType::LINESTRING:
+		TransformGeometry(crs, geom.As<LineString>());
 		break;
-	case core::GeometryType::POLYGON:
-		TransformGeometry(crs, geom.GetPolygon());
+	case GeometryType::POLYGON:
+		TransformGeometry(crs, geom.As<Polygon>());
 		break;
-	case core::GeometryType::MULTIPOINT:
-		TransformGeometry(crs, geom.GetMultiPoint());
+	case GeometryType::MULTIPOINT:
+		TransformGeometry(crs, geom.As<MultiPoint>());
 		break;
-	case core::GeometryType::MULTILINESTRING:
-		TransformGeometry(crs, geom.GetMultiLineString());
+	case GeometryType::MULTILINESTRING:
+		TransformGeometry(crs, geom.As<MultiLineString>());
 		break;
-	case core::GeometryType::MULTIPOLYGON:
-		TransformGeometry(crs, geom.GetMultiPolygon());
+	case GeometryType::MULTIPOLYGON:
+		TransformGeometry(crs, geom.As<MultiPolygon>());
 		break;
-	case core::GeometryType::GEOMETRYCOLLECTION:
-		TransformGeometry(crs, geom.GetGeometryCollection());
+	case GeometryType::GEOMETRYCOLLECTION:
+		TransformGeometry(crs, geom.As<GeometryCollection>());
 		break;
 	default:
 		throw NotImplementedException("Unimplemented geometry type!");
@@ -357,18 +359,17 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			// otherwise fall back to the original CRS
 		}
 
-		UnaryExecutor::Execute<core::geometry_t, core::geometry_t>(geom_vec, result, count,
-		                                                           [&](core::geometry_t input_geom) {
-			                                                           auto geom = factory.Deserialize(input_geom);
-			                                                           TransformGeometry(crs.get(), geom);
-			                                                           return factory.Serialize(result, geom);
-		                                                           });
+		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
+			auto geom = factory.Deserialize(input_geom);
+			TransformGeometry(crs.get(), geom);
+			return factory.Serialize(result, geom);
+		});
 	} else {
 		// General case: projections are not constant
 		// we need to create a projection for each geometry
-		TernaryExecutor::Execute<core::geometry_t, string_t, string_t, core::geometry_t>(
+		TernaryExecutor::Execute<geometry_t, string_t, string_t, geometry_t>(
 		    geom_vec, proj_from_vec, proj_to_vec, result, count,
-		    [&](core::geometry_t input_geom, string_t proj_from, string_t proj_to) {
+		    [&](geometry_t input_geom, string_t proj_from, string_t proj_to) {
 			    auto from_str = proj_from.GetString();
 			    auto to_str = proj_to.GetString();
 			    auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));

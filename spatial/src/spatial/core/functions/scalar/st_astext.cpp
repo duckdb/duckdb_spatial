@@ -78,7 +78,8 @@ void CoreScalarFunctions::RegisterStAsText(DatabaseInstance &db) {
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
 	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::VARCHAR, Box2DAsTextFunction));
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction));
+	as_text_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_text_function_set);
 }

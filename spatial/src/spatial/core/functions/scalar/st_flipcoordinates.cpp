@@ -154,25 +154,25 @@ static void BoxFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, 
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void FlipVertexArray(VertexArray &vertices) {
-    vertices.MakeOwning();
+	vertices.MakeOwning();
 	for (idx_t i = 0; i < vertices.Count(); i++) {
 		auto vertex = vertices.Get(i);
 		std::swap(vertex.x, vertex.y);
-        // We can use SetUnsafe here because we know the vector is owning
+		// We can use SetUnsafe here because we know the vector is owning
 		vertices.SetUnsafe(i, vertex);
 	}
 }
 static void FlipGeometry(Point &point) {
-    FlipVertexArray(point.Vertices());
+	FlipVertexArray(point.Vertices());
 }
 
 static void FlipGeometry(LineString &line) {
-    FlipVertexArray(line.Vertices());
+	FlipVertexArray(line.Vertices());
 }
 
 static void FlipGeometry(Polygon &poly) {
-	for (auto &ring : poly.Rings()) {
-        FlipVertexArray(ring);
+	for (auto &ring : poly) {
+		FlipVertexArray(ring);
 	}
 }
 
@@ -204,25 +204,25 @@ static void FlipGeometry(GeometryCollection &geom) {
 static void FlipGeometry(Geometry &geom) {
 	switch (geom.Type()) {
 	case GeometryType::POINT:
-		FlipGeometry(geom.GetPoint());
+		FlipGeometry(geom.As<Point>());
 		break;
 	case GeometryType::LINESTRING:
-		FlipGeometry(geom.GetLineString());
+		FlipGeometry(geom.As<LineString>());
 		break;
 	case GeometryType::POLYGON:
-		FlipGeometry(geom.GetPolygon());
+		FlipGeometry(geom.As<Polygon>());
 		break;
 	case GeometryType::MULTIPOINT:
-		FlipGeometry(geom.GetMultiPoint());
+		FlipGeometry(geom.As<MultiPoint>());
 		break;
 	case GeometryType::MULTILINESTRING:
-		FlipGeometry(geom.GetMultiLineString());
+		FlipGeometry(geom.As<MultiLineString>());
 		break;
 	case GeometryType::MULTIPOLYGON:
-		FlipGeometry(geom.GetMultiPolygon());
+		FlipGeometry(geom.As<MultiPolygon>());
 		break;
 	case GeometryType::GEOMETRYCOLLECTION:
-		FlipGeometry(geom.GetGeometryCollection());
+		FlipGeometry(geom.As<GeometryCollection>());
 		break;
 	default:
 		throw NotImplementedException("Unimplemented geometry type!");

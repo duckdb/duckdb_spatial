@@ -37,15 +37,15 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (geometry.Type() != GeometryType::POINT) {
 				throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
 			}
-			auto &point = geometry.GetPoint();
+			auto &point = geometry.As<Point>();
 			if (point.IsEmpty()) {
 				continue;
 			}
-            auto vertex = point.Vertices().Get(0);
+			auto vertex = point.Vertices().Get(0);
 			line_geom.Vertices().Append({vertex.x, vertex.y});
 		}
 
-		if (line_geom.Count() == 1) {
+		if (line_geom.Vertices().Count() == 1) {
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		}
 
@@ -66,21 +66,21 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
 		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
 
-		    auto &point_left = geometry_left.GetPoint();
-		    auto &point_right = geometry_right.GetPoint();
+		    auto &point_left = geometry_left.As<Point>();
+		    auto &point_right = geometry_right.As<Point>();
 
 		    // TODO: we should add proper abstractions to append/concat VertexVectors
 		    auto line_geom = lstate.factory.CreateLineString(2, false, false);
 		    if (!point_left.IsEmpty()) {
-                auto vertex = point_left.Vertices().Get(0);
+			    auto vertex = point_left.Vertices().Get(0);
 			    line_geom.Vertices().Append({vertex.x, vertex.y});
 		    }
 		    if (!point_right.IsEmpty()) {
-                auto vertex = point_right.Vertices().Get(0);
+			    auto vertex = point_right.Vertices().Get(0);
 			    line_geom.Vertices().Append({vertex.x, vertex.y});
 		    }
 
-		    if (line_geom.Count() == 1) {
+		    if (line_geom.Vertices().Count() == 1) {
 			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		    }
 

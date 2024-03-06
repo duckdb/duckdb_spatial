@@ -40,7 +40,7 @@ static void GeometryInteriorRingsFunction(DataChunk &args, ExpressionState &stat
 			    return 0;
 		    }
 		    auto polygon = lstate.factory.Deserialize(input);
-		    auto rings = polygon.GetPolygon().Count();
+		    auto rings = polygon.As<Polygon>().RingCount();
 		    return rings == 0 ? 0 : static_cast<int32_t>(rings - 1); // -1 for the exterior ring
 	    });
 }

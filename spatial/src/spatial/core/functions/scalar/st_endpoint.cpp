@@ -71,8 +71,8 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    return geometry_t {};
 		    }
 
-		    auto line = lstate.factory.Deserialize(input).GetLineString();
-		    auto point_count = line.Count();
+		    auto line = lstate.factory.Deserialize(input).As<LineString>();
+		    auto point_count = line.Vertices().Count();
 
 		    if (point_count == 0) {
 			    mask.SetInvalid(row_idx);

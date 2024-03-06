@@ -218,7 +218,7 @@ struct ConvertLineString {
 			// Single LineString
 			auto line_string = factory.CreateLineString(shape->nVertices, false, false);
 			for (int i = 0; i < shape->nVertices; i++) {
-				line_string.Vertices().Append({shape->padfX[i], shape->padfY[i]});
+				line_string.Vertices().AppendUnsafe({shape->padfX[i], shape->padfY[i]});
 			}
 			return line_string;
 		} else {
@@ -230,7 +230,7 @@ struct ConvertLineString {
 				auto &line_string = multi_line_string[i];
 				line_string = factory.CreateLineString(end - start, false, false);
 				for (int j = start; j < end; j++) {
-					line_string.Vertices().Append({shape->padfX[j], shape->padfY[j]});
+					line_string.Vertices().AppendUnsafe({shape->padfX[j], shape->padfY[j]});
 				}
 				start = end;
 			}
@@ -264,10 +264,10 @@ struct ConvertPolygon {
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
-				auto &ring = polygon.Ring(i);
-				ring = factory.AllocateVertexArray(end - start, false, false);
+				auto &ring = polygon[i];
+				ring.Reserve(end - start);
 				for (int j = start; j < end; j++) {
-					ring.Append({shape->padfX[j], shape->padfY[j]});
+					ring.AppendUnsafe({shape->padfX[j], shape->padfY[j]});
 				}
 				start = end;
 			}
@@ -284,10 +284,10 @@ struct ConvertPolygon {
 				for (auto ring_idx = part_start; ring_idx < part_end; ring_idx++) {
 					auto start = shape->panPartStart[ring_idx];
 					auto end = ring_idx == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[ring_idx + 1];
-					auto &ring = polygon.Ring(ring_idx - part_start);
-					ring = factory.AllocateVertexArray(end - start, false, false);
+					auto &ring = polygon[ring_idx - part_start];
+					ring.Reserve(end - start);
 					for (int j = start; j < end; j++) {
-						ring.Append({shape->padfX[j], shape->padfY[j]});
+						ring.AppendUnsafe({shape->padfX[j], shape->padfY[j]});
 					}
 				}
 				multi_polygon[polygon_idx] = polygon;

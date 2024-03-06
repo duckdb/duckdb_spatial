@@ -27,8 +27,8 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
 		    }
 		    auto shell_geom = lstate.factory.Deserialize(line_blob);
-		    auto &shell = shell_geom.GetLineString();
-		    auto shell_vert_count = shell.Count();
+		    auto &shell = shell_geom.As<LineString>();
+		    auto shell_vert_count = shell.Vertices().Count();
 		    if (shell_vert_count < 4) {
 			    throw InvalidInputException("ST_MakePolygon shell requires at least 4 vertices");
 		    }
@@ -61,8 +61,8 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 				    throw InvalidInputException(
 				        StringUtil::Format("ST_MakePolygon hole #%lu is not a LINESTRING geometry", hole_idx + 1));
 			    }
-			    auto &hole = hole_geometry.GetLineString();
-			    auto hole_count = hole.Count();
+			    auto &hole = hole_geometry.As<LineString>();
+			    auto hole_count = hole.Vertices().Count();
 			    if (hole_count < 4) {
 				    throw InvalidInputException(
 				        StringUtil::Format("ST_MakePolygon hole #%lu requires at least 4 vertices", hole_idx + 1));
@@ -82,7 +82,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 
 		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
 			    auto &new_ring = rings[ring_idx];
-			    auto &poly_ring = polygon.Ring(ring_idx);
+			    auto &poly_ring = polygon[ring_idx];
 
 			    for (auto i = 0; i < new_ring.Vertices().Count(); i++) {
 				    poly_ring.Append(new_ring.Vertices().Get(i));
@@ -103,9 +103,9 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 		}
 
 		auto line_geom = lstate.factory.Deserialize(line_blob);
-		auto &line = line_geom.GetLineString();
+		auto &line = line_geom.As<LineString>();
 
-		auto line_count = line.Count();
+		auto line_count = line.Vertices().Count();
 		if (line_count < 4) {
 			throw InvalidInputException("ST_MakePolygon shell requires at least 4 vertices");
 		}
@@ -117,7 +117,7 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 
 		auto polygon = lstate.factory.CreatePolygon(1, &line_count, false, false);
 		for (uint32_t i = 0; i < line_count; i++) {
-			polygon.Shell().Append(line_verts.Get(i));
+			polygon[0].AppendUnsafe(line_verts.Get(i));
 		}
 
 		return lstate.factory.Serialize(result, Geometry(polygon));

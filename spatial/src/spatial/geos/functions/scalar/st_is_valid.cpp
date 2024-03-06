@@ -18,12 +18,12 @@ static bool IsValidForGeos(Geometry &geometry) {
 	switch (geometry.Type()) {
 	case GeometryType::LINESTRING:
 		// Every linestring needs 0 or at least 2 points
-		return geometry.GetLineString().Count() != 1;
+		return geometry.As<LineString>().Vertices().Count() != 1;
 
 	case GeometryType::POLYGON: {
 		// Every ring needs 0 or at least 4 points
-		auto &polygon = geometry.GetPolygon();
-		for (auto &ring : polygon.Rings()) {
+		auto &polygon = geometry.As<Polygon>();
+		for (const auto &ring : polygon) {
 			if (ring.Count() > 0 && ring.Count() < 4) {
 				return false;
 			}
@@ -31,16 +31,16 @@ static bool IsValidForGeos(Geometry &geometry) {
 		return true;
 	}
 	case GeometryType::MULTILINESTRING: {
-		for (auto &linestring : geometry.GetMultiLineString()) {
-			if (linestring.Count() == 1) {
+		for (const auto &linestring : geometry.As<MultiLineString>()) {
+			if (linestring.Vertices().Count() == 1) {
 				return false;
 			}
 		}
 		return true;
 	}
 	case GeometryType::MULTIPOLYGON: {
-		for (auto &polygon : geometry.GetMultiPolygon()) {
-			for (auto &ring : polygon.Rings()) {
+		for (const auto &polygon : geometry.As<MultiPolygon>()) {
+			for (const auto &ring : polygon) {
 				if (ring.Count() > 0 && ring.Count() < 4) {
 					return false;
 				}
@@ -49,7 +49,7 @@ static bool IsValidForGeos(Geometry &geometry) {
 		return true;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
-		for (auto &geom : geometry.GetGeometryCollection()) {
+		for (auto &geom : geometry.As<GeometryCollection>()) {
 			if (!IsValidForGeos(geom)) {
 				return false;
 			}

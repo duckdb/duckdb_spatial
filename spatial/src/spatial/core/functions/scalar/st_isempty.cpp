@@ -55,24 +55,7 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 
 	UnaryExecutor::Execute<geometry_t, bool>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
-		switch (geometry.Type()) {
-		case GeometryType::POINT:
-			return geometry.GetPoint().IsEmpty();
-		case GeometryType::LINESTRING:
-			return geometry.GetLineString().IsEmpty();
-		case GeometryType::POLYGON:
-			return geometry.GetPolygon().IsEmpty();
-		case GeometryType::MULTIPOINT:
-			return geometry.GetMultiPoint().IsEmpty();
-		case GeometryType::MULTILINESTRING:
-			return geometry.GetMultiLineString().IsEmpty();
-		case GeometryType::MULTIPOLYGON:
-			return geometry.GetMultiPolygon().IsEmpty();
-		case GeometryType::GEOMETRYCOLLECTION:
-			return geometry.GetGeometryCollection().IsEmpty();
-		default:
-			throw NotImplementedException("Unimplemented geometry type for ST_IsEmpty");
-		}
+		return geometry.IsEmpty();
 	});
 
 	if (count == 1) {

@@ -11,9 +11,9 @@ namespace core {
 
 // TODO: Implement this
 struct VertexProcessor {
-    static geometry_t Process(const geometry_t &geom, const VertexVector &vertices) {
-        throw NotImplementedException("VertexProcessor::Process");
-    }
+	static geometry_t Process(const geometry_t &geom, const VertexVector &vertices) {
+		throw NotImplementedException("VertexProcessor::Process");
+	}
 };
 
 } // namespace core

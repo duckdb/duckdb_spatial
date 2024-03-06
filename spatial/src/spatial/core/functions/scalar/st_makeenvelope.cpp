@@ -28,12 +28,13 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	    [&](DOUBLE_TYPE x_min, DOUBLE_TYPE y_min, DOUBLE_TYPE x_max, DOUBLE_TYPE y_max) {
 		    uint32_t capacity = 5;
 		    auto envelope_geom = lstate.factory.CreatePolygon(1, &capacity, false, false);
+		    auto &shell = envelope_geom[0];
 		    // Create the exterior ring in CCW order
-		    envelope_geom.Shell().Append({x_min.val, y_min.val});
-		    envelope_geom.Shell().Append({x_min.val, y_max.val});
-		    envelope_geom.Shell().Append({x_max.val, y_max.val});
-		    envelope_geom.Shell().Append({x_max.val, y_min.val});
-		    envelope_geom.Shell().Append({x_min.val, y_min.val});
+		    shell.AppendUnsafe({x_min.val, y_min.val});
+		    shell.AppendUnsafe({x_min.val, y_max.val});
+		    shell.AppendUnsafe({x_max.val, y_max.val});
+		    shell.AppendUnsafe({x_max.val, y_min.val});
+		    shell.AppendUnsafe({x_min.val, y_min.val});
 
 		    return lstate.factory.Serialize(result, Geometry(envelope_geom));
 	    });

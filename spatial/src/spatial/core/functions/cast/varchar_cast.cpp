@@ -122,6 +122,7 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 class GeometryTextProcessor final : GeometryProcessor<void, bool> {
 private:
 	string text;
+
 public:
 	void OnVertexData(const VertexData &data) {
 		auto &dims = data.data;
@@ -180,14 +181,14 @@ public:
 		} else if (in_typed_collection) {
 			OnVertexData(data);
 		} else {
-            text += "(";
+			text += "(";
 			OnVertexData(data);
-            text += ")";
+			text += ")";
 		}
 	}
 
 	void ProcessLineString(const VertexData &data, bool in_typed_collection) override {
-		if (!in_typed_collection){
+		if (!in_typed_collection) {
 			text += "LINESTRING";
 			if (HasZ() && HasM()) {
 				text += " ZM";
@@ -241,23 +242,23 @@ public:
 	}
 
 	void ProcessCollection(CollectionState &state, bool) override {
-        bool collection_is_typed = false;
+		bool collection_is_typed = false;
 		switch (CurrentType()) {
 		case GeometryType::MULTIPOINT:
 			text += "MULTIPOINT";
-            collection_is_typed = true;
+			collection_is_typed = true;
 			break;
 		case GeometryType::MULTILINESTRING:
 			text += "MULTILINESTRING";
-            collection_is_typed = true;
+			collection_is_typed = true;
 			break;
 		case GeometryType::MULTIPOLYGON:
 			text += "MULTIPOLYGON";
-            collection_is_typed = true;
+			collection_is_typed = true;
 			break;
 		case GeometryType::GEOMETRYCOLLECTION:
 			text += "GEOMETRYCOLLECTION";
-            collection_is_typed = false;
+			collection_is_typed = false;
 			break;
 		default:
 			throw InvalidInputException("Invalid geometry type");
@@ -341,9 +342,11 @@ void CoreCastFunctions::RegisterVarcharCasts(DatabaseInstance &db) {
 	ExtensionUtil::RegisterCastFunction(db, GeoTypes::POLYGON_2D(), LogicalType::VARCHAR,
 	                                    BoundCastInfo(Polygon2DToVarcharCast), 1);
 
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::BOX_2D(), LogicalType::VARCHAR, BoundCastInfo(Box2DToVarcharCast),
+	                                    1);
 
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), LogicalType::VARCHAR, BoundCastInfo(GeometryToVarcharCast), 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
+	                                    BoundCastInfo(GeometryToVarcharCast), 1);
 }
 
 } // namespace core

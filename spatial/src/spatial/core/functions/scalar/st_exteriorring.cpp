@@ -103,12 +103,12 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 		    }
 
 		    auto polygon = lstate.factory.Deserialize(input);
-		    auto &poly = polygon.GetPolygon();
+		    auto &poly = polygon.As<Polygon>();
 		    if (poly.IsEmpty()) {
 			    return lstate.factory.Serialize(result, Geometry(lstate.factory.CreateEmptyLineString()));
 		    }
 
-		    auto &shell = poly.Shell();
+		    auto &shell = poly[0];
 		    auto num_points = shell.Count();
 
 		    auto line = lstate.factory.CreateLineString(num_points, false, false);

@@ -74,7 +74,7 @@ static void Box2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 static double PolygonPerimeter(const Polygon &poly) {
 	double perimeter = 0;
-	for (auto &ring : poly.Rings()) {
+	for (const auto &ring : poly) {
 		for (uint32_t i = 0; i < ring.Count() - 1; i++) {
 			auto v1 = ring.Get(i);
 			auto v2 = ring.Get(i + 1);
@@ -87,21 +87,21 @@ static double PolygonPerimeter(const Polygon &poly) {
 static double GeometryPerimeter(const Geometry &geom) {
 	switch (geom.Type()) {
 	case core::GeometryType::POLYGON: {
-		auto &poly = geom.GetPolygon();
+		auto &poly = geom.As<Polygon>();
 		return PolygonPerimeter(poly);
 	}
 	case core::GeometryType::MULTIPOLYGON: {
-		auto &mpoly = geom.GetMultiPolygon();
+		auto &mpoly = geom.As<MultiPolygon>();
 		double total_perimeter = 0;
-		for (auto &poly : mpoly) {
+		for (const auto &poly : mpoly) {
 			total_perimeter += PolygonPerimeter(poly);
 		}
 		return total_perimeter;
 	}
 	case core::GeometryType::GEOMETRYCOLLECTION: {
-		auto &coll = geom.GetGeometryCollection();
+		auto &coll = geom.As<GeometryCollection>();
 		double total_perimeter = 0;
-		for (auto &subgeom : coll) {
+		for (const auto &subgeom : coll) {
 			total_perimeter += GeometryPerimeter(subgeom);
 		}
 		return total_perimeter;
