@@ -67,10 +67,6 @@ string Point::ToString() const {
 	return StringUtil::Format("POINT (%s)", Utils::format_coord(vert.x, vert.y));
 }
 
-Point::operator Geometry() const {
-	return Geometry(*this);
-}
-
 //------------------------------------------------------------------------------
 // LineString
 //------------------------------------------------------------------------------
@@ -92,10 +88,6 @@ string LineString::ToString() const {
 	}
 	result += ")";
 	return result;
-}
-
-LineString::operator Geometry() const {
-	return Geometry(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -134,10 +126,6 @@ string Polygon::ToString() const {
 	return result;
 }
 
-Polygon::operator Geometry() const {
-	return Geometry(*this);
-}
-
 //------------------------------------------------------------------------------
 // MultiPoint
 //------------------------------------------------------------------------------
@@ -162,10 +150,6 @@ string MultiPoint::ToString() const {
 		}
 	}
 	return str + ")";
-}
-
-MultiPoint::operator Geometry() const {
-	return Geometry(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -200,10 +184,6 @@ string MultiLineString::ToString() const {
 		str += ")";
 	}
 	return str + ")";
-}
-
-MultiLineString::operator Geometry() const {
-	return Geometry(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -251,10 +231,6 @@ string MultiPolygon::ToString() const {
 	return str + ")";
 }
 
-MultiPolygon::operator Geometry() const {
-	return Geometry(*this);
-}
-
 //------------------------------------------------------------------------------
 // GeometryCollection
 //------------------------------------------------------------------------------
@@ -274,16 +250,20 @@ string GeometryCollection::ToString() const {
 	return str + ")";
 }
 
-GeometryCollection::operator Geometry() const {
-	return Geometry(*this);
-}
-
 uint32_t GeometryCollection::Dimension() const {
 	uint32_t max = 0;
 	for (auto &item : *this) {
 		max = std::max(max, item.Dimension());
 	}
 	return max;
+}
+
+GeometryCollection GeometryCollection::DeepCopy() const {
+    GeometryCollection copy(*this);
+    for (auto &item : copy.Items()) {
+        item = item.DeepCopy();
+    }
+    return copy;
 }
 
 //------------------------------------------------------------------------------

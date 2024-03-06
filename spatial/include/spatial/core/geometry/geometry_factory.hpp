@@ -47,20 +47,6 @@ public:
 	Geometry Deserialize(const geometry_t &data);
 
 	static bool TryGetSerializedBoundingBox(const geometry_t &data, BoundingBox &bbox);
-
-	// Deep Copy
-	/*
-	VertexArray CopyVertexArray(const VertexArray &vector);
-	Point CopyPoint(const Point &point);
-	LineString CopyLineString(const LineString &linestring);
-	Polygon CopyPolygon(const Polygon &polygon);
-	MultiPoint CopyMultiPoint(const MultiPoint &multipoint);
-	MultiLineString CopyMultiLineString(const MultiLineString &multilinestring);
-	MultiPolygon CopyMultiPolygon(const MultiPolygon &multipolygon);
-	GeometryCollection CopyGeometryCollection(const GeometryCollection &collection);
-	Geometry CopyGeometry(const Geometry &geometry);
-	 */
-
 private:
 	// Serialize
 	void SerializeVertexArray(Cursor &cursor, const VertexArray &vector, bool update_bounds, BoundingBox &bbox);

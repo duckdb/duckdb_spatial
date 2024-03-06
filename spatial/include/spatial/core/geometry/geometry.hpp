@@ -173,6 +173,10 @@ private:
 
 public:
 	static constexpr GeometryType TYPE = GeometryType::POINT;
+
+    explicit Point(Allocator &allocator, double x, double y) : vertices(allocator, 1, false, false) {
+        vertices.AppendUnsafe({x, y});
+    }
 	explicit Point(Allocator &allocator) : vertices(allocator, false, false) {
 	}
 	explicit Point(Allocator &allocator, bool has_z, bool has_m) : vertices(allocator, has_z, has_m) {
@@ -180,8 +184,6 @@ public:
 	explicit Point(VertexArray &&vertices) : vertices(std::move(vertices)) {
 	}
 
-	// NOLINTNEXTLINE
-	operator Geometry() const;
 
 	string ToString() const;
 
@@ -200,6 +202,12 @@ public:
 	uint32_t Dimension() const {
 		return 0;
 	}
+
+    Point DeepCopy() const {
+        Point copy(*this);
+        copy.vertices.MakeOwning();
+        return copy;
+    }
 };
 
 class LineString {
@@ -214,8 +222,6 @@ public:
 	}
 	explicit LineString(VertexArray &&vertices) : vertices(std::move(vertices)) {
 	}
-	// NOLINTNEXTLINE
-	operator Geometry() const;
 
 	string ToString() const;
 
@@ -234,6 +240,13 @@ public:
 	uint32_t Dimension() const {
 		return 1;
 	}
+
+    // Make this linestring owning by copying all the vertices
+    LineString DeepCopy() const {
+        LineString copy(*this);
+        copy.vertices.MakeOwning();
+        return copy;
+    }
 };
 
 class Polygon {
@@ -251,11 +264,24 @@ public:
 		}
 	}
 
-	string ToString() const;
+    Polygon(const Polygon &other) = default;
+    Polygon &operator=(const Polygon &other) = default;
+    Polygon(Polygon &&other) noexcept : rings(std::move(other.rings)) { }
+    Polygon &operator=(Polygon &&other) noexcept {
+        rings = std::move(other.rings);
+        return *this;
+    }
 
-	// Implicitly convert to Geometry
-	// NOLINTNEXTLINE
-	operator Geometry() const;
+    // Make this polygon owning by copying all the vertices
+    Polygon DeepCopy() const {
+        Polygon copy(*this);
+        for (auto &ring : copy.rings) {
+            ring.MakeOwning();
+        }
+        return copy;
+    }
+
+	string ToString() const;
 
 	// Collection Methods
 	VertexArray &operator[](uint32_t index) {
@@ -299,13 +325,14 @@ public:
 
 template <class T>
 class MultiGeometry {
-	std::vector<T, DuckDBAllocator<T>> items;
-
+    std::vector<T, DuckDBAllocator<T>> items;
 protected:
-	const std::vector<T, DuckDBAllocator<T>> &Items() const {
+    const std::vector<T, DuckDBAllocator<T>> &Items() const {
 		return items;
 	}
-
+    std::vector<T, DuckDBAllocator<T>> &Items() {
+        return items;
+    }
 public:
 	explicit MultiGeometry(Allocator &allocator, uint32_t count) : items(allocator) {
 		items.reserve(count);
@@ -347,6 +374,15 @@ public:
 		}
 		return true;
 	}
+
+    MultiGeometry(const MultiGeometry &other) = default;
+    MultiGeometry &operator=(const MultiGeometry &other) = default;
+    MultiGeometry(MultiGeometry &&other) noexcept : items(std::move(other.items)) { }
+    MultiGeometry &operator=(MultiGeometry &&other) noexcept {
+        items = std::move(other.items);
+        return *this;
+    }
+
 };
 class GeometryCollection : public MultiGeometry<Geometry> {
 public:
@@ -355,12 +391,21 @@ public:
 	}
 
 	string ToString() const;
-	operator Geometry() const;
 
 	template <class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
 
 	uint32_t Dimension() const;
+
+    GeometryCollection DeepCopy() const;
+
+    GeometryCollection(const GeometryCollection &other) = default;
+    GeometryCollection &operator=(const GeometryCollection &other) = default;
+    GeometryCollection(GeometryCollection &&other) noexcept : MultiGeometry<Geometry>(std::move(other)) { }
+    GeometryCollection &operator=(GeometryCollection &&other) noexcept {
+        MultiGeometry<Geometry>::operator=(std::move(other));
+        return *this;
+    }
 };
 
 class MultiPoint : public MultiGeometry<Point> {
@@ -370,11 +415,26 @@ public:
 	}
 
 	string ToString() const;
-	operator Geometry() const;
 
 	uint32_t Dimension() const {
 		return 0;
 	}
+
+    MultiPoint DeepCopy() const {
+        MultiPoint copy(*this);
+        for (auto &item : copy.Items()) {
+            item = item.DeepCopy();
+        }
+        return copy;
+    }
+
+    MultiPoint(const MultiPoint &other) = default;
+    MultiPoint &operator=(const MultiPoint &other) = default;
+    MultiPoint(MultiPoint &&other) noexcept : MultiGeometry<Point>(std::move(other)) { }
+    MultiPoint &operator=(MultiPoint &&other) noexcept {
+        MultiGeometry<Point>::operator=(std::move(other));
+        return *this;
+    }
 };
 
 class MultiLineString : public MultiGeometry<LineString> {
@@ -384,11 +444,26 @@ public:
 	}
 
 	string ToString() const;
-	operator Geometry() const;
 
 	uint32_t Dimension() const {
 		return 1;
 	}
+
+    MultiLineString DeepCopy() const {
+        MultiLineString copy(*this);
+        for (auto &item : copy.Items()) {
+            item = item.DeepCopy();
+        }
+        return copy;
+    }
+
+    MultiLineString(const MultiLineString &other) = default;
+    MultiLineString &operator=(const MultiLineString &other) = default;
+    MultiLineString(MultiLineString &&other) noexcept : MultiGeometry<LineString>(std::move(other)) { }
+    MultiLineString &operator=(MultiLineString &&other) noexcept {
+        MultiGeometry<LineString>::operator=(std::move(other));
+        return *this;
+    }
 };
 
 class MultiPolygon : public MultiGeometry<Polygon> {
@@ -398,11 +473,26 @@ public:
 	}
 
 	string ToString() const;
-	operator Geometry() const;
 
 	uint32_t Dimension() const {
 		return 2;
 	}
+
+    MultiPolygon DeepCopy() const {
+        MultiPolygon copy(*this);
+        for (auto &item : copy.Items()) {
+            item = item.DeepCopy();
+        }
+        return copy;
+    }
+
+    MultiPolygon(const MultiPolygon &other) = default;
+    MultiPolygon &operator=(const MultiPolygon &other) = default;
+    MultiPolygon(MultiPolygon &&other) noexcept : MultiGeometry<Polygon>(std::move(other)) { }
+    MultiPolygon &operator=(MultiPolygon &&other) noexcept {
+        MultiGeometry<Polygon>::operator=(std::move(other));
+        return *this;
+    }
 };
 
 class Geometry {
@@ -424,38 +514,37 @@ public:
 		new (&point) Point(allocator);
 	}
 
-	explicit Geometry(const Point &point) : type(GeometryType::POINT), point(point) {
+	Geometry(const Point &point) : type(GeometryType::POINT), point(point) {
 	}
-	explicit Geometry(const LineString &linestring) : type(GeometryType::LINESTRING), linestring(linestring) {
+	Geometry(const LineString &linestring) : type(GeometryType::LINESTRING), linestring(linestring) {
 	}
-	explicit Geometry(const Polygon &polygon) : type(GeometryType::POLYGON), polygon(polygon) {
+	Geometry(const Polygon &polygon) : type(GeometryType::POLYGON), polygon(polygon) {
 	}
-	explicit Geometry(const MultiPoint &multipoint) : type(GeometryType::MULTIPOINT), multipoint(multipoint) {
+	Geometry(const MultiPoint &multipoint) : type(GeometryType::MULTIPOINT), multipoint(multipoint) {
 	}
-	explicit Geometry(const MultiLineString &multilinestring)
+	Geometry(const MultiLineString &multilinestring)
 	    : type(GeometryType::MULTILINESTRING), multilinestring(multilinestring) {
 	}
-	explicit Geometry(const MultiPolygon &multipolygon) : type(GeometryType::MULTIPOLYGON), multipolygon(multipolygon) {
+	Geometry(const MultiPolygon &multipolygon) : type(GeometryType::MULTIPOLYGON), multipolygon(multipolygon) {
 	}
-	explicit Geometry(const GeometryCollection &collection)
-	    : type(GeometryType::GEOMETRYCOLLECTION), collection(collection) {
+	Geometry(const GeometryCollection &collection)
+     : type(GeometryType::GEOMETRYCOLLECTION), collection(collection) {
 	}
-
-	explicit Geometry(Point &&point) : type(GeometryType::POINT), point(std::move(point)) {
+	Geometry(Point &&point) : type(GeometryType::POINT), point(std::move(point)) {
 	}
-	explicit Geometry(LineString &&linestring) : type(GeometryType::LINESTRING), linestring(std::move(linestring)) {
+	Geometry(LineString &&linestring) : type(GeometryType::LINESTRING), linestring(std::move(linestring)) {
 	}
-	explicit Geometry(Polygon &&polygon) : type(GeometryType::POLYGON), polygon(std::move(polygon)) {
+	Geometry(Polygon &&polygon) : type(GeometryType::POLYGON), polygon(std::move(polygon)) {
 	}
-	explicit Geometry(MultiPoint &&multipoint) : type(GeometryType::MULTIPOINT), multipoint(std::move(multipoint)) {
+	Geometry(MultiPoint &&multipoint) : type(GeometryType::MULTIPOINT), multipoint(std::move(multipoint)) {
 	}
-	explicit Geometry(MultiLineString &&multilinestring)
+	Geometry(MultiLineString &&multilinestring)
 	    : type(GeometryType::MULTILINESTRING), multilinestring(std::move(multilinestring)) {
 	}
-	explicit Geometry(MultiPolygon &&multipolygon)
+	Geometry(MultiPolygon &&multipolygon)
 	    : type(GeometryType::MULTIPOLYGON), multipolygon(std::move(multipolygon)) {
 	}
-	explicit Geometry(GeometryCollection &&collection)
+	Geometry(GeometryCollection &&collection)
 	    : type(GeometryType::GEOMETRYCOLLECTION), collection(std::move(collection)) {
 	}
 
@@ -527,6 +616,27 @@ public:
 		}
 		return 0;
 	}
+
+    Geometry DeepCopy() const {
+        switch (type) {
+        case GeometryType::POINT:
+            return Geometry(point.DeepCopy());
+        case GeometryType::LINESTRING:
+            return Geometry(linestring.DeepCopy());
+        case GeometryType::POLYGON:
+            return Geometry(polygon.DeepCopy());
+        case GeometryType::MULTIPOINT:
+            return Geometry(multipoint.DeepCopy());
+        case GeometryType::MULTILINESTRING:
+            return Geometry(multilinestring.DeepCopy());
+        case GeometryType::MULTIPOLYGON:
+            return Geometry(multipolygon.DeepCopy());
+        case GeometryType::GEOMETRYCOLLECTION:
+            return Geometry(collection.DeepCopy());
+        default:
+            throw NotImplementedException("Geometry::DeepCopy()");
+        }
+    }
 
 	// Accessor
 	template <class T>

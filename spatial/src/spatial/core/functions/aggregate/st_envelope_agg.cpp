@@ -76,7 +76,7 @@ struct EnvelopeAggFunction {
 			auto &alloc = arena_alloc.GetAllocator();
 			GeometryFactory factory(alloc);
 			auto box = factory.CreateBox(state.xmin, state.ymin, state.xmax, state.ymax);
-			target = factory.Serialize(finalize_data.result, box);
+			target = factory.Serialize(finalize_data.result, std::move(box));
 		}
 	}
 

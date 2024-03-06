@@ -270,28 +270,23 @@ public:
 		if (!IsOwning()) {
 			MakeOwning();
 		}
-		ReserveUnsafe(vertex_count + 1);
+		Reserve(vertex_count + 1);
 		AppendUnsafe(v);
 	}
 
 	//-------------------------------------------------------------------------
 	// Reserve
 	//-------------------------------------------------------------------------
-
-	void ReserveUnsafe(uint32_t count) {
-		D_ASSERT(IsOwning()); // Only owning arrays can be modified
-		if (count > owned_capacity) {
-			auto vertex_size = properties.VertexSize();
-			vertex_data = alloc.get().ReallocateData(vertex_data, owned_capacity * vertex_size, count * vertex_size);
-			owned_capacity = count;
-		}
-	}
-
 	void Reserve(uint32_t count) {
-		if (!IsOwning()) {
-			MakeOwning();
-		}
-		ReserveUnsafe(count);
+        if (count > owned_capacity) {
+            if (owned_capacity == 0) {
+                // TODO: Optimize this, we can allocate the exact amount of memory we need
+                MakeOwning();
+            }
+            auto vertex_size = properties.VertexSize();
+            vertex_data = alloc.get().ReallocateData(vertex_data, owned_capacity * vertex_size, count * vertex_size);
+            owned_capacity = count;
+        }
 	}
 
 	//-------------------------------------------------------------------------
