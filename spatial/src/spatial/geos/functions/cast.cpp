@@ -26,20 +26,6 @@ static bool WKBToWKTCast(Vector &source, Vector &result, idx_t count, CastParame
 	return true;
 }
 
-static bool GeometryToTextCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-
-	auto &lstate = GEOSFunctionLocalState::ResetAndGet(parameters);
-	auto writer = lstate.ctx.CreateWKTWriter();
-	writer.SetTrim(true);
-
-	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count, [&](geometry_t &input) {
-		auto geom = lstate.ctx.Deserialize(input);
-		return writer.Write(geom, result);
-	});
-
-	return true;
-}
-
 static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(parameters);
@@ -50,10 +36,6 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 	    source, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
 			    auto geos_geom = reader.Read(wkt);
-			    auto multidimensional = (GEOSHasZ_r(lstate.ctx.GetCtx(), geos_geom.get()) == 1);
-			    if (multidimensional) {
-				    throw InvalidInputException("3D/4D geometries are not supported");
-			    }
 			    return lstate.ctx.Serialize(result, geos_geom);
 		    } catch (InvalidInputException &e) {
 			    if (success) {
@@ -71,8 +53,6 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 void GeosCastFunctions::Register(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterCastFunction(db, core::GeoTypes::WKB_BLOB(), LogicalType::VARCHAR, WKBToWKTCast);
-	ExtensionUtil::RegisterCastFunction(db, core::GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
-	                                    BoundCastInfo(GeometryToTextCast, nullptr, GEOSFunctionLocalState::InitCast));
 
 	ExtensionUtil::RegisterCastFunction(db, LogicalType::VARCHAR, core::GeoTypes::GEOMETRY(),
 	                                    BoundCastInfo(TextToGeometryCast, nullptr, GEOSFunctionLocalState::InitCast));

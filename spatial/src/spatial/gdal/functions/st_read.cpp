@@ -14,6 +14,7 @@
 #include "spatial/gdal/file_handler.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/geometry_writer.hpp"
+#include "spatial/core/geometry/wkb_reader.hpp"
 
 #include "ogrsf_frmts.h"
 
@@ -120,8 +121,10 @@ struct GdalScanFunctionData : public TableFunctionData {
 
 struct GdalScanLocalState : ArrowScanLocalState {
 	core::GeometryFactory factory;
+    // We trust GDAL to produce valid WKB
+    core::WKBReader<false> wkb_reader;
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
-	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)) {
+	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)), wkb_reader(factory.allocator) {
 	}
 };
 
@@ -163,7 +166,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 	auto siblings_params = input.named_parameters.find("sibling_files");
 	if (siblings_params != input.named_parameters.end()) {
-		for (auto &param : ListValue::GetChildren(drivers_param->second)) {
+		for (auto &param : ListValue::GetChildren(siblings_params->second)) {
 			result->dataset_sibling_files.AddString(StringValue::Get(param).c_str());
 		}
 	}
@@ -556,9 +559,8 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				auto &wkb_vec = output.data[col_idx];
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
 				UnaryExecutor::Execute<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
-					auto geometry = state.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-					// TODO: Handle Z and M
-					return state.factory.Serialize(geom_vec, geometry, false, false);
+					auto geometry = state.wkb_reader.Deserialize(input);
+					return state.factory.Serialize(geom_vec, geometry, state.wkb_reader.GeomHasZ(), state.wkb_reader.GeomHasM());
 				});
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}

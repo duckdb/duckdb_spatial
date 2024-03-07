@@ -17,8 +17,6 @@ public:
 	explicit GeometryFactory(Allocator &allocator) : allocator(allocator) {
 	}
 
-	Geometry FromWKB(const char *wkb, uint32_t length);
-
 	VertexArray AllocateVertexArray(uint32_t capacity, bool has_z, bool has_m);
 
 	Point CreatePoint(double x, double y);

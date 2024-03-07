@@ -223,6 +223,19 @@ public:
 		                    properties.HasM()};
 	}
 
+    // Zero-initialize the vertex array up to the current capacity
+    VertexArray& Initialize(bool zero_initialize) {
+        if (!IsOwning()) {
+            MakeOwning();
+        }
+        if(zero_initialize) {
+            auto remaining = owned_capacity - vertex_count;
+            memset(vertex_data + vertex_count * properties.VertexSize(), 0, remaining * properties.VertexSize());
+        }
+        vertex_count = owned_capacity;
+        return *this;
+    }
+
 	//-------------------------------------------------------------------------
 	// Set
 	//-------------------------------------------------------------------------
@@ -248,21 +261,36 @@ public:
 		SetTemplatedUnsafe(i, v);
 	}
 
-	// This is safe to call on XYZ, XYM and XYZM arrays
-	void SetUnsafe(uint32_t i, const VertexXY &v) {
-		D_ASSERT(IsOwning());       // Only owning arrays can be modified
-		D_ASSERT(i < vertex_count); // Index out of bounds
-		auto offset = i * properties.VertexSize();
-		Store<VertexXY>(v, vertex_data + offset);
-	}
+    void SetUnsafe(uint32_t i, double x, double y) {
+        D_ASSERT(IsOwning());       // Only owning arrays can be modified
+        D_ASSERT(i < vertex_count); // Index out of bounds
+        D_ASSERT(!properties.HasZ()); // Z mismatch
+        D_ASSERT(!properties.HasM()); // M mismatch
+        auto offset = i * properties.VertexSize();
+        Store<double>(x, vertex_data + offset);
+        Store<double>(y, vertex_data + offset + sizeof(double));
+    }
 
-	// This is safe to call on XYZ, XYM and XYZM arrays
-	void Set(uint32_t i, const VertexXY &v) {
-		if (!IsOwning()) {
-			MakeOwning();
-		}
-		SetUnsafe(i, v);
-	}
+    void SetUnsafe(uint32_t i, double x, double y, double zm) {
+        D_ASSERT(IsOwning());       // Only owning arrays can be modified
+        D_ASSERT(i < vertex_count); // Index out of bounds
+        D_ASSERT(properties.HasZ() || properties.HasM()); // ZM mismatch
+        auto offset = i * properties.VertexSize();
+        Store<double>(x, vertex_data + offset);
+        Store<double>(y, vertex_data + offset + sizeof(double));
+        Store<double>(zm, vertex_data + offset + 2 * sizeof(double));
+    }
+
+    void SetUnsafe(uint32_t i, double x, double y, double z, double m) {
+        D_ASSERT(IsOwning());       // Only owning arrays can be modified
+        D_ASSERT(i < vertex_count); // Index out of bounds
+        D_ASSERT(properties.HasZ() && properties.HasM()); // ZM mismatch
+        auto offset = i * properties.VertexSize();
+        Store<double>(x, vertex_data + offset);
+        Store<double>(y, vertex_data + offset + sizeof(double));
+        Store<double>(z, vertex_data + offset + 2 * sizeof(double));
+        Store<double>(m, vertex_data + offset + 3 * sizeof(double));
+    }
 
 	//-------------------------------------------------------------------------
 	// Append
@@ -286,7 +314,7 @@ public:
 	//-------------------------------------------------------------------------
 	// Reserve
 	//-------------------------------------------------------------------------
-	void Reserve(uint32_t count) {
+	VertexArray& Reserve(uint32_t count) {
 		if (count > owned_capacity) {
 			if (owned_capacity == 0) {
 				// TODO: Optimize this, we can allocate the exact amount of memory we need
@@ -296,6 +324,7 @@ public:
 			vertex_data = alloc.get().ReallocateData(vertex_data, owned_capacity * vertex_size, count * vertex_size);
 			owned_capacity = count;
 		}
+        return *this;
 	}
 
 	//-------------------------------------------------------------------------

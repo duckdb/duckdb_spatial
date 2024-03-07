@@ -10,12 +10,6 @@ namespace spatial {
 
 namespace core {
 
-// Parse "standard" WKB format
-Geometry GeometryFactory::FromWKB(const char *wkb, uint32_t length) {
-	WKBReader reader(*this, wkb, length);
-	return reader.ReadGeometry();
-}
-
 VertexArray GeometryFactory::AllocateVertexArray(uint32_t capacity, bool has_z, bool has_m) {
 	return VertexArray {allocator.GetAllocator(), capacity, has_z, has_m};
 }

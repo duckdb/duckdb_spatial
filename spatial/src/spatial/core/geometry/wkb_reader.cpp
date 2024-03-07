@@ -8,6 +8,7 @@ namespace spatial {
 
 namespace core {
 
+    /*
 template <>
 uint32_t WKBReader::ReadInt<WKBByteOrder::NDR>() {
 	if (cursor + sizeof(uint32_t) > length) {
@@ -311,6 +312,8 @@ GeometryCollection WKBReader::ReadGeometryCollectionBody() {
 	}
 	return geometry_collection;
 }
+*/
+
 
 } // namespace core
 

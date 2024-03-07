@@ -159,7 +159,7 @@ static void FlipVertexArray(VertexArray &vertices) {
 		auto vertex = vertices.Get(i);
 		std::swap(vertex.x, vertex.y);
 		// We can use SetUnsafe here because we know the vector is owning
-		vertices.SetUnsafe(i, vertex);
+		vertices.SetUnsafe(i, vertex.x, vertex.y);
 	}
 }
 static void FlipGeometry(Point &point) {

@@ -239,7 +239,7 @@ static void TransformVertexArray(PJ *crs, VertexArray &array) {
 		auto vertex = array.Get(i);
 		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
 		// we own the array, so we can use SetUnsafe
-		array.SetUnsafe(i, {transformed.x, transformed.y});
+		array.SetUnsafe(i, transformed.x, transformed.y);
 	}
 }
 

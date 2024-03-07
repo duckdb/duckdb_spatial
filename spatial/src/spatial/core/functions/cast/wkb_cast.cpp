@@ -3,9 +3,11 @@
 #include "spatial/core/functions/cast.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+#include "spatial/core/geometry/wkb_reader.hpp"
 
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/common/operator/cast_operators.hpp"
 
 namespace spatial {
 
@@ -16,13 +18,24 @@ namespace core {
 //------------------------------------------------------------------------------
 static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+    WKBReader<true> reader(lstate.factory.allocator);
 
-	UnaryExecutor::Execute<string_t, geometry_t>(source, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		// TODO: Handle Z and M
-		return lstate.factory.Serialize(result, geometry, false, false);
+    bool success = true;
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(source, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
+        try {
+            auto geometry = reader.Deserialize(input);
+            return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
+        } catch (SerializationException &e) {
+            if(success) {
+                success = false;
+                ErrorData error(e);
+                HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
+            }
+            mask.SetInvalid(idx);
+            return geometry_t{};
+        }
 	});
-	return true;
+	return success;
 }
 
 //------------------------------------------------------------------------------

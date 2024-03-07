@@ -4,6 +4,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/geometry/wkb_reader.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -271,10 +272,10 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &input = args.data[0];
 	auto count = args.size();
 
+    WKBReader<true> reader(lstate.factory.allocator);
 	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		// TODO: Handle Z and M
-		return lstate.factory.Serialize(result, geometry, false, false);
+        auto geometry = reader.Deserialize(input);
+		return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
 	});
 }
 
