@@ -223,18 +223,18 @@ public:
 		                    properties.HasM()};
 	}
 
-    // Zero-initialize the vertex array up to the current capacity
-    VertexArray& Initialize(bool zero_initialize) {
-        if (!IsOwning()) {
-            MakeOwning();
-        }
-        if(zero_initialize) {
-            auto remaining = owned_capacity - vertex_count;
-            memset(vertex_data + vertex_count * properties.VertexSize(), 0, remaining * properties.VertexSize());
-        }
-        vertex_count = owned_capacity;
-        return *this;
-    }
+	// Zero-initialize the vertex array up to the current capacity
+	VertexArray &Initialize(bool zero_initialize) {
+		if (!IsOwning()) {
+			MakeOwning();
+		}
+		if (zero_initialize) {
+			auto remaining = owned_capacity - vertex_count;
+			memset(vertex_data + vertex_count * properties.VertexSize(), 0, remaining * properties.VertexSize());
+		}
+		vertex_count = owned_capacity;
+		return *this;
+	}
 
 	//-------------------------------------------------------------------------
 	// Set
@@ -261,36 +261,36 @@ public:
 		SetTemplatedUnsafe(i, v);
 	}
 
-    void SetUnsafe(uint32_t i, double x, double y) {
-        D_ASSERT(IsOwning());       // Only owning arrays can be modified
-        D_ASSERT(i < vertex_count); // Index out of bounds
-        D_ASSERT(!properties.HasZ()); // Z mismatch
-        D_ASSERT(!properties.HasM()); // M mismatch
-        auto offset = i * properties.VertexSize();
-        Store<double>(x, vertex_data + offset);
-        Store<double>(y, vertex_data + offset + sizeof(double));
-    }
+	void SetUnsafe(uint32_t i, double x, double y) {
+		D_ASSERT(IsOwning());         // Only owning arrays can be modified
+		D_ASSERT(i < vertex_count);   // Index out of bounds
+		D_ASSERT(!properties.HasZ()); // Z mismatch
+		D_ASSERT(!properties.HasM()); // M mismatch
+		auto offset = i * properties.VertexSize();
+		Store<double>(x, vertex_data + offset);
+		Store<double>(y, vertex_data + offset + sizeof(double));
+	}
 
-    void SetUnsafe(uint32_t i, double x, double y, double zm) {
-        D_ASSERT(IsOwning());       // Only owning arrays can be modified
-        D_ASSERT(i < vertex_count); // Index out of bounds
-        D_ASSERT(properties.HasZ() || properties.HasM()); // ZM mismatch
-        auto offset = i * properties.VertexSize();
-        Store<double>(x, vertex_data + offset);
-        Store<double>(y, vertex_data + offset + sizeof(double));
-        Store<double>(zm, vertex_data + offset + 2 * sizeof(double));
-    }
+	void SetUnsafe(uint32_t i, double x, double y, double zm) {
+		D_ASSERT(IsOwning());                             // Only owning arrays can be modified
+		D_ASSERT(i < vertex_count);                       // Index out of bounds
+		D_ASSERT(properties.HasZ() || properties.HasM()); // ZM mismatch
+		auto offset = i * properties.VertexSize();
+		Store<double>(x, vertex_data + offset);
+		Store<double>(y, vertex_data + offset + sizeof(double));
+		Store<double>(zm, vertex_data + offset + 2 * sizeof(double));
+	}
 
-    void SetUnsafe(uint32_t i, double x, double y, double z, double m) {
-        D_ASSERT(IsOwning());       // Only owning arrays can be modified
-        D_ASSERT(i < vertex_count); // Index out of bounds
-        D_ASSERT(properties.HasZ() && properties.HasM()); // ZM mismatch
-        auto offset = i * properties.VertexSize();
-        Store<double>(x, vertex_data + offset);
-        Store<double>(y, vertex_data + offset + sizeof(double));
-        Store<double>(z, vertex_data + offset + 2 * sizeof(double));
-        Store<double>(m, vertex_data + offset + 3 * sizeof(double));
-    }
+	void SetUnsafe(uint32_t i, double x, double y, double z, double m) {
+		D_ASSERT(IsOwning());                             // Only owning arrays can be modified
+		D_ASSERT(i < vertex_count);                       // Index out of bounds
+		D_ASSERT(properties.HasZ() && properties.HasM()); // ZM mismatch
+		auto offset = i * properties.VertexSize();
+		Store<double>(x, vertex_data + offset);
+		Store<double>(y, vertex_data + offset + sizeof(double));
+		Store<double>(z, vertex_data + offset + 2 * sizeof(double));
+		Store<double>(m, vertex_data + offset + 3 * sizeof(double));
+	}
 
 	//-------------------------------------------------------------------------
 	// Append
@@ -314,7 +314,7 @@ public:
 	//-------------------------------------------------------------------------
 	// Reserve
 	//-------------------------------------------------------------------------
-	VertexArray& Reserve(uint32_t count) {
+	VertexArray &Reserve(uint32_t count) {
 		if (count > owned_capacity) {
 			if (owned_capacity == 0) {
 				// TODO: Optimize this, we can allocate the exact amount of memory we need
@@ -324,7 +324,7 @@ public:
 			vertex_data = alloc.get().ReallocateData(vertex_data, owned_capacity * vertex_size, count * vertex_size);
 			owned_capacity = count;
 		}
-        return *this;
+		return *this;
 	}
 
 	//-------------------------------------------------------------------------
@@ -387,15 +387,15 @@ public:
 	// Change dimensions
 	//-------------------------------------------------------------------------
 	// TODO: Test this properly
-	void UpdateVertexType(bool has_z, bool has_m) {
+	void UpdateVertexType(bool has_z, bool has_m, double default_z = 0, double default_m = 0) {
 		if (properties.HasZ() == has_z && properties.HasM() == has_m) {
 			return;
 		}
 		if (!IsOwning()) {
 			MakeOwning();
 		}
-        auto used_to_have_z = properties.HasZ();
-        auto used_to_have_m = properties.HasM();
+		auto used_to_have_z = properties.HasZ();
+		auto used_to_have_m = properties.HasM();
 		auto old_vertex_size = properties.VertexSize();
 		properties.SetZ(has_z);
 		properties.SetM(has_m);
@@ -406,47 +406,75 @@ public:
 			vertex_data =
 			    alloc.get().ReallocateData(vertex_data, vertex_count * old_vertex_size, vertex_count * new_vertex_size);
 
-			// Loop backwards
-			for (int64_t i = vertex_count - 1; i >= 0; i--) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
-				memmove(vertex_data + new_offset, vertex_data + old_offset, old_vertex_size);
+			// There are 5 cases here:
+			if (used_to_have_m && has_m && !used_to_have_z && has_z) {
+				// 1. We go from XYM to XYZM
+				// This is special, because we need to slide the M value to the end of each vertex
+				for (int64_t i = vertex_count - 1; i >= 0; i--) {
+					auto old_offset = i * old_vertex_size;
+					auto new_offset = i * new_vertex_size;
+					memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+					auto z_offset = old_offset + sizeof(double) * 2;
+					auto m_offset = old_offset + sizeof(double) * 3;
+					memcpy(vertex_data + new_offset + m_offset, vertex_data + z_offset, sizeof(double));
+					memcpy(vertex_data + new_offset + z_offset, &default_z, sizeof(double));
+				}
+			} else if (!used_to_have_z && has_z && !used_to_have_m && has_m) {
+				// 2. We go from XY to XYZM
+				// This is special, because we need to add both the default Z and M values to the end of each vertex
+				for (int64_t i = vertex_count - 1; i >= 0; i--) {
+					auto old_offset = i * old_vertex_size;
+					auto new_offset = i * new_vertex_size;
+					memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+					memcpy(vertex_data + new_offset + sizeof(double) * 2, &default_z, sizeof(double));
+					memcpy(vertex_data + new_offset + sizeof(double) * 3, &default_m, sizeof(double));
+				}
+			} else {
+				// Otherwise:
+				// 3. We go from XY to XYZ
+				// 4. We go from XY to XYM
+				// 5. We go from XYZ to XYZM
+				// These are all really the same, we just add the default to the end
+				auto default_value = has_m ? default_m : default_z;
+				for (int64_t i = vertex_count - 1; i >= 0; i--) {
+					auto old_offset = i * old_vertex_size;
+					auto new_offset = i * new_vertex_size;
+					memmove(vertex_data + new_offset, vertex_data + old_offset, old_vertex_size);
+					memcpy(vertex_data + new_offset + old_vertex_size, &default_value, sizeof(double));
+				}
 			}
-
-            // Special case: If we go from XYM to XYZM, we need to slide the M value to the end of each vertex
-            if(used_to_have_m && !used_to_have_z && has_m && has_z) {
-                for (uint32_t i = 0; i < vertex_count; i++) {
-                    auto offset = i * new_vertex_size;
-                    auto z_offset = offset + sizeof(double) * 2;
-                    auto m_offset = offset + sizeof(double) * 3;
-                    memcpy(vertex_data + m_offset, vertex_data + z_offset, sizeof(double));
-                    memset(vertex_data + z_offset, 0, sizeof(double));
-                }
-            } else {
-                // Zero out the new data
-                for(uint32_t i = 0; i < vertex_count; i++) {
-                    auto offset = i * new_vertex_size + old_vertex_size;
-                    memset(vertex_data + offset, 0, new_vertex_size - old_vertex_size);
-                }
-            }
 		}
 		// Case 2: The new vertex size is equal to the old vertex size
 		else if (new_vertex_size == old_vertex_size) {
-			// This only happens when we are replacing z with m or m with z
-			// In this case we just need to zero out the third dimension
+			// This only happens when we go from XYZ -> XYM or XYM -> XYZ
+			// In this case we just need to set the default on the third dimension
+			auto default_value = has_m ? default_m : default_z;
 			for (uint32_t i = 0; i < vertex_count; i++) {
 				auto offset = i * new_vertex_size + sizeof(double) * 2;
-				memset(vertex_data + offset, 0, sizeof(double));
+				memcpy(vertex_data + offset, &default_value, sizeof(double));
 			}
 		}
 		// Case 3: The new vertex size is smaller than the old vertex size.
 		// In this case we need to allocate new memory and copy the data over to not lose any data
 		else {
 			auto new_data = alloc.get().AllocateData(vertex_count * new_vertex_size);
-			for (uint32_t i = 0; i < vertex_count; i++) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
-				memcpy(new_data + new_offset, vertex_data + old_offset, new_vertex_size);
+
+			// Special case: If we go from XYZM to XYM, we need to slide the M value to the end of each vertex
+			if (used_to_have_z && used_to_have_m && !has_z && has_m) {
+				for (uint32_t i = 0; i < vertex_count; i++) {
+					auto old_offset = i * old_vertex_size;
+					auto new_offset = i * new_vertex_size;
+					memcpy(new_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+					auto m_offset = old_offset + sizeof(double) * 3;
+					memcpy(new_data + new_offset + sizeof(double) * 2, vertex_data + m_offset, sizeof(double));
+				}
+			} else {
+				// Otherwise, we just copy the data over
+				for (uint32_t i = 0; i < vertex_count; i++) {
+					auto old_offset = i * old_vertex_size;
+					auto new_offset = i * new_vertex_size;
+					memcpy(new_data + new_offset, vertex_data + old_offset, new_vertex_size);
+				}
 			}
 			alloc.get().FreeData(vertex_data, vertex_count * old_vertex_size);
 			vertex_data = new_data;

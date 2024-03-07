@@ -121,10 +121,11 @@ struct GdalScanFunctionData : public TableFunctionData {
 
 struct GdalScanLocalState : ArrowScanLocalState {
 	core::GeometryFactory factory;
-    // We trust GDAL to produce valid WKB
-    core::WKBReader<false> wkb_reader;
+	// We trust GDAL to produce valid WKB
+	core::WKBReader<false> wkb_reader;
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
-	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)), wkb_reader(factory.allocator) {
+	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)),
+	      wkb_reader(factory.allocator) {
 	}
 };
 
@@ -560,7 +561,8 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
 				UnaryExecutor::Execute<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
 					auto geometry = state.wkb_reader.Deserialize(input);
-					return state.factory.Serialize(geom_vec, geometry, state.wkb_reader.GeomHasZ(), state.wkb_reader.GeomHasM());
+					return state.factory.Serialize(geom_vec, geometry, state.wkb_reader.GeomHasZ(),
+					                               state.wkb_reader.GeomHasM());
 				});
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}

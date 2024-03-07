@@ -18,23 +18,24 @@ namespace core {
 //------------------------------------------------------------------------------
 static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-    WKBReader<true> reader(lstate.factory.allocator);
+	WKBReader<true> reader(lstate.factory.allocator);
 
-    bool success = true;
-	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(source, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
-        try {
-            auto geometry = reader.Deserialize(input);
-            return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
-        } catch (SerializationException &e) {
-            if(success) {
-                success = false;
-                ErrorData error(e);
-                HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
-            }
-            mask.SetInvalid(idx);
-            return geometry_t{};
-        }
-	});
+	bool success = true;
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
+	    source, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
+		    try {
+			    auto geometry = reader.Deserialize(input);
+			    return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
+		    } catch (SerializationException &e) {
+			    if (success) {
+				    success = false;
+				    ErrorData error(e);
+				    HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
+			    }
+			    mask.SetInvalid(idx);
+			    return geometry_t {};
+		    }
+	    });
 	return success;
 }
 

@@ -54,3 +54,19 @@ query I
 SELECT ST_Collect(['POINT M (3 4 2)'::GEOMETRY, 'POINT Z(0 1 2)'::GEOMETRY]) as merged;
 ----
 MULTIPOINT ZM (3 4 0 2, 0 1 2 0)
+
+
+# Vertex size grows
+# XY -> XYZ
+# XY -> XYM
+# XY -> XYZM
+# XYM -> XYZM
+
+# Stays the same
+# XYZ -> XYM
+
+# Vertex size shrinks
+# XYZ -> XY
+# XYM -> XY
+# XYZM -> XYM
+# XYZM -> XYZ
