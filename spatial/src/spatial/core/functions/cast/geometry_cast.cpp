@@ -23,7 +23,7 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 	GenericExecutor::ExecuteUnary<POINT_TYPE, GEOMETRY_TYPE>(source, result, count, [&](POINT_TYPE &point) {
 		// Don't bother resetting the allocator, points take up a fixed amount of space anyway
 		auto geom = lstate.factory.CreatePoint(point.a_val, point.b_val);
-		return lstate.factory.Serialize(result, Geometry(geom));
+		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;
 }
@@ -64,14 +64,14 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 	auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
-	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &line) {
+	UnaryExecutor::Execute<list_entry_t, geometry_t>(source, result, count, [&](list_entry_t &line) {
 		auto geom = lstate.factory.CreateLineString(line.length, false, false);
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.Vertices().Append({x, y});
+			geom.Vertices().AppendUnsafe({x, y});
 		}
-		return lstate.factory.Serialize(result, Geometry(geom));
+		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;
 }
@@ -125,7 +125,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 	auto x_data = FlatVector::GetData<double>(*coord_vec_children[0]);
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
-	UnaryExecutor::Execute<list_entry_t, string_t>(source, result, count, [&](list_entry_t &poly) {
+	UnaryExecutor::Execute<list_entry_t, geometry_t>(source, result, count, [&](list_entry_t &poly) {
 		auto geom = lstate.factory.CreatePolygon(poly.length);
 
 		for (idx_t i = 0; i < poly.length; i++) {
@@ -138,7 +138,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 				ring_array.AppendUnsafe({x, y});
 			}
 		}
-		return lstate.factory.Serialize(result, Geometry(geom));
+		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;
 }
@@ -222,7 +222,7 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		shell.AppendUnsafe({maxx, maxy});
 		shell.AppendUnsafe({minx, maxy});
 		shell.AppendUnsafe({minx, miny});
-		return lstate.factory.Serialize(result, Geometry(geom));
+		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;
 }

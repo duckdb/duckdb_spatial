@@ -315,7 +315,9 @@ static void ConvertGeomLoop(Vector &result, int record_start, idx_t count, SHPHa
 		if (shape->nSHPType == SHPT_NULL) {
 			FlatVector::SetNull(result, result_idx, true);
 		} else {
-			FlatVector::GetData<string_t>(result)[result_idx] = factory.Serialize(result, OP::Convert(shape, factory));
+			// TODO: Handle Z and M
+			FlatVector::GetData<string_t>(result)[result_idx] =
+			    factory.Serialize(result, OP::Convert(shape, factory), false, false);
 		}
 	}
 }

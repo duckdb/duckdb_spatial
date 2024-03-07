@@ -24,6 +24,7 @@ public:
 		RegisterStExtent(db);
 		RegisterStExteriorRing(db);
 		RegisterStFlipCoordinates(db);
+		RegisterStForce(db);
 		RegisterStGeometryType(db);
 		RegisterStGeomFromHEXWKB(db);
 		RegisterStGeomFromWKB(db);
@@ -99,6 +100,9 @@ private:
 
 	// ST_FlipCoordinates
 	static void RegisterStFlipCoordinates(DatabaseInstance &db);
+
+	// ST_Force(2D/3D)
+	static void RegisterStForce(DatabaseInstance &db);
 
 	// ST_GeometryType
 	static void RegisterStGeometryType(DatabaseInstance &db);

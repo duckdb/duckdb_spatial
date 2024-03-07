@@ -177,9 +177,9 @@ public:
 		return owned_capacity > 0;
 	}
 
-	void MakeOwning() {
+	VertexArray &MakeOwning() {
 		if (IsOwning()) {
-			return;
+			return *this;
 		}
 
 		// Ensure that we at least have a capacity of 1
@@ -188,6 +188,8 @@ public:
 		memcpy(new_data, vertex_data, vertex_count * properties.VertexSize());
 		vertex_data = new_data;
 		owned_capacity = new_capacity;
+
+		return *this;
 	}
 
 	uint32_t Count() const {
@@ -212,6 +214,13 @@ public:
 
 	const_data_ptr_t GetData() const {
 		return vertex_data;
+	}
+
+	/// Return a new vertex array that is a slice of the current vertex array
+	VertexArray Slice(uint32_t start, uint32_t count) const {
+		D_ASSERT(start + count <= vertex_count);
+		return VertexArray {alloc, vertex_data + start * properties.VertexSize(), count, properties.HasZ(),
+		                    properties.HasM()};
 	}
 
 	//-------------------------------------------------------------------------

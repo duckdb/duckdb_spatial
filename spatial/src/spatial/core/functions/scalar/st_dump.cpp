@@ -101,11 +101,15 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 		auto &result_geom_vec = result_list_children[0];
 		auto &result_path_vec = result_list_children[1];
 
+		// The child geometries must share the same properties as the parent geometry
+		auto props = geometry_blob.GetProperties();
+
 		auto geom_data = FlatVector::GetData<geometry_t>(*result_geom_vec);
 		for (idx_t i = 0; i < geom_length; i++) {
 			// Write the geometry
 			auto &item_blob = std::get<0>(items[i]);
-			geom_data[geom_offset + i] = lstate.factory.Serialize(*result_geom_vec, item_blob);
+			geom_data[geom_offset + i] =
+			    lstate.factory.Serialize(*result_geom_vec, item_blob, props.HasZ(), props.HasM());
 
 			// Now write the paths
 			auto &path = std::get<1>(items[i]);

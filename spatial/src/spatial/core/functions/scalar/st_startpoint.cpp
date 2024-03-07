@@ -71,6 +71,7 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 			    return geometry_t {};
 		    }
 
+		    auto props = input.GetProperties();
 		    auto line = lstate.factory.Deserialize(input).As<LineString>();
 		    auto point_count = line.Vertices().Count();
 
@@ -79,8 +80,8 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 			    return geometry_t {};
 		    }
 
-		    auto point = line.Vertices().Get(0);
-		    return lstate.factory.Serialize(result, Geometry(lstate.factory.CreatePoint(point.x, point.y)));
+		    Point point(line.Vertices().Slice(0, 1));
+		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
 	    });
 }
 

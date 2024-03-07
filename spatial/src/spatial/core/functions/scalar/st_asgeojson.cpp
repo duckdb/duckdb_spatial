@@ -589,7 +589,8 @@ static void GeoJSONFragmentToGeometryFunction(DataChunk &args, ExpressionState &
 			throw InvalidInputException("Could not parse GeoJSON input: %s, (%s)", err.msg, input.GetString());
 		} else {
 			auto geom = FromGeoJSON(root, lstate.factory, input);
-			return lstate.factory.Serialize(result, geom);
+			/// TODO: Handle Z and M
+			return lstate.factory.Serialize(result, geom, false, false);
 		}
 	});
 }

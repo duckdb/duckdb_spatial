@@ -19,7 +19,8 @@ static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastP
 
 	UnaryExecutor::Execute<string_t, geometry_t>(source, result, count, [&](string_t input) {
 		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		return lstate.factory.Serialize(result, geometry);
+		// TODO: Handle Z and M
+		return lstate.factory.Serialize(result, geometry, false, false);
 	});
 	return true;
 }

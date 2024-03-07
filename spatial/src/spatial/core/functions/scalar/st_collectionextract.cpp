@@ -100,6 +100,7 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 
 	BinaryExecutor::Execute<geometry_t, int32_t, geometry_t>(
 	    input, dim, result, count, [&](geometry_t input, int32_t requested_type) {
+		    auto props = input.GetProperties();
 		    auto geometry = lstate.factory.Deserialize(input);
 		    switch (requested_type) {
 		    case 1: {
@@ -116,15 +117,15 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoint[i] = points[i];
 					    }
-					    return lstate.factory.Serialize(result, mpoint);
+					    return lstate.factory.Serialize(result, mpoint, props.HasZ(), props.HasM());
 				    }
 				    // otherwise, we return an empty multipoint
 				    auto empty = lstate.factory.CreateEmptyMultiPoint();
-				    return lstate.factory.Serialize(result, empty);
+				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    } else {
 				    // otherwise if its not a collection, we return an empty point
 				    auto empty = lstate.factory.CreateEmptyPoint();
-				    return lstate.factory.Serialize(result, empty);
+				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    }
 		    }
 		    case 2: {
@@ -141,15 +142,15 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    for (uint32_t i = 0; i < size; i++) {
 						    mline[i] = lines[i];
 					    }
-					    return lstate.factory.Serialize(result, mline);
+					    return lstate.factory.Serialize(result, mline, props.HasZ(), props.HasM());
 				    }
 				    // otherwise, we return an empty multilinestring
 				    auto empty = lstate.factory.CreateEmptyMultiLineString();
-				    return lstate.factory.Serialize(result, empty);
+				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    } else {
 				    // otherwise if its not a collection, we return an empty linestring
 				    auto empty = lstate.factory.CreateEmptyLineString();
-				    return lstate.factory.Serialize(result, empty);
+				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    }
 		    }
 		    case 3: {
@@ -166,15 +167,15 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoly[i] = polys[i];
 					    }
-					    return lstate.factory.Serialize(result, mpoly);
+					    return lstate.factory.Serialize(result, mpoly, props.HasZ(), props.HasM());
 				    }
 				    // otherwise, we return an empty multipolygon
 				    auto empty = lstate.factory.CreateEmptyMultiPolygon();
-				    return lstate.factory.Serialize(result, empty);
+				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    } else {
 				    // otherwise if its not a collection, we return an empty polygon
 				    auto empty = lstate.factory.CreateEmptyPolygon();
-				    return lstate.factory.Serialize(result, empty);
+				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    }
 		    }
 		    default:
@@ -193,6 +194,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		if (input.GetType() == GeometryType::GEOMETRYCOLLECTION) {
+			auto props = input.GetProperties();
 			auto geometry = lstate.factory.Deserialize(input);
 
 			auto &collection = geometry.As<GeometryCollection>();
@@ -221,7 +223,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				for (uint32_t i = 0; i < size; i++) {
 					mpoint[i] = points[i];
 				}
-				return lstate.factory.Serialize(result, mpoint);
+				return lstate.factory.Serialize(result, mpoint, props.HasZ(), props.HasM());
 			}
 			// LineString case
 			case 1: {
@@ -232,7 +234,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				for (uint32_t i = 0; i < size; i++) {
 					mline[i] = lines[i];
 				}
-				return lstate.factory.Serialize(result, mline);
+				return lstate.factory.Serialize(result, mline, props.HasZ(), props.HasM());
 			}
 			// Polygon case
 			case 2: {
@@ -243,7 +245,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				for (uint32_t i = 0; i < size; i++) {
 					mpoly[i] = polys[i];
 				}
-				return lstate.factory.Serialize(result, mpoly);
+				return lstate.factory.Serialize(result, mpoly, props.HasZ(), props.HasM());
 			}
 			default: {
 				throw InternalException("Invalid dimension in collection extract");

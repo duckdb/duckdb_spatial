@@ -32,6 +32,12 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 				continue;
 			}
 			auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
+
+			// TODO: Support Z and M
+			if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
+				throw InvalidInputException("ST_MakeLine does not support Z or M geometries");
+			}
+
 			auto geometry = lstate.factory.Deserialize(geometry_blob);
 
 			if (geometry.Type() != GeometryType::POINT) {
@@ -49,7 +55,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		}
 
-		return lstate.factory.Serialize(result, Geometry(line_geom));
+		return lstate.factory.Serialize(result, line_geom, false, false);
 	});
 }
 
@@ -84,7 +90,7 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		    }
 
-		    return lstate.factory.Serialize(result, Geometry(line_geom));
+		    return lstate.factory.Serialize(result, line_geom, false, false);
 	    });
 }
 

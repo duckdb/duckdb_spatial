@@ -108,10 +108,10 @@ private:
 
 protected:
 	bool HasZ() const {
-		return false;
+		return has_z;
 	}
 	bool HasM() const {
-		return false;
+		return has_m;
 	}
 	bool IsNested() const {
 		return nesting_level > 0;

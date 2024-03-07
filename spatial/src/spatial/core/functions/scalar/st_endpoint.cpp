@@ -70,6 +70,7 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
+		    auto props = input.GetProperties();
 
 		    auto line = lstate.factory.Deserialize(input).As<LineString>();
 		    auto point_count = line.Vertices().Count();
@@ -79,8 +80,8 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    return geometry_t {};
 		    }
 
-		    auto point = line.Vertices().Get(point_count - 1);
-		    return lstate.factory.Serialize(result, Geometry(lstate.factory.CreatePoint(point.x, point.y)));
+		    Point point(line.Vertices().Slice(point_count - 1, 1));
+		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
 	    });
 }
 

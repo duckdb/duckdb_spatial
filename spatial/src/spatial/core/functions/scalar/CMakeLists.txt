@@ -16,6 +16,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_extent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_exteriorring.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_flipcoordinates.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_force.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geometrytype.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromhexwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp

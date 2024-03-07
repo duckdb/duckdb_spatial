@@ -43,7 +43,7 @@ public:
 	MultiPolygon CreateEmptyMultiPolygon();
 	GeometryCollection CreateEmptyGeometryCollection();
 
-	geometry_t Serialize(Vector &result, const Geometry &geometry);
+	geometry_t Serialize(Vector &result, const Geometry &geometry, bool has_z, bool has_m);
 	Geometry Deserialize(const geometry_t &data);
 
 	static bool TryGetSerializedBoundingBox(const geometry_t &data, BoundingBox &bbox);
@@ -70,13 +70,13 @@ private:
 	uint32_t GetSerializedSize(const Geometry &geometry);
 
 	// Deserialize
-	Point DeserializePoint(Cursor &reader);
-	LineString DeserializeLineString(Cursor &reader);
-	Polygon DeserializePolygon(Cursor &reader);
-	MultiPoint DeserializeMultiPoint(Cursor &reader);
-	MultiLineString DeserializeMultiLineString(Cursor &reader);
-	MultiPolygon DeserializeMultiPolygon(Cursor &reader);
-	GeometryCollection DeserializeGeometryCollection(Cursor &reader);
+	Point DeserializePoint(Cursor &reader, bool has_z, bool has_m);
+	LineString DeserializeLineString(Cursor &reader, bool has_z, bool has_m);
+	Polygon DeserializePolygon(Cursor &reader, bool has_z, bool has_m);
+	MultiPoint DeserializeMultiPoint(Cursor &reader, bool has_z, bool has_m);
+	MultiLineString DeserializeMultiLineString(Cursor &reader, bool has_z, bool has_m);
+	MultiPolygon DeserializeMultiPolygon(Cursor &reader, bool has_z, bool has_m);
+	GeometryCollection DeserializeGeometryCollection(Cursor &reader, bool has_z, bool has_m);
 };
 
 } // namespace core

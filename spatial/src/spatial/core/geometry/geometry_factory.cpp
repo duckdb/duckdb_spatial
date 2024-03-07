@@ -132,7 +132,7 @@ GeometryCollection GeometryFactory::CreateEmptyGeometryCollection() {
 //    NumGeometries (4 bytes)
 //    Geometries (variable length)
 
-geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) {
+geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry, bool has_z, bool has_m) {
 	auto geom_size = GetSerializedSize(geometry);
 
 	auto type = geometry.Type();
@@ -142,6 +142,8 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry) 
 	// auto properties = geometry.Properties();
 	GeometryProperties properties;
 	properties.SetBBox(has_bbox);
+	properties.SetZ(has_z);
+	properties.SetM(has_m);
 	uint16_t hash = 0;
 
 	// Hash geom_size uint32_t to uint16_t
@@ -536,30 +538,33 @@ Geometry GeometryFactory::Deserialize(const geometry_t &data) {
 		cursor.Skip(16); // Skip bounding box
 	}
 
+	bool has_z = properties.HasZ();
+	bool has_m = properties.HasM();
+
 	// peek the type
 	auto type = cursor.Peek<SerializedGeometryType>();
 	switch (type) {
 	case SerializedGeometryType::POINT:
-		return Geometry(DeserializePoint(cursor));
+		return DeserializePoint(cursor, has_z, has_m);
 	case SerializedGeometryType::LINESTRING:
-		return Geometry(DeserializeLineString(cursor));
+		return DeserializeLineString(cursor, has_z, has_m);
 	case SerializedGeometryType::POLYGON:
-		return Geometry(DeserializePolygon(cursor));
+		return DeserializePolygon(cursor, has_z, has_m);
 	case SerializedGeometryType::MULTIPOINT:
-		return Geometry(DeserializeMultiPoint(cursor));
+		return DeserializeMultiPoint(cursor, has_z, has_m);
 	case SerializedGeometryType::MULTILINESTRING:
-		return Geometry(DeserializeMultiLineString(cursor));
+		return DeserializeMultiLineString(cursor, has_z, has_m);
 	case SerializedGeometryType::MULTIPOLYGON:
-		return Geometry(DeserializeMultiPolygon(cursor));
+		return DeserializeMultiPolygon(cursor, has_z, has_m);
 	case SerializedGeometryType::GEOMETRYCOLLECTION:
-		return Geometry(DeserializeGeometryCollection(cursor));
+		return DeserializeGeometryCollection(cursor, has_z, has_m);
 	default:
 		throw NotImplementedException(
 		    StringUtil::Format("Deserialize: Geometry type %d not supported", static_cast<int>(type)));
 	}
 }
 
-Point GeometryFactory::DeserializePoint(Cursor &reader) {
+Point GeometryFactory::DeserializePoint(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::POINT);
 	(void)type;
@@ -567,51 +572,51 @@ Point GeometryFactory::DeserializePoint(Cursor &reader) {
 	// Points can be empty too, in which case the count is 0
 	auto count = reader.Read<uint32_t>();
 	if (count == 0) {
-		return Point(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
+		return Point(VertexArray::CreateEmpty(allocator.GetAllocator(), has_z, has_m));
 	} else {
 		D_ASSERT(count == 1);
-		VertexArray vertex_data(allocator.GetAllocator(), reader.GetPtr(), 1, false, false);
+		VertexArray vertex_data(allocator.GetAllocator(), reader.GetPtr(), 1, has_z, has_m);
 		// Move the pointer forward (in case we are reading from a collection type)
 		reader.Skip(vertex_data.ByteSize());
 		return Point(std::move(vertex_data));
 	}
 }
 
-LineString GeometryFactory::DeserializeLineString(Cursor &reader) {
+LineString GeometryFactory::DeserializeLineString(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::LINESTRING);
 	(void)type;
 	// 0 if the linestring is empty
 	auto count = reader.Read<uint32_t>();
 	// read data
-	VertexArray vertex_data(allocator.GetAllocator(), reader.GetPtr(), count, false, false);
+	VertexArray vertex_data(allocator.GetAllocator(), reader.GetPtr(), count, has_z, has_m);
 
 	reader.Skip(vertex_data.ByteSize());
 
 	return LineString(std::move(vertex_data));
 }
 
-Polygon GeometryFactory::DeserializePolygon(Cursor &reader) {
+Polygon GeometryFactory::DeserializePolygon(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::POLYGON);
 	(void)type;
 	// read num rings
 	auto num_rings = reader.Read<uint32_t>();
 
-	Polygon polygon(allocator.GetAllocator(), num_rings, false, false);
+	Polygon polygon(allocator.GetAllocator(), num_rings, has_z, has_m);
 
 	// Read the count and corresponding ring in parallel
 	auto data_ptr = reader.GetPtr() + sizeof(uint32_t) * num_rings + ((num_rings % 2) * sizeof(uint32_t));
 	for (uint32_t i = 0; i < num_rings; i++) {
 		auto count = reader.Read<uint32_t>();
-		polygon[i] = VertexArray(allocator.GetAllocator(), data_ptr, count, false, false);
+		polygon[i] = VertexArray(allocator.GetAllocator(), data_ptr, count, has_z, has_m);
 		data_ptr += polygon[i].ByteSize();
 	}
 	reader.SetPtr(data_ptr);
 	return polygon;
 }
 
-MultiPoint GeometryFactory::DeserializeMultiPoint(Cursor &reader) {
+MultiPoint GeometryFactory::DeserializeMultiPoint(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::MULTIPOINT);
 	(void)type;
@@ -619,12 +624,12 @@ MultiPoint GeometryFactory::DeserializeMultiPoint(Cursor &reader) {
 	auto num_points = reader.Read<uint32_t>();
 	MultiPoint multipoint(allocator.GetAllocator(), num_points);
 	for (uint32_t i = 0; i < num_points; i++) {
-		multipoint[i] = DeserializePoint(reader);
+		multipoint[i] = DeserializePoint(reader, has_z, has_m);
 	}
 	return multipoint;
 }
 
-MultiLineString GeometryFactory::DeserializeMultiLineString(Cursor &reader) {
+MultiLineString GeometryFactory::DeserializeMultiLineString(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::MULTILINESTRING);
 	(void)type;
@@ -634,12 +639,12 @@ MultiLineString GeometryFactory::DeserializeMultiLineString(Cursor &reader) {
 	auto multilinestring = MultiLineString(allocator.GetAllocator(), num_linestrings);
 	for (uint32_t i = 0; i < num_linestrings; i++) {
 		// Placement new to initialize the LineString
-		multilinestring[i] = DeserializeLineString(reader);
+		multilinestring[i] = DeserializeLineString(reader, has_z, has_m);
 	}
 	return multilinestring;
 }
 
-MultiPolygon GeometryFactory::DeserializeMultiPolygon(Cursor &reader) {
+MultiPolygon GeometryFactory::DeserializeMultiPolygon(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::MULTIPOLYGON);
 	(void)type;
@@ -648,12 +653,12 @@ MultiPolygon GeometryFactory::DeserializeMultiPolygon(Cursor &reader) {
 
 	auto multipolygon = MultiPolygon(allocator.GetAllocator(), num_polygons);
 	for (uint32_t i = 0; i < num_polygons; i++) {
-		multipolygon[i] = DeserializePolygon(reader);
+		multipolygon[i] = DeserializePolygon(reader, has_z, has_m);
 	}
 	return multipolygon;
 }
 
-GeometryCollection GeometryFactory::DeserializeGeometryCollection(Cursor &reader) {
+GeometryCollection GeometryFactory::DeserializeGeometryCollection(Cursor &reader, bool has_z, bool has_m) {
 	auto type = reader.Read<SerializedGeometryType>();
 	D_ASSERT(type == SerializedGeometryType::GEOMETRYCOLLECTION);
 	(void)type;
@@ -665,25 +670,25 @@ GeometryCollection GeometryFactory::DeserializeGeometryCollection(Cursor &reader
 		auto geometry_type = reader.Peek<SerializedGeometryType>();
 		switch (geometry_type) {
 		case SerializedGeometryType::POINT:
-			collection[i] = DeserializePoint(reader);
+			collection[i] = DeserializePoint(reader, has_z, has_m);
 			break;
 		case SerializedGeometryType::LINESTRING:
-			collection[i] = DeserializeLineString(reader);
+			collection[i] = DeserializeLineString(reader, has_z, has_m);
 			break;
 		case SerializedGeometryType::POLYGON:
-			collection[i] = DeserializePolygon(reader);
+			collection[i] = DeserializePolygon(reader, has_z, has_m);
 			break;
 		case SerializedGeometryType::MULTIPOINT:
-			collection[i] = DeserializeMultiPoint(reader);
+			collection[i] = DeserializeMultiPoint(reader, has_z, has_m);
 			break;
 		case SerializedGeometryType::MULTILINESTRING:
-			collection[i] = DeserializeMultiLineString(reader);
+			collection[i] = DeserializeMultiLineString(reader, has_z, has_m);
 			break;
 		case SerializedGeometryType::MULTIPOLYGON:
-			collection[i] = DeserializeMultiPolygon(reader);
+			collection[i] = DeserializeMultiPolygon(reader, has_z, has_m);
 			break;
 		case SerializedGeometryType::GEOMETRYCOLLECTION:
-			collection[i] = DeserializeGeometryCollection(reader);
+			collection[i] = DeserializeGeometryCollection(reader, has_z, has_m);
 			break;
 		default:
 			auto msg = StringUtil::Format("Unimplemented geometry type for deserialization: %d", geometry_type);

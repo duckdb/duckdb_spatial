@@ -360,9 +360,10 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 		}
 
 		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
+			auto props = input_geom.GetProperties();
 			auto geom = factory.Deserialize(input_geom);
 			TransformGeometry(crs.get(), geom);
-			return factory.Serialize(result, geom);
+			return factory.Serialize(result, geom, props.HasZ(), props.HasM());
 		});
 	} else {
 		// General case: projections are not constant
@@ -386,9 +387,10 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 				    // otherwise fall back to the original CRS
 			    }
 
+			    auto props = input_geom.GetProperties();
 			    auto geom = factory.Deserialize(input_geom);
 			    TransformGeometry(crs.get(), geom);
-			    return factory.Serialize(result, geom);
+			    return factory.Serialize(result, geom, props.HasZ(), props.HasM());
 		    });
 	}
 }

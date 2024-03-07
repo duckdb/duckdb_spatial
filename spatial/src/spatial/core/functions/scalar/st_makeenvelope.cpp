@@ -36,7 +36,7 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 		    shell.AppendUnsafe({x_max.val, y_min.val});
 		    shell.AppendUnsafe({x_min.val, y_min.val});
 
-		    return lstate.factory.Serialize(result, Geometry(envelope_geom));
+		    return lstate.factory.Serialize(result, envelope_geom, false, false);
 	    });
 }
 

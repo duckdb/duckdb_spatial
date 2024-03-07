@@ -101,11 +101,12 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 			    validity.SetInvalid(idx);
 			    return geometry_t {};
 		    }
-
+		    auto props = input.GetProperties();
 		    auto polygon = lstate.factory.Deserialize(input);
 		    auto &poly = polygon.As<Polygon>();
 		    if (poly.IsEmpty()) {
-			    return lstate.factory.Serialize(result, Geometry(lstate.factory.CreateEmptyLineString()));
+			    return lstate.factory.Serialize(result, lstate.factory.CreateEmptyLineString(), props.HasZ(),
+			                                    props.HasM());
 		    }
 
 		    auto &shell = poly[0];
@@ -115,7 +116,7 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 		    for (uint32_t i = 0; i < num_points; i++) {
 			    line.Vertices().Append(shell.Get(i));
 		    }
-		    return lstate.factory.Serialize(result, Geometry(line));
+		    return lstate.factory.Serialize(result, line, props.HasZ(), props.HasM());
 	    });
 }
 

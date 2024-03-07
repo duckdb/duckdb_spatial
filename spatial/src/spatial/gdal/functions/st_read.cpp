@@ -555,9 +555,10 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				state.factory.allocator.Reset();
 				auto &wkb_vec = output.data[col_idx];
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
-				UnaryExecutor::Execute<string_t, string_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
+				UnaryExecutor::Execute<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
 					auto geometry = state.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-					return state.factory.Serialize(geom_vec, geometry);
+					// TODO: Handle Z and M
+					return state.factory.Serialize(geom_vec, geometry, false, false);
 				});
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}

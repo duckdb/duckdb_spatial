@@ -48,7 +48,8 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 		}
 
 		auto geom = lstate.factory.FromWKB((const char *)wkb_blob.get(), blob_size);
-		return lstate.factory.Serialize(result, geom);
+		// TODO: Handle Z and M
+		return lstate.factory.Serialize(result, geom, false, false);
 	});
 }
 

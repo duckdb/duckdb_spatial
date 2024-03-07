@@ -237,9 +237,10 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto count = args.size();
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
+		auto props = input.GetProperties();
 		auto geom = lstate.factory.Deserialize(input);
 		FlipGeometry(geom);
-		return lstate.factory.Serialize(result, geom);
+		return lstate.factory.Serialize(result, geom, props.HasZ(), props.HasM());
 	});
 }
 

@@ -518,6 +518,29 @@ public:
 		}
 	}
 
+	// Apply a functor to the contained geometry
+	template <class F, class... ARGS>
+	auto Dispatch(ARGS... args) -> decltype(F::Apply(std::declval<Point &>(), std::forward<ARGS>(args)...)) {
+		switch (type) {
+		case GeometryType::POINT:
+			return F::Apply(point, std::forward<ARGS>(args)...);
+		case GeometryType::LINESTRING:
+			return F::Apply(linestring, std::forward<ARGS>(args)...);
+		case GeometryType::POLYGON:
+			return F::Apply(polygon, std::forward<ARGS>(args)...);
+		case GeometryType::MULTIPOINT:
+			return F::Apply(multipoint, std::forward<ARGS>(args)...);
+		case GeometryType::MULTILINESTRING:
+			return F::Apply(multilinestring, std::forward<ARGS>(args)...);
+		case GeometryType::MULTIPOLYGON:
+			return F::Apply(multipolygon, std::forward<ARGS>(args)...);
+		case GeometryType::GEOMETRYCOLLECTION:
+			return F::Apply(collection, std::forward<ARGS>(args)...);
+		default:
+			throw NotImplementedException("Geometry::Dispatch()");
+		}
+	}
+
 	bool IsEmpty() const {
 		if (type == GeometryType::POINT) {
 			return point.IsEmpty();
@@ -575,6 +598,47 @@ public:
 		default:
 			throw NotImplementedException("Geometry::DeepCopy()");
 		}
+	}
+
+	Geometry &SetVertexType(bool has_z, bool has_m) {
+		switch (type) {
+		case GeometryType::POINT:
+			point.Vertices().UpdateVertexType(has_z, has_m);
+			break;
+		case GeometryType::LINESTRING:
+			linestring.Vertices().UpdateVertexType(has_z, has_m);
+			break;
+		case GeometryType::POLYGON:
+			for (auto &ring : polygon) {
+				ring.UpdateVertexType(has_z, has_m);
+			}
+			break;
+		case GeometryType::MULTIPOINT:
+			for (auto &point : multipoint) {
+				point.Vertices().UpdateVertexType(has_z, has_m);
+			}
+			break;
+		case GeometryType::MULTILINESTRING:
+			for (auto &line : multilinestring) {
+				line.Vertices().UpdateVertexType(has_z, has_m);
+			}
+			break;
+		case GeometryType::MULTIPOLYGON:
+			for (auto &polygon : multipolygon) {
+				for (auto &ring : polygon) {
+					ring.UpdateVertexType(has_z, has_m);
+				}
+			}
+			break;
+		case GeometryType::GEOMETRYCOLLECTION:
+			for (auto &geom : collection) {
+				geom.SetVertexType(has_z, has_m);
+			}
+			break;
+		default:
+			break;
+		}
+		return *this;
 	}
 
 	// Accessor

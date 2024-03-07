@@ -273,7 +273,8 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 
 	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
 		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		return lstate.factory.Serialize(result, geometry);
+		// TODO: Handle Z and M
+		return lstate.factory.Serialize(result, geometry, false, false);
 	});
 }
 

@@ -193,7 +193,7 @@ static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk
 	idx_t count = 0;
 	while (state.offset < state.xy_geoms.size() && count < STANDARD_VECTOR_SIZE) {
 		auto &geom = state.xy_geoms[state.offset++];
-		geom_data[count] = state.factory.Serialize(geom_vector, geom);
+		geom_data[count] = state.factory.Serialize(geom_vector, geom, false, false);
 		count++;
 	}
 

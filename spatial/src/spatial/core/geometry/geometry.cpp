@@ -290,28 +290,6 @@ string Geometry::ToString() const {
 	}
 }
 
-/*
-bool Geometry::IsEmpty() const {
-    switch (type) {
-    case GeometryType::POINT:
-        return point.IsEmpty();
-    case GeometryType::LINESTRING:
-        return linestring.IsEmpty();
-    case GeometryType::POLYGON:
-        return polygon.IsEmpty();
-    case GeometryType::MULTIPOINT:
-        return multipoint.IsEmpty();
-    case GeometryType::MULTILINESTRING:
-        return multilinestring.IsEmpty();
-    case GeometryType::MULTIPOLYGON:
-        return multipolygon.IsEmpty();
-    case GeometryType::GEOMETRYCOLLECTION:
-        return geometrycollection.IsEmpty();
-    default:
-        throw NotImplementedException("Geometry::IsEmpty()");
-    }
-}*/
-
 bool Geometry::IsCollection() const {
 	switch (type) {
 	case GeometryType::POINT:

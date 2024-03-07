@@ -26,6 +26,12 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 		    if (line_blob.GetType() != GeometryType::LINESTRING) {
 			    throw InvalidInputException("ST_MakePolygon only accepts LINESTRING geometries");
 		    }
+
+		    // TODO: Support Z and M
+		    if (line_blob.GetProperties().HasM() || line_blob.GetProperties().HasZ()) {
+			    throw InvalidInputException("ST_MakePolygon does not support Z or M geometries");
+		    }
+
 		    auto shell_geom = lstate.factory.Deserialize(line_blob);
 		    auto &shell = shell_geom.As<LineString>();
 		    auto shell_vert_count = shell.Vertices().Count();
@@ -55,6 +61,12 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    }
 
 			    auto geometry_blob = UnifiedVectorFormat::GetData<geometry_t>(format)[mapped_idx];
+
+			    // TODO: Support Z and M
+			    if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
+				    throw InvalidInputException("ST_MakePolygon does not support Z or M geometries");
+			    }
+
 			    auto hole_geometry = lstate.factory.Deserialize(geometry_blob);
 
 			    if (hole_geometry.Type() != GeometryType::LINESTRING) {
@@ -89,7 +101,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    }
 		    }
 
-		    return lstate.factory.Serialize(result, Geometry(polygon));
+		    return lstate.factory.Serialize(result, polygon, false, false);
 	    });
 }
 
@@ -115,12 +127,12 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 			throw InvalidInputException("ST_MakePolygon shell must be closed (first and last vertex must be equal)");
 		}
 
-		auto polygon = lstate.factory.CreatePolygon(1, &line_count, false, false);
-		for (uint32_t i = 0; i < line_count; i++) {
-			polygon[0].AppendUnsafe(line_verts.Get(i));
-		}
+		auto polygon = lstate.factory.CreatePolygon(1);
+		polygon[0] = line.Vertices();
 
-		return lstate.factory.Serialize(result, Geometry(polygon));
+		auto props = line_blob.GetProperties();
+
+		return lstate.factory.Serialize(result, polygon, props.HasZ(), props.HasM());
 	});
 }
 

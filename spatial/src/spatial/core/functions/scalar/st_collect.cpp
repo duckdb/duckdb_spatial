@@ -23,6 +23,19 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
+		// First figure out if we have Z or M
+		bool has_z = false;
+		bool has_m = false;
+		for (idx_t i = offset; i < offset + length; i++) {
+			auto mapped_idx = format.sel->get_index(i);
+			if (format.validity.RowIsValid(mapped_idx)) {
+				auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
+				auto props = geometry_blob.GetProperties();
+				has_z = has_z || props.HasZ();
+				has_m = has_m || props.HasM();
+			}
+		}
+
 		// TODO: Peek the types first
 		vector<Geometry> geometries;
 		for (idx_t i = offset; i < offset + length; i++) {
@@ -39,7 +52,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 
 		if (geometries.empty()) {
 			auto empty = lstate.factory.CreateGeometryCollection(0);
-			return lstate.factory.Serialize(result, Geometry(empty));
+			return lstate.factory.Serialize(result, empty, false, false);
 		}
 
 		bool all_points = true;
@@ -61,27 +74,27 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		if (all_points) {
 			auto collection = lstate.factory.CreateMultiPoint(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].As<Point>();
+				collection[i] = geometries[i].SetVertexType(has_z, has_m).As<Point>();
 			}
-			return lstate.factory.Serialize(result, Geometry(collection));
+			return lstate.factory.Serialize(result, collection, has_z, has_m);
 		} else if (all_lines) {
 			auto collection = lstate.factory.CreateMultiLineString(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].As<LineString>();
+				collection[i] = geometries[i].SetVertexType(has_z, has_m).As<LineString>();
 			}
-			return lstate.factory.Serialize(result, Geometry(collection));
+			return lstate.factory.Serialize(result, collection, has_z, has_m);
 		} else if (all_polygons) {
 			auto collection = lstate.factory.CreateMultiPolygon(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].As<Polygon>();
+				collection[i] = geometries[i].SetVertexType(has_z, has_m).As<Polygon>();
 			}
-			return lstate.factory.Serialize(result, Geometry(collection));
+			return lstate.factory.Serialize(result, collection, has_z, has_m);
 		} else {
 			auto collection = lstate.factory.CreateGeometryCollection(geometries.size());
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i];
+				collection[i] = geometries[i].SetVertexType(has_z, has_m);
 			}
-			return lstate.factory.Serialize(result, collection);
+			return lstate.factory.Serialize(result, collection, has_z, has_m);
 		}
 	});
 }
