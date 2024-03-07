@@ -160,7 +160,7 @@ private:
     WKBGeometryType ReadType() {
         uint32_t type = ReadInt<ORDER>();
 
-        // Check for extended WKB flags and ISO flags
+        // Check for extended WKB flags
         bool geom_has_z = (type & 0x80000000) == 0x80000000;
         if(geom_has_z) {
             type &= ~0x80000000;
@@ -170,9 +170,15 @@ private:
             type &= ~0x40000000;
         }
         bool geom_has_srid = (type & 0x20000000) == 0x20000000;
-        uint32_t srid = 0;
+        if (geom_has_srid) {
+            // SRID present
+            uint32_t srid = ReadInt<ORDER>();
+            (void)srid;
+            // Remove and ignore the srid flag for now
+            type &= ~0x20000000;
+        }
 
-        // Else check for ISO flags
+        // Check for ISO flags
         // TODO: We should just always check for ISO flags unless we are sure we are dealing with extended WKB
         if(type > 1000 && type < 2000) {
             geom_has_z = true;
@@ -186,32 +192,21 @@ private:
             type -= 3000;
         }
 
-        if(geom_has_z) {
+        if(is_first) {
+            has_z = geom_has_z;
+            has_m = geom_has_m;
+            is_first = false;
+        } else {
             // TODO: Is this even possible? If so, what should we do? Do we upcast?
-            if(!is_first && (has_z != geom_has_z)) {
+            if(has_z != geom_has_z) {
                 throw SerializationException(
                         "WKB Reader: Z value presence does not match top level geometry, DuckDB requires all geometries inside a WKB blob to have the same amount of coordinate dimensions");
             }
-        }
-        if(geom_has_m) {
-            if (!is_first && (has_m != geom_has_m)) {
+            if (has_m != geom_has_m) {
                 throw SerializationException(
                         "WKB Reader: M value presence does not match top level geometry, DuckDB requires all geometries inside a WKB blob to have the same amount of coordinate dimensions");
             }
         }
-        if (is_first) {
-            has_z = geom_has_z;
-            has_m = geom_has_m;
-            is_first = false;
-        }
-
-        if (geom_has_srid) {
-            // SRID present
-            srid = ReadInt<ORDER>();
-            // Remove and ignore the srid flag for now
-            type &= ~0x20000000;
-        }
-        (void)srid;
 
         return static_cast<WKBGeometryType>(type);
     }

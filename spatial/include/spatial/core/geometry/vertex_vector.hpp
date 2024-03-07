@@ -394,6 +394,8 @@ public:
 		if (!IsOwning()) {
 			MakeOwning();
 		}
+        auto used_to_have_z = properties.HasZ();
+        auto used_to_have_m = properties.HasM();
 		auto old_vertex_size = properties.VertexSize();
 		properties.SetZ(has_z);
 		properties.SetM(has_m);
@@ -403,14 +405,30 @@ public:
 		if (new_vertex_size > old_vertex_size) {
 			vertex_data =
 			    alloc.get().ReallocateData(vertex_data, vertex_count * old_vertex_size, vertex_count * new_vertex_size);
+
 			// Loop backwards
 			for (int64_t i = vertex_count - 1; i >= 0; i--) {
 				auto old_offset = i * old_vertex_size;
 				auto new_offset = i * new_vertex_size;
 				memmove(vertex_data + new_offset, vertex_data + old_offset, old_vertex_size);
-				// zero out the new data
-				memset(vertex_data + new_offset + old_vertex_size, 0, new_vertex_size - old_vertex_size);
 			}
+
+            // Special case: If we go from XYM to XYZM, we need to slide the M value to the end of each vertex
+            if(used_to_have_m && !used_to_have_z && has_m && has_z) {
+                for (uint32_t i = 0; i < vertex_count; i++) {
+                    auto offset = i * new_vertex_size;
+                    auto z_offset = offset + sizeof(double) * 2;
+                    auto m_offset = offset + sizeof(double) * 3;
+                    memcpy(vertex_data + m_offset, vertex_data + z_offset, sizeof(double));
+                    memset(vertex_data + z_offset, 0, sizeof(double));
+                }
+            } else {
+                // Zero out the new data
+                for(uint32_t i = 0; i < vertex_count; i++) {
+                    auto offset = i * new_vertex_size + old_vertex_size;
+                    memset(vertex_data + offset, 0, new_vertex_size - old_vertex_size);
+                }
+            }
 		}
 		// Case 2: The new vertex size is equal to the old vertex size
 		else if (new_vertex_size == old_vertex_size) {
