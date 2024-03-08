@@ -25,7 +25,7 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 	auto count = args.size();
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-	WKBReader<true> reader(lstate.factory.allocator);
+	WKBReader reader(lstate.factory.allocator);
 
 	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input_hex) {
 		auto hex_size = input_hex.GetSize();

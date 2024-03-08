@@ -3,7 +3,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
 #include "spatial/core/types.hpp"
 
@@ -272,7 +271,7 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	WKBReader<true> reader(lstate.factory.allocator);
+	WKBReader reader(lstate.factory.allocator);
 	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
 		auto geometry = reader.Deserialize(input);
 		return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
