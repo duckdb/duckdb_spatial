@@ -114,8 +114,11 @@ public:
 	static constexpr GeometryType TYPE = GeometryType::POINT;
 
 	explicit Point(Allocator &allocator, double x, double y) : vertices(allocator, 1, false, false) {
-		vertices.AppendUnsafe({x, y});
+        vertices.Initialize(false).SetUnsafe(0, x, y);
 	}
+    explicit Point(Allocator &allocator, double x, double y, double z) : vertices(allocator, 1, true, false) {
+        vertices.Initialize(false).SetUnsafe(0, x, y, z);
+    }
 	explicit Point(Allocator &allocator) : vertices(allocator, false, false) {
 	}
 	explicit Point(Allocator &allocator, bool has_z, bool has_m) : vertices(allocator, has_z, has_m) {
