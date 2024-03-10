@@ -140,7 +140,7 @@ public:
 					text += ", ";
 				}
 			}
-		} else if (HasZ() || HasM()) {
+		} else if (HasZ()) {
 			for (uint32_t i = 0; i < count; i++) {
 				auto x = Load<double>(dims[0] + i * strides[0]);
 				auto y = Load<double>(dims[1] + i * strides[1]);
@@ -150,7 +150,17 @@ public:
 					text += ", ";
 				}
 			}
-		} else {
+        } else if (HasM()) {
+            for (uint32_t i = 0; i < count; i++) {
+                auto x = Load<double>(dims[0] + i * strides[0]);
+                auto y = Load<double>(dims[1] + i * strides[1]);
+                auto m = Load<double>(dims[3] + i * strides[3]);
+                text += Utils::format_coord(x, y, m);
+                if (i < count - 1) {
+                    text += ", ";
+                }
+            }
+        } else {
 			for (uint32_t i = 0; i < count; i++) {
 				auto x = Load<double>(dims[0] + i * strides[0]);
 				auto y = Load<double>(dims[1] + i * strides[1]);

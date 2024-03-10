@@ -8,16 +8,6 @@ namespace spatial {
 
 namespace core {
 
-enum class WKBGeometryType : uint32_t {
-	POINT = 1,
-	LINESTRING = 2,
-	POLYGON = 3,
-	MULTIPOINT = 4,
-	MULTILINESTRING = 5,
-	MULTIPOLYGON = 6,
-	GEOMETRYCOLLECTION = 7
-};
-
 //------------------------------------------------------------------------------
 // Size Calculator
 //------------------------------------------------------------------------------
@@ -92,38 +82,27 @@ class WKBSerializer final : GeometryProcessor<void, Cursor &> {
 		} else {
 			cursor.Write(Load<double>(vertices.data[0]));
 			cursor.Write(Load<double>(vertices.data[1]));
-			if (HasZ() && HasM()) {
-				cursor.Write(Load<double>(vertices.data[2]));
-				cursor.Write(Load<double>(vertices.data[3]));
-			} else if (HasZ() || HasM()) {
-				cursor.Write(Load<double>(vertices.data[2]));
-			}
+            if(HasZ()) {
+                cursor.Write(Load<double>(vertices.data[2]));
+            }
+            if(HasM()) {
+                cursor.Write(Load<double>(vertices.data[3]));
+            }
 		}
 	}
 
-	template <bool HAS_Z, bool HAS_M>
 	void ProcessVertices(const VertexData &vertices, Cursor &cursor) {
+        bool has_z = HasZ();
+        bool has_m = HasM();
 		for (uint32_t i = 0; i < vertices.count; i++) {
 			cursor.Write(Load<double>(vertices.data[0] + i * vertices.stride[0]));
 			cursor.Write(Load<double>(vertices.data[1] + i * vertices.stride[1]));
-			if (HAS_Z && HAS_M) {
-				cursor.Write(Load<double>(vertices.data[2] + i * vertices.stride[2]));
-				cursor.Write(Load<double>(vertices.data[3] + i * vertices.stride[3]));
-			} else if (HAS_Z || HAS_M) {
+			if (has_z) {
 				cursor.Write(Load<double>(vertices.data[2] + i * vertices.stride[2]));
 			}
-		}
-	}
-
-	void ProcessVertices(const VertexData &vertices, Cursor &cursor) {
-		if (HasZ() && HasM()) {
-			ProcessVertices<true, true>(vertices, cursor);
-		} else if (HasZ()) {
-			ProcessVertices<true, false>(vertices, cursor);
-		} else if (HasM()) {
-			ProcessVertices<false, true>(vertices, cursor);
-		} else {
-			ProcessVertices<false, false>(vertices, cursor);
+            if(has_m){
+                cursor.Write(Load<double>(vertices.data[3] + i * vertices.stride[3]));
+			}
 		}
 	}
 

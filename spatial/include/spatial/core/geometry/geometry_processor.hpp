@@ -25,6 +25,7 @@ private:
 	static const constexpr double EMPTY_DATA = 0;
 
 public:
+    // The M axis is always in the fourth position and the Z axis is always in the third position
 	const_data_ptr_t data[4] = {const_data_ptr_cast(&EMPTY_DATA), const_data_ptr_cast(&EMPTY_DATA),
 	                            const_data_ptr_cast(&EMPTY_DATA), const_data_ptr_cast(&EMPTY_DATA)};
 	ptrdiff_t stride[4] = {0, 0, 0, 0};
@@ -33,20 +34,25 @@ public:
 	VertexData(const_data_ptr_t data_ptr, uint32_t count, bool has_z, bool has_m) : count(count) {
 		// Get the data at the current cursor position
 
-		// TODO: Maybe we should always keep the z in the 3rd position and the m in the 4th position?
 		// TODO: These calculations are all constant, we could move it to Execute() instead.
 		// TODO: Add GetX, GetY, GetZ, GetM methods
 		data[0] = data_ptr;
 		data[1] = data_ptr + sizeof(double);
-		data[2] = (has_z || has_m) ? data_ptr + 2 * sizeof(double) : const_data_ptr_cast(&EMPTY_DATA);
-		data[3] = (has_m && has_z) ? data_ptr + 3 * sizeof(double) : const_data_ptr_cast(&EMPTY_DATA);
+        if(has_z && has_m) {
+            data[2] = data_ptr + 2 * sizeof(double);
+            data[3] = data_ptr + 3 * sizeof(double);
+        } else if(has_z) {
+            data[2] = data_ptr + 2 * sizeof(double);
+        } else if(has_m) {
+            data[3] = data_ptr + 2 * sizeof(double);
+        }
 
 		auto vertex_size = static_cast<ptrdiff_t>(sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0)));
 
 		stride[0] = vertex_size;
 		stride[1] = vertex_size;
-		stride[2] = (has_z || has_m) ? vertex_size : 0;
-		stride[3] = (has_z && has_m) ? vertex_size : 0;
+		stride[2] = has_z ? vertex_size : 0;
+		stride[3] = has_m ? vertex_size : 0;
 	}
 
 	bool IsEmpty() const {
@@ -62,34 +68,34 @@ public:
 // Helper so that we can return void from functions generically
 //------------------------------------------------------------------------
 template <class RESULT>
-class ResultHolder {
+class ResultWrapper {
 private:
 	RESULT tmp;
 
 public:
 	template <class F>
-	explicit ResultHolder(F &&f) : tmp(std::move(f())) {
+	explicit ResultWrapper(F &&f) : tmp(std::move(f())) {
 	}
-	ResultHolder(const ResultHolder &other) = delete;
-	ResultHolder &operator=(const ResultHolder &other) = delete;
-	ResultHolder(ResultHolder &&other) = delete;
-	ResultHolder &operator=(ResultHolder &&other) = delete;
+	ResultWrapper(const ResultWrapper &other) = delete;
+	ResultWrapper &operator=(const ResultWrapper &other) = delete;
+	ResultWrapper(ResultWrapper &&other) = delete;
+	ResultWrapper &operator=(ResultWrapper &&other) = delete;
 	RESULT &&ReturnAndDestroy() {
 		return std::move(tmp);
 	}
 };
 
 template <>
-class ResultHolder<void> {
+class ResultWrapper<void> {
 public:
 	template <class F>
-	explicit ResultHolder(F &&f) {
+	explicit ResultWrapper(F &&f) {
 		f();
 	}
-	ResultHolder(const ResultHolder &other) = delete;
-	ResultHolder &operator=(const ResultHolder &other) = delete;
-	ResultHolder(ResultHolder &&other) = delete;
-	ResultHolder &operator=(ResultHolder &&other) = delete;
+	ResultWrapper(const ResultWrapper &other) = delete;
+	ResultWrapper &operator=(const ResultWrapper &other) = delete;
+	ResultWrapper(ResultWrapper &&other) = delete;
+	ResultWrapper &operator=(ResultWrapper &&other) = delete;
 	void ReturnAndDestroy() {
 	}
 };
@@ -157,7 +163,7 @@ protected:
 			processor.parent_type = processor.current_type;
 			processor.nesting_level++;
 			// NOLINTNEXTLINE
-			ResultHolder<RESULT> result([&]() { return processor.ReadGeometry(cursor, args...); });
+			ResultWrapper<RESULT> result([&]() { return processor.ReadGeometry(cursor, args...); });
 
 			// Restore parent type and decrement nesting
 			processor.current_type = processor.parent_type;
@@ -227,9 +233,11 @@ public:
 		cursor.Skip<uint16_t>();
 		cursor.Skip(4);
 
-		if (geom.GetProperties().HasBBox()) {
-			cursor.Skip(sizeof(float) * 4);
-		}
+        auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
+        auto has_bbox = geom.GetProperties().HasBBox();
+        auto bbox_size = has_bbox ? dims * sizeof(float) : 0;
+        cursor.Skip(bbox_size);
+
 		return ReadGeometry(cursor, args...);
 	}
 
@@ -292,7 +300,7 @@ private:
 		cursor.Skip(ring_count * sizeof(uint32_t) + ((ring_count % 2) * sizeof(uint32_t)));
 		PolygonState state(ring_count, count_ptr, cursor.GetPtr(), *this);
 
-		ResultHolder<RESULT> result([&]() { return ProcessPolygon(state, args...); });
+		ResultWrapper<RESULT> result([&]() { return ProcessPolygon(state, args...); });
 
 		if (IsNested()) {
 			// Consume the rest of the polygon so we can continue processing the parent
@@ -312,7 +320,7 @@ private:
 		auto count = cursor.Read<uint32_t>();
 		CollectionState state(count, *this, cursor);
 
-		ResultHolder<RESULT> result([&]() { return ProcessCollection(state, args...); });
+		ResultWrapper<RESULT> result([&]() { return ProcessCollection(state, args...); });
 
 		if (IsNested()) {
 			// Consume the rest of the collection so we can continue processing the parent

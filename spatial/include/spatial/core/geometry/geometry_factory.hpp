@@ -66,15 +66,6 @@ private:
 	uint32_t GetSerializedSize(const MultiPolygon &multipolygon);
 	uint32_t GetSerializedSize(const GeometryCollection &collection);
 	uint32_t GetSerializedSize(const Geometry &geometry);
-
-	// Deserialize
-	Point DeserializePoint(Cursor &reader, bool has_z, bool has_m);
-	LineString DeserializeLineString(Cursor &reader, bool has_z, bool has_m);
-	Polygon DeserializePolygon(Cursor &reader, bool has_z, bool has_m);
-	MultiPoint DeserializeMultiPoint(Cursor &reader, bool has_z, bool has_m);
-	MultiLineString DeserializeMultiLineString(Cursor &reader, bool has_z, bool has_m);
-	MultiPolygon DeserializeMultiPolygon(Cursor &reader, bool has_z, bool has_m);
-	GeometryCollection DeserializeGeometryCollection(Cursor &reader, bool has_z, bool has_m);
 };
 
 } // namespace core

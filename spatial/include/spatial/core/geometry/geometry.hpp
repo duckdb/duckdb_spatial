@@ -56,6 +56,10 @@ struct BoundingBox {
 	double miny = std::numeric_limits<double>::max();
 	double maxx = std::numeric_limits<double>::lowest();
 	double maxy = std::numeric_limits<double>::lowest();
+    double minz = std::numeric_limits<double>::max();
+    double maxz = std::numeric_limits<double>::lowest();
+    double minm = std::numeric_limits<double>::max();
+    double maxm = std::numeric_limits<double>::lowest();
 
 	bool Intersects(const BoundingBox &other) const {
 		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);
