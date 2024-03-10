@@ -591,24 +591,28 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
                 for (auto i = 0; i < state.ItemCount(); i++) {
                     multi_point[i] = state.Next().As<Point>();
                 }
+                return multi_point;
             }
             case GeometryType::MULTILINESTRING: {
                 auto multi_line_string = MultiLineString(allocator, state.ItemCount());
                 for (auto i = 0; i < state.ItemCount(); i++) {
                     multi_line_string[i] = state.Next().As<LineString>();
                 }
+                return multi_line_string;
             }
             case GeometryType::MULTIPOLYGON: {
                 auto multi_polygon = MultiPolygon(allocator, state.ItemCount());
                 for (auto i = 0; i < state.ItemCount(); i++) {
                     multi_polygon[i] = state.Next().As<Polygon>();
                 }
+                return multi_polygon;
             }
             case GeometryType::GEOMETRYCOLLECTION: {
                 auto collection = GeometryCollection(allocator, state.ItemCount());
                 for (auto i = 0; i < state.ItemCount(); i++) {
                     collection[i] = state.Next();
                 }
+                return collection;
             }
             default:
                 throw NotImplementedException("GeometryDeserializer: Unimplemented geometry type: %d", CurrentType());
