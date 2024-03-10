@@ -311,6 +311,42 @@ public:
 		AppendUnsafe(v);
 	}
 
+    // Append one vertex array to the other. If the others vertex type doesnt match, performs a deep copy before appending.
+    void Append(const VertexArray &other) {
+        if (!IsOwning()) {
+            MakeOwning();
+        }
+
+        auto vertex_size = properties.VertexSize();
+        auto other_data = other.GetData();
+        auto other_count = other.Count();
+        auto other_vertex_size = other.properties.VertexSize();
+        Reserve(vertex_count + other_count);
+
+
+        auto this_has_z = properties.HasZ();
+        auto this_has_m = properties.HasM();
+        auto other_has_z = other.properties.HasZ();
+        auto other_has_m = other.properties.HasM();
+
+        // Fast path, properties are the same
+        if(this_has_z == other_has_z && this_has_m == other_has_m) {
+            memcpy(vertex_data + vertex_count * vertex_size, other_data, other_count * other_vertex_size);
+            vertex_count += other_count;
+        } else {
+            // Ensure the vertex types match by copying and resizing the other array
+            // TODO: Optimize this, we can avoid the copy if the vertex sizes fit.
+            VertexArray other_copy = other;
+            other_copy.UpdateVertexType(this_has_z, this_has_m);
+
+            other_data = other_copy.GetData();
+            other_count = other_copy.Count();
+            other_vertex_size = other_copy.GetProperties().VertexSize();
+            memcpy(vertex_data + vertex_count * vertex_size, other_data, other_count * other_vertex_size);
+            vertex_count += other_count;
+        }
+    }
+
 	//-------------------------------------------------------------------------
 	// Reserve
 	//-------------------------------------------------------------------------
@@ -480,6 +516,59 @@ public:
 			vertex_data = new_data;
 		}
 	}
+    //-------------------------------------------------------------------------
+    // ToString()
+    //-------------------------------------------------------------------------
+
+    string ToString() const {
+        auto has_z = properties.HasZ();
+        auto has_m = properties.HasM();
+        if(has_z && has_m) {
+            string result = StringUtil::Format("VertexArray XYZM (%d/%d) [", vertex_count, owned_capacity);
+            for (uint32_t i = 0; i < vertex_count; i++) {
+                auto vertex = GetTemplated<VertexXYZM>(i);
+                result += StringUtil::Format("(%f, %f, %f, %f)", vertex.x, vertex.y, vertex.z, vertex.m);
+                if(i < vertex_count - 1) {
+                    result += ", ";
+                }
+            }
+            result += "]";
+            return result;
+        } else if(has_z) {
+            string result = StringUtil::Format("VertexArray XYZ (%d/%d) [", vertex_count, owned_capacity);
+            for (uint32_t i = 0; i < vertex_count; i++) {
+                auto vertex = GetTemplated<VertexXYZ>(i);
+                result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.z);
+                if(i < vertex_count - 1) {
+                    result += ", ";
+                }
+            }
+            result += "]";
+            return result;
+        } else if(has_m) {
+            string result = StringUtil::Format("VertexArray XYM (%d/%d) [", vertex_count, owned_capacity);
+            for (uint32_t i = 0; i < vertex_count; i++) {
+                auto vertex = GetTemplated<VertexXYM>(i);
+                result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.m);
+                if(i < vertex_count - 1) {
+                    result += ", ";
+                }
+            }
+            result += "]";
+            return result;
+        } else {
+            string result = StringUtil::Format("VertexArray XY (%d/%d) [", vertex_count, owned_capacity);
+            for (uint32_t i = 0; i < vertex_count; i++) {
+                auto vertex = GetTemplated<VertexXY>(i);
+                result += StringUtil::Format("(%f, %f)", vertex.x, vertex.y);
+                if(i < vertex_count - 1) {
+                    result += ", ";
+                }
+            }
+            result += "]";
+            return result;
+        }
+    }
 };
 
 } // namespace core

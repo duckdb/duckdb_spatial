@@ -72,25 +72,30 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
 		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
 
+            if(geometry_left.IsEmpty() && geometry_right.IsEmpty()) {
+                // Empty linestring
+                LineString line(lstate.factory.allocator.GetAllocator());
+                return lstate.factory.Serialize(result, line, false, false);
+            }
+
+            if(geometry_left.IsEmpty() || geometry_right.IsEmpty()) {
+                throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
+            }
+
+            auto has_z = geom_blob_left.GetProperties().HasZ() || geom_blob_right.GetProperties().HasZ();
+            auto has_m = geom_blob_left.GetProperties().HasM() || geom_blob_right.GetProperties().HasM();
+
 		    auto &point_left = geometry_left.As<Point>();
 		    auto &point_right = geometry_right.As<Point>();
 
-		    // TODO: we should add proper abstractions to append/concat VertexVectors
-		    auto line_geom = lstate.factory.CreateLineString(2, false, false);
-		    if (!point_left.IsEmpty()) {
-			    auto vertex = point_left.Vertices().Get(0);
-			    line_geom.Vertices().Append({vertex.x, vertex.y});
-		    }
-		    if (!point_right.IsEmpty()) {
-			    auto vertex = point_right.Vertices().Get(0);
-			    line_geom.Vertices().Append({vertex.x, vertex.y});
-		    }
+            VertexArray vertices(lstate.factory.allocator.GetAllocator(), 2, has_z, has_m);
 
-		    if (line_geom.Vertices().Count() == 1) {
-			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
-		    }
+            vertices.Append(point_left.Vertices());
+            vertices.Append(point_right.Vertices());
 
-		    return lstate.factory.Serialize(result, line_geom, false, false);
+            LineString line_geom(std::move(vertices));
+
+		    return lstate.factory.Serialize(result, line_geom, has_z, has_m);
 	    });
 }
 

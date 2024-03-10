@@ -141,7 +141,7 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry, 
 
 	auto header_size = 4;
     auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
-    auto bbox_size = has_bbox ? (sizeof(float) * dims) : 0;
+    auto bbox_size = has_bbox ? (sizeof(float) * 2 * dims) : 0;
 	auto size = header_size + 4 + bbox_size + geom_size; // + 4 for padding, + 16 for bbox
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor cursor(blob);

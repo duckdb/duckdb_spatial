@@ -235,7 +235,7 @@ public:
 
         auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
         auto has_bbox = geom.GetProperties().HasBBox();
-        auto bbox_size = has_bbox ? dims * sizeof(float) : 0;
+        auto bbox_size = has_bbox ? dims * 2 * sizeof(float) : 0;
         cursor.Skip(bbox_size);
 
 		return ReadGeometry(cursor, args...);

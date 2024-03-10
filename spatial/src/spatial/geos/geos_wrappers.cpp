@@ -736,7 +736,7 @@ geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSC
     bool has_z = GEOSHasZ_r(ctx, geom);
     bool has_m = GEOSHasM_r(ctx, geom);
 
-    auto bbox_size = has_bbox ? (sizeof(float) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0))) : 0;
+    auto bbox_size = has_bbox ? (sizeof(float) * 2 * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0))) : 0;
 
 	auto size = GetSerializedSize(geom, ctx);
 	size += 4;                 // Header
