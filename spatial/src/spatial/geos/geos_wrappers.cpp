@@ -617,89 +617,91 @@ static void SerializeGeometry(Cursor &writer, const GEOSGeometry *geom, const GE
 	}
 }
 
-template<bool HAS_Z, bool HAS_M>
-static void GetExtendedExtent(const GEOSCoordSeq_t *seq, double *zmin, double *zmax, double *mmin, double *mmax, GEOSContextHandle_t ctx) {
-    uint32_t size;
-    GEOSCoordSeq_getSize_r(ctx, seq, &size);
-    if(size > 2) {
-        if(HAS_Z && HAS_M) {
-            double z, m;
-            GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 2, &z);
-            GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 3, &m);
-            *zmin = std::min(z, *zmin);
-            *zmax = std::max(z, *zmax);
-            *mmin = std::min(m, *mmin);
-            *mmax = std::max(m, *mmax);
-        } else if(HAS_Z) {
-            double z;
-            GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 2, &z);
-            *zmin = std::min(z, *zmin);
-            *zmax = std::max(z, *zmax);
-        } else if(HAS_M) {
-            double m;
-            GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 2, &m);
-            *mmin = std::min(m, *mmin);
-            *mmax = std::max(m, *mmax);
-        }
-    }
+template <bool HAS_Z, bool HAS_M>
+static void GetExtendedExtent(const GEOSCoordSeq_t *seq, double *zmin, double *zmax, double *mmin, double *mmax,
+                              GEOSContextHandle_t ctx) {
+	uint32_t size;
+	GEOSCoordSeq_getSize_r(ctx, seq, &size);
+	if (size > 2) {
+		if (HAS_Z && HAS_M) {
+			double z, m;
+			GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 2, &z);
+			GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 3, &m);
+			*zmin = std::min(z, *zmin);
+			*zmax = std::max(z, *zmax);
+			*mmin = std::min(m, *mmin);
+			*mmax = std::max(m, *mmax);
+		} else if (HAS_Z) {
+			double z;
+			GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 2, &z);
+			*zmin = std::min(z, *zmin);
+			*zmax = std::max(z, *zmax);
+		} else if (HAS_M) {
+			double m;
+			GEOSCoordSeq_getOrdinate_r(ctx, seq, 0, 2, &m);
+			*mmin = std::min(m, *mmin);
+			*mmax = std::max(m, *mmax);
+		}
+	}
 }
 
-template<bool HAS_Z, bool HAS_M>
-static void GetExtendedExtent(const GEOSGeometry *geom, double* zmin, double *zmax, double *mmin, double *mmax, GEOSContextHandle_t ctx) {
-    auto geos_type = GEOSGeomTypeId_r(ctx, geom);
-    switch(geos_type) {
-        case GEOS_POINT:
-        case GEOS_LINESTRING: {
-            auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
-            GetExtendedExtent<HAS_Z, HAS_M>(seq, zmin, zmax, mmin, mmax, ctx);
-            break;
-        }
-        case GEOS_POLYGON: {
-            auto shell = GEOSGetExteriorRing_r(ctx, geom);
-            auto seq = GEOSGeom_getCoordSeq_r(ctx, shell);
-            GetExtendedExtent<HAS_Z, HAS_M>(seq, zmin, zmax, mmin, mmax, ctx);
-            auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
-            for(auto i = 0; i < num_holes; i++) {
-                auto hole = GEOSGetInteriorRingN_r(ctx, geom, i);
-                auto rseq = GEOSGeom_getCoordSeq_r(ctx, hole);
-                GetExtendedExtent<HAS_Z, HAS_M>(rseq, zmin, zmax, mmin, mmax, ctx);
-            }
-            break;
-        }
-        case GEOS_MULTIPOINT:
-        case GEOS_MULTILINESTRING:
-        case GEOS_MULTIPOLYGON:
-        case GEOS_GEOMETRYCOLLECTION: {
-            auto num_polygons = GEOSGetNumGeometries_r(ctx, geom);
-            for(auto i = 0; i < num_polygons; i++) {
-                auto polygon = GEOSGetGeometryN_r(ctx, geom, i);
-                GetExtendedExtent<HAS_Z, HAS_M>(polygon, zmin, zmax, mmin, mmax, ctx);
-            }
-            break;
-        }
-        default:
-            throw NotImplementedException(StringUtil::Format("GEOS Serialize: Geometry type %d not supported", geos_type));
-    }
+template <bool HAS_Z, bool HAS_M>
+static void GetExtendedExtent(const GEOSGeometry *geom, double *zmin, double *zmax, double *mmin, double *mmax,
+                              GEOSContextHandle_t ctx) {
+	auto geos_type = GEOSGeomTypeId_r(ctx, geom);
+	switch (geos_type) {
+	case GEOS_POINT:
+	case GEOS_LINESTRING: {
+		auto seq = GEOSGeom_getCoordSeq_r(ctx, geom);
+		GetExtendedExtent<HAS_Z, HAS_M>(seq, zmin, zmax, mmin, mmax, ctx);
+		break;
+	}
+	case GEOS_POLYGON: {
+		auto shell = GEOSGetExteriorRing_r(ctx, geom);
+		auto seq = GEOSGeom_getCoordSeq_r(ctx, shell);
+		GetExtendedExtent<HAS_Z, HAS_M>(seq, zmin, zmax, mmin, mmax, ctx);
+		auto num_holes = GEOSGetNumInteriorRings_r(ctx, geom);
+		for (auto i = 0; i < num_holes; i++) {
+			auto hole = GEOSGetInteriorRingN_r(ctx, geom, i);
+			auto rseq = GEOSGeom_getCoordSeq_r(ctx, hole);
+			GetExtendedExtent<HAS_Z, HAS_M>(rseq, zmin, zmax, mmin, mmax, ctx);
+		}
+		break;
+	}
+	case GEOS_MULTIPOINT:
+	case GEOS_MULTILINESTRING:
+	case GEOS_MULTIPOLYGON:
+	case GEOS_GEOMETRYCOLLECTION: {
+		auto num_polygons = GEOSGetNumGeometries_r(ctx, geom);
+		for (auto i = 0; i < num_polygons; i++) {
+			auto polygon = GEOSGetGeometryN_r(ctx, geom, i);
+			GetExtendedExtent<HAS_Z, HAS_M>(polygon, zmin, zmax, mmin, mmax, ctx);
+		}
+		break;
+	}
+	default:
+		throw NotImplementedException(StringUtil::Format("GEOS Serialize: Geometry type %d not supported", geos_type));
+	}
 }
 
-static void GetExtendedExtent(const GEOSGeometry *geom, double* zmin, double *zmax, double *mmin, double *mmax, GEOSContextHandle_t ctx) {
-    *zmin = std::numeric_limits<double>::max();
-    *zmax = std::numeric_limits<double>::lowest();
-    *mmin = std::numeric_limits<double>::max();
-    *mmax = std::numeric_limits<double>::lowest();
-    auto has_z = GEOSHasZ_r(ctx, geom);
-    auto has_m = GEOSHasM_r(ctx, geom);
-    if(has_z && has_m) {
-        GetExtendedExtent<true, true>(geom, zmin, zmax, mmin, mmax, ctx);
-    } else if(has_z) {
-        GetExtendedExtent<true, false>(geom, zmin, zmax, mmin, mmax, ctx);
-    } else if(has_m) {
-        GetExtendedExtent<false, true>(geom, zmin, zmax, mmin, mmax, ctx);
-    } else {
-        GetExtendedExtent<false, false>(geom, zmin, zmax, mmin, mmax, ctx);
-    }
+static void GetExtendedExtent(const GEOSGeometry *geom, double *zmin, double *zmax, double *mmin, double *mmax,
+                              GEOSContextHandle_t ctx) {
+	*zmin = std::numeric_limits<double>::max();
+	*zmax = std::numeric_limits<double>::lowest();
+	*mmin = std::numeric_limits<double>::max();
+	*mmax = std::numeric_limits<double>::lowest();
+	auto has_z = GEOSHasZ_r(ctx, geom);
+	auto has_m = GEOSHasM_r(ctx, geom);
+	if (has_z && has_m) {
+		GetExtendedExtent<true, true>(geom, zmin, zmax, mmin, mmax, ctx);
+	} else if (has_z) {
+		GetExtendedExtent<true, false>(geom, zmin, zmax, mmin, mmax, ctx);
+	} else if (has_m) {
+		GetExtendedExtent<false, true>(geom, zmin, zmax, mmin, mmax, ctx);
+	} else {
+		GetExtendedExtent<false, false>(geom, zmin, zmax, mmin, mmax, ctx);
+	}
 }
-
 
 geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSContextHandle_t ctx) {
 
@@ -733,15 +735,15 @@ geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSC
 	}
 
 	bool has_bbox = type != GeometryType::POINT && GEOSisEmpty_r(ctx, geom) == 0;
-    bool has_z = GEOSHasZ_r(ctx, geom);
-    bool has_m = GEOSHasM_r(ctx, geom);
+	bool has_z = GEOSHasZ_r(ctx, geom);
+	bool has_m = GEOSHasM_r(ctx, geom);
 
-    auto bbox_size = has_bbox ? (sizeof(float) * 2 * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0))) : 0;
+	auto bbox_size = has_bbox ? (sizeof(float) * 2 * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0))) : 0;
 
 	auto size = GetSerializedSize(geom, ctx);
-	size += 4;                 // Header
-	size += sizeof(uint32_t);  // Padding
-	size += bbox_size; // BBox
+	size += 4;                // Header
+	size += sizeof(uint32_t); // Padding
+	size += bbox_size;        // BBox
 
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor writer(blob);
@@ -766,19 +768,19 @@ geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSC
 		writer.Write<float>(Utils::DoubleToFloatUp(maxx));
 		writer.Write<float>(Utils::DoubleToFloatUp(maxy));
 
-        // well, this sucks. GEOS doesnt have a native way to get the Z and M value extents.
-        if(has_z || has_m) {
-            double minz, maxz, minm, maxm;
-            GetExtendedExtent(geom, &minz, &maxz, &minm, &maxm, ctx);
-            if(has_z) {
-                writer.Write<float>(Utils::DoubleToFloatDown(minz));
-                writer.Write<float>(Utils::DoubleToFloatUp(maxz));
-            }
-            if(has_m) {
-                writer.Write<float>(Utils::DoubleToFloatDown(minm));
-                writer.Write<float>(Utils::DoubleToFloatUp(maxm));
-            }
-        }
+		// well, this sucks. GEOS doesnt have a native way to get the Z and M value extents.
+		if (has_z || has_m) {
+			double minz, maxz, minm, maxm;
+			GetExtendedExtent(geom, &minz, &maxz, &minm, &maxm, ctx);
+			if (has_z) {
+				writer.Write<float>(Utils::DoubleToFloatDown(minz));
+				writer.Write<float>(Utils::DoubleToFloatUp(maxz));
+			}
+			if (has_m) {
+				writer.Write<float>(Utils::DoubleToFloatDown(minm));
+				writer.Write<float>(Utils::DoubleToFloatUp(maxm));
+			}
+		}
 	}
 
 	SerializeGeometry(writer, geom, ctx);

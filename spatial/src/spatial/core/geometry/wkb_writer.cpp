@@ -82,26 +82,26 @@ class WKBSerializer final : GeometryProcessor<void, Cursor &> {
 		} else {
 			cursor.Write(Load<double>(vertices.data[0]));
 			cursor.Write(Load<double>(vertices.data[1]));
-            if(HasZ()) {
-                cursor.Write(Load<double>(vertices.data[2]));
-            }
-            if(HasM()) {
-                cursor.Write(Load<double>(vertices.data[3]));
-            }
+			if (HasZ()) {
+				cursor.Write(Load<double>(vertices.data[2]));
+			}
+			if (HasM()) {
+				cursor.Write(Load<double>(vertices.data[3]));
+			}
 		}
 	}
 
 	void ProcessVertices(const VertexData &vertices, Cursor &cursor) {
-        bool has_z = HasZ();
-        bool has_m = HasM();
+		bool has_z = HasZ();
+		bool has_m = HasM();
 		for (uint32_t i = 0; i < vertices.count; i++) {
 			cursor.Write(Load<double>(vertices.data[0] + i * vertices.stride[0]));
 			cursor.Write(Load<double>(vertices.data[1] + i * vertices.stride[1]));
 			if (has_z) {
 				cursor.Write(Load<double>(vertices.data[2] + i * vertices.stride[2]));
 			}
-            if(has_m){
-                cursor.Write(Load<double>(vertices.data[3] + i * vertices.stride[3]));
+			if (has_m) {
+				cursor.Write(Load<double>(vertices.data[3] + i * vertices.stride[3]));
 			}
 		}
 	}

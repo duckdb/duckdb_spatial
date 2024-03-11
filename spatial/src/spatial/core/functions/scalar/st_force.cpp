@@ -12,43 +12,49 @@ namespace spatial {
 namespace core {
 
 struct UpdateDimensionFunctor {
-	static void Apply(Point &point, bool has_z, bool has_m, double default_z, double default_m) {
-		point.Vertices().UpdateVertexType(has_z, has_m, default_z, default_m);
+	static void Apply(Point &point, bool has_z, bool has_m, double default_z, double default_m, ArenaAllocator &arena) {
+		point.Vertices().SetVertexType(arena, has_z, has_m, default_z, default_m);
 	}
 
-	static void Apply(MultiPoint &mpoint, bool has_z, bool has_m, double default_z, double default_m) {
+	static void Apply(MultiPoint &mpoint, bool has_z, bool has_m, double default_z, double default_m,
+	                  ArenaAllocator &arena) {
 		for (auto &point : mpoint) {
-			point.Vertices().UpdateVertexType(has_z, has_m, default_z, default_m);
+			point.Vertices().SetVertexType(arena, has_z, has_m, default_z, default_m);
 		}
 	}
 
-	static void Apply(LineString &line, bool has_z, bool has_m, double default_z, double default_m) {
-		line.Vertices().UpdateVertexType(has_z, has_m, default_z, default_m);
+	static void Apply(LineString &line, bool has_z, bool has_m, double default_z, double default_m,
+	                  ArenaAllocator &arena) {
+		line.Vertices().SetVertexType(arena, has_z, has_m, default_z, default_m);
 	}
 
-	static void Apply(MultiLineString &mline, bool has_z, bool has_m, double default_z, double default_m) {
+	static void Apply(MultiLineString &mline, bool has_z, bool has_m, double default_z, double default_m,
+	                  ArenaAllocator &arena) {
 		for (auto &line : mline) {
-			line.Vertices().UpdateVertexType(has_z, has_m, default_z, default_m);
+			line.Vertices().SetVertexType(arena, has_z, has_m, default_z, default_m);
 		}
 	}
 
-	static void Apply(Polygon &polygon, bool has_z, bool has_m, double default_z, double default_m) {
+	static void Apply(Polygon &polygon, bool has_z, bool has_m, double default_z, double default_m,
+	                  ArenaAllocator &arena) {
 		for (auto &ring : polygon) {
-			ring.UpdateVertexType(has_z, has_m, default_z, default_m);
+			ring.SetVertexType(arena, has_z, has_m, default_z, default_m);
 		}
 	}
 
-	static void Apply(MultiPolygon &mpolygon, bool has_z, bool has_m, double default_z, double default_m) {
+	static void Apply(MultiPolygon &mpolygon, bool has_z, bool has_m, double default_z, double default_m,
+	                  ArenaAllocator &arena) {
 		for (auto &polygon : mpolygon) {
 			for (auto &ring : polygon) {
-				ring.UpdateVertexType(has_z, has_m, default_z, default_m);
+				ring.SetVertexType(arena, has_z, has_m, default_z, default_m);
 			}
 		}
 	}
 
-	static void Apply(GeometryCollection &collection, bool has_z, bool has_m, double default_z, double default_m) {
+	static void Apply(GeometryCollection &collection, bool has_z, bool has_m, double default_z, double default_m,
+	                  ArenaAllocator &arena) {
 		for (auto &child : collection) {
-			child.Dispatch<UpdateDimensionFunctor>(has_z, has_m, default_z, default_m);
+			child.Dispatch<UpdateDimensionFunctor>(has_z, has_m, default_z, default_m, arena);
 		}
 	}
 };
@@ -59,7 +65,7 @@ struct UpdateDimensionFunctor {
 template <bool HAS_Z, bool HAS_M>
 static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-
+	auto &arena = lstate.factory.allocator;
 	auto count = args.size();
 	auto &input = args.data[0];
 
@@ -69,7 +75,7 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 		TernaryExecutor::Execute<geometry_t, double, double, geometry_t>(
 		    input, z_values, m_values, result, count, [&](const geometry_t &blob, double default_z, double default_m) {
 			    auto geometry = lstate.factory.Deserialize(blob);
-			    geometry.Dispatch<UpdateDimensionFunctor>(HAS_Z, HAS_M, default_z, default_m);
+			    geometry.Dispatch<UpdateDimensionFunctor>(HAS_Z, HAS_M, default_z, default_m, arena);
 			    return lstate.factory.Serialize(result, geometry, HAS_Z, HAS_M);
 		    });
 
@@ -79,13 +85,13 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 		    input, z_values, result, count, [&](const geometry_t &blob, double default_value) {
 			    auto geometry = lstate.factory.Deserialize(blob);
 			    geometry.Dispatch<UpdateDimensionFunctor>(HAS_Z, HAS_M, HAS_Z ? default_value : 0,
-			                                              HAS_M ? default_value : 0);
+			                                              HAS_M ? default_value : 0, arena);
 			    return lstate.factory.Serialize(result, geometry, HAS_Z, HAS_M);
 		    });
 	} else {
 		UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](const geometry_t &blob) {
 			auto geometry = lstate.factory.Deserialize(blob);
-			geometry.Dispatch<UpdateDimensionFunctor>(HAS_Z, HAS_M, 0, 0);
+			geometry.Dispatch<UpdateDimensionFunctor>(HAS_Z, HAS_M, 0, 0, arena);
 			return lstate.factory.Serialize(result, geometry, HAS_Z, HAS_M);
 		});
 	}

@@ -31,12 +31,12 @@ struct MaxOp {
 };
 
 struct AnyOp {
-    static double Default() {
-        return 0.0;
-    }
-    static double Operation(double left, double right) {
-        return right;
-    }
+	static double Default() {
+		return 0.0;
+	}
+	static double Operation(double left, double right) {
+		return right;
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -152,48 +152,49 @@ static void Polygon2DFunction(DataChunk &args, ExpressionState &state, Vector &r
 template <size_t N, class OP>
 class BoundsProcessor final : GeometryProcessor<> {
 
-    bool is_empty = true;
-    double result = 0;
+	bool is_empty = true;
+	double result = 0;
 
-    void HandleVertexData(const VertexData &vertices) {
-        if(!vertices.IsEmpty()){
-            is_empty = false;
-        }
-        for(uint32_t i = 0; i < vertices.count; i++) {
-            result = OP::Operation(result, Load<double>(vertices.data[N] + i * vertices.stride[N]));
-        }
-    }
+	void HandleVertexData(const VertexData &vertices) {
+		if (!vertices.IsEmpty()) {
+			is_empty = false;
+		}
+		for (uint32_t i = 0; i < vertices.count; i++) {
+			result = OP::Operation(result, Load<double>(vertices.data[N] + i * vertices.stride[N]));
+		}
+	}
 
-    void ProcessPoint(const VertexData &vertices) override {
-        return HandleVertexData(vertices);
-    }
+	void ProcessPoint(const VertexData &vertices) override {
+		return HandleVertexData(vertices);
+	}
 
-    void ProcessLineString(const VertexData &vertices) override {
-        return HandleVertexData(vertices);
-    }
+	void ProcessLineString(const VertexData &vertices) override {
+		return HandleVertexData(vertices);
+	}
 
-    void ProcessPolygon(PolygonState &state) override {
-        while(!state.IsDone()) {
-            HandleVertexData(state.Next());
-        }
-    }
+	void ProcessPolygon(PolygonState &state) override {
+		while (!state.IsDone()) {
+			HandleVertexData(state.Next());
+		}
+	}
 
-    void ProcessCollection(CollectionState &state) override {
-        while(!state.IsDone()) {
-             state.Next();
-        }
-    }
+	void ProcessCollection(CollectionState &state) override {
+		while (!state.IsDone()) {
+			state.Next();
+		}
+	}
+
 public:
-    double Execute(const geometry_t &geom) {
-        is_empty = true;
-        result = OP::Default();
-        Process(geom);
-        return result;
-    }
+	double Execute(const geometry_t &geom) {
+		is_empty = true;
+		result = OP::Default();
+		Process(geom);
+		return result;
+	}
 
-    bool ResultIsEmpty() const {
-        return is_empty;
-    }
+	bool ResultIsEmpty() const {
+		return is_empty;
+	}
 };
 
 template <size_t N, class OP>
@@ -204,17 +205,17 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 	auto count = args.size();
 	auto &input = args.data[0];
 
-    BoundsProcessor<N, OP> processor;
-	UnaryExecutor::ExecuteWithNulls<geometry_t, double>(
-	    input, result, count, [&](geometry_t blob, ValidityMask &mask, idx_t idx) {
-            auto res = processor.Execute(blob);
-            if(processor.ResultIsEmpty()) {
-                mask.SetInvalid(idx);
-                return 0.0;
-            } else {
-                return res;
-            }
-	    });
+	BoundsProcessor<N, OP> processor;
+	UnaryExecutor::ExecuteWithNulls<geometry_t, double>(input, result, count,
+	                                                    [&](geometry_t blob, ValidityMask &mask, idx_t idx) {
+		                                                    auto res = processor.Execute(blob);
+		                                                    if (processor.ResultIsEmpty()) {
+			                                                    mask.SetInvalid(idx);
+			                                                    return 0.0;
+		                                                    } else {
+			                                                    return res;
+		                                                    }
+	                                                    });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -236,12 +237,12 @@ static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vect
 			    throw InvalidInputException("ST_X/ST_Y/ST_Z/ST_M only supports POINT geometries");
 		    }
 		    auto res = processor.Execute(blob);
-            if(processor.ResultIsEmpty()) {
-                mask.SetInvalid(idx);
-                return 0.0;
-            } else {
-                return res;
-            }
+		    if (processor.ResultIsEmpty()) {
+			    mask.SetInvalid(idx);
+			    return 0.0;
+		    } else {
+			    return res;
+		    }
 	    });
 
 	if (count == 1) {
@@ -324,45 +325,45 @@ void CoreScalarFunctions::RegisterStYMin(DatabaseInstance &db) {
 
 void CoreScalarFunctions::RegisterStZ(DatabaseInstance &db) {
 
-    ScalarFunctionSet st_z("ST_Z");
-    st_z.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<2>));
+	ScalarFunctionSet st_z("ST_Z");
+	st_z.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<2>));
 
-    ExtensionUtil::RegisterFunction(db, st_z);
+	ExtensionUtil::RegisterFunction(db, st_z);
 }
 
 void CoreScalarFunctions::RegisterStZMax(DatabaseInstance &db) {
-    ScalarFunctionSet st_zmax("ST_ZMax");
-    st_zmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<2, MaxOp>));
+	ScalarFunctionSet st_zmax("ST_ZMax");
+	st_zmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<2, MaxOp>));
 
-    ExtensionUtil::RegisterFunction(db, st_zmax);
+	ExtensionUtil::RegisterFunction(db, st_zmax);
 }
 
 void CoreScalarFunctions::RegisterStZMin(DatabaseInstance &db) {
-    ScalarFunctionSet st_zmin("ST_ZMin");
-    st_zmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<2, MinOp>));
+	ScalarFunctionSet st_zmin("ST_ZMin");
+	st_zmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<2, MinOp>));
 
-    ExtensionUtil::RegisterFunction(db, st_zmin);
+	ExtensionUtil::RegisterFunction(db, st_zmin);
 }
 
 void CoreScalarFunctions::RegisterStM(DatabaseInstance &db) {
-    ScalarFunctionSet st_m("ST_M");
-    st_m.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<3>));
+	ScalarFunctionSet st_m("ST_M");
+	st_m.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<3>));
 
-    ExtensionUtil::RegisterFunction(db, st_m);
+	ExtensionUtil::RegisterFunction(db, st_m);
 }
 
 void CoreScalarFunctions::RegisterStMMax(DatabaseInstance &db) {
-    ScalarFunctionSet st_mmax("ST_MMax");
-    st_mmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<3, MaxOp>));
+	ScalarFunctionSet st_mmax("ST_MMax");
+	st_mmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<3, MaxOp>));
 
-    ExtensionUtil::RegisterFunction(db, st_mmax);
+	ExtensionUtil::RegisterFunction(db, st_mmax);
 }
 
 void CoreScalarFunctions::RegisterStMMin(DatabaseInstance &db) {
-    ScalarFunctionSet st_mmin("ST_MMin");
-    st_mmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<3, MinOp>));
+	ScalarFunctionSet st_mmin("ST_MMin");
+	st_mmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<3, MinOp>));
 
-    ExtensionUtil::RegisterFunction(db, st_mmin);
+	ExtensionUtil::RegisterFunction(db, st_mmin);
 }
 
 } // namespace core

@@ -11,6 +11,7 @@ private:
 	data_ptr_t start;
 	data_ptr_t ptr;
 	data_ptr_t end;
+
 public:
 	enum class Offset { START, CURRENT, END };
 
@@ -27,10 +28,10 @@ public:
 		return ptr;
 	}
 
-    uint32_t Remaining() {
-        D_ASSERT(ptr <= end);
-        return end - ptr;
-    }
+	uint32_t Remaining() {
+		D_ASSERT(ptr <= end);
+		return end - ptr;
+	}
 
 	void SetPtr(data_ptr_t ptr_p) {
 		if (ptr_p < start || ptr_p > end) {

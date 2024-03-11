@@ -9,94 +9,6 @@ namespace spatial {
 
 namespace core {
 
-VertexArray GeometryFactory::AllocateVertexArray(uint32_t capacity, bool has_z, bool has_m) {
-	return VertexArray {allocator.GetAllocator(), capacity, has_z, has_m};
-}
-
-Point GeometryFactory::CreatePoint(double x, double y) {
-	auto data = AllocateVertexArray(1, false, false);
-	data.Append({x, y});
-	return Point(std::move(data));
-}
-
-LineString GeometryFactory::CreateLineString(uint32_t num_points, bool has_z, bool has_m) {
-	return LineString(AllocateVertexArray(num_points, has_z, has_m));
-}
-
-Polygon GeometryFactory::CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities, bool has_z, bool has_m) {
-	Polygon polygon(allocator.GetAllocator(), num_rings, has_z, has_m);
-	for (uint32_t i = 0; i < num_rings; i++) {
-		polygon[i].Reserve(ring_capacities[i]);
-	}
-	return polygon;
-}
-
-Polygon GeometryFactory::CreatePolygon(uint32_t num_rings) {
-	Polygon polygon(allocator.GetAllocator(), num_rings, false, false);
-	return polygon;
-}
-
-MultiPoint GeometryFactory::CreateMultiPoint(uint32_t num_points) {
-	MultiPoint multipoint(allocator.GetAllocator(), num_points);
-	return multipoint;
-}
-
-MultiLineString GeometryFactory::CreateMultiLineString(uint32_t num_linestrings) {
-	MultiLineString multilinestring(allocator.GetAllocator(), num_linestrings);
-	return multilinestring;
-}
-
-MultiPolygon GeometryFactory::CreateMultiPolygon(uint32_t num_polygons) {
-	MultiPolygon multipolygon(allocator.GetAllocator(), num_polygons);
-	return multipolygon;
-}
-
-GeometryCollection GeometryFactory::CreateGeometryCollection(uint32_t num_geometries) {
-	GeometryCollection collection(allocator.GetAllocator(), num_geometries);
-	return collection;
-}
-
-Polygon GeometryFactory::CreateBox(double xmin, double ymin, double xmax, double ymax) {
-	Polygon polygon(allocator.GetAllocator(), 1, false, false);
-	auto &shell = polygon[0];
-	shell.Reserve(5);
-	shell.Append({xmin, ymin});
-	shell.Append({xmin, ymax});
-	shell.Append({xmax, ymax});
-	shell.Append({xmax, ymin});
-	shell.Append({xmin, ymin}); // close the ring
-	return polygon;
-}
-
-// Empty
-Point GeometryFactory::CreateEmptyPoint() {
-	return Point(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
-}
-
-LineString GeometryFactory::CreateEmptyLineString() {
-	return LineString(VertexArray::CreateEmpty(allocator.GetAllocator(), false, false));
-}
-
-Polygon GeometryFactory::CreateEmptyPolygon() {
-	return Polygon(allocator.GetAllocator(), 0, false, false);
-}
-
-MultiPoint GeometryFactory::CreateEmptyMultiPoint() {
-	return MultiPoint(allocator.GetAllocator(), 0);
-}
-
-MultiLineString GeometryFactory::CreateEmptyMultiLineString() {
-	return MultiLineString(allocator.GetAllocator(), 0);
-}
-
-MultiPolygon GeometryFactory::CreateEmptyMultiPolygon() {
-	return MultiPolygon(allocator.GetAllocator(), 0);
-}
-
-GeometryCollection GeometryFactory::CreateEmptyGeometryCollection() {
-	return GeometryCollection(allocator.GetAllocator(), 0);
-}
-
 //----------------------------------------------------------------------
 // Serialization
 //----------------------------------------------------------------------
@@ -140,8 +52,8 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry, 
 	uint16_t hash = 0;
 
 	auto header_size = 4;
-    auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
-    auto bbox_size = has_bbox ? (sizeof(float) * 2 * dims) : 0;
+	auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
+	auto bbox_size = has_bbox ? (sizeof(float) * 2 * dims) : 0;
 	auto size = header_size + 4 + bbox_size + geom_size; // + 4 for padding, + 16 for bbox
 	auto blob = StringVector::EmptyString(result, size);
 	Cursor cursor(blob);
@@ -157,9 +69,9 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry, 
 	BoundingBox bbox;
 	auto bbox_ptr = cursor.GetPtr();
 
-    // skip the bounding box for now
-    // we will come back and write it later
-    cursor.Skip(bbox_size);
+	// skip the bounding box for now
+	// we will come back and write it later
+	cursor.Skip(bbox_size);
 
 	switch (type) {
 	case GeometryType::POINT: {
@@ -211,14 +123,14 @@ geometry_t GeometryFactory::Serialize(Vector &result, const Geometry &geometry, 
 		cursor.Write<float>(Utils::DoubleToFloatDown(bbox.miny));
 		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxx));
 		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxy));
-        if(has_z) {
-            cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minz));
-            cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxz));
-        }
-        if(has_m) {
-            cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minm));
-            cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxm));
-        }
+		if (has_z) {
+			cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minz));
+			cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxz));
+		}
+		if (has_m) {
+			cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minm));
+			cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxm));
+		}
 	}
 	blob.Finalize();
 	return geometry_t(blob);
@@ -233,50 +145,50 @@ void GeometryFactory::SerializeVertexArray(Cursor &cursor, const VertexArray &ar
 	cursor.Skip(byte_size);
 	// Also update the bounds real quick
 	if (update_bounds) {
-        auto props = array.GetProperties();
-        auto has_m = props.HasM();
-        auto has_z = props.HasZ();
-        if(has_m && has_z) {
-            for (uint32_t i = 0; i < array.Count(); i++) {
-                auto vertex = array.GetTemplated<VertexXYZM>(i);
-                bbox.maxx = std::max(bbox.maxx, vertex.x);
-                bbox.maxy = std::max(bbox.maxy, vertex.y);
-                bbox.minx = std::min(bbox.minx, vertex.x);
-                bbox.miny = std::min(bbox.miny, vertex.y);
-                bbox.maxz = std::max(bbox.maxz, vertex.z);
-                bbox.minz = std::min(bbox.minz, vertex.z);
-                bbox.maxm = std::max(bbox.maxm, vertex.m);
-                bbox.minm = std::min(bbox.minm, vertex.m);
-            }
-        } else if(has_z) {
-            for (uint32_t i = 0; i < array.Count(); i++) {
-                auto vertex = array.GetTemplated<VertexXYZ>(i);
-                bbox.maxx = std::max(bbox.maxx, vertex.x);
-                bbox.maxy = std::max(bbox.maxy, vertex.y);
-                bbox.minx = std::min(bbox.minx, vertex.x);
-                bbox.miny = std::min(bbox.miny, vertex.y);
-                bbox.maxz = std::max(bbox.maxz, vertex.z);
-                bbox.minz = std::min(bbox.minz, vertex.z);
-            }
-        } else if (has_m) {
-            for (uint32_t i = 0; i < array.Count(); i++) {
-                auto vertex = array.GetTemplated<VertexXYM>(i);
-                bbox.maxx = std::max(bbox.maxx, vertex.x);
-                bbox.maxy = std::max(bbox.maxy, vertex.y);
-                bbox.minx = std::min(bbox.minx, vertex.x);
-                bbox.miny = std::min(bbox.miny, vertex.y);
-                bbox.maxm = std::max(bbox.maxm, vertex.m);
-                bbox.minm = std::min(bbox.minm, vertex.m);
-            }
-        } else {
-            for (uint32_t i = 0; i < array.Count(); i++) {
-                auto vertex = array.GetTemplated<VertexXY>(i);
-                bbox.maxx = std::max(bbox.maxx, vertex.x);
-                bbox.maxy = std::max(bbox.maxy, vertex.y);
-                bbox.minx = std::min(bbox.minx, vertex.x);
-                bbox.miny = std::min(bbox.miny, vertex.y);
-            }
-        }
+		auto props = array.GetProperties();
+		auto has_m = props.HasM();
+		auto has_z = props.HasZ();
+		if (has_m && has_z) {
+			for (uint32_t i = 0; i < array.Count(); i++) {
+				auto vertex = array.GetExact<VertexXYZM>(i);
+				bbox.maxx = std::max(bbox.maxx, vertex.x);
+				bbox.maxy = std::max(bbox.maxy, vertex.y);
+				bbox.minx = std::min(bbox.minx, vertex.x);
+				bbox.miny = std::min(bbox.miny, vertex.y);
+				bbox.maxz = std::max(bbox.maxz, vertex.z);
+				bbox.minz = std::min(bbox.minz, vertex.z);
+				bbox.maxm = std::max(bbox.maxm, vertex.m);
+				bbox.minm = std::min(bbox.minm, vertex.m);
+			}
+		} else if (has_z) {
+			for (uint32_t i = 0; i < array.Count(); i++) {
+				auto vertex = array.GetExact<VertexXYZ>(i);
+				bbox.maxx = std::max(bbox.maxx, vertex.x);
+				bbox.maxy = std::max(bbox.maxy, vertex.y);
+				bbox.minx = std::min(bbox.minx, vertex.x);
+				bbox.miny = std::min(bbox.miny, vertex.y);
+				bbox.maxz = std::max(bbox.maxz, vertex.z);
+				bbox.minz = std::min(bbox.minz, vertex.z);
+			}
+		} else if (has_m) {
+			for (uint32_t i = 0; i < array.Count(); i++) {
+				auto vertex = array.GetExact<VertexXYM>(i);
+				bbox.maxx = std::max(bbox.maxx, vertex.x);
+				bbox.maxy = std::max(bbox.maxy, vertex.y);
+				bbox.minx = std::min(bbox.minx, vertex.x);
+				bbox.miny = std::min(bbox.miny, vertex.y);
+				bbox.maxm = std::max(bbox.maxm, vertex.m);
+				bbox.minm = std::min(bbox.minm, vertex.m);
+			}
+		} else {
+			for (uint32_t i = 0; i < array.Count(); i++) {
+				auto vertex = array.GetExact<VertexXY>(i);
+				bbox.maxx = std::max(bbox.maxx, vertex.x);
+				bbox.maxy = std::max(bbox.maxy, vertex.y);
+				bbox.minx = std::min(bbox.minx, vertex.x);
+				bbox.miny = std::min(bbox.miny, vertex.y);
+			}
+		}
 	}
 }
 
@@ -558,77 +470,77 @@ uint32_t GeometryFactory::GetSerializedSize(const Geometry &geometry) {
 // Deserialization
 //----------------------------------------------------------------------
 class GeometryDeserializer final : GeometryProcessor<Geometry> {
-    Allocator &allocator;
+	ArenaAllocator &allocator;
 
-    VertexArray ProcessVertices(const VertexData &vertices) {
-        VertexArray array(allocator, const_cast<data_ptr_t>(vertices.data[0]), vertices.count, HasZ(), HasM());
-        return array;
-    }
+	VertexArray ProcessVertices(const VertexData &vertices) {
+		return VertexArray::Reference(const_cast<data_ptr_t>(vertices.data[0]), vertices.count, HasZ(), HasM());
+	}
 
-    Geometry ProcessPoint(const VertexData &vertices) override {
-        if (vertices.IsEmpty()) {
-            return Point(allocator);
-        }
-        return Point(ProcessVertices(vertices));
-    }
+	Geometry ProcessPoint(const VertexData &vertices) override {
+		if (vertices.IsEmpty()) {
+			return Point(HasZ(), HasM());
+		}
+		return Point(ProcessVertices(vertices));
+	}
 
-    Geometry ProcessLineString(const VertexData &vertices) override {
-        return LineString(ProcessVertices(vertices));
-    }
+	Geometry ProcessLineString(const VertexData &vertices) override {
+		return LineString(ProcessVertices(vertices));
+	}
 
-    Geometry ProcessPolygon(PolygonState &state) override {
-        Polygon polygon(allocator, state.RingCount(), HasZ(), HasM());
-        for (auto i = 0; i < state.RingCount(); i++) {
-            polygon[i] = ProcessVertices(state.Next());
-        }
-        return polygon;
-    }
+	Geometry ProcessPolygon(PolygonState &state) override {
+		Polygon polygon(allocator, state.RingCount(), HasZ(), HasM());
+		for (auto i = 0; i < state.RingCount(); i++) {
+			polygon[i] = ProcessVertices(state.Next());
+		}
+		return polygon;
+	}
 
-    Geometry ProcessCollection(CollectionState &state) override {
-        switch(CurrentType()) {
-            case GeometryType::MULTIPOINT: {
-                auto multi_point = MultiPoint(allocator, state.ItemCount());
-                for (auto i = 0; i < state.ItemCount(); i++) {
-                    multi_point[i] = state.Next().As<Point>();
-                }
-                return multi_point;
-            }
-            case GeometryType::MULTILINESTRING: {
-                auto multi_line_string = MultiLineString(allocator, state.ItemCount());
-                for (auto i = 0; i < state.ItemCount(); i++) {
-                    multi_line_string[i] = state.Next().As<LineString>();
-                }
-                return multi_line_string;
-            }
-            case GeometryType::MULTIPOLYGON: {
-                auto multi_polygon = MultiPolygon(allocator, state.ItemCount());
-                for (auto i = 0; i < state.ItemCount(); i++) {
-                    multi_polygon[i] = state.Next().As<Polygon>();
-                }
-                return multi_polygon;
-            }
-            case GeometryType::GEOMETRYCOLLECTION: {
-                auto collection = GeometryCollection(allocator, state.ItemCount());
-                for (auto i = 0; i < state.ItemCount(); i++) {
-                    collection[i] = state.Next();
-                }
-                return collection;
-            }
-            default:
-                throw NotImplementedException("GeometryDeserializer: Unimplemented geometry type: %d", CurrentType());
-        }
-    }
+	Geometry ProcessCollection(CollectionState &state) override {
+		switch (CurrentType()) {
+		case GeometryType::MULTIPOINT: {
+			MultiPoint multi_point(allocator, state.ItemCount(), HasZ(), HasM());
+			for (auto i = 0; i < state.ItemCount(); i++) {
+				multi_point[i] = state.Next().As<Point>();
+			}
+			return multi_point;
+		}
+		case GeometryType::MULTILINESTRING: {
+			MultiLineString multi_line_string(allocator, state.ItemCount(), HasZ(), HasM());
+			for (auto i = 0; i < state.ItemCount(); i++) {
+				multi_line_string[i] = state.Next().As<LineString>();
+			}
+			return multi_line_string;
+		}
+		case GeometryType::MULTIPOLYGON: {
+			MultiPolygon multi_polygon(allocator, state.ItemCount(), HasZ(), HasM());
+			for (auto i = 0; i < state.ItemCount(); i++) {
+				multi_polygon[i] = state.Next().As<Polygon>();
+			}
+			return multi_polygon;
+		}
+		case GeometryType::GEOMETRYCOLLECTION: {
+			GeometryCollection collection(allocator, state.ItemCount(), HasZ(), HasM());
+			for (auto i = 0; i < state.ItemCount(); i++) {
+				collection[i] = state.Next();
+			}
+			return collection;
+		}
+		default:
+			throw NotImplementedException("GeometryDeserializer: Unimplemented geometry type: %d", CurrentType());
+		}
+	}
 
 public:
-    explicit GeometryDeserializer(Allocator &allocator) : allocator(allocator) { }
-    Geometry Execute(const geometry_t &data) {
-        return Process(data);
-    }
+	explicit GeometryDeserializer(ArenaAllocator &allocator) : allocator(allocator) {
+	}
+	Geometry Execute(const geometry_t &data) {
+		return Process(data);
+	}
 };
 
 Geometry GeometryFactory::Deserialize(const geometry_t &data) {
-	GeometryDeserializer deserializer(allocator.GetAllocator());
-    return deserializer.Execute(data);
+	GeometryDeserializer deserializer(allocator);
+	return deserializer.Execute(data);
 }
 
 } // namespace core

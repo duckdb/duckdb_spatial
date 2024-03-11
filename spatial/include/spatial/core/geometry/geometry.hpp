@@ -56,52 +56,14 @@ struct BoundingBox {
 	double miny = std::numeric_limits<double>::max();
 	double maxx = std::numeric_limits<double>::lowest();
 	double maxy = std::numeric_limits<double>::lowest();
-    double minz = std::numeric_limits<double>::max();
-    double maxz = std::numeric_limits<double>::lowest();
-    double minm = std::numeric_limits<double>::max();
-    double maxm = std::numeric_limits<double>::lowest();
+	double minz = std::numeric_limits<double>::max();
+	double maxz = std::numeric_limits<double>::lowest();
+	double minm = std::numeric_limits<double>::max();
+	double maxm = std::numeric_limits<double>::lowest();
 
 	bool Intersects(const BoundingBox &other) const {
 		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);
 	}
-};
-
-// Custom STL Allocator
-// No realloc though :(
-template <class T>
-struct DuckDBAllocator {
-	using value_type = T;
-
-	DuckDBAllocator(Allocator &allocator) : allocator(allocator) {
-	}
-	DuckDBAllocator(const DuckDBAllocator &other) : allocator(other.allocator) {
-	}
-	template <class U>
-	DuckDBAllocator(const DuckDBAllocator<U> &other) : allocator(other.allocator) {
-	}
-
-	// Required
-	T *allocate(std::size_t n) {
-		return reinterpret_cast<T *>(allocator.get().AllocateData(n * sizeof(T)));
-	}
-	// Required
-	void deallocate(T *p, std::size_t n) {
-		allocator.get().FreeData(reinterpret_cast<data_ptr_t>(p), n * sizeof(T));
-	}
-
-	bool operator==(const DuckDBAllocator &other) const {
-		return true;
-	}
-
-	bool operator!=(const DuckDBAllocator &other) const {
-		return false;
-	}
-
-private:
-	template <class U>
-	friend struct DuckDBAllocator;
-
-	reference<Allocator> allocator;
 };
 
 class Geometry;
@@ -113,17 +75,17 @@ private:
 public:
 	static constexpr GeometryType TYPE = GeometryType::POINT;
 
-	explicit Point(Allocator &allocator, double x, double y) : vertices(allocator, 1, false, false) {
-        vertices.Initialize(false).SetUnsafe(0, x, y);
+	explicit Point(ArenaAllocator &alloc, double x, double y) : vertices(VertexArray::Create(alloc, 1, false, false)) {
+		vertices.Set(0, x, y);
 	}
-    explicit Point(Allocator &allocator, double x, double y, double z) : vertices(allocator, 1, true, false) {
-        vertices.Initialize(false).SetUnsafe(0, x, y, z);
-    }
-	explicit Point(Allocator &allocator) : vertices(allocator, false, false) {
+	explicit Point(ArenaAllocator &alloc, double x, double y, double z)
+	    : vertices(VertexArray::Create(alloc, 1, true, false)) {
+		vertices.Set(0, x, y, z);
 	}
-	explicit Point(Allocator &allocator, bool has_z, bool has_m) : vertices(allocator, has_z, has_m) {
+
+	explicit Point(bool has_z, bool has_m) : vertices(VertexArray::Empty(has_z, has_m)) {
 	}
-	explicit Point(VertexArray &&vertices) : vertices(std::move(vertices)) {
+	explicit Point(VertexArray vertices) : vertices(vertices) {
 	}
 
 	string ToString() const;
@@ -144,9 +106,9 @@ public:
 		return 0;
 	}
 
-	Point DeepCopy() const {
+	Point DeepCopy(ArenaAllocator &alloc) const {
 		Point copy(*this);
-		copy.vertices.MakeOwning();
+		copy.vertices.MakeOwning(alloc);
 		return copy;
 	}
 };
@@ -157,11 +119,12 @@ private:
 
 public:
 	static constexpr GeometryType TYPE = GeometryType::LINESTRING;
-	explicit LineString(Allocator &allocator) : vertices(allocator, false, false) {
+	LineString(bool has_z, bool has_m) : vertices(VertexArray::Empty(has_z, has_m)) {
 	}
-	explicit LineString(Allocator &allocator, bool has_z, bool has_m) : vertices(allocator, has_z, has_m) {
+	LineString(ArenaAllocator &arena, uint32_t size, bool has_z, bool has_m)
+	    : vertices(VertexArray::Create(arena, size, has_z, has_m)) {
 	}
-	explicit LineString(VertexArray &&vertices) : vertices(std::move(vertices)) {
+	explicit LineString(VertexArray vertices) : vertices(vertices) {
 	}
 
 	string ToString() const;
@@ -183,42 +146,43 @@ public:
 	}
 
 	// Make this linestring owning by copying all the vertices
-	LineString DeepCopy() const {
+	LineString DeepCopy(ArenaAllocator &alloc) const {
 		LineString copy(*this);
-		copy.vertices.MakeOwning();
+		copy.vertices.MakeOwning(alloc);
 		return copy;
 	}
 };
 
 class Polygon {
 private:
-	std::vector<VertexArray, DuckDBAllocator<VertexArray>> rings;
+	uint32_t ring_count;
+	VertexArray *rings;
 
 public:
 	static constexpr GeometryType TYPE = GeometryType::POLYGON;
-	explicit Polygon(Allocator &allocator) : rings(allocator) {
+	explicit Polygon(bool has_z, bool has_m) : ring_count(0), rings(nullptr) {
 	}
-	explicit Polygon(Allocator &allocator, uint32_t num_rings, bool has_z, bool has_m) : rings(allocator) {
-		rings.reserve(num_rings);
-		for (uint32_t i = 0; i < num_rings; i++) {
-			rings.emplace_back(allocator, has_z, has_m);
+	explicit Polygon(ArenaAllocator &alloc, uint32_t ring_count_p, bool has_z, bool has_m)
+	    : ring_count(ring_count_p),
+	      rings(reinterpret_cast<VertexArray *>(alloc.AllocateAligned(ring_count * sizeof(VertexArray)))) {
+		for (uint32_t i = 0; i < ring_count; i++) {
+			new (&rings[i]) VertexArray(VertexArray::Empty(has_z, has_m));
+		}
+	}
+	explicit Polygon(ArenaAllocator &alloc, uint32_t ring_count_p, uint32_t *ring_sizes_p, bool has_z, bool has_m)
+	    : ring_count(ring_count_p),
+	      rings(reinterpret_cast<VertexArray *>(alloc.AllocateAligned(ring_count * sizeof(VertexArray)))) {
+		for (uint32_t i = 0; i < ring_count; i++) {
+			new (&rings[i]) VertexArray(VertexArray::Create(alloc, ring_sizes_p[i], has_z, has_m));
 		}
 	}
 
-	Polygon(const Polygon &other) = default;
-	Polygon &operator=(const Polygon &other) = default;
-	Polygon(Polygon &&other) noexcept : rings(std::move(other.rings)) {
-	}
-	Polygon &operator=(Polygon &&other) noexcept {
-		rings = std::move(other.rings);
-		return *this;
-	}
-
 	// Make this polygon owning by copying all the vertices
-	Polygon DeepCopy() const {
+	Polygon DeepCopy(ArenaAllocator &alloc) const {
 		Polygon copy(*this);
-		for (auto &ring : copy.rings) {
-			ring.MakeOwning();
+		copy.rings = reinterpret_cast<VertexArray *>(alloc.AllocateAligned(copy.RingCount() * sizeof(VertexArray)));
+		for (uint32_t i = 0; i < copy.RingCount(); i++) {
+			new (&copy.rings[i]) VertexArray(VertexArray::Copy(alloc, rings[i]));
 		}
 		return copy;
 	}
@@ -227,32 +191,32 @@ public:
 
 	// Collection Methods
 	VertexArray &operator[](uint32_t index) {
-		D_ASSERT(index < rings.size());
+		D_ASSERT(index < ring_count);
 		return rings[index];
 	}
 	const VertexArray &operator[](uint32_t index) const {
-		D_ASSERT(index < rings.size());
+		D_ASSERT(index < ring_count);
 		return rings[index];
 	}
 	VertexArray *begin() {
-		return rings.data();
+		return rings;
 	}
 	VertexArray *end() {
-		return rings.data() + rings.size();
+		return rings + ring_count;
 	}
 	const VertexArray *begin() const {
-		return rings.data();
+		return rings;
 	}
 	const VertexArray *end() const {
-		return rings.data() + rings.size();
+		return rings + ring_count;
 	}
 
 	uint32_t RingCount() const {
-		return rings.size();
+		return ring_count;
 	}
 
 	bool IsEmpty() const {
-		for (const auto &ring : rings) {
+		for (const auto &ring : *this) {
 			if (!ring.IsEmpty()) {
 				return false;
 			}
@@ -267,126 +231,99 @@ public:
 
 template <class T>
 class MultiGeometry {
-	std::vector<T, DuckDBAllocator<T>> items;
-
-protected:
-	const std::vector<T, DuckDBAllocator<T>> &Items() const {
-		return items;
-	}
-	std::vector<T, DuckDBAllocator<T>> &Items() {
-		return items;
-	}
+private:
+	uint32_t item_count;
+	T *items;
 
 public:
-	explicit MultiGeometry(Allocator &allocator, uint32_t count) : items(allocator) {
-		items.reserve(count);
-		for (uint32_t i = 0; i < count; i++) {
-			items.emplace_back(allocator);
+	MultiGeometry(bool has_z, bool has_m) : item_count(0), items(nullptr) {
+	}
+	MultiGeometry(ArenaAllocator &allocator, uint32_t item_count_p, bool has_z, bool has_m)
+	    : item_count(item_count_p), items(reinterpret_cast<T *>(allocator.AllocateAligned(item_count * sizeof(T)))) {
+		for (uint32_t i = 0; i < item_count; i++) {
+			new (&items[i]) T(has_z, has_m);
 		}
 	}
 
 	T &operator[](uint32_t index) {
-		D_ASSERT(index < items.size());
+		D_ASSERT(index < item_count);
 		return items[index];
 	}
 	const T &operator[](uint32_t index) const {
-		D_ASSERT(index < items.size());
+		D_ASSERT(index < item_count);
 		return items[index];
 	}
 	T *begin() {
-		return items.data();
+		return items;
 	}
 	T *end() {
-		return items.data() + items.size();
+		return items + item_count;
 	}
 	const T *begin() const {
-		return items.data();
+		return items;
 	}
 	const T *end() const {
-		return items.data() + items.size();
+		return items + item_count;
 	}
 
 	uint32_t ItemCount() const {
-		return items.size();
+		return item_count;
 	}
 
 	bool IsEmpty() const {
-		for (const auto &item : items) {
+		for (const auto &item : *this) {
 			if (!item.IsEmpty()) {
 				return false;
 			}
 		}
 		return true;
 	}
-
-	MultiGeometry(const MultiGeometry &other) = default;
-	MultiGeometry &operator=(const MultiGeometry &other) = default;
-	MultiGeometry(MultiGeometry &&other) noexcept : items(std::move(other.items)) {
-	}
-	MultiGeometry &operator=(MultiGeometry &&other) noexcept {
-		items = std::move(other.items);
-		return *this;
-	}
 };
 class GeometryCollection : public MultiGeometry<Geometry> {
 public:
 	static constexpr GeometryType TYPE = GeometryType::GEOMETRYCOLLECTION;
-	GeometryCollection(Allocator &allocator, uint32_t count) : MultiGeometry<Geometry>(allocator, count) {
+	GeometryCollection(bool has_z, bool has_m) : MultiGeometry<Geometry>(has_z, has_m) {
+	}
+	GeometryCollection(ArenaAllocator &allocator, uint32_t count, bool has_z, bool has_m)
+	    : MultiGeometry<Geometry>(allocator, count, has_z, has_m) {
 	}
 
 	string ToString() const;
-
 	template <class AGG, class RESULT_TYPE>
 	RESULT_TYPE Aggregate(AGG agg, RESULT_TYPE zero) const;
-
 	uint32_t Dimension() const;
-
-	GeometryCollection DeepCopy() const;
-
-	GeometryCollection(const GeometryCollection &other) = default;
-	GeometryCollection &operator=(const GeometryCollection &other) = default;
-	GeometryCollection(GeometryCollection &&other) noexcept : MultiGeometry<Geometry>(std::move(other)) {
-	}
-	GeometryCollection &operator=(GeometryCollection &&other) noexcept {
-		MultiGeometry<Geometry>::operator=(std::move(other));
-		return *this;
-	}
+	GeometryCollection DeepCopy(ArenaAllocator &alloc) const;
 };
 
 class MultiPoint : public MultiGeometry<Point> {
 public:
 	static constexpr GeometryType TYPE = GeometryType::MULTIPOINT;
-	MultiPoint(Allocator &allocator, uint32_t count) : MultiGeometry<Point>(allocator, count) {
+	MultiPoint(bool has_z, bool has_m) : MultiGeometry<Point>(has_z, has_m) {
+	}
+	MultiPoint(ArenaAllocator &allocator, uint32_t count, bool has_z, bool has_m)
+	    : MultiGeometry<Point>(allocator, count, has_z, has_m) {
 	}
 
 	string ToString() const;
-
 	uint32_t Dimension() const {
 		return 0;
 	}
-
-	MultiPoint DeepCopy() const {
+	MultiPoint DeepCopy(ArenaAllocator &alloc) const {
 		MultiPoint copy(*this);
-		for (auto &item : copy.Items()) {
-			item = item.DeepCopy();
+		for (auto &item : copy) {
+			item = item.DeepCopy(alloc);
 		}
 		return copy;
-	}
-
-	MultiPoint(const MultiPoint &other) = default;
-	MultiPoint &operator=(const MultiPoint &other) = default;
-	MultiPoint(MultiPoint &&other) noexcept : MultiGeometry<Point>(std::move(other)) {
-	}
-	MultiPoint &operator=(MultiPoint &&other) noexcept {
-		MultiGeometry<Point>::operator=(std::move(other));
-		return *this;
 	}
 };
 
 class MultiLineString : public MultiGeometry<LineString> {
 public:
 	static constexpr GeometryType TYPE = GeometryType::MULTILINESTRING;
-	MultiLineString(Allocator &allocator, uint32_t count) : MultiGeometry<LineString>(allocator, count) {
+	MultiLineString(bool has_z, bool has_m) : MultiGeometry<LineString>(has_z, has_m) {
+	}
+	MultiLineString(ArenaAllocator &allocator, uint32_t count, bool has_z, bool has_m)
+	    : MultiGeometry<LineString>(allocator, count, has_z, has_m) {
 	}
 
 	string ToString() const;
@@ -395,28 +332,22 @@ public:
 		return 1;
 	}
 
-	MultiLineString DeepCopy() const {
+	MultiLineString DeepCopy(ArenaAllocator &alloc) const {
 		MultiLineString copy(*this);
-		for (auto &item : copy.Items()) {
-			item = item.DeepCopy();
+		for (auto &item : copy) {
+			item = item.DeepCopy(alloc);
 		}
 		return copy;
-	}
-
-	MultiLineString(const MultiLineString &other) = default;
-	MultiLineString &operator=(const MultiLineString &other) = default;
-	MultiLineString(MultiLineString &&other) noexcept : MultiGeometry<LineString>(std::move(other)) {
-	}
-	MultiLineString &operator=(MultiLineString &&other) noexcept {
-		MultiGeometry<LineString>::operator=(std::move(other));
-		return *this;
 	}
 };
 
 class MultiPolygon : public MultiGeometry<Polygon> {
 public:
 	static constexpr GeometryType TYPE = GeometryType::MULTIPOLYGON;
-	MultiPolygon(Allocator &allocator, uint32_t count) : MultiGeometry<Polygon>(allocator, count) {
+	MultiPolygon(bool has_z, bool has_m) : MultiGeometry<Polygon>(has_z, has_m) {
+	}
+	MultiPolygon(ArenaAllocator &allocator, uint32_t count, bool has_z, bool has_m)
+	    : MultiGeometry<Polygon>(allocator, count, has_z, has_m) {
 	}
 
 	string ToString() const;
@@ -425,21 +356,12 @@ public:
 		return 2;
 	}
 
-	MultiPolygon DeepCopy() const {
+	MultiPolygon DeepCopy(ArenaAllocator &alloc) const {
 		MultiPolygon copy(*this);
-		for (auto &item : copy.Items()) {
-			item = item.DeepCopy();
+		for (auto &item : copy) {
+			item = item.DeepCopy(alloc);
 		}
 		return copy;
-	}
-
-	MultiPolygon(const MultiPolygon &other) = default;
-	MultiPolygon &operator=(const MultiPolygon &other) = default;
-	MultiPolygon(MultiPolygon &&other) noexcept : MultiGeometry<Polygon>(std::move(other)) {
-	}
-	MultiPolygon &operator=(MultiPolygon &&other) noexcept {
-		MultiGeometry<Polygon>::operator=(std::move(other));
-		return *this;
 	}
 };
 
@@ -457,9 +379,9 @@ private:
 	};
 
 public:
-	explicit Geometry(Allocator &allocator) {
+	explicit Geometry(bool has_z, bool has_m) {
 		type = GeometryType::POINT;
-		new (&point) Point(allocator);
+		new (&point) Point(has_z, has_m);
 	}
 
 	Geometry(const Point &point) : type(GeometryType::POINT), point(point) {
@@ -503,7 +425,7 @@ public:
 
 	// Apply a functor to the contained geometry
 	template <class F, class... ARGS>
-	auto Dispatch(ARGS... args) const
+	auto Dispatch(ARGS &&...args) const
 	    -> decltype(F::Apply(std::declval<const Point &>(), std::forward<ARGS>(args)...)) {
 		switch (type) {
 		case GeometryType::POINT:
@@ -527,22 +449,22 @@ public:
 
 	// Apply a functor to the contained geometry
 	template <class F, class... ARGS>
-	auto Dispatch(ARGS... args) -> decltype(F::Apply(std::declval<Point &>(), std::forward<ARGS>(args)...)) {
+	auto Dispatch(ARGS &&...args) -> decltype(F::Apply(std::declval<Point &>(), std::forward<ARGS>(args)...)) {
 		switch (type) {
 		case GeometryType::POINT:
-			return F::Apply(point, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<Point &>(point), std::forward<ARGS>(args)...);
 		case GeometryType::LINESTRING:
-			return F::Apply(linestring, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<LineString &>(linestring), std::forward<ARGS>(args)...);
 		case GeometryType::POLYGON:
-			return F::Apply(polygon, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<Polygon &>(polygon), std::forward<ARGS>(args)...);
 		case GeometryType::MULTIPOINT:
-			return F::Apply(multipoint, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<MultiPoint &>(multipoint), std::forward<ARGS>(args)...);
 		case GeometryType::MULTILINESTRING:
-			return F::Apply(multilinestring, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<MultiLineString &>(multilinestring), std::forward<ARGS>(args)...);
 		case GeometryType::MULTIPOLYGON:
-			return F::Apply(multipolygon, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<MultiPolygon &>(multipolygon), std::forward<ARGS>(args)...);
 		case GeometryType::GEOMETRYCOLLECTION:
-			return F::Apply(collection, std::forward<ARGS>(args)...);
+			return F::Apply(static_cast<GeometryCollection &>(collection), std::forward<ARGS>(args)...);
 		default:
 			throw NotImplementedException("Geometry::Dispatch()");
 		}
@@ -586,60 +508,60 @@ public:
 		return 0;
 	}
 
-	Geometry DeepCopy() const {
+	Geometry DeepCopy(ArenaAllocator &alloc) const {
 		switch (type) {
 		case GeometryType::POINT:
-			return Geometry(point.DeepCopy());
+			return Geometry(point.DeepCopy(alloc));
 		case GeometryType::LINESTRING:
-			return Geometry(linestring.DeepCopy());
+			return Geometry(linestring.DeepCopy(alloc));
 		case GeometryType::POLYGON:
-			return Geometry(polygon.DeepCopy());
+			return Geometry(polygon.DeepCopy(alloc));
 		case GeometryType::MULTIPOINT:
-			return Geometry(multipoint.DeepCopy());
+			return Geometry(multipoint.DeepCopy(alloc));
 		case GeometryType::MULTILINESTRING:
-			return Geometry(multilinestring.DeepCopy());
+			return Geometry(multilinestring.DeepCopy(alloc));
 		case GeometryType::MULTIPOLYGON:
-			return Geometry(multipolygon.DeepCopy());
+			return Geometry(multipolygon.DeepCopy(alloc));
 		case GeometryType::GEOMETRYCOLLECTION:
-			return Geometry(collection.DeepCopy());
+			return Geometry(collection.DeepCopy(alloc));
 		default:
 			throw NotImplementedException("Geometry::DeepCopy()");
 		}
 	}
 
-	Geometry &SetVertexType(bool has_z, bool has_m) {
+	Geometry &SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m) {
 		switch (type) {
 		case GeometryType::POINT:
-			point.Vertices().UpdateVertexType(has_z, has_m);
+			point.Vertices().SetVertexType(alloc, has_z, has_m);
 			break;
 		case GeometryType::LINESTRING:
-			linestring.Vertices().UpdateVertexType(has_z, has_m);
+			linestring.Vertices().SetVertexType(alloc, has_z, has_m);
 			break;
 		case GeometryType::POLYGON:
 			for (auto &ring : polygon) {
-				ring.UpdateVertexType(has_z, has_m);
+				ring.SetVertexType(alloc, has_z, has_m);
 			}
 			break;
 		case GeometryType::MULTIPOINT:
 			for (auto &point : multipoint) {
-				point.Vertices().UpdateVertexType(has_z, has_m);
+				point.Vertices().SetVertexType(alloc, has_z, has_m);
 			}
 			break;
 		case GeometryType::MULTILINESTRING:
 			for (auto &line : multilinestring) {
-				line.Vertices().UpdateVertexType(has_z, has_m);
+				line.Vertices().SetVertexType(alloc, has_z, has_m);
 			}
 			break;
 		case GeometryType::MULTIPOLYGON:
 			for (auto &polygon : multipolygon) {
 				for (auto &ring : polygon) {
-					ring.UpdateVertexType(has_z, has_m);
+					ring.SetVertexType(alloc, has_z, has_m);
 				}
 			}
 			break;
 		case GeometryType::GEOMETRYCOLLECTION:
 			for (auto &geom : collection) {
-				geom.SetVertexType(has_z, has_m);
+				geom.SetVertexType(alloc, has_z, has_m);
 			}
 			break;
 		default:
@@ -828,7 +750,7 @@ public:
 template <class AGG, class RESULT_TYPE>
 RESULT_TYPE GeometryCollection::Aggregate(AGG agg, RESULT_TYPE zero) const {
 	RESULT_TYPE result = zero;
-	for (auto &item : Items()) {
+	for (auto &item : *this) {
 		if (item.Type() == GeometryType::GEOMETRYCOLLECTION) {
 			result = item.As<GeometryCollection>().Aggregate(agg, result);
 		} else {

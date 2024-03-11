@@ -8,6 +8,217 @@ namespace spatial {
 
 namespace core {
 
+// Allocating methods
+
+void VertexArray::Append(ArenaAllocator &alloc, const VertexArray &other) {
+	if (!IsOwning()) {
+		// TODO: Optimize this case
+		MakeOwning(alloc);
+	}
+}
+
+void VertexArray::Resize(ArenaAllocator &alloc, uint32_t new_count) {
+	auto vertex_size = properties.VertexSize();
+	if (IsOwning()) {
+		vertex_data = alloc.Reallocate(vertex_data, vertex_count * vertex_size, vertex_size * new_count);
+		vertex_count = new_count;
+	} else {
+		auto new_data = alloc.AllocateAligned(vertex_size * new_count);
+		auto copy_count = std::min(vertex_count, new_count);
+		memcpy(new_data, vertex_data, vertex_size * copy_count);
+		vertex_data = new_data;
+		vertex_count = new_count;
+		properties.SetOwning(true);
+	}
+}
+
+void VertexArray::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, double default_z, double default_m) {
+	if (properties.HasZ() == has_z && properties.HasM() == has_m) {
+		return;
+	}
+	if (!IsOwning()) {
+		MakeOwning(alloc);
+	}
+
+	auto used_to_have_z = properties.HasZ();
+	auto used_to_have_m = properties.HasM();
+	auto old_vertex_size = properties.VertexSize();
+	properties.SetHasZ(has_z);
+	properties.SetHasM(has_m);
+
+	auto new_vertex_size = properties.VertexSize();
+	// Case 1: The new vertex size is larger than the old vertex size
+	if (new_vertex_size > old_vertex_size) {
+		vertex_data =
+		    alloc.ReallocateAligned(vertex_data, vertex_count * old_vertex_size, vertex_count * new_vertex_size);
+
+		// There are 5 cases here:
+		if (used_to_have_m && has_m && !used_to_have_z && has_z) {
+			// 1. We go from XYM to XYZM
+			// This is special, because we need to slide the M value to the end of each vertex
+			for (int64_t i = vertex_count - 1; i >= 0; i--) {
+				auto old_offset = i * old_vertex_size;
+				auto new_offset = i * new_vertex_size;
+				memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+				auto z_offset = old_offset + sizeof(double) * 2;
+				auto m_offset = old_offset + sizeof(double) * 3;
+				memcpy(vertex_data + new_offset + m_offset, vertex_data + z_offset, sizeof(double));
+				memcpy(vertex_data + new_offset + z_offset, &default_z, sizeof(double));
+			}
+		} else if (!used_to_have_z && has_z && !used_to_have_m && has_m) {
+			// 2. We go from XY to XYZM
+			// This is special, because we need to add both the default Z and M values to the end of each vertex
+			for (int64_t i = vertex_count - 1; i >= 0; i--) {
+				auto old_offset = i * old_vertex_size;
+				auto new_offset = i * new_vertex_size;
+				memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+				memcpy(vertex_data + new_offset + sizeof(double) * 2, &default_z, sizeof(double));
+				memcpy(vertex_data + new_offset + sizeof(double) * 3, &default_m, sizeof(double));
+			}
+		} else {
+			// Otherwise:
+			// 3. We go from XY to XYZ
+			// 4. We go from XY to XYM
+			// 5. We go from XYZ to XYZM
+			// These are all really the same, we just add the default to the end
+			auto default_value = has_m ? default_m : default_z;
+			for (int64_t i = vertex_count - 1; i >= 0; i--) {
+				auto old_offset = i * old_vertex_size;
+				auto new_offset = i * new_vertex_size;
+				memmove(vertex_data + new_offset, vertex_data + old_offset, old_vertex_size);
+				memcpy(vertex_data + new_offset + old_vertex_size, &default_value, sizeof(double));
+			}
+		}
+	}
+	// Case 2: The new vertex size is equal to the old vertex size
+	else if (new_vertex_size == old_vertex_size) {
+		// This only happens when we go from XYZ -> XYM or XYM -> XYZ
+		// In this case we just need to set the default on the third dimension
+		auto default_value = has_m ? default_m : default_z;
+		for (uint32_t i = 0; i < vertex_count; i++) {
+			auto offset = i * new_vertex_size + sizeof(double) * 2;
+			memcpy(vertex_data + offset, &default_value, sizeof(double));
+		}
+	}
+	// Case 3: The new vertex size is smaller than the old vertex size.
+	// In this case we need to allocate new memory and copy the data over to not lose any data
+	else {
+		auto new_data = alloc.AllocateAligned(vertex_count * new_vertex_size);
+
+		// Special case: If we go from XYZM to XYM, we need to slide the M value to the end of each vertex
+		if (used_to_have_z && used_to_have_m && !has_z && has_m) {
+			for (uint32_t i = 0; i < vertex_count; i++) {
+				auto old_offset = i * old_vertex_size;
+				auto new_offset = i * new_vertex_size;
+				memcpy(new_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+				auto m_offset = old_offset + sizeof(double) * 3;
+				memcpy(new_data + new_offset + sizeof(double) * 2, vertex_data + m_offset, sizeof(double));
+			}
+		} else {
+			// Otherwise, we just copy the data over
+			for (uint32_t i = 0; i < vertex_count; i++) {
+				auto old_offset = i * old_vertex_size;
+				auto new_offset = i * new_vertex_size;
+				memcpy(new_data + new_offset, vertex_data + old_offset, new_vertex_size);
+			}
+		}
+		vertex_data = new_data;
+	}
+}
+
+void VertexArray::MakeOwning(ArenaAllocator &alloc) {
+	if (IsOwning()) {
+		return;
+	}
+	if (vertex_count == 0) {
+		vertex_data = nullptr;
+		properties.SetOwning(true);
+		return;
+	}
+
+	auto new_data = alloc.AllocateAligned(properties.VertexSize() * vertex_count);
+	memcpy(new_data, vertex_data, properties.VertexSize() * vertex_count);
+	vertex_data = new_data;
+	properties.SetOwning(true);
+}
+
+// Properties
+bool VertexArray::IsClosed() const {
+	if (vertex_count == 0) {
+		return false;
+	}
+	if (vertex_count == 1) {
+		return true;
+	}
+	// TODO: Approximate comparison?
+	auto size = properties.VertexSize();
+	return memcmp(vertex_data + size * (vertex_count - 1), vertex_data, size) == 0;
+}
+
+double VertexArray::Length() const {
+	auto length = 0.0;
+	if (vertex_count < 2) {
+		return 0.0;
+	}
+	for (uint32_t i = 0; i < vertex_count - 1; i++) {
+		auto p1 = Get(i);
+		auto p2 = Get(i + 1);
+		length += std::sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y));
+	}
+	return length;
+}
+
+string VertexArray::ToString() const {
+	auto has_z = properties.HasZ();
+	auto has_m = properties.HasM();
+
+	if (has_z && has_m) {
+		string result = StringUtil::Format("VertexArray XYZM (%d) [", vertex_count);
+		for (uint32_t i = 0; i < vertex_count; i++) {
+			auto vertex = GetExact<VertexXYZM>(i);
+			result += StringUtil::Format("(%f, %f, %f, %f)", vertex.x, vertex.y, vertex.z, vertex.m);
+			if (i < vertex_count - 1) {
+				result += ", ";
+			}
+		}
+		result += "]";
+		return result;
+	} else if (has_z) {
+		string result = StringUtil::Format("VertexArray XYZ (%d) [", vertex_count);
+		for (uint32_t i = 0; i < vertex_count; i++) {
+			auto vertex = GetExact<VertexXYZ>(i);
+			result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.z);
+			if (i < vertex_count - 1) {
+				result += ", ";
+			}
+		}
+		result += "]";
+		return result;
+	} else if (has_m) {
+		string result = StringUtil::Format("VertexArray XYM (%d/%d) [", vertex_count);
+		for (uint32_t i = 0; i < vertex_count; i++) {
+			auto vertex = GetExact<VertexXYM>(i);
+			result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.m);
+			if (i < vertex_count - 1) {
+				result += ", ";
+			}
+		}
+		result += "]";
+		return result;
+	} else {
+		string result = StringUtil::Format("VertexArray XY (%d/%d) [", vertex_count);
+		for (uint32_t i = 0; i < vertex_count; i++) {
+			auto vertex = GetExact<VertexXY>(i);
+			result += StringUtil::Format("(%f, %f)", vertex.x, vertex.y);
+			if (i < vertex_count - 1) {
+				result += ", ";
+			}
+		}
+		result += "]";
+		return result;
+	}
+}
+
 /*
 double Vertex::Distance(const Vertex &other) const {
     return std::sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
@@ -26,14 +237,14 @@ double Vertex::DistanceSquared(const Vertex &p1, const Vertex &p2) const {
     return DistanceSquared(p);
 }
 
-void VertexVector::Serialize(Cursor &cursor) const {
+void VertexArray::Serialize(Cursor &cursor) const {
     auto ptr = cursor.GetPtr();
     memcpy((void *)ptr, (const char *)data, count * sizeof(Vertex));
     ptr += count * sizeof(Vertex);
     cursor.SetPtr(ptr);
 }
 
-void VertexVector::SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) const {
+void VertexArray::SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) const {
     for (idx_t i = 0; i < count; i++) {
         auto p = Get(i);
         bbox.minx = std::min(bbox.minx, p.x);
@@ -45,7 +256,7 @@ void VertexVector::SerializeAndUpdateBounds(Cursor &cursor, BoundingBox &bbox) c
     }
 }
 
-double VertexVector::Length() const {
+double VertexArray::Length() const {
     double length = 0;
     if (count < 2) {
         return 0.0;
@@ -58,7 +269,7 @@ double VertexVector::Length() const {
     return length;
 }
 
-double VertexVector::SignedArea() const {
+double VertexArray::SignedArea() const {
     if (count < 3) {
         return 0;
     }
@@ -142,11 +353,11 @@ Contains ColumnarContainsPoint(vector<double> xs, vector<double> ys, double x, d
     return winding_number == 0 ? Contains::OUTSIDE : Contains::INSIDE;
 }
 
-double VertexVector::Area() const {
+double VertexArray::Area() const {
     return std::abs(SignedArea());
 }
 
-bool VertexVector::IsClosed() const {
+bool VertexArray::IsClosed() const {
     if (count == 0) {
         return false;
     }
@@ -156,33 +367,33 @@ bool VertexVector::IsClosed() const {
     return Get(0) == Get(count - 1);
 }
 
-bool VertexVector::IsEmpty() const {
+bool VertexArray::IsEmpty() const {
     return count == 0;
 }
 
-WindingOrder VertexVector::GetWindingOrder() const {
+WindingOrder VertexArray::GetWindingOrder() const {
     return SignedArea() > 0 ? WindingOrder::COUNTER_CLOCKWISE : WindingOrder::CLOCKWISE;
 }
 
-bool VertexVector::IsClockwise() const {
+bool VertexArray::IsClockwise() const {
     return GetWindingOrder() == WindingOrder::CLOCKWISE;
 }
 
-bool VertexVector::IsCounterClockwise() const {
+bool VertexArray::IsCounterClockwise() const {
     return GetWindingOrder() == WindingOrder::COUNTER_CLOCKWISE;
 }
 
-bool VertexVector::IsSimple() const {
-    throw NotImplementedException("VertexVector::IsSimple");
+bool VertexArray::IsSimple() const {
+    throw NotImplementedException("VertexArray::IsSimple");
 }
 
-Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const {
+Contains VertexArray::ContainsVertex(const Vertex &p, bool ensure_closed) const {
 
     auto p1 = Get(0);
     auto p2 = Get(count - 1);
 
     if (ensure_closed && p1 != p2) {
-        throw InternalException("VertexVector::Contains: VertexVector is not closed");
+        throw InternalException("VertexArray::Contains: VertexArray is not closed");
     }
 
     int winding_number = 0;
@@ -215,7 +426,7 @@ Contains VertexVector::ContainsVertex(const Vertex &p, bool ensure_closed) const
     return winding_number == 0 ? Contains::OUTSIDE : Contains::INSIDE;
 }
 
-std::tuple<uint32_t, double> VertexVector::ClosestSegment(const Vertex &p) const {
+std::tuple<uint32_t, double> VertexArray::ClosestSegment(const Vertex &p) const {
     double min_distance = std::numeric_limits<double>::max();
     uint32_t min_index = 0;
     // Loop over all segments and find the closest one
@@ -238,7 +449,7 @@ std::tuple<uint32_t, double> VertexVector::ClosestSegment(const Vertex &p) const
     return make_pair(min_index, std::sqrt(min_distance));
 }
 
-std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
+std::tuple<uint32_t, double> VertexArray::ClosetVertex(const Vertex &p) const {
     double min_distance = std::numeric_limits<double>::max();
     uint32_t min_index = 0;
     // Loop over all segments and find the closest one
@@ -252,7 +463,7 @@ std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
             min_index = i;
 
             if (min_distance == 0) {
-                // if the Vertex is on the VertexVector, then we don't have to search any further
+                // if the Vertex is on the VertexArray, then we don't have to search any further
                 return make_pair(min_index, 0);
             }
         }
@@ -260,7 +471,7 @@ std::tuple<uint32_t, double> VertexVector::ClosetVertex(const Vertex &p) const {
     return make_pair(min_index, std::sqrt(min_distance));
 }
 
-std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) const {
+std::tuple<Vertex, double, double> VertexArray::LocateVertex(const Vertex &p) const {
     if (count == 0) {
         return std::make_tuple(Vertex(), 0, 0);
     }
@@ -296,7 +507,7 @@ std::tuple<Vertex, double, double> VertexVector::LocateVertex(const Vertex &p) c
     // Now we have the closest Vertex, find the distance from the start of the segment
     auto total_length = Length();
     if (total_length == 0) {
-        // if the VertexVector is a Vertex, then the closest Vertex is the Vertex itself
+        // if the VertexArray is a Vertex, then the closest Vertex is the Vertex itself
         return std::make_tuple(closest_Vertex, 0, min_distance);
     }
     auto Vertex_length = 0.0;

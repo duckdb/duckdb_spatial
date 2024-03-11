@@ -23,7 +23,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
-		auto line_geom = lstate.factory.CreateLineString(length, false, false);
+		LineString line_geom(lstate.factory.allocator, length, false, false);
 
 		for (idx_t i = offset; i < offset + length; i++) {
 
@@ -48,7 +48,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 				continue;
 			}
 			auto vertex = point.Vertices().Get(0);
-			line_geom.Vertices().Append({vertex.x, vertex.y});
+			line_geom.Vertices().Set(i, vertex.x, vertex.y);
 		}
 
 		if (line_geom.Vertices().Count() == 1) {
@@ -72,28 +72,27 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
 		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
 
-            if(geometry_left.IsEmpty() && geometry_right.IsEmpty()) {
-                // Empty linestring
-                LineString line(lstate.factory.allocator.GetAllocator());
-                return lstate.factory.Serialize(result, line, false, false);
-            }
+		    if (geometry_left.IsEmpty() && geometry_right.IsEmpty()) {
+			    // Empty linestring
+			    LineString line(false, false);
+			    return lstate.factory.Serialize(result, line, false, false);
+		    }
 
-            if(geometry_left.IsEmpty() || geometry_right.IsEmpty()) {
-                throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
-            }
+		    if (geometry_left.IsEmpty() || geometry_right.IsEmpty()) {
+			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
+		    }
 
-            auto has_z = geom_blob_left.GetProperties().HasZ() || geom_blob_right.GetProperties().HasZ();
-            auto has_m = geom_blob_left.GetProperties().HasM() || geom_blob_right.GetProperties().HasM();
+		    auto has_z = geom_blob_left.GetProperties().HasZ() || geom_blob_right.GetProperties().HasZ();
+		    auto has_m = geom_blob_left.GetProperties().HasM() || geom_blob_right.GetProperties().HasM();
 
 		    auto &point_left = geometry_left.As<Point>();
 		    auto &point_right = geometry_right.As<Point>();
 
-            VertexArray vertices(lstate.factory.allocator.GetAllocator(), 2, has_z, has_m);
+		    auto vertices = VertexArray::Empty(has_z, has_m);
+		    vertices.Append(lstate.factory.allocator, point_left.Vertices());
+		    vertices.Append(lstate.factory.allocator, point_right.Vertices());
 
-            vertices.Append(point_left.Vertices());
-            vertices.Append(point_right.Vertices());
-
-            LineString line_geom(std::move(vertices));
+		    LineString line_geom(vertices);
 
 		    return lstate.factory.Serialize(result, line_geom, has_z, has_m);
 	    });

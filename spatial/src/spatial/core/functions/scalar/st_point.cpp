@@ -108,7 +108,7 @@ static void PointFunction(DataChunk &args, ExpressionState &state, Vector &resul
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, geometry_t>(x, y, result, count, [&](double x, double y) {
-		auto point = lstate.factory.CreatePoint(x, y);
+		Point point(lstate.factory.allocator, x, y);
 		return lstate.factory.Serialize(result, point, false, false);
 	});
 }

@@ -98,7 +98,7 @@ string Polygon::ToString() const {
 
 	// check if the polygon is empty
 	uint32_t total_verts = 0;
-	auto num_rings = rings.size();
+	auto num_rings = ring_count;
 	for (uint32_t i = 0; i < num_rings; i++) {
 		total_verts += rings[i].Count();
 	}
@@ -136,7 +136,7 @@ string MultiPoint::ToString() const {
 		return "MULTIPOINT EMPTY";
 	}
 	string str = "MULTIPOINT (";
-	auto &points = Items();
+	auto &points = *this;
 	for (uint32_t i = 0; i < num_points; i++) {
 		auto &point = points[i];
 		if (point.IsEmpty()) {
@@ -242,7 +242,7 @@ string GeometryCollection::ToString() const {
 	}
 	string str = "GEOMETRYCOLLECTION (";
 	for (uint32_t i = 0; i < count; i++) {
-		str += Items()[i].ToString();
+		str += (*this)[i].ToString();
 		if (i < count - 1) {
 			str += ", ";
 		}
@@ -258,10 +258,10 @@ uint32_t GeometryCollection::Dimension() const {
 	return max;
 }
 
-GeometryCollection GeometryCollection::DeepCopy() const {
+GeometryCollection GeometryCollection::DeepCopy(ArenaAllocator &alloc) const {
 	GeometryCollection copy(*this);
-	for (auto &item : copy.Items()) {
-		item = item.DeepCopy();
+	for (auto &item : copy) {
+		item = item.DeepCopy(alloc);
 	}
 	return copy;
 }

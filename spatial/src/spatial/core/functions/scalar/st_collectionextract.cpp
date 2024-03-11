@@ -113,18 +113,18 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectPoints(geometry, points);
 					    uint32_t size = points.size();
 
-					    auto mpoint = lstate.factory.CreateMultiPoint(size);
+					    MultiPoint mpoint(lstate.factory.allocator, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoint[i] = points[i];
 					    }
 					    return lstate.factory.Serialize(result, mpoint, props.HasZ(), props.HasM());
 				    }
 				    // otherwise, we return an empty multipoint
-				    auto empty = lstate.factory.CreateEmptyMultiPoint();
+				    MultiPoint empty(props.HasZ(), props.HasM());
 				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    } else {
 				    // otherwise if its not a collection, we return an empty point
-				    auto empty = lstate.factory.CreateEmptyPoint();
+				    Point empty(props.HasZ(), props.HasM());
 				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    }
 		    }
@@ -138,18 +138,18 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectLines(geometry, lines);
 					    uint32_t size = lines.size();
 
-					    auto mline = lstate.factory.CreateMultiLineString(size);
+					    MultiLineString mline(lstate.factory.allocator, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mline[i] = lines[i];
 					    }
 					    return lstate.factory.Serialize(result, mline, props.HasZ(), props.HasM());
 				    }
 				    // otherwise, we return an empty multilinestring
-				    auto empty = lstate.factory.CreateEmptyMultiLineString();
+				    MultiLineString empty(props.HasZ(), props.HasM());
 				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    } else {
 				    // otherwise if its not a collection, we return an empty linestring
-				    auto empty = lstate.factory.CreateEmptyLineString();
+				    LineString empty(props.HasZ(), props.HasM());
 				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    }
 		    }
@@ -163,18 +163,18 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectPolygons(geometry, polys);
 					    uint32_t size = polys.size();
 
-					    auto mpoly = lstate.factory.CreateMultiPolygon(size);
+					    MultiPolygon mpoly(lstate.factory.allocator, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoly[i] = polys[i];
 					    }
 					    return lstate.factory.Serialize(result, mpoly, props.HasZ(), props.HasM());
 				    }
 				    // otherwise, we return an empty multipolygon
-				    auto empty = lstate.factory.CreateEmptyMultiPolygon();
+				    MultiPolygon empty(props.HasZ(), props.HasM());
 				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    } else {
 				    // otherwise if its not a collection, we return an empty polygon
-				    auto empty = lstate.factory.CreateEmptyPolygon();
+				    Polygon empty(props.HasZ(), props.HasM());
 				    return lstate.factory.Serialize(result, empty, props.HasZ(), props.HasM());
 			    }
 		    }
@@ -219,7 +219,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<Point> points;
 				CollectPoints(geometry, points);
 				uint32_t size = points.size();
-				auto mpoint = lstate.factory.CreateMultiPoint(size);
+				MultiPoint mpoint(lstate.factory.allocator, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mpoint[i] = points[i];
 				}
@@ -230,7 +230,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<LineString> lines;
 				CollectLines(geometry, lines);
 				uint32_t size = lines.size();
-				auto mline = lstate.factory.CreateMultiLineString(size);
+				MultiLineString mline(lstate.factory.allocator, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mline[i] = lines[i];
 				}
@@ -241,7 +241,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<Polygon> polys;
 				CollectPolygons(geometry, polys);
 				uint32_t size = polys.size();
-				auto mpoly = lstate.factory.CreateMultiPolygon(size);
+				MultiPolygon mpoly(lstate.factory.allocator, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mpoly[i] = polys[i];
 				}

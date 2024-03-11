@@ -80,7 +80,7 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    return geometry_t {};
 		    }
 
-		    Point point(line.Vertices().Slice(point_count - 1, 1));
+		    Point point(VertexArray::Reference(line.Vertices(), point_count - 1, 1));
 		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
 	    });
 }

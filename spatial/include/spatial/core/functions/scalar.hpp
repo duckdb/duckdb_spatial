@@ -50,12 +50,12 @@ public:
 		RegisterStY(db);
 		RegisterStYMax(db);
 		RegisterStYMin(db);
-        RegisterStZ(db);
-        RegisterStZMax(db);
-        RegisterStZMin(db);
-        RegisterStM(db);
-        RegisterStMMax(db);
-        RegisterStMMin(db);
+		RegisterStZ(db);
+		RegisterStZMax(db);
+		RegisterStZMin(db);
+		RegisterStM(db);
+		RegisterStMMax(db);
+		RegisterStMMin(db);
 	}
 
 private:
@@ -185,23 +185,23 @@ private:
 	// ST_YMin
 	static void RegisterStYMin(DatabaseInstance &db);
 
-    // ST_Z
-    static void RegisterStZ(DatabaseInstance &db);
+	// ST_Z
+	static void RegisterStZ(DatabaseInstance &db);
 
-    // ST_ZMax
-    static void RegisterStZMax(DatabaseInstance &db);
+	// ST_ZMax
+	static void RegisterStZMax(DatabaseInstance &db);
 
-    // ST_ZMin
-    static void RegisterStZMin(DatabaseInstance &db);
+	// ST_ZMin
+	static void RegisterStZMin(DatabaseInstance &db);
 
-    // ST_M
-    static void RegisterStM(DatabaseInstance &db);
+	// ST_M
+	static void RegisterStM(DatabaseInstance &db);
 
-    // ST_MMax
-    static void RegisterStMMax(DatabaseInstance &db);
+	// ST_MMax
+	static void RegisterStMMax(DatabaseInstance &db);
 
-    // ST_MMin
-    static void RegisterStMMin(DatabaseInstance &db);
+	// ST_MMin
+	static void RegisterStMMin(DatabaseInstance &db);
 };
 
 } // namespace core

@@ -89,7 +89,7 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 
 		    auto props = input.GetProperties();
 		    auto actual_index = index < 0 ? point_count + index : index - 1;
-		    Point point(line.Vertices().Slice(actual_index, 1));
+		    Point point(VertexArray::Reference(line.Vertices(), actual_index, 1));
 		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
 	    });
 }

@@ -22,7 +22,7 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 
 	GenericExecutor::ExecuteUnary<POINT_TYPE, GEOMETRY_TYPE>(source, result, count, [&](POINT_TYPE &point) {
 		// Don't bother resetting the allocator, points take up a fixed amount of space anyway
-		auto geom = lstate.factory.CreatePoint(point.a_val, point.b_val);
+		Point geom(lstate.factory.allocator, point.a_val, point.b_val);
 		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;
@@ -58,6 +58,7 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+	auto &arena = lstate.factory.allocator;
 
 	auto &coord_vec = ListVector::GetEntry(source);
 	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
@@ -65,12 +66,13 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, geometry_t>(source, result, count, [&](list_entry_t &line) {
-		auto geom = lstate.factory.CreateLineString(line.length, false, false);
+		auto vertices = VertexArray::Create(arena, line.length, false, false);
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.Vertices().AppendUnsafe({x, y});
+			vertices.Set(i, x, y);
 		}
+		LineString geom(vertices);
 		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;
@@ -126,16 +128,17 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, geometry_t>(source, result, count, [&](list_entry_t &poly) {
-		auto geom = lstate.factory.CreatePolygon(poly.length);
+		auto &arena = lstate.factory.allocator;
+		Polygon geom(arena, poly.length, false, false);
 
 		for (idx_t i = 0; i < poly.length; i++) {
 			auto ring = ring_entries[poly.offset + i];
 			auto &ring_array = geom[i];
-			ring_array.Reserve(ring.length);
+			ring_array.Resize(arena, ring.length);
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-				ring_array.AppendUnsafe({x, y});
+				ring_array.Set(j, x, y);
 			}
 		}
 		return lstate.factory.Serialize(result, geom, false, false);
@@ -204,7 +207,7 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 // Since BOX is a non-standard geometry type, we serialize it as a polygon
 static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
+	auto &arena = lstate.factory.allocator;
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 	uint32_t capacity = 5; // 4 vertices + 1 for closing the polygon
@@ -215,13 +218,13 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto maxx = box.c_val;
 		auto maxy = box.d_val;
 
-		auto geom = lstate.factory.CreatePolygon(1, &capacity, false, false);
+		Polygon geom(arena, 1, &capacity, false, false);
 		auto &shell = geom[0];
-		shell.AppendUnsafe({minx, miny});
-		shell.AppendUnsafe({maxx, miny});
-		shell.AppendUnsafe({maxx, maxy});
-		shell.AppendUnsafe({minx, maxy});
-		shell.AppendUnsafe({minx, miny});
+		shell.Set(0, minx, miny);
+		shell.Set(1, maxx, miny);
+		shell.Set(2, maxx, maxy);
+		shell.Set(3, minx, maxy);
+		shell.Set(4, minx, miny);
 		return lstate.factory.Serialize(result, geom, false, false);
 	});
 	return true;

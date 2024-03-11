@@ -75,8 +75,16 @@ struct EnvelopeAggFunction {
 			auto &arena_alloc = finalize_data.input.allocator;
 			auto &alloc = arena_alloc.GetAllocator();
 			GeometryFactory factory(alloc);
-			auto box = factory.CreateBox(state.xmin, state.ymin, state.xmax, state.ymax);
-			target = factory.Serialize(finalize_data.result, std::move(box), false, false);
+			uint32_t capacity = 5;
+			Polygon box(arena_alloc, 1, &capacity, false, false);
+			auto &ring = box[0];
+			ring.Set(0, state.xmin, state.ymin);
+			ring.Set(1, state.xmin, state.ymax);
+			ring.Set(2, state.xmax, state.ymax);
+			ring.Set(3, state.xmax, state.ymin);
+			ring.Set(4, state.xmin, state.ymin);
+
+			target = factory.Serialize(finalize_data.result, box, false, false);
 		}
 	}
 

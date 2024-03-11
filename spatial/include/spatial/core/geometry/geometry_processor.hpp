@@ -25,7 +25,7 @@ private:
 	static const constexpr double EMPTY_DATA = 0;
 
 public:
-    // The M axis is always in the fourth position and the Z axis is always in the third position
+	// The M axis is always in the fourth position and the Z axis is always in the third position
 	const_data_ptr_t data[4] = {const_data_ptr_cast(&EMPTY_DATA), const_data_ptr_cast(&EMPTY_DATA),
 	                            const_data_ptr_cast(&EMPTY_DATA), const_data_ptr_cast(&EMPTY_DATA)};
 	ptrdiff_t stride[4] = {0, 0, 0, 0};
@@ -38,14 +38,14 @@ public:
 		// TODO: Add GetX, GetY, GetZ, GetM methods
 		data[0] = data_ptr;
 		data[1] = data_ptr + sizeof(double);
-        if(has_z && has_m) {
-            data[2] = data_ptr + 2 * sizeof(double);
-            data[3] = data_ptr + 3 * sizeof(double);
-        } else if(has_z) {
-            data[2] = data_ptr + 2 * sizeof(double);
-        } else if(has_m) {
-            data[3] = data_ptr + 2 * sizeof(double);
-        }
+		if (has_z && has_m) {
+			data[2] = data_ptr + 2 * sizeof(double);
+			data[3] = data_ptr + 3 * sizeof(double);
+		} else if (has_z) {
+			data[2] = data_ptr + 2 * sizeof(double);
+		} else if (has_m) {
+			data[3] = data_ptr + 2 * sizeof(double);
+		}
 
 		auto vertex_size = static_cast<ptrdiff_t>(sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0)));
 
@@ -233,10 +233,10 @@ public:
 		cursor.Skip<uint16_t>();
 		cursor.Skip(4);
 
-        auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
-        auto has_bbox = geom.GetProperties().HasBBox();
-        auto bbox_size = has_bbox ? dims * 2 * sizeof(float) : 0;
-        cursor.Skip(bbox_size);
+		auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
+		auto has_bbox = geom.GetProperties().HasBBox();
+		auto bbox_size = has_bbox ? dims * 2 * sizeof(float) : 0;
+		cursor.Skip(bbox_size);
 
 		return ReadGeometry(cursor, args...);
 	}

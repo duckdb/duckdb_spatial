@@ -561,8 +561,8 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
 				UnaryExecutor::Execute<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
 					auto geometry = state.wkb_reader.Deserialize(input);
-                    auto has_z = state.wkb_reader.GeomHasZ();
-                    auto has_m = state.wkb_reader.GeomHasM();
+					auto has_z = state.wkb_reader.GeomHasZ();
+					auto has_m = state.wkb_reader.GeomHasM();
 					return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
 				});
 				output.data[col_idx].ReferenceAndSetType(geom_vec);

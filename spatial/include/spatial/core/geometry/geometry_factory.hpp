@@ -17,30 +17,6 @@ public:
 	explicit GeometryFactory(Allocator &allocator) : allocator(allocator) {
 	}
 
-	VertexArray AllocateVertexArray(uint32_t capacity, bool has_z, bool has_m);
-
-	Point CreatePoint(double x, double y);
-	LineString CreateLineString(uint32_t capacity, bool has_z, bool has_m);
-	Polygon CreatePolygon(uint32_t num_rings, uint32_t *ring_capacities, bool has_z, bool has_m);
-	// Create a polygon, but leave the ring arrays empty
-	Polygon CreatePolygon(uint32_t num_rings);
-
-	MultiPoint CreateMultiPoint(uint32_t capacity);
-	MultiLineString CreateMultiLineString(uint32_t capacity);
-	MultiPolygon CreateMultiPolygon(uint32_t capacity);
-	GeometryCollection CreateGeometryCollection(uint32_t capacity);
-
-	Polygon CreateBox(double xmin, double ymin, double xmax, double ymax);
-
-	// Empty
-	Point CreateEmptyPoint();
-	LineString CreateEmptyLineString();
-	Polygon CreateEmptyPolygon();
-	MultiPoint CreateEmptyMultiPoint();
-	MultiLineString CreateEmptyMultiLineString();
-	MultiPolygon CreateEmptyMultiPolygon();
-	GeometryCollection CreateEmptyGeometryCollection();
-
 	geometry_t Serialize(Vector &result, const Geometry &geometry, bool has_z, bool has_m);
 	Geometry Deserialize(const geometry_t &data);
 

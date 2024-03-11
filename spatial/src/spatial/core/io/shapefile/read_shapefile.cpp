@@ -208,7 +208,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 
 struct ConvertPoint {
 	static Geometry Convert(SHPObjectPtr &shape, GeometryFactory &factory) {
-		return factory.CreatePoint(shape->padfX[0], shape->padfY[0]);
+		return Point(factory.allocator, shape->padfX[0], shape->padfY[0]);
 	}
 };
 
@@ -216,22 +216,24 @@ struct ConvertLineString {
 	static Geometry Convert(SHPObjectPtr &shape, GeometryFactory &factory) {
 		if (shape->nParts == 1) {
 			// Single LineString
-			auto line_string = factory.CreateLineString(shape->nVertices, false, false);
+			auto vertices = VertexArray::Create(factory.allocator, shape->nVertices, false, false);
 			for (int i = 0; i < shape->nVertices; i++) {
-				line_string.Vertices().AppendUnsafe({shape->padfX[i], shape->padfY[i]});
+				vertices.Set(i, shape->padfX[i], shape->padfY[i]);
 			}
-			return line_string;
+			return LineString(vertices);
 		} else {
 			// MultiLineString
-			auto multi_line_string = factory.CreateMultiLineString(shape->nParts);
+			MultiLineString multi_line_string(factory.allocator, shape->nParts, false, false);
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
-				auto &line_string = multi_line_string[i];
-				line_string = factory.CreateLineString(end - start, false, false);
-				for (int j = start; j < end; j++) {
-					line_string.Vertices().AppendUnsafe({shape->padfX[j], shape->padfY[j]});
+				auto line_size = end - start;
+				auto vertices = VertexArray::Create(factory.allocator, line_size, false, false);
+				for (int j = 0; j < line_size; j++) {
+					auto offset = start + j;
+					vertices.Set(j, shape->padfX[offset], shape->padfY[offset]);
 				}
+				multi_line_string[i] = LineString(vertices);
 				start = end;
 			}
 			return multi_line_string;
@@ -260,34 +262,39 @@ struct ConvertPolygon {
 			// Single polygon, every part is an interior ring
 			// Even if the polygon is counter-clockwise (which should not happen for shapefiles).
 			// we still fall back and convert it to a single polygon.
-			auto polygon = factory.CreatePolygon(shape->nParts);
+			Polygon polygon(factory.allocator, shape->nParts, false, false);
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
 				auto &ring = polygon[i];
-				ring.Reserve(end - start);
-				for (int j = start; j < end; j++) {
-					ring.AppendUnsafe({shape->padfX[j], shape->padfY[j]});
+				auto ring_size = end - start;
+				ring.Resize(factory.allocator, ring_size);
+				for (int j = 0; j < ring_size; j++) {
+					auto offset = start + j;
+					ring.Set(j, shape->padfX[offset], shape->padfY[offset]);
 				}
 				start = end;
 			}
 			return polygon;
 		} else {
 			// MultiPolygon
-			auto multi_polygon = factory.CreateMultiPolygon(polygon_part_starts.size());
+			MultiPolygon multi_polygon(factory.allocator, polygon_part_starts.size(), false, false);
 			for (size_t polygon_idx = 0; polygon_idx < polygon_part_starts.size(); polygon_idx++) {
 				auto part_start = polygon_part_starts[polygon_idx];
 				auto part_end = polygon_idx == polygon_part_starts.size() - 1 ? shape->nParts
 				                                                              : polygon_part_starts[polygon_idx + 1];
-				auto polygon = factory.CreatePolygon(part_end - part_start);
+
+				Polygon polygon(factory.allocator, part_end - part_start, false, false);
 
 				for (auto ring_idx = part_start; ring_idx < part_end; ring_idx++) {
 					auto start = shape->panPartStart[ring_idx];
 					auto end = ring_idx == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[ring_idx + 1];
 					auto &ring = polygon[ring_idx - part_start];
-					ring.Reserve(end - start);
-					for (int j = start; j < end; j++) {
-						ring.AppendUnsafe({shape->padfX[j], shape->padfY[j]});
+					auto ring_size = end - start;
+					ring.Resize(factory.allocator, ring_size);
+					for (int j = 0; j < ring_size; j++) {
+						auto offset = start + j;
+						ring.Set(j, shape->padfX[offset], shape->padfY[offset]);
 					}
 				}
 				multi_polygon[polygon_idx] = polygon;
@@ -299,9 +306,9 @@ struct ConvertPolygon {
 
 struct ConvertMultiPoint {
 	static Geometry Convert(SHPObjectPtr &shape, GeometryFactory &factory) {
-		auto multi_point = factory.CreateMultiPoint(shape->nVertices);
+		MultiPoint multi_point(factory.allocator, shape->nVertices, false, false);
 		for (int i = 0; i < shape->nVertices; i++) {
-			multi_point[i] = factory.CreatePoint(shape->padfX[i], shape->padfY[i]);
+			multi_point[i] = Point(factory.allocator, shape->padfX[i], shape->padfY[i]);
 		}
 		return multi_point;
 	}

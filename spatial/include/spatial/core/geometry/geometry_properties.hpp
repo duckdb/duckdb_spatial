@@ -10,7 +10,7 @@ private:
 	static constexpr const uint8_t Z = 0x01;
 	static constexpr const uint8_t M = 0x02;
 	static constexpr const uint8_t BBOX = 0x04;
-    // Example of other useful properties:
+	// Example of other useful properties:
 	// static constexpr const uint8_t EMPTY = 0x08;
 	// static constexpr const uint8_t GEODETIC = 0x10;
 	// static constexpr const uint8_t SOLID = 0x20;
@@ -38,7 +38,6 @@ public:
 	inline void SetBBox(bool value) {
 		flags = value ? (flags | BBOX) : (flags & ~BBOX);
 	}
-
 };
 
 } // namespace core
