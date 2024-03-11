@@ -157,7 +157,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto gdal_sibling_files = vector<char const *>();
 	auto siblings_params = input.named_parameters.find("sibling_files");
 	if (siblings_params != input.named_parameters.end()) {
-		for (auto &param : ListValue::GetChildren(drivers_param->second)) {
+		for (auto &param : ListValue::GetChildren(siblings_params->second)) {
 			gdal_sibling_files.push_back(StringValue::Get(param).c_str());
 		}
 	}
