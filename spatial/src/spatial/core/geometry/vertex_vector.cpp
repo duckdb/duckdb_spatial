@@ -34,6 +34,7 @@ void VertexArray::Resize(ArenaAllocator &alloc, uint32_t new_count) {
         vertex_data = alloc.AllocateAligned(vertex_size * new_count);
         vertex_count = new_count;
         properties.SetOwning(true);
+        memset(vertex_data, 0, vertex_size * new_count);
         return;
     }
 
@@ -42,6 +43,7 @@ void VertexArray::Resize(ArenaAllocator &alloc, uint32_t new_count) {
 		vertex_count = new_count;
 	} else {
 		auto new_data = alloc.AllocateAligned(vertex_size * new_count);
+        memset(new_data, 0, vertex_size * new_count);
 		auto copy_count = std::min(vertex_count, new_count);
 		memcpy(new_data, vertex_data, vertex_size * copy_count);
 		vertex_data = new_data;
@@ -122,6 +124,7 @@ void VertexArray::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, d
 	// In this case we need to allocate new memory and copy the data over to not lose any data
 	else {
 		auto new_data = alloc.AllocateAligned(vertex_count * new_vertex_size);
+        memset(new_data, 0, vertex_count * new_vertex_size);
 
 		// Special case: If we go from XYZM to XYM, we need to slide the M value to the end of each vertex
 		if (used_to_have_z && used_to_have_m && !has_z && has_m) {

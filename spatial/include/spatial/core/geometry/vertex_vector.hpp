@@ -8,7 +8,15 @@ namespace spatial {
 
 namespace core {
 
+enum class VertexType : uint8_t {
+    XY,
+    XYZ,
+    XYM,
+    XYZM
+};
+
 struct VertexXY {
+    static const constexpr VertexType TYPE = VertexType::XY;
 	static const constexpr bool IS_VERTEX = true;
 	static const constexpr bool HAS_Z = false;
 	static const constexpr bool HAS_M = false;
@@ -18,8 +26,9 @@ struct VertexXY {
 };
 
 struct VertexXYZ {
+    static const constexpr VertexType TYPE = VertexType::XYZ;
 	static const constexpr bool IS_VERTEX = true;
-	static const constexpr bool HAS_Z = true;
+    static const constexpr bool HAS_Z = true;
 	static const constexpr bool HAS_M = false;
 
 	double x;
@@ -28,8 +37,9 @@ struct VertexXYZ {
 };
 
 struct VertexXYM {
+    static const constexpr VertexType TYPE = VertexType::XYM;
 	static const constexpr bool IS_VERTEX = true;
-	static const constexpr bool HAS_Z = false;
+    static const constexpr bool HAS_Z = false;
 	static const constexpr bool HAS_M = true;
 
 	double x;
@@ -38,6 +48,7 @@ struct VertexXYM {
 };
 
 struct VertexXYZM {
+    static const constexpr VertexType TYPE = VertexType::XYZM;
 	static const constexpr bool IS_VERTEX = true;
 	static const constexpr bool HAS_Z = true;
 	static const constexpr bool HAS_M = true;
@@ -114,7 +125,9 @@ public:
 
 	// Create a new vertex vector with the given count and properties
 	static VertexArray Create(ArenaAllocator &allocator, uint32_t count, bool has_z, bool has_m) {
-		auto data = allocator.AllocateAligned(count * sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0)));
+        auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
+		auto data = allocator.AllocateAligned(count * vertex_size);
+        memset(data, 0, count * vertex_size);
 		return VertexArray(data, count, has_z, has_m, true);
 	}
 
