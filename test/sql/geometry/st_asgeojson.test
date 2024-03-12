@@ -82,3 +82,28 @@ SELECT ST_GeomFromGeoJSON('{"type":"MultiPoint","coordinates":[[1.0,2.0,3.0],[4.
 ----
 MULTIPOINT Z (1 2 3, 4 5 6)
 
+query I
+SELECT ST_AsGeoJSON('POINT Z(1 2 3)');
+----
+{"type":"Point","coordinates":[1.0,2.0,3.0]}
+
+query I
+SELECT ST_AsGeoJSON('LINESTRING Z(1 2 3, 4 5 6)');
+----
+{"type":"LineString","coordinates":[[1.0,2.0,3.0],[4.0,5.0,6.0]]}
+
+query I
+SELECT ST_AsGeoJSON('POLYGON Z((1 2 3, 4 5 6, 7 8 9, 1 2 3))');
+----
+{"type":"Polygon","coordinates":[[[1.0,2.0,3.0],[4.0,5.0,6.0],[7.0,8.0,9.0],[1.0,2.0,3.0]]]}
+
+# M values are not supported
+query I
+SELECT ST_AsGeoJSON('POINT M(1 2 3)');
+----
+{"type":"Point","coordinates":[1.0,2.0]}
+
+query I
+SELECT ST_AsGeoJSON('LINESTRING ZM (1 2 3 4, 4 5 6 7)');
+----
+{"type":"LineString","coordinates":[[1.0,2.0,3.0],[4.0,5.0,6.0]]}

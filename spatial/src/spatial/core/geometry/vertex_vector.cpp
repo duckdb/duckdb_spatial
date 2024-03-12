@@ -12,13 +12,31 @@ namespace core {
 
 void VertexArray::Append(ArenaAllocator &alloc, const VertexArray &other) {
 	if (!IsOwning()) {
-		// TODO: Optimize this case
 		MakeOwning(alloc);
 	}
+
+    D_ASSERT(properties.HasZ() == other.properties.HasZ());
+    D_ASSERT(properties.HasM() == other.properties.HasM());
+    auto old_count = vertex_count;
+    auto new_count = vertex_count + other.vertex_count;
+    Resize(alloc, new_count);
+    auto vertex_size = properties.VertexSize();
+    memcpy(vertex_data + old_count * vertex_size, other.vertex_data, vertex_size * other.vertex_count);
+    vertex_count = new_count;
 }
 
 void VertexArray::Resize(ArenaAllocator &alloc, uint32_t new_count) {
 	auto vertex_size = properties.VertexSize();
+    if(new_count == vertex_count) {
+        return;
+    }
+    if(vertex_data == nullptr) {
+        vertex_data = alloc.AllocateAligned(vertex_size * new_count);
+        vertex_count = new_count;
+        properties.SetOwning(true);
+        return;
+    }
+
 	if (IsOwning()) {
 		vertex_data = alloc.Reallocate(vertex_data, vertex_count * vertex_size, vertex_size * new_count);
 		vertex_count = new_count;

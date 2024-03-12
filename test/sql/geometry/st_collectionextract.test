@@ -126,3 +126,20 @@ POINT (1 1)
 LINESTRING (1 1, 2 2)
 POLYGON ((1 1, 2 2, 3 3, 1 1))
 GEOMETRYCOLLECTION EMPTY
+
+
+# Multidimensional geometry
+query I
+SELECT ST_AsText(ST_CollectionExtract(ST_GeomFromText('GEOMETRYCOLLECTION Z( POINT Z(0 0 1), LINESTRING Z (1 1 3, 2 2 3) )')));
+----
+MULTILINESTRING Z ((1 1 3, 2 2 3))
+
+query I
+SELECT ST_AsText(ST_CollectionExtract(ST_GeomFromText('POINT Z (1 1 1)')));
+----
+POINT Z (1 1 1)
+
+query I
+SELECT ST_AsText(ST_CollectionExtract(ST_GeomFromText('GEOMETRYCOLLECTION M ( POINT M (0 0 3), LINESTRING M (1 1 3, 2 2 3) )'), 1));
+----
+MULTIPOINT M (0 0 3)

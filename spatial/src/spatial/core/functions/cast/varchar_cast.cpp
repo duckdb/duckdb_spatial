@@ -2,12 +2,13 @@
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/cast.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
-
+#include "spatial/core/geometry/wkt_reader.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
+#include "duckdb/common/operator/cast_operators.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/common/error_data.hpp"
 
 namespace spatial {
 
@@ -313,6 +314,29 @@ void CoreVectorOperations::GeometryToVarchar(Vector &source, Vector &result, idx
 	});
 }
 
+static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+
+    auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+    WKTReader reader(lstate.factory.allocator);
+    bool success = true;
+    UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
+            source, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
+                try {
+                    auto geom = reader.Parse(wkt);
+                    return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
+                } catch (InvalidInputException &e) {
+                    if (success) {
+                        success = false;
+                        ErrorData error(e);
+                        HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
+                    }
+                    mask.SetInvalid(idx);
+                    return geometry_t {};
+                }
+            });
+    return success;
+}
+
 //------------------------------------------------------------------------------
 // CASTS
 //------------------------------------------------------------------------------
@@ -357,6 +381,9 @@ void CoreCastFunctions::RegisterVarcharCasts(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), LogicalType::VARCHAR,
 	                                    BoundCastInfo(GeometryToVarcharCast), 1);
+
+    ExtensionUtil::RegisterCastFunction(db, LogicalType::VARCHAR, core::GeoTypes::GEOMETRY(),
+                                        BoundCastInfo(TextToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast));
 }
 
 } // namespace core

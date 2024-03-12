@@ -27,6 +27,7 @@ public:
 		RegisterStForce(db);
 		RegisterStGeometryType(db);
 		RegisterStGeomFromHEXWKB(db);
+        RegisterStGeomFromText(db);
 		RegisterStGeomFromWKB(db);
 		RegisterStIntersects(db);
 		RegisterStIntersectsExtent(db);
@@ -115,6 +116,9 @@ private:
 
 	// ST_GeomFromHEXWKB
 	static void RegisterStGeomFromHEXWKB(DatabaseInstance &db);
+
+    // ST_GeomFromText
+    static void RegisterStGeomFromText(DatabaseInstance &db);
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(DatabaseInstance &db);

@@ -25,6 +25,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 
 		LineString line_geom(lstate.factory.allocator, length, false, false);
 
+        uint32_t vertex_idx = 0;
 		for (idx_t i = offset; i < offset + length; i++) {
 
 			auto mapped_idx = format.sel->get_index(i);
@@ -33,23 +34,25 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			}
 			auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
 
+            if(geometry_blob.GetType() != GeometryType::POINT) {
+                throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+            }
+
 			// TODO: Support Z and M
 			if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
-				throw InvalidInputException("ST_MakeLine does not support Z or M geometries");
+				throw InvalidInputException("ST_MakeLine from list does not support Z or M geometries");
 			}
 
-			auto geometry = lstate.factory.Deserialize(geometry_blob);
-
-			if (geometry.Type() != GeometryType::POINT) {
-				throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
-			}
-			auto &point = geometry.As<Point>();
+			auto point = lstate.factory.Deserialize(geometry_blob).As<Point>();
 			if (point.IsEmpty()) {
 				continue;
 			}
 			auto vertex = point.Vertices().Get(0);
-			line_geom.Vertices().Set(i, vertex.x, vertex.y);
+			line_geom.Vertices().Set(vertex_idx++, vertex.x, vertex.y);
 		}
+
+        // Shrink the vertex array to the actual size
+        line_geom.Vertices().Resize(lstate.factory.allocator, vertex_idx);
 
 		if (line_geom.Vertices().Count() == 1) {
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
@@ -87,6 +90,9 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 
 		    auto &point_left = geometry_left.As<Point>();
 		    auto &point_right = geometry_right.As<Point>();
+
+            point_left.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
+            point_right.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
 
 		    auto vertices = VertexArray::Empty(has_z, has_m);
 		    vertices.Append(lstate.factory.allocator, point_left.Vertices());

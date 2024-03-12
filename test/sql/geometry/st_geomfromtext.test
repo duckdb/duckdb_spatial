@@ -1,0 +1,30 @@
+require spatial
+
+# Multipoint with or without parentheses
+query I
+SELECT ST_AsText(ST_GeomFromText('MULTIPOINT ((0 0), (1 1))'));
+----
+MULTIPOINT (0 0, 1 1)
+
+query I
+SELECT ST_AsText(ST_GeomFromText('MULTIPOINT (0 0, 1 1)'));
+----
+MULTIPOINT (0 0, 1 1)
+
+# Ignore SRID
+query I
+SELECT ST_AsText(ST_GeomFromText('SRID=4326; POINT (0 1)'));
+----
+POINT (0 1)
+
+# Dimensionality mismatch
+statement error
+SELECT ST_AsText(ST_GeomFromText('POINT Z (1 2)'));
+----
+Invalid Input Error: WKT Parser: Expected double at position 12 near: 'POINT Z (1 2)'|<---
+
+# Mixed dimensionality not allowed
+statement error
+SELECT ST_AsText(ST_GeomFromText('GEOMETRYCOLLECTION ZM (POINT Z (1 2 3))'));
+----
+Invalid Input Error: WKT Parser: GeometryCollection with mixed Z and M types are not supported, mismatch at position 31 near: 'GEOMETRYCOLLECTION ZM (POINT Z ('|<---
