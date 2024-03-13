@@ -13,7 +13,7 @@ public:
 	static void LineString2DToVarchar(Vector &source, Vector &result, idx_t count);
 	static void Polygon2DToVarchar(Vector &source, Vector &result, idx_t count);
 	static void Box2DToVarchar(Vector &source, Vector &result, idx_t count);
-	static void GeometryToVarchar(Vector &source, Vector &result, idx_t count, GeometryFactory &factory);
+	static void GeometryToVarchar(Vector &source, Vector &result, idx_t count);
 };
 
 struct CoreCastFunctions {

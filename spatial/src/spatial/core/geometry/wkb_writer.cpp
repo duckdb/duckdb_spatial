@@ -2,218 +2,171 @@
 #include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+#include "spatial/core/geometry/geometry_processor.hpp"
 
 namespace spatial {
 
 namespace core {
 
-enum class WKBGeometryType : uint32_t {
-	POINT = 1,
-	LINESTRING = 2,
-	POLYGON = 3,
-	MULTIPOINT = 4,
-	MULTILINESTRING = 5,
-	MULTIPOLYGON = 6,
-	GEOMETRYCOLLECTION = 7
+//------------------------------------------------------------------------------
+// Size Calculator
+//------------------------------------------------------------------------------
+class WKBSizeCalculator final : GeometryProcessor<uint32_t> {
+	uint32_t ProcessPoint(const VertexData &vertices) override {
+		// <byte order> + <type> + <x> + <y> (+ <z> + <m>)
+		// WKB Points always write points even if empty
+		return sizeof(uint8_t) + sizeof(uint32_t) + sizeof(double) * (2 + (HasZ() ? 1 : 0) + (HasM() ? 1 : 0));
+	}
+
+	uint32_t ProcessLineString(const VertexData &vertices) override {
+		// <byte order> + <type> + <count> + <points>
+		return sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t) + vertices.ByteSize();
+	}
+
+	uint32_t ProcessPolygon(PolygonState &state) override {
+		// <byte order> + <type> + <ring_count> + <rings>
+		uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
+		while (!state.IsDone()) {
+			// <count> + <points>
+			size += sizeof(uint32_t) + state.Next().ByteSize();
+		}
+		return size;
+	}
+
+	uint32_t ProcessCollection(CollectionState &state) override {
+		// <byte order> + <type> + <geometry_count>
+		uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
+		while (!state.IsDone()) {
+			// + <geometry>
+			size += state.Next();
+		}
+		return size;
+	}
+
+public:
+	uint32_t Execute(const geometry_t &geometry) {
+		return Process(geometry);
+	}
 };
 
-uint32_t WKBWriter::GetRequiredSize(const Geometry &geom) {
-	switch (geom.Type()) {
-	case GeometryType::POINT:
-		return GetRequiredSize(geom.GetPoint());
-	case GeometryType::LINESTRING:
-		return GetRequiredSize(geom.GetLineString());
-	case GeometryType::POLYGON:
-		return GetRequiredSize(geom.GetPolygon());
-	case GeometryType::MULTIPOINT:
-		return GetRequiredSize(geom.GetMultiPoint());
-	case GeometryType::MULTILINESTRING:
-		return GetRequiredSize(geom.GetMultiLineString());
-	case GeometryType::MULTIPOLYGON:
-		return GetRequiredSize(geom.GetMultiPolygon());
-	case GeometryType::GEOMETRYCOLLECTION:
-		return GetRequiredSize(geom.GetGeometryCollection());
-	default:
-		throw NotImplementedException(
-		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geom.Type())));
+//------------------------------------------------------------------------------
+// Serializer
+//------------------------------------------------------------------------------
+class WKBSerializer final : GeometryProcessor<void, Cursor &> {
+
+	void WriteHeader(Cursor &cursor) {
+		// <byte order>
+		cursor.Write<uint8_t>(1);
+		uint32_t type_id = static_cast<uint32_t>(CurrentType()) + 1;
+		if (HasZ()) {
+			type_id += 1000;
+		}
+		if (HasM()) {
+			type_id += 2000;
+		}
+		// <type>
+		cursor.Write<uint32_t>(type_id);
 	}
-}
 
-uint32_t WKBWriter::GetRequiredSize(const Point &point) {
-	// Byte order + type + x + y
-	return sizeof(uint8_t) + sizeof(uint32_t) + sizeof(double) + sizeof(double);
-}
-
-uint32_t WKBWriter::GetRequiredSize(const LineString &line) {
-	// Byte order + type + count + (count * (x + y))
-	return sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t) + line.Count() * sizeof(double) * 2;
-}
-
-uint32_t WKBWriter::GetRequiredSize(const Polygon &poly) {
-	// Byte order + type + count + (count * (ring_count[i] * (x + y)))
-	uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
-	for (auto &ring : poly.Rings()) {
-		size += sizeof(uint32_t) + ring.Count() * sizeof(double) * 2;
-	}
-	return size;
-}
-
-uint32_t WKBWriter::GetRequiredSize(const MultiPoint &multi_point) {
-	uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
-	for (auto &point : multi_point) {
-		size += GetRequiredSize(point);
-	}
-	return size;
-}
-
-uint32_t WKBWriter::GetRequiredSize(const MultiLineString &multi_line) {
-	uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
-	for (auto &line : multi_line) {
-		size += GetRequiredSize(line);
-	}
-	return size;
-}
-
-uint32_t WKBWriter::GetRequiredSize(const MultiPolygon &multi_poly) {
-	uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
-	for (auto &poly : multi_poly) {
-		size += GetRequiredSize(poly);
-	}
-	return size;
-}
-
-uint32_t WKBWriter::GetRequiredSize(const GeometryCollection &collection) {
-	uint32_t size = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
-	for (auto &geom : collection) {
-		size += GetRequiredSize(geom);
-	}
-	return size;
-}
-
-static void WriteByte(uint8_t value, data_ptr_t &ptr) {
-	Store<uint8_t>(value, ptr);
-	ptr += sizeof(uint8_t);
-}
-
-static void WriteInt(uint32_t value, data_ptr_t &ptr) {
-	Store<uint32_t>(value, ptr);
-	ptr += sizeof(uint32_t);
-}
-
-static void WriteDouble(double value, data_ptr_t &ptr) {
-	Store<double>(value, ptr);
-	ptr += sizeof(double);
-}
-
-// Public API
-void WKBWriter::Write(const Geometry &geom, data_ptr_t &ptr) {
-	switch (geom.Type()) {
-	case GeometryType::POINT:
-		Write(geom.GetPoint(), ptr);
-		break;
-	case GeometryType::LINESTRING:
-		Write(geom.GetLineString(), ptr);
-		break;
-	case GeometryType::POLYGON:
-		Write(geom.GetPolygon(), ptr);
-		break;
-	case GeometryType::MULTIPOINT:
-		Write(geom.GetMultiPoint(), ptr);
-		break;
-	case GeometryType::MULTILINESTRING:
-		Write(geom.GetMultiLineString(), ptr);
-		break;
-	case GeometryType::MULTIPOLYGON:
-		Write(geom.GetMultiPolygon(), ptr);
-		break;
-	case GeometryType::GEOMETRYCOLLECTION:
-		Write(geom.GetGeometryCollection(), ptr);
-		break;
-	default:
-		throw NotImplementedException(
-		    StringUtil::Format("Geometry type %d not supported", static_cast<int>(geom.Type())));
-	}
-}
-
-void WKBWriter::Write(const Point &point, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                            // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::POINT), ptr); // geometry type
-
-	if (point.IsEmpty()) {
-		auto x = std::numeric_limits<double>::quiet_NaN();
-		auto y = std::numeric_limits<double>::quiet_NaN();
-		WriteDouble(x, ptr);
-		WriteDouble(y, ptr);
-	} else {
-		auto vertex = point.GetVertex();
-		WriteDouble(vertex.x, ptr);
-		WriteDouble(vertex.y, ptr);
-	}
-}
-
-void WKBWriter::Write(const LineString &line, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                                 // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::LINESTRING), ptr); // geometry type
-
-	auto num_points = line.Count();
-	WriteInt(num_points, ptr);
-	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
-		auto vertex = line.Vertices().Get(i);
-		WriteDouble(vertex.x, ptr);
-		WriteDouble(vertex.y, ptr);
-	}
-}
-
-void WKBWriter::Write(const Polygon &polygon, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                              // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::POLYGON), ptr); // geometry type
-
-	WriteInt(polygon.Count(), ptr);
-	for (auto &ring : polygon.Rings()) {
-		WriteInt(ring.Count(), ptr);
-
-		for (uint32_t i = 0; i < ring.Count(); i++) {
-			auto vertex = ring.Get(i);
-			WriteDouble(vertex.x, ptr);
-			WriteDouble(vertex.y, ptr);
+	void ProcessPoint(const VertexData &vertices, Cursor &cursor) override {
+		WriteHeader(cursor);
+		if (vertices.IsEmpty()) {
+			cursor.Write(std::numeric_limits<double>::quiet_NaN());
+			cursor.Write(std::numeric_limits<double>::quiet_NaN());
+			if (HasZ()) {
+				cursor.Write(std::numeric_limits<double>::quiet_NaN());
+			}
+			if (HasM()) {
+				cursor.Write(std::numeric_limits<double>::quiet_NaN());
+			}
+		} else {
+			cursor.Write(Load<double>(vertices.data[0]));
+			cursor.Write(Load<double>(vertices.data[1]));
+			if (HasZ()) {
+				cursor.Write(Load<double>(vertices.data[2]));
+			}
+			if (HasM()) {
+				cursor.Write(Load<double>(vertices.data[3]));
+			}
 		}
 	}
+
+	void ProcessVertices(const VertexData &vertices, Cursor &cursor) {
+		bool has_z = HasZ();
+		bool has_m = HasM();
+		for (uint32_t i = 0; i < vertices.count; i++) {
+			cursor.Write(Load<double>(vertices.data[0] + i * vertices.stride[0]));
+			cursor.Write(Load<double>(vertices.data[1] + i * vertices.stride[1]));
+			if (has_z) {
+				cursor.Write(Load<double>(vertices.data[2] + i * vertices.stride[2]));
+			}
+			if (has_m) {
+				cursor.Write(Load<double>(vertices.data[3] + i * vertices.stride[3]));
+			}
+		}
+	}
+
+	void ProcessLineString(const VertexData &vertices, Cursor &cursor) override {
+		WriteHeader(cursor);
+		cursor.Write<uint32_t>(vertices.count);
+		ProcessVertices(vertices, cursor);
+	}
+
+	void ProcessPolygon(PolygonState &state, Cursor &cursor) override {
+		WriteHeader(cursor);
+		cursor.Write<uint32_t>(state.RingCount());
+		while (!state.IsDone()) {
+			auto vertices = state.Next();
+			cursor.Write<uint32_t>(vertices.count);
+			ProcessVertices(vertices, cursor);
+		}
+	}
+
+	void ProcessCollection(CollectionState &state, Cursor &cursor) override {
+		WriteHeader(cursor);
+		cursor.Write<uint32_t>(state.ItemCount());
+		while (!state.IsDone()) {
+			state.Next(cursor);
+		}
+	}
+
+public:
+	void Execute(const geometry_t &geometry, data_ptr_t start, data_ptr_t end) {
+		Cursor cursor(start, end);
+		Process(geometry, cursor);
+	}
+	void Execute(const geometry_t &geometry, string_t &blob) {
+		Cursor cursor(blob);
+		Process(geometry, cursor);
+		blob.Finalize();
+	}
+};
+
+string_t WKBWriter::Write(const geometry_t &geometry, Vector &result) {
+	WKBSizeCalculator size_processor;
+	WKBSerializer serializer;
+	auto size = size_processor.Execute(geometry);
+	auto blob = StringVector::EmptyString(result, size);
+	serializer.Execute(geometry, blob);
+	return blob;
 }
 
-void WKBWriter::Write(const MultiPoint &multi_point, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                                 // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::MULTIPOINT), ptr); // geometry type
-	WriteInt(multi_point.Count(), ptr);
-	for (auto &point : multi_point) {
-		Write(point, ptr);
-	}
+void WKBWriter::Write(const geometry_t &geometry, vector<data_t> &buffer) {
+	WKBSizeCalculator size_processor;
+	WKBSerializer serializer;
+	auto size = size_processor.Execute(geometry);
+	buffer.resize(size);
+	serializer.Execute(geometry, buffer.data(), buffer.data() + size);
 }
 
-void WKBWriter::Write(const MultiLineString &multi_line, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                                      // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::MULTILINESTRING), ptr); // geometry type
-	WriteInt(multi_line.Count(), ptr);
-	for (auto &line : multi_line) {
-		Write(line, ptr);
-	}
-}
-
-void WKBWriter::Write(const MultiPolygon &multi_polygon, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                                   // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::MULTIPOLYGON), ptr); // geometry type
-	WriteInt(multi_polygon.Count(), ptr);
-	for (auto &polygon : multi_polygon) {
-		Write(polygon, ptr);
-	}
-}
-
-void WKBWriter::Write(const GeometryCollection &collection, data_ptr_t &ptr) {
-	WriteByte(1, ptr);                                                         // byte order
-	WriteInt(static_cast<uint32_t>(WKBGeometryType::GEOMETRYCOLLECTION), ptr); // geometry type
-	WriteInt(collection.Count(), ptr);
-	for (auto &geom : collection) {
-		Write(geom, ptr);
-	}
+const_data_ptr_t WKBWriter::Write(const geometry_t &geometry, uint32_t *size, ArenaAllocator &allocator) {
+	WKBSizeCalculator size_processor;
+	WKBSerializer serializer;
+	auto blob_size = size_processor.Execute(geometry);
+	auto blob = allocator.AllocateAligned(blob_size);
+	serializer.Execute(geometry, blob, blob + blob_size);
+	*size = blob_size;
+	return blob;
 }
 
 } // namespace core

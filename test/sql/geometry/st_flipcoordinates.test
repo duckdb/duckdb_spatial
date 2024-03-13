@@ -50,3 +50,20 @@ SELECT ST_FlipCoordinates(NULL)
 ----
 NULL
 
+# With Z
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('POINT Z(1 2 3)'))
+----
+POINT Z (2 1 3)
+
+# With M
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('POINT M(1 2 3)'))
+----
+POINT M (2 1 3)
+
+# With ZM
+query I
+SELECT ST_FlipCoordinates(ST_GeomFromText('POINT ZM(1 2 3 4)'))
+----
+POINT ZM (2 1 3 4)

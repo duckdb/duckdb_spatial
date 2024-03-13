@@ -13,6 +13,8 @@
 #include "spatial/gdal/functions.hpp"
 #include "spatial/gdal/file_handler.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/geometry/geometry_writer.hpp"
+#include "spatial/core/geometry/wkb_reader.hpp"
 
 #include "ogrsf_frmts.h"
 
@@ -96,29 +98,43 @@ static string FilterToGdal(const TableFilterSet &set, const vector<idx_t> &colum
 }
 
 struct GdalScanFunctionData : public TableFunctionData {
-	idx_t layer_idx;
+	int layer_idx;
 	bool sequential_layer_scan = false;
 	bool keep_wkb = false;
 	unordered_set<idx_t> geometry_column_ids;
-	vector<string> layer_creation_options;
 	unique_ptr<SpatialFilter> spatial_filter;
-	GDALDatasetUniquePtr dataset;
 	idx_t max_threads;
 	// before they are renamed
 	vector<string> all_names;
 	vector<LogicalType> all_types;
-	atomic<idx_t> lines_read;
 	ArrowTableType arrow_table;
+
+	bool has_approximate_feature_count;
+	idx_t approximate_feature_count;
+	string raw_file_name;
+	string prefixed_file_name;
+	CPLStringList dataset_open_options;
+	CPLStringList dataset_allowed_drivers;
+	CPLStringList dataset_sibling_files;
+	CPLStringList layer_creation_options;
 };
 
 struct GdalScanLocalState : ArrowScanLocalState {
 	core::GeometryFactory factory;
+	// We trust GDAL to produce valid WKB
+	core::WKBReader wkb_reader;
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
-	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)) {
+	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)),
+	      wkb_reader(factory.allocator) {
 	}
 };
 
-struct GdalScanGlobalState : ArrowScanGlobalState {};
+struct GdalScanGlobalState : ArrowScanGlobalState {
+	GDALDatasetUniquePtr dataset;
+	atomic<idx_t> lines_read;
+	explicit GdalScanGlobalState(GDALDatasetUniquePtr dataset) : dataset(std::move(dataset)), lines_read(0) {
+	}
+};
 
 //------------------------------------------------------------------------------
 // Bind
@@ -131,53 +147,44 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		throw PermissionException("Scanning GDAL files is disabled through configuration");
 	}
 
+	auto result = make_uniq<GdalScanFunctionData>();
+
 	// First scan for "options" parameter
-	auto gdal_open_options = vector<char const *>();
+	// auto gdal_open_options = vector<char const *>();
 	auto options_param = input.named_parameters.find("open_options");
 	if (options_param != input.named_parameters.end()) {
 		for (auto &param : ListValue::GetChildren(options_param->second)) {
-			gdal_open_options.push_back(StringValue::Get(param).c_str());
+			result->dataset_open_options.AddString(StringValue::Get(param).c_str());
 		}
 	}
-	if (!gdal_open_options.empty()) {
-		gdal_open_options.push_back(nullptr);
-	}
 
-	auto gdal_allowed_drivers = vector<char const *>();
 	auto drivers_param = input.named_parameters.find("allowed_drivers");
 	if (drivers_param != input.named_parameters.end()) {
 		for (auto &param : ListValue::GetChildren(drivers_param->second)) {
-			gdal_allowed_drivers.push_back(StringValue::Get(param).c_str());
+			result->dataset_allowed_drivers.AddString(StringValue::Get(param).c_str());
 		}
 	}
-	if (!gdal_allowed_drivers.empty()) {
-		gdal_allowed_drivers.push_back(nullptr);
-	}
 
-	auto gdal_sibling_files = vector<char const *>();
 	auto siblings_params = input.named_parameters.find("sibling_files");
 	if (siblings_params != input.named_parameters.end()) {
 		for (auto &param : ListValue::GetChildren(siblings_params->second)) {
-			gdal_sibling_files.push_back(StringValue::Get(param).c_str());
+			result->dataset_sibling_files.AddString(StringValue::Get(param).c_str());
 		}
-	}
-	if (!gdal_sibling_files.empty()) {
-		gdal_sibling_files.push_back(nullptr);
 	}
 
 	// Now we can open the dataset
-	auto raw_file_name = input.inputs[0].GetValue<string>();
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
-	auto prefixed_file_name = ctx_state.GetPrefix() + raw_file_name;
-	auto dataset =
-	    GDALDatasetUniquePtr(GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
-	                                           gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
-	                                           gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
-	                                           gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data()));
+
+	result->raw_file_name = input.inputs[0].GetValue<string>();
+	result->prefixed_file_name = ctx_state.GetPrefix() + result->raw_file_name;
+
+	auto dataset = GDALDatasetUniquePtr(GDALDataset::Open(
+	    result->prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR, result->dataset_allowed_drivers,
+	    result->dataset_open_options, result->dataset_sibling_files));
 
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
-		throw IOException("Could not open file: " + raw_file_name + " (" + error + ")");
+		throw IOException("Could not open file: " + result->raw_file_name + " (" + error + ")");
 	}
 
 	// Double check that the dataset have any layers
@@ -186,7 +193,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Now we can bind the additonal options
-	auto result = make_uniq<GdalScanFunctionData>();
 	bool max_batch_size_set = false;
 	for (auto &kv : input.named_parameters) {
 		auto loption = StringUtil::Lower(kv.first);
@@ -202,7 +208,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 					throw BinderException(
 					    StringUtil::Format("Layer index too large (%s > %s)", layer_idx, dataset->GetLayerCount()));
 				}
-				result->layer_idx = (idx_t)layer_idx;
+				result->layer_idx = layer_idx;
 			}
 
 			// Find layer by name
@@ -211,7 +217,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 				bool found = false;
 				for (auto layer_idx = 0; layer_idx < dataset->GetLayerCount(); layer_idx++) {
 					if (strcmp(dataset->GetLayer(layer_idx)->GetName(), name) == 0) {
-						result->layer_idx = (idx_t)layer_idx;
+						result->layer_idx = layer_idx;
 						found = true;
 						break;
 					}
@@ -259,7 +265,8 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 			if (max_batch_size <= 0) {
 				throw BinderException("'max_batch_size' parameter must be positive");
 			}
-			result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", max_batch_size));
+			auto str = StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", max_batch_size);
+			result->layer_creation_options.AddString(str.c_str());
 			max_batch_size_set = true;
 		}
 
@@ -274,27 +281,32 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	}
 
 	// Defaults
-	result->layer_creation_options.push_back("INCLUDE_FID=NO");
-	if (max_batch_size_set == false) {
+	result->layer_creation_options.AddString("INCLUDE_FID=NO");
+	if (!max_batch_size_set) {
 		// Set default max batch size to standard vector size
-		result->layer_creation_options.push_back(StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", STANDARD_VECTOR_SIZE));
-	}
-
-	// set layer options
-	char **lco = nullptr;
-	for (auto &option : result->layer_creation_options) {
-		lco = CSLAddString(lco, option.c_str());
+		auto str = StringUtil::Format("MAX_FEATURES_IN_BATCH=%d", STANDARD_VECTOR_SIZE);
+		result->layer_creation_options.AddString(str.c_str());
 	}
 
 	// Get the schema for the selected layer
 	auto layer = dataset->GetLayer(result->layer_idx);
+
+	// Check if we can get an approximate feature count
+	result->approximate_feature_count = 0;
+	result->has_approximate_feature_count = false;
+	if (!result->sequential_layer_scan) {
+		auto count = layer->GetFeatureCount();
+		if (count > -1) {
+			result->approximate_feature_count = count;
+			result->has_approximate_feature_count = true;
+		}
+	}
+
 	struct ArrowArrayStream stream;
-	if (!layer->GetArrowStream(&stream, lco)) {
+	if (!layer->GetArrowStream(&stream, result->layer_creation_options)) {
 		// layer is owned by GDAL, we do not need to destory it
-		CSLDestroy(lco);
 		throw IOException("Could not get arrow stream from layer");
 	}
-	CSLDestroy(lco);
 
 	struct ArrowSchema schema;
 	if (stream.get_schema(&stream, &schema) != 0) {
@@ -367,7 +379,6 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 
 	GdalTableFunction::RenameColumns(names);
 
-	result->dataset = std::move(dataset);
 	result->all_types = return_types;
 
 	return std::move(result);
@@ -398,19 +409,35 @@ void GdalTableFunction::RenameColumns(vector<string> &names) {
 }
 
 idx_t GdalTableFunction::MaxThreads(ClientContext &context, const FunctionData *bind_data_p) {
-	auto data = (const GdalScanFunctionData *)bind_data_p;
-	return data->max_threads;
+	auto &data = bind_data_p->Cast<GdalScanFunctionData>();
+	return data.max_threads;
 }
 
-OGRLayer *open_layer(const GdalScanFunctionData &data) {
+//-----------------------------------------------------------------------------
+// Init global
+//-----------------------------------------------------------------------------
+unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
+                                                                   TableFunctionInitInput &input) {
+	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
 
-	// Get selected layer
+	auto dataset = GDALDatasetUniquePtr(
+	    GDALDataset::Open(data.prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
+	                      data.dataset_allowed_drivers, data.dataset_open_options, data.dataset_sibling_files));
+	if (dataset == nullptr) {
+		auto error = string(CPLGetLastErrorMsg());
+		throw IOException("Could not open file: " + data.raw_file_name + " (" + error + ")");
+	}
+
+	auto global_state = make_uniq<GdalScanGlobalState>(std::move(dataset));
+	auto &gstate = *global_state;
+
+	// Open the layer
 	OGRLayer *layer = nullptr;
 	if (data.sequential_layer_scan) {
 		// Get the layer from the dataset by scanning through the layers
-		for (int i = 0; i < data.dataset->GetLayerCount(); i++) {
-			layer = data.dataset->GetLayer(i);
-			if (i == (int)data.layer_idx) {
+		for (int i = 0; i < gstate.dataset->GetLayerCount(); i++) {
+			layer = gstate.dataset->GetLayer(i);
+			if (i == data.layer_idx) {
 				// desired layer found
 				break;
 			}
@@ -422,7 +449,7 @@ OGRLayer *open_layer(const GdalScanFunctionData &data) {
 		}
 	} else {
 		// Otherwise get the layer directly
-		layer = data.dataset->GetLayer(data.layer_idx);
+		layer = gstate.dataset->GetLayer(data.layer_idx);
 	}
 
 	// Apply spatial filter (if we got one)
@@ -435,19 +462,6 @@ OGRLayer *open_layer(const GdalScanFunctionData &data) {
 			layer->SetSpatialFilter(OGRGeometry::FromHandle(filter.geom));
 		}
 	}
-
-	return layer;
-}
-
-//-----------------------------------------------------------------------------
-// Init global
-//-----------------------------------------------------------------------------
-unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext &context,
-                                                                   TableFunctionInitInput &input) {
-	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
-	auto global_state = make_uniq<GdalScanGlobalState>();
-
-	auto layer = open_layer(data);
 	// TODO: Apply projection pushdown
 
 	// Apply predicate pushdown
@@ -459,28 +473,22 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 
 	// Create arrow stream from layer
 
-	global_state->stream = make_uniq<ArrowArrayStreamWrapper>();
+	gstate.stream = make_uniq<ArrowArrayStreamWrapper>();
 
 	// set layer options
-	char **lco = nullptr;
-	for (auto &option : data.layer_creation_options) {
-		lco = CSLAddString(lco, option.c_str());
-	}
-	if (!layer->GetArrowStream(&global_state->stream->arrow_array_stream, lco)) {
-		CSLDestroy(lco);
+	if (!layer->GetArrowStream(&gstate.stream->arrow_array_stream, data.layer_creation_options)) {
 		throw IOException("Could not get arrow stream");
 	}
-	CSLDestroy(lco);
 
-	global_state->max_threads = GdalTableFunction::MaxThreads(context, input.bind_data.get());
+	gstate.max_threads = GdalTableFunction::MaxThreads(context, input.bind_data.get());
 
 	if (input.CanRemoveFilterColumns()) {
-		global_state->projection_ids = input.projection_ids;
+		gstate.projection_ids = input.projection_ids;
 		for (const auto &col_idx : input.column_ids) {
 			if (col_idx == COLUMN_IDENTIFIER_ROW_ID) {
-				global_state->scanned_types.emplace_back(LogicalType::ROW_TYPE);
+				gstate.scanned_types.emplace_back(LogicalType::ROW_TYPE);
 			} else {
-				global_state->scanned_types.push_back(data.all_types[col_idx]);
+				gstate.scanned_types.push_back(data.all_types[col_idx]);
 			}
 		}
 	}
@@ -518,27 +526,27 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 	if (!input.local_state) {
 		return;
 	}
-	auto &data = (GdalScanFunctionData &)*input.bind_data;
-	auto &state = (GdalScanLocalState &)*input.local_state;
-	auto &global_state = (GdalScanGlobalState &)*input.global_state;
+	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
+	auto &state = input.local_state->Cast<GdalScanLocalState>();
+	auto &gstate = input.global_state->Cast<GdalScanGlobalState>();
 
 	//! Out of tuples in this chunk
 	if (state.chunk_offset >= (idx_t)state.chunk->arrow_array.length) {
-		if (!ArrowScanParallelStateNext(context, input.bind_data.get(), state, global_state)) {
+		if (!ArrowScanParallelStateNext(context, input.bind_data.get(), state, gstate)) {
 			return;
 		}
 	}
-	auto output_size = MinValue<int64_t>(STANDARD_VECTOR_SIZE, state.chunk->arrow_array.length - state.chunk_offset);
-	data.lines_read += output_size;
+	auto output_size = MinValue<idx_t>(STANDARD_VECTOR_SIZE, state.chunk->arrow_array.length - state.chunk_offset);
+	gstate.lines_read += output_size;
 
-	if (global_state.CanRemoveFilterColumns()) {
+	if (gstate.CanRemoveFilterColumns()) {
 		state.all_columns.Reset();
 		state.all_columns.SetCardinality(output_size);
-		ArrowToDuckDB(state, data.arrow_table.GetColumns(), state.all_columns, data.lines_read - output_size, false);
-		output.ReferenceColumns(state.all_columns, global_state.projection_ids);
+		ArrowToDuckDB(state, data.arrow_table.GetColumns(), state.all_columns, gstate.lines_read - output_size, false);
+		output.ReferenceColumns(state.all_columns, gstate.projection_ids);
 	} else {
 		output.SetCardinality(output_size);
-		ArrowToDuckDB(state, data.arrow_table.GetColumns(), output, data.lines_read - output_size, false);
+		ArrowToDuckDB(state, data.arrow_table.GetColumns(), output, gstate.lines_read - output_size, false);
 	}
 
 	if (!data.keep_wkb) {
@@ -551,9 +559,11 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				state.factory.allocator.Reset();
 				auto &wkb_vec = output.data[col_idx];
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
-				UnaryExecutor::Execute<string_t, string_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
-					auto geometry = state.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-					return state.factory.Serialize(geom_vec, geometry);
+				UnaryExecutor::Execute<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
+					auto geometry = state.wkb_reader.Deserialize(input);
+					auto has_z = state.wkb_reader.GeomHasZ();
+					auto has_m = state.wkb_reader.GeomHasM();
+					return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
 				});
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}
@@ -568,22 +578,10 @@ unique_ptr<NodeStatistics> GdalTableFunction::Cardinality(ClientContext &context
 	auto &gdal_data = data->Cast<GdalScanFunctionData>();
 	auto result = make_uniq<NodeStatistics>();
 
-	if (gdal_data.sequential_layer_scan) {
-		// It would be too expensive to calculate the cardinality for a sequential layer scan
-		// as we would have to scan through all the layers twice.
-		return result;
-	}
-
-	// Some drivers wont return a feature count if it would be to expensive to calculate
-	// (unless we pass 1 "= force" to the function calculate)
-	auto layer = open_layer(gdal_data);
-
-	auto count = layer->GetFeatureCount(0);
-	if (count > -1) {
+	if (gdal_data.has_approximate_feature_count) {
 		result->has_estimated_cardinality = true;
-		result->estimated_cardinality = count;
+		result->estimated_cardinality = gdal_data.approximate_feature_count;
 	}
-
 	return result;
 }
 

@@ -9,6 +9,7 @@
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+#include "spatial/core/geometry/wkb_reader.hpp"
 
 namespace spatial {
 
@@ -24,8 +25,9 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 	auto count = args.size();
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+	WKBReader reader(lstate.factory.allocator);
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input_hex) {
+	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input_hex) {
 		auto hex_size = input_hex.GetSize();
 		auto hex_ptr = const_data_ptr_cast(input_hex.GetData());
 
@@ -47,8 +49,8 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 			blob_ptr[blob_idx++] = (byte_a << 4) + byte_b;
 		}
 
-		auto geom = lstate.factory.FromWKB((const char *)wkb_blob.get(), blob_size);
-		return lstate.factory.Serialize(result, geom);
+		auto geom = reader.Deserialize(blob_ptr, blob_size);
+		return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
 	});
 }
 

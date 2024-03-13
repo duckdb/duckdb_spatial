@@ -54,3 +54,16 @@ query I
 SELECT ST_AsText(ST_MakeLine(NULL, ST_Point(1,2)))
 ----
 NULL
+
+# Mixed dimensions
+query I
+SELECT ST_AsText(ST_MakeLine(ST_GeomFromText('POINT Z (1 1 1)'), ST_GeomFromText('POINT (2 2)')))
+----
+LINESTRING Z (1 1 1, 2 2 0)
+
+# Mixed dimensions
+query I
+SELECT ST_AsText(ST_MakeLine(ST_GeomFromText('POINT Z (1 1 1)'), ST_GeomFromText('POINT M (2 2 3)')))
+----
+LINESTRING ZM (1 1 1 0, 2 2 0 3)
+

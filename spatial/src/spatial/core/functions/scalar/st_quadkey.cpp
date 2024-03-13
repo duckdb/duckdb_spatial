@@ -66,17 +66,16 @@ static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &level = args.data[1];
 	auto count = args.size();
 
-	BinaryExecutor::Execute<string_t, int32_t, string_t>(
-	    geom, level, result, count, [&](string_t input, int32_t level) {
-		    auto header = GeometryHeader::Get(input);
-		    if (header.type != GeometryType::POINT) {
+	BinaryExecutor::Execute<geometry_t, int32_t, string_t>(
+	    geom, level, result, count, [&](geometry_t input, int32_t level) {
+		    if (input.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_QuadKey: Only POINT geometries are supported");
 		    }
 		    auto point = ctx.factory.Deserialize(input);
 		    if (point.IsEmpty()) {
 			    throw InvalidInputException("ST_QuadKey: Empty geometries are not supported");
 		    }
-		    auto vertex = point.GetPoint().GetVertex();
+		    auto vertex = point.As<Point>().Vertices().Get(0);
 		    auto x = vertex.x;
 		    auto y = vertex.y;
 

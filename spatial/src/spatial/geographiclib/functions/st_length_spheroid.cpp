@@ -16,6 +16,8 @@ namespace spatial {
 
 namespace geographiclib {
 
+using namespace core;
+
 //------------------------------------------------------------------------------
 // LINESTRING_2D
 //------------------------------------------------------------------------------
@@ -57,7 +59,7 @@ static void GeodesicLineString2DFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static double LineLength(const core::LineString &line, GeographicLib::PolygonArea &comp) {
+static double LineLength(const LineString &line, GeographicLib::PolygonArea &comp) {
 	comp.Clear();
 	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
 		auto vert = line.Vertices().Get(i);
@@ -69,21 +71,21 @@ static double LineLength(const core::LineString &line, GeographicLib::PolygonAre
 	return linestring_length;
 }
 
-static double GeometryLength(const core::Geometry &geom, GeographicLib::PolygonArea &comp) {
+static double GeometryLength(const Geometry &geom, GeographicLib::PolygonArea &comp) {
 	switch (geom.Type()) {
-	case core::GeometryType::LINESTRING: {
-		return LineLength(geom.GetLineString(), comp);
+	case GeometryType::LINESTRING: {
+		return LineLength(geom.As<LineString>(), comp);
 	}
-	case core::GeometryType::MULTILINESTRING: {
-		auto &mline = geom.GetMultiLineString();
+	case GeometryType::MULTILINESTRING: {
+		auto &mline = geom.As<MultiLineString>();
 		double mline_length = 0;
 		for (auto &line : mline) {
 			mline_length += LineLength(line, comp);
 		}
 		return mline_length;
 	}
-	case core::GeometryType::GEOMETRYCOLLECTION: {
-		auto &coll = geom.GetGeometryCollection();
+	case GeometryType::GEOMETRYCOLLECTION: {
+		auto &coll = geom.As<GeometryCollection>();
 		auto sum = 0;
 		for (auto &item : coll) {
 			sum += GeometryLength(item, comp);
@@ -97,7 +99,7 @@ static double GeometryLength(const core::Geometry &geom, GeographicLib::PolygonA
 }
 
 static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &lstate = core::GeometryFunctionLocalState::ResetAndGet(state);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
 	auto &input = args.data[0];
 	auto count = args.size();
@@ -105,7 +107,7 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, true);
 
-	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		return GeometryLength(geometry, comp);
 	});
@@ -119,10 +121,9 @@ void GeographicLibFunctions::RegisterLength(DatabaseInstance &db) {
 
 	// Length
 	ScalarFunctionSet set("ST_Length_Spheroid");
-	set.AddFunction(
-	    ScalarFunction({spatial::core::GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, GeodesicLineString2DFunction));
-	set.AddFunction(ScalarFunction({spatial::core::GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction,
-	                               nullptr, nullptr, nullptr, spatial::core::GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, GeodesicLineString2DFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeodesicGeometryFunction, nullptr,
+	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 }

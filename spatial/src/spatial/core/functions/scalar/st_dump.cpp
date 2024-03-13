@@ -31,7 +31,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			continue;
 		}
 
-		auto geometry_blob = UnifiedVectorFormat::GetData<string_t>(geom_format)[in_row_idx];
+		auto geometry_blob = UnifiedVectorFormat::GetData<geometry_t>(geom_format)[in_row_idx];
 		auto geometry = lstate.factory.Deserialize(geometry_blob);
 
 		vector<std::tuple<Geometry, vector<int32_t>>> stack;
@@ -47,29 +47,29 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			stack.pop_back();
 
 			if (current_geom.Type() == GeometryType::MULTIPOINT) {
-				auto mpoint = current_geom.GetMultiPoint();
-				for (int32_t i = 0; i < mpoint.Count(); i++) {
+				auto mpoint = current_geom.As<MultiPoint>();
+				for (int32_t i = 0; i < mpoint.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1); // path is 1-indexed
 					stack.emplace_back(mpoint[i], path);
 				}
 			} else if (current_geom.Type() == GeometryType::MULTILINESTRING) {
-				auto mline = current_geom.GetMultiLineString();
-				for (int32_t i = 0; i < mline.Count(); i++) {
+				auto mline = current_geom.As<MultiLineString>();
+				for (int32_t i = 0; i < mline.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(mline[i], path);
 				}
 			} else if (current_geom.Type() == GeometryType::MULTIPOLYGON) {
-				auto mpoly = current_geom.GetMultiPolygon();
-				for (int32_t i = 0; i < mpoly.Count(); i++) {
+				auto mpoly = current_geom.As<MultiPolygon>();
+				for (int32_t i = 0; i < mpoly.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(mpoly[i], path);
 				}
 			} else if (current_geom.Type() == GeometryType::GEOMETRYCOLLECTION) {
-				auto collection = current_geom.GetGeometryCollection();
-				for (int32_t i = 0; i < collection.Count(); i++) {
+				auto collection = current_geom.As<GeometryCollection>();
+				for (int32_t i = 0; i < collection.ItemCount(); i++) {
 					auto path = current_path;
 					path.push_back(i + 1);
 					stack.emplace_back(collection[i], path);
@@ -101,11 +101,15 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 		auto &result_geom_vec = result_list_children[0];
 		auto &result_path_vec = result_list_children[1];
 
-		auto geom_data = FlatVector::GetData<string_t>(*result_geom_vec);
+		// The child geometries must share the same properties as the parent geometry
+		auto props = geometry_blob.GetProperties();
+
+		auto geom_data = FlatVector::GetData<geometry_t>(*result_geom_vec);
 		for (idx_t i = 0; i < geom_length; i++) {
 			// Write the geometry
 			auto &item_blob = std::get<0>(items[i]);
-			geom_data[geom_offset + i] = lstate.factory.Serialize(*result_geom_vec, item_blob);
+			geom_data[geom_offset + i] =
+			    lstate.factory.Serialize(*result_geom_vec, item_blob, props.HasZ(), props.HasM());
 
 			// Now write the paths
 			auto &path = std::get<1>(items[i]);

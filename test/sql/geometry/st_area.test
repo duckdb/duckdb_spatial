@@ -134,3 +134,20 @@ query I
 SELECT ST_AREA(ST_GeomFromText('POLYGON ((-82.03623 29.60482, -82.0357 29.605, -82.03526 29.60513, -82.03623 29.60482))'))
 ----
 5.150000001635108e-09
+
+
+# Test ST_Area with multidimensional geometries
+query I
+SELECT ST_Area(ST_GeomFromText('POINT Z (0 0 0)'));
+----
+0
+
+query I
+SELECT ST_Area(ST_GeomFromText('LINESTRING Z (0 0 0, 1 1 1)'));
+----
+0
+
+query I
+SELECT ST_Area(ST_GeomFromText('POLYGON Z((0 0 0, 1 0 0, 1 1 1, 0 1 1, 0 0 0))'));
+----
+1

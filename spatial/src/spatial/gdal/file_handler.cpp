@@ -29,6 +29,12 @@ public:
 		return static_cast<vsi_l_offset>(file_handle->SeekPosition());
 	}
 	int Seek(vsi_l_offset nOffset, int nWhence) override {
+		if (nWhence == SEEK_SET && nOffset == 0) {
+			// Use the reset function instead to allow compressed file handles to rewind
+			// even if they don't support seeking
+			file_handle->Reset();
+			return 0;
+		}
 		switch (nWhence) {
 		case SEEK_SET:
 			file_handle->Seek(nOffset);
@@ -161,7 +167,7 @@ public:
 				return new DuckDBFileHandle(std::move(file));
 			}
 #endif
-			auto file = fs.OpenFile(file_name, flags);
+			auto file = fs.OpenFile(file_name, flags, FileSystem::DEFAULT_LOCK, FileCompressionType::AUTO_DETECT);
 			return new DuckDBFileHandle(std::move(file));
 		} catch (std::exception &ex) {
 			// Failed to open file via DuckDB File System. If this doesnt have a VSI prefix we can return an error here.
@@ -171,16 +177,17 @@ public:
 				}
 				return nullptr;
 			}
+			// Fall back to GDAL instead
+			auto handler = VSIFileManager::GetHandler(file_name);
+			if (handler) {
+				return handler->Open(file_name, access);
+			} else {
+				if (bSetError) {
+					VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
+				}
+				return nullptr;
+			}
 		}
-
-		VSIFilesystemHandler *poFSHandler =
-			VSIFileManager::GetHandler(file_name);
-
-		VSIVirtualHandle *poVirtualHandle =
-			poFSHandler->Open(file_name, access);
-
-		return poVirtualHandle;
-
 	}
 
 	int Stat(const char *prefixed_file_name, VSIStatBufL *pstatbuf, int n_flags) override {
@@ -202,7 +209,8 @@ public:
 
 		unique_ptr<FileHandle> file;
 		try {
-			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ);
+			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ, FileSystem::DEFAULT_LOCK,
+			                   FileCompressionType::AUTO_DETECT);
 		} catch (std::exception &ex) {
 			return -1;
 		}

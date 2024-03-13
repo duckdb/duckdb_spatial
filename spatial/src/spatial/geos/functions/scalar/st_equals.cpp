@@ -17,12 +17,12 @@ using namespace spatial::core;
 static void EqualsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-	                                                  [&](string_t &left_blob, string_t &right_blob) {
-		                                                  auto left = lstate.ctx.Deserialize(left_blob);
-		                                                  auto right = lstate.ctx.Deserialize(right_blob);
-		                                                  return GEOSEquals_r(ctx, left.get(), right.get());
-	                                                  });
+	BinaryExecutor::Execute<geometry_t, geometry_t, bool>(args.data[0], args.data[1], result, args.size(),
+	                                                      [&](geometry_t &left_blob, geometry_t &right_blob) {
+		                                                      auto left = lstate.ctx.Deserialize(left_blob);
+		                                                      auto right = lstate.ctx.Deserialize(right_blob);
+		                                                      return GEOSEquals_r(ctx, left.get(), right.get());
+	                                                      });
 }
 
 void GEOSScalarFunctions::RegisterStEquals(DatabaseInstance &db) {

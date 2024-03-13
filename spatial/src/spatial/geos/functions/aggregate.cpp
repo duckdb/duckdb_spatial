@@ -178,14 +178,14 @@ void GeosAggregateFunctions::Register(DatabaseInstance &db) {
 
 	AggregateFunctionSet st_intersection_agg("ST_Intersection_Agg");
 	st_intersection_agg.AddFunction(
-	    AggregateFunction::UnaryAggregateDestructor<GEOSAggState, string_t, string_t, IntersectionAggFunction>(
+	    AggregateFunction::UnaryAggregateDestructor<GEOSAggState, geometry_t, geometry_t, IntersectionAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_intersection_agg);
 
 	AggregateFunctionSet st_union_agg("ST_Union_Agg");
 	st_union_agg.AddFunction(
-	    AggregateFunction::UnaryAggregateDestructor<GEOSAggState, string_t, string_t, UnionAggFunction>(
+	    AggregateFunction::UnaryAggregateDestructor<GEOSAggState, geometry_t, geometry_t, UnionAggFunction>(
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_union_agg);

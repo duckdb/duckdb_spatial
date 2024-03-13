@@ -24,8 +24,10 @@ public:
 		RegisterStExtent(db);
 		RegisterStExteriorRing(db);
 		RegisterStFlipCoordinates(db);
+		RegisterStForce(db);
 		RegisterStGeometryType(db);
 		RegisterStGeomFromHEXWKB(db);
+        RegisterStGeomFromText(db);
 		RegisterStGeomFromWKB(db);
 		RegisterStIntersects(db);
 		RegisterStIntersectsExtent(db);
@@ -49,6 +51,12 @@ public:
 		RegisterStY(db);
 		RegisterStYMax(db);
 		RegisterStYMin(db);
+		RegisterStZ(db);
+		RegisterStZMax(db);
+		RegisterStZMin(db);
+		RegisterStM(db);
+		RegisterStMMax(db);
+		RegisterStMMin(db);
 	}
 
 private:
@@ -100,11 +108,17 @@ private:
 	// ST_FlipCoordinates
 	static void RegisterStFlipCoordinates(DatabaseInstance &db);
 
+	// ST_Force(2D/3D)
+	static void RegisterStForce(DatabaseInstance &db);
+
 	// ST_GeometryType
 	static void RegisterStGeometryType(DatabaseInstance &db);
 
 	// ST_GeomFromHEXWKB
 	static void RegisterStGeomFromHEXWKB(DatabaseInstance &db);
+
+    // ST_GeomFromText
+    static void RegisterStGeomFromText(DatabaseInstance &db);
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(DatabaseInstance &db);
@@ -174,6 +188,24 @@ private:
 
 	// ST_YMin
 	static void RegisterStYMin(DatabaseInstance &db);
+
+	// ST_Z
+	static void RegisterStZ(DatabaseInstance &db);
+
+	// ST_ZMax
+	static void RegisterStZMax(DatabaseInstance &db);
+
+	// ST_ZMin
+	static void RegisterStZMin(DatabaseInstance &db);
+
+	// ST_M
+	static void RegisterStM(DatabaseInstance &db);
+
+	// ST_MMax
+	static void RegisterStMMax(DatabaseInstance &db);
+
+	// ST_MMin
+	static void RegisterStMMin(DatabaseInstance &db);
 };
 
 } // namespace core

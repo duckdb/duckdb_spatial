@@ -17,8 +17,8 @@ using namespace spatial::core;
 static void SimplifyFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	BinaryExecutor::Execute<string_t, double, string_t>(
-	    args.data[0], args.data[1], result, args.size(), [&](string_t input, double distance) {
+	BinaryExecutor::Execute<geometry_t, double, geometry_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](geometry_t input, double distance) {
 		    auto geom = lstate.ctx.Deserialize(input);
 		    auto simplified = make_uniq_geos(ctx, GEOSSimplify_r(ctx, geom.get(), distance));
 		    return lstate.ctx.Serialize(result, simplified);

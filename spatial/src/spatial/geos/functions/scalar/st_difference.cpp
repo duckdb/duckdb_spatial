@@ -17,8 +17,8 @@ using namespace spatial::core;
 static void DifferenceFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	BinaryExecutor::Execute<string_t, string_t, string_t>(
-	    args.data[0], args.data[1], result, args.size(), [&](string_t left, string_t right) {
+	BinaryExecutor::Execute<geometry_t, geometry_t, geometry_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](geometry_t left, geometry_t right) {
 		    auto left_geos_geom = lstate.ctx.Deserialize(left);
 		    auto right_geos_geom = lstate.ctx.Deserialize(right);
 		    auto geos_result = make_uniq_geos(ctx, GEOSDifference_r(ctx, left_geos_geom.get(), right_geos_geom.get()));

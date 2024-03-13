@@ -21,21 +21,21 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &max_y_vec = args.data[3];
 
 	using DOUBLE_TYPE = PrimitiveType<double>;
-	using GEOMETRY_TYPE = PrimitiveType<string_t>;
+	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 
 	GenericExecutor::ExecuteQuaternary<DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, GEOMETRY_TYPE>(
 	    min_x_vec, min_y_vec, max_x_vec, max_y_vec, result, count,
 	    [&](DOUBLE_TYPE x_min, DOUBLE_TYPE y_min, DOUBLE_TYPE x_max, DOUBLE_TYPE y_max) {
 		    uint32_t capacity = 5;
-		    auto envelope_geom = lstate.factory.CreatePolygon(1, &capacity);
+		    Polygon envelope_geom(lstate.factory.allocator, 1, &capacity, false, false);
+		    auto &shell = envelope_geom[0];
 		    // Create the exterior ring in CCW order
-		    envelope_geom.Shell().Add(Vertex(x_min.val, y_min.val));
-		    envelope_geom.Shell().Add(Vertex(x_min.val, y_max.val));
-		    envelope_geom.Shell().Add(Vertex(x_max.val, y_max.val));
-		    envelope_geom.Shell().Add(Vertex(x_max.val, y_min.val));
-		    envelope_geom.Shell().Add(Vertex(x_min.val, y_min.val));
-
-		    return lstate.factory.Serialize(result, Geometry(envelope_geom));
+		    shell.Set(0, x_min.val, y_min.val);
+		    shell.Set(1, x_min.val, y_max.val);
+		    shell.Set(2, x_max.val, y_max.val);
+		    shell.Set(3, x_max.val, y_min.val);
+		    shell.Set(4, x_min.val, y_min.val);
+		    return lstate.factory.Serialize(result, envelope_geom, false, false);
 	    });
 }
 

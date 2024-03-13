@@ -153,79 +153,55 @@ static void BoxFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, 
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static void FlipVertexVector(VertexVector &vertices) {
-	for (idx_t i = 0; i < vertices.count; i++) {
-		auto vertex = vertices.Get(i);
-		std::swap(vertex.x, vertex.y);
-		vertices.Set(i, vertex);
-	}
-}
-static void FlipGeometry(Point &point) {
-	FlipVertexVector(point.Vertices());
-}
 
-static void FlipGeometry(LineString &line) {
-	FlipVertexVector(line.Vertices());
-}
-
-static void FlipGeometry(Polygon &poly) {
-	for (auto &ring : poly.Rings()) {
-		FlipVertexVector(ring);
+struct FlipOp {
+	static void FlipVertexArray(VertexArray &vertices, ArenaAllocator &arena) {
+		vertices.MakeOwning(arena);
+		for (idx_t i = 0; i < vertices.Count(); i++) {
+			auto vertex = vertices.Get(i);
+			std::swap(vertex.x, vertex.y);
+			vertices.Set(i, vertex);
+		}
 	}
-}
 
-static void FlipGeometry(MultiPoint &multi_point) {
-	for (auto &point : multi_point) {
-		FlipGeometry(point);
+	static void Apply(Point &point, ArenaAllocator &alloc) {
+		FlipVertexArray(point.Vertices(), alloc);
 	}
-}
 
-static void FlipGeometry(MultiLineString &multi_line) {
-	for (auto &line : multi_line) {
-		FlipGeometry(line);
+	static void Apply(LineString &line, ArenaAllocator &alloc) {
+		FlipVertexArray(line.Vertices(), alloc);
 	}
-}
 
-static void FlipGeometry(MultiPolygon &multi_poly) {
-	for (auto &poly : multi_poly) {
-		FlipGeometry(poly);
+	static void Apply(Polygon &poly, ArenaAllocator &alloc) {
+		for (auto &ring : poly) {
+			FlipVertexArray(ring, alloc);
+		}
 	}
-}
 
-static void FlipGeometry(Geometry &geom);
-static void FlipGeometry(GeometryCollection &geom) {
-	for (auto &child : geom) {
-		FlipGeometry(child);
+	static void Apply(MultiPoint &multi_point, ArenaAllocator &alloc) {
+		for (auto &point : multi_point) {
+			Apply(point, alloc);
+		}
 	}
-}
 
-static void FlipGeometry(Geometry &geom) {
-	switch (geom.Type()) {
-	case GeometryType::POINT:
-		FlipGeometry(geom.GetPoint());
-		break;
-	case GeometryType::LINESTRING:
-		FlipGeometry(geom.GetLineString());
-		break;
-	case GeometryType::POLYGON:
-		FlipGeometry(geom.GetPolygon());
-		break;
-	case GeometryType::MULTIPOINT:
-		FlipGeometry(geom.GetMultiPoint());
-		break;
-	case GeometryType::MULTILINESTRING:
-		FlipGeometry(geom.GetMultiLineString());
-		break;
-	case GeometryType::MULTIPOLYGON:
-		FlipGeometry(geom.GetMultiPolygon());
-		break;
-	case GeometryType::GEOMETRYCOLLECTION:
-		FlipGeometry(geom.GetGeometryCollection());
-		break;
-	default:
-		throw NotImplementedException("Unimplemented geometry type!");
+	static void Apply(MultiLineString &multi_line, ArenaAllocator &alloc) {
+		for (auto &line : multi_line) {
+			Apply(line, alloc);
+		}
 	}
-}
+
+	static void Apply(MultiPolygon &multi_poly, ArenaAllocator &alloc) {
+		for (auto &poly : multi_poly) {
+			Apply(poly, alloc);
+		}
+	}
+
+	static void Apply(GeometryCollection &geom, ArenaAllocator &alloc) {
+		for (auto &child : geom) {
+			child.Dispatch<FlipOp>(alloc);
+		}
+	}
+};
 
 static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
@@ -234,11 +210,11 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, string_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
+		auto props = input.GetProperties();
 		auto geom = lstate.factory.Deserialize(input);
-		auto copy = lstate.factory.CopyGeometry(geom);
-		FlipGeometry(copy);
-		return lstate.factory.Serialize(result, copy);
+		geom.Dispatch<FlipOp>(lstate.factory.allocator);
+		return lstate.factory.Serialize(result, geom, props.HasZ(), props.HasM());
 	});
 }
 

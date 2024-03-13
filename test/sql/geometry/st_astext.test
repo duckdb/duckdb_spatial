@@ -5,3 +5,22 @@ query I
 SELECT ST_GeomFromText('MULTIPOLYGON (((0 0, 1 1, 2 2, 0 0), (0 0, 1 1, 2 2, 0 0)))');
 ----
 MULTIPOLYGON (((0 0, 1 1, 2 2, 0 0), (0 0, 1 1, 2 2, 0 0)))
+
+
+# With Z
+query I
+SELECT ST_GeomFromText('MULTIPOLYGON Z(((0 0 0, 1 1 1, 2 2 2, 0 0 0), (0 0 0, 1 1 1, 2 2 2, 0 0 0)))');
+----
+MULTIPOLYGON Z (((0 0 0, 1 1 1, 2 2 2, 0 0 0), (0 0 0, 1 1 1, 2 2 2, 0 0 0)))
+
+# With M
+query I
+SELECT ST_GeomFromText('MULTIPOLYGON M(((0 0 0, 1 1 1, 2 2 2, 0 0 0), (0 0 0, 1 1 1, 2 2 2, 0 0 0)))');
+----
+MULTIPOLYGON M (((0 0 0, 1 1 1, 2 2 2, 0 0 0), (0 0 0, 1 1 1, 2 2 2, 0 0 0)))
+
+# With Z and M
+query I
+SELECT ST_GeomFromText('MULTIPOLYGON ZM(((0 0 0 0, 1 1 1 1, 2 2 2 2, 0 0 0 0), (0 0 0 0, 1 1 1 1, 2 2 2 2, 0 0 0 0)))');
+----
+MULTIPOLYGON ZM (((0 0 0 0, 1 1 1 1, 2 2 2 2, 0 0 0 0), (0 0 0 0, 1 1 1 1, 2 2 2 2, 0 0 0 0)))
