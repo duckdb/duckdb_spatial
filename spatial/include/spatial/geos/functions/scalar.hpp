@@ -22,7 +22,6 @@ public:
 		RegisterStDistance(db);
 		RegisterStDistanceWithin(db);
 		RegisterStEquals(db);
-		RegisterStGeomFromText(db);
 		RegisterStEnvelope(db);
 		RegisterStIntersection(db);
 		RegisterStIntersects(db);
@@ -60,7 +59,6 @@ private:
 	static void RegisterStDistance(DatabaseInstance &db);
 	static void RegisterStDistanceWithin(DatabaseInstance &db);
 	static void RegisterStEquals(DatabaseInstance &db);
-	static void RegisterStGeomFromText(DatabaseInstance &db);
 	static void RegisterStEnvelope(DatabaseInstance &db);
 	static void RegisterStIntersection(DatabaseInstance &db);
 	static void RegisterStIntersects(DatabaseInstance &db);

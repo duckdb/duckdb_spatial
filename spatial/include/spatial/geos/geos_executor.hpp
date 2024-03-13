@@ -35,29 +35,29 @@ struct GEOSExecutor {
 
 		if (left.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 		    right.GetVectorType() != VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(left)) {
-			auto &left_blob = ConstantVector::GetData<string_t>(left)[0];
+			auto &left_blob = ConstantVector::GetData<geometry_t>(left)[0];
 			auto left_geom = lstate.ctx.Deserialize(left_blob);
 			auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 
-			UnaryExecutor::Execute<string_t, bool>(right, result, count, [&](string_t &right_blob) {
+			UnaryExecutor::Execute<geometry_t, bool>(right, result, count, [&](geometry_t &right_blob) {
 				auto right_geometry = lstate.ctx.Deserialize(right_blob);
 				auto ok = prepared(ctx, left_prepared.get(), right_geometry.get());
 				return ok == 1;
 			});
 		} else if (right.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 		           left.GetVectorType() != VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(right)) {
-			auto &right_blob = ConstantVector::GetData<string_t>(right)[0];
+			auto &right_blob = ConstantVector::GetData<geometry_t>(right)[0];
 			auto right_geom = lstate.ctx.Deserialize(right_blob);
 			auto right_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, right_geom.get()));
 
-			UnaryExecutor::Execute<string_t, bool>(left, result, count, [&](string_t &left_blob) {
+			UnaryExecutor::Execute<geometry_t, bool>(left, result, count, [&](geometry_t &left_blob) {
 				auto left_geometry = lstate.ctx.Deserialize(left_blob);
 				auto ok = prepared(ctx, right_prepared.get(), left_geometry.get());
 				return ok == 1;
 			});
 		} else {
-			BinaryExecutor::Execute<string_t, string_t, bool>(
-			    left, right, result, count, [&](string_t &left_blob, string_t &right_blob) {
+			BinaryExecutor::Execute<geometry_t, geometry_t, bool>(
+			    left, right, result, count, [&](geometry_t &left_blob, geometry_t &right_blob) {
 				    auto left_geometry = lstate.ctx.Deserialize(left_blob);
 				    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 				    auto ok = normal(ctx, left_geometry.get(), right_geometry.get());
@@ -76,18 +76,18 @@ struct GEOSExecutor {
 		// Optimize: if one of the arguments is a constant, we can prepare it once and reuse it
 		if (left.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 		    right.GetVectorType() != VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(left)) {
-			auto &left_blob = ConstantVector::GetData<string_t>(left)[0];
+			auto &left_blob = ConstantVector::GetData<geometry_t>(left)[0];
 			auto left_geom = lstate.ctx.Deserialize(left_blob);
 			auto left_prepared = make_uniq_geos(ctx, GEOSPrepare_r(ctx, left_geom.get()));
 
-			UnaryExecutor::Execute<string_t, bool>(right, result, count, [&](string_t &right_blob) {
+			UnaryExecutor::Execute<geometry_t, bool>(right, result, count, [&](geometry_t &right_blob) {
 				auto right_geometry = lstate.ctx.Deserialize(right_blob);
 				auto ok = prepared(ctx, left_prepared.get(), right_geometry.get());
 				return ok == 1;
 			});
 		} else {
-			BinaryExecutor::Execute<string_t, string_t, bool>(
-			    left, right, result, count, [&](string_t &left_blob, string_t &right_blob) {
+			BinaryExecutor::Execute<geometry_t, geometry_t, bool>(
+			    left, right, result, count, [&](geometry_t &left_blob, geometry_t &right_blob) {
 				    auto left_geometry = lstate.ctx.Deserialize(left_blob);
 				    auto right_geometry = lstate.ctx.Deserialize(right_blob);
 				    auto ok = normal(ctx, left_geometry.get(), right_geometry.get());

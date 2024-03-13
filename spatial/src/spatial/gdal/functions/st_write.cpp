@@ -10,6 +10,7 @@
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
 #include "spatial/gdal/functions.hpp"
 #include "spatial/gdal/file_handler.hpp"
 
@@ -27,7 +28,7 @@ struct BindData : public TableFunctionData {
 	string driver_name;
 	string layer_name;
 	CPLStringList dataset_creation_options;
-    CPLStringList layer_creation_options;
+	CPLStringList layer_creation_options;
 	string target_srs;
 	OGRwkbGeometryType geometry_type = wkbUnknown;
 
@@ -85,8 +86,8 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyFunctionBindInp
 				if (s.type().id() != LogicalTypeId::VARCHAR) {
 					throw BinderException("Layer creation options must be strings");
 				}
-                auto str = s.GetValue<string>();
-                bind_data->layer_creation_options.AddString(str.c_str());
+				auto str = s.GetValue<string>();
+				bind_data->layer_creation_options.AddString(str.c_str());
 			}
 		} else if (StringUtil::Upper(option.first) == "DATASET_CREATION_OPTIONS") {
 			auto set = option.second;
@@ -94,7 +95,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, CopyFunctionBindInp
 				if (s.type().id() != LogicalTypeId::VARCHAR) {
 					throw BinderException("Dataset creation options must be strings");
 				}
-                auto str = s.GetValue<string>();
+				auto str = s.GetValue<string>();
 				bind_data->dataset_creation_options.AddString(str.c_str());
 			}
 		} else if (StringUtil::Upper(option.first) == "GEOMETRY_TYPE") {
@@ -286,7 +287,8 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	// Create the dataset
 	auto &client_ctx = GDALClientContextState::GetOrCreate(context);
 	auto prefixed_path = client_ctx.GetPrefix() + file_path;
-	auto dataset = GDALDatasetUniquePtr(driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, gdal_data.dataset_creation_options));
+	auto dataset = GDALDatasetUniquePtr(
+	    driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, gdal_data.dataset_creation_options));
 	if (!dataset) {
 		throw IOException("Could not open dataset");
 	}
@@ -300,7 +302,8 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 	// so we have to pass nullptr if we want the default behavior.
 	OGRSpatialReference *srs_ptr = gdal_data.target_srs.empty() ? nullptr : &srs;
 
-	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, gdal_data.geometry_type, gdal_data.layer_creation_options);
+	auto layer = dataset->CreateLayer(gdal_data.layer_name.c_str(), srs_ptr, gdal_data.geometry_type,
+	                                  gdal_data.layer_creation_options);
 	if (!layer) {
 		throw IOException("Could not create layer");
 	}
@@ -351,11 +354,8 @@ static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const 
 		return OGRGeometryUniquePtr(ptr);
 	} else if (type == core::GeoTypes::GEOMETRY()) {
 		auto blob = value.GetValueUnsafe<string_t>();
-		auto geom = factory.Deserialize(blob);
-
 		uint32_t size;
-		auto wkb = factory.ToWKB(geom, &size);
-
+		auto wkb = core::WKBWriter::Write(core::geometry_t(blob), &size, factory.allocator);
 		OGRGeometry *ptr;
 		auto ok = OGRGeometryFactory::createFromWkb(wkb, nullptr, &ptr, size, wkbVariantIso);
 		if (ok != OGRERR_NONE) {

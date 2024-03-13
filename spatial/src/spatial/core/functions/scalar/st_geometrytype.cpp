@@ -14,9 +14,9 @@ static unique_ptr<FunctionData> GeometryTypeFunctionBind(ClientContext &context,
 	// Create an enum type for all geometry types
 	// Ensure that these are in the same order as the GeometryType enum
 	vector<string> enum_values = {"POINT", "LINESTRING", "POLYGON", "MULTIPOINT", "MULTILINESTRING", "MULTIPOLYGON",
-	                                "GEOMETRYCOLLECTION",
-	                                // or...
-	                                "UNKNOWN"};
+	                              "GEOMETRYCOLLECTION",
+	                              // or...
+	                              "UNKNOWN"};
 
 	bound_function.return_type = GeoTypes::CreateEnumType("GEOMETRY_TYPE", enum_values);
 
@@ -51,16 +51,11 @@ static void Polygon2DTypeFunction(DataChunk &args, ExpressionState &state, Vecto
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void GeometryTypeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, uint8_t>(input, result, count, [&](string_t input) {
-		auto geom = lstate.factory.Deserialize(input);
-		return static_cast<uint8_t>(geom.Type());
-	});
+	UnaryExecutor::Execute<geometry_t, uint8_t>(
+	    input, result, count, [&](geometry_t input) { return static_cast<uint8_t>(input.GetType()); });
 }
 
 //------------------------------------------------------------------------------
@@ -75,9 +70,8 @@ void CoreScalarFunctions::RegisterStGeometryType(DatabaseInstance &db) {
 	                                             Linestring2DTypeFunction, GeometryTypeFunctionBind));
 	geometry_type_set.AddFunction(
 	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::ANY, Polygon2DTypeFunction, GeometryTypeFunctionBind));
-	geometry_type_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::ANY, GeometryTypeFunction,
-	                                             GeometryTypeFunctionBind, nullptr, nullptr,
-	                                             GeometryFunctionLocalState::Init));
+	geometry_type_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::ANY, GeometryTypeFunction, GeometryTypeFunctionBind));
 
 	ExtensionUtil::RegisterFunction(db, geometry_type_set);
 }

@@ -20,24 +20,23 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<string_t, int32_t>(input, result, count, [&](string_t input) {
-		auto header = GeometryHeader::Get(input);
-		switch (header.type) {
+	UnaryExecutor::Execute<geometry_t, int32_t>(input, result, count, [&](geometry_t input) {
+		switch (input.GetType()) {
 		case GeometryType::MULTIPOINT: {
-			auto mpoint = ctx.factory.Deserialize(input).GetMultiPoint();
-			return static_cast<int32_t>(mpoint.Count());
+			auto mpoint = ctx.factory.Deserialize(input).As<MultiPoint>();
+			return static_cast<int32_t>(mpoint.ItemCount());
 		}
 		case GeometryType::MULTILINESTRING: {
-			auto mline = ctx.factory.Deserialize(input).GetMultiLineString();
-			return static_cast<int32_t>(mline.Count());
+			auto mline = ctx.factory.Deserialize(input).As<MultiLineString>();
+			return static_cast<int32_t>(mline.ItemCount());
 		}
 		case GeometryType::MULTIPOLYGON: {
-			auto mpoly = ctx.factory.Deserialize(input).GetMultiPolygon();
-			return static_cast<int32_t>(mpoly.Count());
+			auto mpoly = ctx.factory.Deserialize(input).As<MultiPolygon>();
+			return static_cast<int32_t>(mpoly.ItemCount());
 		}
 		case GeometryType::GEOMETRYCOLLECTION: {
-			auto collection = ctx.factory.Deserialize(input).GetGeometryCollection();
-			return static_cast<int32_t>(collection.Count());
+			auto collection = ctx.factory.Deserialize(input).As<GeometryCollection>();
+			return static_cast<int32_t>(collection.ItemCount());
 		}
 		default:
 			auto geom = ctx.factory.Deserialize(input);

@@ -72,26 +72,25 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 
 	auto count = args.size();
 
-	BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(
-	    geom_vec, index_vec, result, count, [&](string_t input, int32_t index, ValidityMask &mask, idx_t row_idx) {
-		    auto header = GeometryHeader::Get(input);
-		    if (header.type != GeometryType::LINESTRING) {
+	BinaryExecutor::ExecuteWithNulls<geometry_t, int32_t, geometry_t>(
+	    geom_vec, index_vec, result, count, [&](geometry_t input, int32_t index, ValidityMask &mask, idx_t row_idx) {
+		    if (input.GetType() != GeometryType::LINESTRING) {
 			    mask.SetInvalid(row_idx);
-			    return string_t();
+			    return geometry_t {};
 		    }
-
-		    auto line = lstate.factory.Deserialize(input).GetLineString();
-		    auto point_count = line.Count();
+		    auto line = lstate.factory.Deserialize(input).As<LineString>();
+		    auto point_count = line.Vertices().Count();
 
 		    if (point_count == 0 || index == 0 || index < -static_cast<int64_t>(point_count) ||
 		        index > static_cast<int64_t>(point_count)) {
 			    mask.SetInvalid(row_idx);
-			    return string_t();
+			    return geometry_t {};
 		    }
 
+		    auto props = input.GetProperties();
 		    auto actual_index = index < 0 ? point_count + index : index - 1;
-		    auto point = line.Vertices().Get(actual_index);
-		    return lstate.factory.Serialize(result, Geometry(lstate.factory.CreatePoint(point.x, point.y)));
+		    Point point(VertexArray::Reference(line.Vertices(), actual_index, 1));
+		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
 	    });
 }
 

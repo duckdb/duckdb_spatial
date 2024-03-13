@@ -8,6 +8,8 @@ namespace geos {
 using namespace spatial::core;
 
 GEOSFunctionLocalState::GEOSFunctionLocalState(ClientContext &context) : ctx(), factory(BufferAllocator::Get(context)) {
+	// TODO: Set GEOS error handler
+	// GEOSContext_setErrorMessageHandler_r()
 }
 
 unique_ptr<FunctionLocalState> GEOSFunctionLocalState::Init(ExpressionState &state, const BoundFunctionExpression &expr,
@@ -16,7 +18,7 @@ unique_ptr<FunctionLocalState> GEOSFunctionLocalState::Init(ExpressionState &sta
 }
 
 unique_ptr<FunctionLocalState> GEOSFunctionLocalState::InitCast(CastLocalStateParameters &parameters) {
-	return make_uniq<GEOSFunctionLocalState>(*parameters.context.get());
+	return make_uniq<GEOSFunctionLocalState>(*parameters.context);
 }
 
 GEOSFunctionLocalState &GEOSFunctionLocalState::ResetAndGet(CastParameters &parameters) {

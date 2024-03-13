@@ -40,4 +40,20 @@ NULL
 
 endloop
 
+# With Z
+query I
+SELECT ST_astext(st_pointn(ST_GeomFromText('LINESTRING Z(0 0 5, 1 1 6, 2 2 7, 3 3 8)'), - 1));
+----
+POINT Z (3 3 8)
 
+# With M
+query I
+SELECT ST_astext(st_pointn(ST_GeomFromText('LINESTRING M(0 0 5, 1 1 6, 2 2 7, 3 3 8)'), 2));
+----
+POINT M (1 1 6)
+
+# With Z and M
+query I
+SELECT ST_astext(st_pointn(ST_GeomFromText('LINESTRING ZM(0 0 5 1, 1 1 6 2, 2 2 7 3, 3 3 8 4)'), 3));
+----
+POINT ZM (2 2 7 3)

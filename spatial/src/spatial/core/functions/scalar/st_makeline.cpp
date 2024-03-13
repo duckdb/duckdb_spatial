@@ -19,36 +19,46 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 	UnifiedVectorFormat format;
 	child_vec.ToUnifiedFormat(count, format);
 
-	UnaryExecutor::Execute<list_entry_t, string_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
+	UnaryExecutor::Execute<list_entry_t, geometry_t>(args.data[0], result, count, [&](list_entry_t &geometry_list) {
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
-		auto line_geom = lstate.factory.CreateLineString(length);
+		LineString line_geom(lstate.factory.allocator, length, false, false);
 
+        uint32_t vertex_idx = 0;
 		for (idx_t i = offset; i < offset + length; i++) {
 
 			auto mapped_idx = format.sel->get_index(i);
 			if (!format.validity.RowIsValid(mapped_idx)) {
 				continue;
 			}
-			auto geometry_blob = ((string_t *)format.data)[mapped_idx];
-			auto geometry = lstate.factory.Deserialize(geometry_blob);
+			auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
 
-			if (geometry.Type() != GeometryType::POINT) {
-				throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+            if(geometry_blob.GetType() != GeometryType::POINT) {
+                throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+            }
+
+			// TODO: Support Z and M
+			if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
+				throw InvalidInputException("ST_MakeLine from list does not support Z or M geometries");
 			}
-			auto &point = geometry.GetPoint();
+
+			auto point = lstate.factory.Deserialize(geometry_blob).As<Point>();
 			if (point.IsEmpty()) {
 				continue;
 			}
-			line_geom.Vertices().Add(point.GetVertex());
+			auto vertex = point.Vertices().Get(0);
+			line_geom.Vertices().Set(vertex_idx++, vertex.x, vertex.y);
 		}
 
-		if (line_geom.Count() == 1) {
+        // Shrink the vertex array to the actual size
+        line_geom.Vertices().Resize(lstate.factory.allocator, vertex_idx);
+
+		if (line_geom.Vertices().Count() == 1) {
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		}
 
-		return lstate.factory.Serialize(result, Geometry(line_geom));
+		return lstate.factory.Serialize(result, line_geom, false, false);
 	});
 }
 
@@ -56,32 +66,42 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 	auto count = args.size();
 
-	BinaryExecutor::Execute<string_t, string_t, string_t>(
-	    args.data[0], args.data[1], result, count, [&](string_t &geom_blob_left, string_t &geom_blob_right) {
-		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
-		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
-
-		    if (geometry_left.Type() != GeometryType::POINT || geometry_right.Type() != GeometryType::POINT) {
+	BinaryExecutor::Execute<geometry_t, geometry_t, geometry_t>(
+	    args.data[0], args.data[1], result, count, [&](geometry_t &geom_blob_left, geometry_t &geom_blob_right) {
+		    if (geom_blob_left.GetType() != GeometryType::POINT || geom_blob_right.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
 		    }
 
-		    auto &point_left = geometry_left.GetPoint();
-		    auto &point_right = geometry_right.GetPoint();
+		    auto geometry_left = lstate.factory.Deserialize(geom_blob_left);
+		    auto geometry_right = lstate.factory.Deserialize(geom_blob_right);
 
-		    // TODO: we should add proper abstractions to append/concat VertexVectors
-		    auto line_geom = lstate.factory.CreateLineString(2);
-		    if (!point_left.IsEmpty()) {
-			    line_geom.Vertices().Add(point_left.GetVertex());
-		    }
-		    if (!point_right.IsEmpty()) {
-			    line_geom.Vertices().Add(point_right.GetVertex());
+		    if (geometry_left.IsEmpty() && geometry_right.IsEmpty()) {
+			    // Empty linestring
+			    LineString line(false, false);
+			    return lstate.factory.Serialize(result, line, false, false);
 		    }
 
-		    if (line_geom.Count() == 1) {
+		    if (geometry_left.IsEmpty() || geometry_right.IsEmpty()) {
 			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		    }
 
-		    return lstate.factory.Serialize(result, Geometry(line_geom));
+		    auto has_z = geom_blob_left.GetProperties().HasZ() || geom_blob_right.GetProperties().HasZ();
+		    auto has_m = geom_blob_left.GetProperties().HasM() || geom_blob_right.GetProperties().HasM();
+
+		    auto &point_left = geometry_left.As<Point>();
+		    auto &point_right = geometry_right.As<Point>();
+
+            // TODO: Dont upcast the child geometries, just append and let the append function handle upcasting of the target instead.
+            point_left.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
+            point_right.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
+
+		    auto vertices = VertexArray::Empty(has_z, has_m);
+		    vertices.Append(lstate.factory.allocator, point_left.Vertices());
+		    vertices.Append(lstate.factory.allocator, point_right.Vertices());
+
+		    LineString line_geom(vertices);
+
+		    return lstate.factory.Serialize(result, line_geom, has_z, has_m);
 	    });
 }
 

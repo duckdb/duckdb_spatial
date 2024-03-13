@@ -17,12 +17,14 @@ namespace spatial {
 
 namespace proj {
 
+using namespace core;
+
 struct ProjFunctionLocalState : public FunctionLocalState {
 
 	PJ_CONTEXT *proj_ctx;
-	core::GeometryFactory factory;
+	GeometryFactory factory;
 
-	ProjFunctionLocalState(ClientContext &context)
+	explicit ProjFunctionLocalState(ClientContext &context)
 	    : proj_ctx(ProjModule::GetThreadProjContext()), factory(BufferAllocator::Get(context)) {
 	}
 
@@ -230,90 +232,55 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 	}
 }
 
-static void TransformGeometry(PJ *crs, core::Point &point) {
-	if (point.IsEmpty()) {
-		return;
-	}
-	auto vertex = point.GetVertex();
-	auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
-	point.Vertices().Set(0, core::Vertex(transformed.x, transformed.y));
-}
-
-static void TransformGeometry(PJ *crs, core::LineString &line) {
-
-	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
-		auto vert = line.Vertices().Get(i);
-		auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
-
-		core::Vertex new_vert(transformed.x, transformed.y);
-		line.Vertices().Set(i, new_vert);
-	}
-}
-
-static void TransformGeometry(PJ *crs, core::Polygon &poly) {
-	for (auto &ring : poly.Rings()) {
-		for (uint32_t i = 0; i < ring.Count(); i++) {
-			auto vert = ring.Get(i);
-			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vert.x, vert.y, 0, 0)).xy;
-			core::Vertex new_vert(transformed.x, transformed.y);
-			ring.Set(i, new_vert);
+struct TransformOp {
+	static void Transform(VertexArray &array, PJ *crs, ArenaAllocator &arena) {
+		array.MakeOwning(arena);
+		for (uint32_t i = 0; i < array.Count(); i++) {
+			auto vertex = array.Get(i);
+			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
+			// we own the array, so we can use SetUnsafe
+			array.Set(i, transformed.x, transformed.y);
 		}
 	}
-}
 
-static void TransformGeometry(PJ *crs, core::MultiPoint &multi_point) {
-	for (auto &point : multi_point) {
-		TransformGeometry(crs, point);
+	static void Apply(Point &point, PJ *crs, ArenaAllocator &arena) {
+		Transform(point.Vertices(), crs, arena);
 	}
-}
 
-static void TransformGeometry(PJ *crs, core::MultiLineString &multi_line) {
-	for (auto &line : multi_line) {
-		TransformGeometry(crs, line);
+	static void Apply(LineString &line, PJ *crs, ArenaAllocator &arena) {
+		Transform(line.Vertices(), crs, arena);
 	}
-}
 
-static void TransformGeometry(PJ *crs, core::MultiPolygon &multi_poly) {
-	for (auto &poly : multi_poly) {
-		TransformGeometry(crs, poly);
+	static void Apply(Polygon &poly, PJ *crs, ArenaAllocator &arena) {
+		for (auto &ring : poly) {
+			Transform(ring, crs, arena);
+		}
 	}
-}
 
-static void TransformGeometry(PJ *crs, core::Geometry &geom);
-
-static void TransformGeometry(PJ *crs, core::GeometryCollection &geom) {
-	for (auto &child : geom) {
-		TransformGeometry(crs, child);
+	static void Apply(MultiPoint &multi_point, PJ *crs, ArenaAllocator &arena) {
+		for (auto &point : multi_point) {
+			Apply(point, crs, arena);
+		}
 	}
-}
 
-static void TransformGeometry(PJ *crs, core::Geometry &geom) {
-	switch (geom.Type()) {
-	case core::GeometryType::POINT:
-		TransformGeometry(crs, geom.GetPoint());
-		break;
-	case core::GeometryType::LINESTRING:
-		TransformGeometry(crs, geom.GetLineString());
-		break;
-	case core::GeometryType::POLYGON:
-		TransformGeometry(crs, geom.GetPolygon());
-		break;
-	case core::GeometryType::MULTIPOINT:
-		TransformGeometry(crs, geom.GetMultiPoint());
-		break;
-	case core::GeometryType::MULTILINESTRING:
-		TransformGeometry(crs, geom.GetMultiLineString());
-		break;
-	case core::GeometryType::MULTIPOLYGON:
-		TransformGeometry(crs, geom.GetMultiPolygon());
-		break;
-	case core::GeometryType::GEOMETRYCOLLECTION:
-		TransformGeometry(crs, geom.GetGeometryCollection());
-		break;
-	default:
-		throw NotImplementedException("Unimplemented geometry type!");
+	static void Apply(MultiLineString &multi_line, PJ *crs, ArenaAllocator &arena) {
+		for (auto &line : multi_line) {
+			Apply(line, crs, arena);
+		}
 	}
-}
+
+	static void Apply(MultiPolygon &multi_poly, PJ *crs, ArenaAllocator &arena) {
+		for (auto &poly : multi_poly) {
+			Apply(poly, crs, arena);
+		}
+	}
+
+	static void Apply(GeometryCollection &geom, PJ *crs, ArenaAllocator &arena) {
+		for (auto &child : geom) {
+			child.Dispatch<TransformOp>(crs, arena);
+		}
+	}
+};
 
 struct ProjCRSDelete {
 	void operator()(PJ *crs) {
@@ -360,18 +327,18 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			// otherwise fall back to the original CRS
 		}
 
-		UnaryExecutor::Execute<string_t, string_t>(geom_vec, result, count, [&](string_t input_geom) {
+		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
+			auto props = input_geom.GetProperties();
 			auto geom = factory.Deserialize(input_geom);
-			auto copy = factory.CopyGeometry(geom);
-			TransformGeometry(crs.get(), copy);
-			return factory.Serialize(result, copy);
+			geom.Dispatch<TransformOp>(crs.get(), factory.allocator);
+			return factory.Serialize(result, geom, props.HasZ(), props.HasM());
 		});
 	} else {
 		// General case: projections are not constant
 		// we need to create a projection for each geometry
-		TernaryExecutor::Execute<string_t, string_t, string_t, string_t>(
+		TernaryExecutor::Execute<geometry_t, string_t, string_t, geometry_t>(
 		    geom_vec, proj_from_vec, proj_to_vec, result, count,
-		    [&](string_t input_geom, string_t proj_from, string_t proj_to) {
+		    [&](geometry_t input_geom, string_t proj_from, string_t proj_to) {
 			    auto from_str = proj_from.GetString();
 			    auto to_str = proj_to.GetString();
 			    auto crs = ProjCRS(proj_create_crs_to_crs(proj_ctx, from_str.c_str(), to_str.c_str(), nullptr));
@@ -388,10 +355,11 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 				    // otherwise fall back to the original CRS
 			    }
 
+			    auto props = input_geom.GetProperties();
 			    auto geom = factory.Deserialize(input_geom);
-			    auto copy = factory.CopyGeometry(geom);
-			    TransformGeometry(crs.get(), copy);
-			    return factory.Serialize(result, copy);
+			    geom.Dispatch<TransformOp>(crs.get(), factory.allocator);
+			    // TransformGeometry(crs.get(), geom);
+			    return factory.Serialize(result, geom, props.HasZ(), props.HasM());
 		    });
 	}
 }

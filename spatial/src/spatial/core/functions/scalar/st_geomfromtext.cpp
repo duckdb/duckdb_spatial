@@ -1,9 +1,8 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
-#include "spatial/geos/functions/scalar.hpp"
-#include "spatial/geos/functions/common.hpp"
-#include "spatial/geos/geos_wrappers.hpp"
-
+#include "spatial/core/functions/scalar.hpp"
+#include "spatial/core/functions/common.hpp"
+#include "spatial/core/geometry/wkt_reader.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
@@ -12,9 +11,7 @@
 
 namespace spatial {
 
-namespace geos {
-
-using namespace spatial::core;
+namespace core {
 
 struct GeometryFromWKTBindData : public FunctionData {
 	bool ignore_invalid = false;
@@ -32,36 +29,30 @@ public:
 };
 
 // TODO: we should implement our own WKT parser asap. This is a temporary and really inefficient solution.
+// TODO: Ignore_invalid doesnt make sense here, we should just use a try_cast instead.
 static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto count = args.size();
 	auto input = args.data[0];
 
-	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	const auto &info = (GeometryFromWKTBindData &)*func_expr.bind_info;
+	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
+	const auto &info = func_expr.bind_info->Cast<GeometryFromWKTBindData>();
 
-	auto ctx = GeosContextWrapper();
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-	auto reader = ctx.CreateWKTReader();
-
-	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
-
-	UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
-		    try {
-			    auto geos_geom = reader.Read(wkt);
-			    auto multidimensional = (GEOSHasZ_r(lstate.ctx.GetCtx(), geos_geom.get()) == 1);
-			    if (multidimensional) {
-				    throw InvalidInputException("3D/4D geometries are not supported");
-			    }
-			    return lstate.ctx.Serialize(result, geos_geom);
-		    } catch (InvalidInputException &error) {
-			    if (!info.ignore_invalid) {
-				    throw;
-			    }
-			    mask.SetInvalid(idx);
-			    return string_t();
-		    }
-	    });
+    WKTReader reader(lstate.factory.allocator);
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(input, result, count,
+          [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
+          try {
+              auto geom = reader.Parse(wkt);
+              return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
+          } catch (InvalidInputException &error) {
+              if (!info.ignore_invalid) {
+                  throw;
+              }
+              mask.SetInvalid(idx);
+              return geometry_t {};
+          }
+      });
 }
 
 static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, ScalarFunction &bound_function,
@@ -94,14 +85,14 @@ static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, Scal
 	return make_uniq<GeometryFromWKTBindData>(ignore_invalid);
 }
 
-void GEOSScalarFunctions::RegisterStGeomFromText(DatabaseInstance &db) {
+void CoreScalarFunctions::RegisterStGeomFromText(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GeomFromText");
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR}, core::GeoTypes::GEOMETRY(), GeometryFromWKTFunction,
-	                               GeometryFromWKTBind, nullptr, nullptr, GEOSFunctionLocalState::Init));
+	                               GeometryFromWKTBind, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR, LogicalType::BOOLEAN}, core::GeoTypes::GEOMETRY(),
 	                               GeometryFromWKTFunction, GeometryFromWKTBind, nullptr, nullptr,
-	                               GEOSFunctionLocalState::Init));
+                                   GeometryFunctionLocalState::Init));
 	ExtensionUtil::RegisterFunction(db, set);
 }
 

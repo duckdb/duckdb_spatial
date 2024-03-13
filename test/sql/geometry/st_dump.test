@@ -72,3 +72,12 @@ FROM (VALUES
 [{'geom': POINT (1 1), 'path': [1]}, {'geom': POINT (2 2), 'path': [2]}, {'geom': POINT (3 3), 'path': [3, 1]}]
 NULL
 [{'geom': POINT (1 1), 'path': [1]}, {'geom': POINT (3 3), 'path': [2, 1]}, {'geom': POINT (2 2), 'path': [3]}]
+
+
+# With Z and M
+query II
+SELECT UNNEST(ST_Dump(ST_GeomFromText('GEOMETRYCOLLECTION ZM (POINT ZM (1 1 1 1), POINT ZM (2 2 2 2), GEOMETRYCOLLECTION ZM (POINT ZM (3 3 3 3)))')), recursive := true);
+----
+POINT ZM (1 1 1 1)	[1]
+POINT ZM (2 2 2 2)	[2]
+POINT ZM (3 3 3 3)	[3, 1]

@@ -1,10 +1,7 @@
 #include "duckdb/common/vector_operations/generic_executor.hpp"
-#include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
-#include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/functions/common.hpp"
 #include "spatial/core/types.hpp"
 
 #include "spatial/core/functions/cast.hpp"
@@ -65,8 +62,7 @@ static void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vect
 	D_ASSERT(args.data.size() == 1);
 	auto count = args.size();
 	auto &input = args.data[0];
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-	CoreVectorOperations::GeometryToVarchar(input, result, count, lstate.factory);
+	CoreVectorOperations::GeometryToVarchar(input, result, count);
 }
 
 //------------------------------------------------------------------------------
@@ -82,9 +78,8 @@ void CoreScalarFunctions::RegisterStAsText(DatabaseInstance &db) {
 	as_text_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::VARCHAR, Polygon2DAsTextFunction));
 	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::VARCHAR, Box2DAsTextFunction));
-	as_text_function_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
-	                                                GeometryAsTextFunction, nullptr, nullptr, nullptr,
-	                                                GeometryFunctionLocalState::Init));
+	as_text_function_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_text_function_set);
 }

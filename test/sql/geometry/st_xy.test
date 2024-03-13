@@ -46,4 +46,9 @@ SELECT st_x(geom) as x, st_y(geom) as y FROM (SELECT st_point(14.919113688081065
 ----
 14.919113688081064	50.94247828919525
 
+# With Z and M
+query IIII
+SELECT st_x(geom) as x, st_y(geom) as y, st_z(geom) as z, st_m(geom) as m FROM (SELECT 'POINT ZM (0 1 2 3)'::GEOMETRY as geom)
+----
+0	1	2	3
 

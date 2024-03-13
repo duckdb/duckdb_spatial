@@ -47,3 +47,15 @@ query I
 SElECT ST_Collect([NULL, NULL]);
 ----
 GEOMETRYCOLLECTION EMPTY
+
+
+# Multidimensional geometries
+query I
+SELECT ST_Collect(['POINT M (3 4 2)'::GEOMETRY, 'POINT Z(0 1 2)'::GEOMETRY]) as merged;
+----
+MULTIPOINT ZM (3 4 0 2, 0 1 2 0)
+
+query I
+SELECT ST_Collect(['LINESTRING M (1 2 3, 4 5 6)'::GEOMETRY, 'POINT Z EMPTY'::GEOMETRY]) as merged;
+----
+MULTILINESTRING ZM ((1 2 0 3, 4 5 0 6))

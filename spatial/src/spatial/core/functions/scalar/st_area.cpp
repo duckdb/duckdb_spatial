@@ -5,6 +5,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/geometry/geometry_processor.hpp"
 
 namespace spatial {
 
@@ -97,36 +98,80 @@ static void BoxAreaFunction(DataChunk &args, ExpressionState &state, Vector &res
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+class AreaProcessor final : GeometryProcessor<double> {
+	static double ProcessVertices(const VertexData &vertices) {
+		if (vertices.count < 3) {
+			return 0.0;
+		}
 
-	auto &ctx = GeometryFunctionLocalState::ResetAndGet(state);
+		const auto count = vertices.count;
+		const auto x_data = vertices.data[0];
+		const auto y_data = vertices.data[1];
+		const auto x_stride = vertices.stride[0];
+		const auto y_stride = vertices.stride[1];
 
-	auto &input = args.data[0];
-	auto count = args.size();
+		double signed_area = 0.0;
 
-	UnaryExecutor::Execute<string_t, double>(input, result, count, [&](string_t input) {
-		auto geometry = ctx.factory.Deserialize(input);
-		switch (geometry.Type()) {
-		case GeometryType::POLYGON:
-			return geometry.GetPolygon().Area();
+		auto x0 = Load<double>(x_data);
+
+		for (uint32_t i = 1; i < count - 1; ++i) {
+			auto x1 = Load<double>(x_data + i * x_stride);
+			auto y1 = Load<double>(y_data + (i + 1) * y_stride);
+			auto y2 = Load<double>(y_data + (i - 1) * y_stride);
+			signed_area += (x1 - x0) * (y2 - y1);
+		}
+
+		signed_area *= 0.5;
+
+		return std::abs(signed_area);
+	}
+
+	double ProcessPoint(const VertexData &vertices) override {
+		return 0.0;
+	}
+
+	double ProcessLineString(const VertexData &vertices) override {
+		return 0.0;
+	}
+
+	double ProcessPolygon(PolygonState &state) override {
+		double sum = 0.0;
+		if (!state.IsDone()) {
+			sum += ProcessVertices(state.Next());
+		}
+		while (!state.IsDone()) {
+			sum -= ProcessVertices(state.Next());
+		}
+		return std::abs(sum);
+	}
+
+	double ProcessCollection(CollectionState &state) override {
+		switch (CurrentType()) {
 		case GeometryType::MULTIPOLYGON:
-			return geometry.GetMultiPolygon().Area();
-		case GeometryType::GEOMETRYCOLLECTION:
-			return geometry.GetGeometryCollection().Aggregate(
-			    [](Geometry &geom, double state) {
-				    if (geom.Type() == GeometryType::POLYGON) {
-					    return state + geom.GetPolygon().Area();
-				    } else if (geom.Type() == GeometryType::MULTIPOLYGON) {
-					    return state + geom.GetMultiPolygon().Area();
-				    } else {
-					    return state;
-				    }
-			    },
-			    0.0);
+		case GeometryType::GEOMETRYCOLLECTION: {
+			double sum = 0;
+			while (!state.IsDone()) {
+				sum += state.Next();
+			}
+			return sum;
+		}
 		default:
 			return 0.0;
 		}
-	});
+	}
+
+public:
+	double Execute(const geometry_t &geometry) {
+		return Process(geometry);
+	}
+};
+
+static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input = args.data[0];
+	auto count = args.size();
+	AreaProcessor processor;
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count,
+	                                           [&](const geometry_t &input) { return processor.Execute(input); });
 }
 
 //------------------------------------------------------------------------------
@@ -138,8 +183,7 @@ void CoreScalarFunctions::RegisterStArea(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointAreaFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineStringAreaFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, LogicalType::DOUBLE, PolygonAreaFunction));
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction, nullptr, nullptr,
-	                               nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAreaFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);

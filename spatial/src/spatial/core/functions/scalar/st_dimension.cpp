@@ -21,7 +21,7 @@ static void DimensionFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto count = args.size();
 	auto &input = args.data[0];
 
-	UnaryExecutor::Execute<string_t, int32_t>(input, result, count, [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, int32_t>(input, result, count, [&](geometry_t input) {
 		auto geometry = lstate.factory.Deserialize(input);
 		return geometry.Dimension();
 	});

@@ -5,6 +5,7 @@ namespace spatial {
 
 namespace core {
 
+// TODO: Split this into a read and write cursor. Get rid of bounds checks in release mode
 class Cursor {
 private:
 	data_ptr_t start;
@@ -17,11 +18,19 @@ public:
 	explicit Cursor(data_ptr_t start, data_ptr_t end) : start(start), ptr(start), end(end) {
 	}
 
-	explicit Cursor(string_t blob) : start((data_ptr_t)blob.GetDataUnsafe()), ptr(start), end(start + blob.GetSize()) {
+	// Be really careful with passing string_ts here, if we accidentally copy we may end up writing to the inlined data
+	// of a temporary
+	explicit Cursor(const string_t &blob)
+	    : start((data_ptr_t)blob.GetDataWriteable()), ptr(start), end(start + blob.GetSize()) {
 	}
 
 	data_ptr_t GetPtr() {
 		return ptr;
+	}
+
+	uint32_t Remaining() {
+		D_ASSERT(ptr <= end);
+		return end - ptr;
 	}
 
 	void SetPtr(data_ptr_t ptr_p) {
@@ -59,6 +68,12 @@ public:
 			throw SerializationException("Trying to read past end of buffer");
 		}
 		return Load<T>(ptr);
+	}
+
+	template <class T>
+	void Skip() {
+		static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
+		Skip(sizeof(T));
 	}
 
 	void Skip(uint32_t bytes) {

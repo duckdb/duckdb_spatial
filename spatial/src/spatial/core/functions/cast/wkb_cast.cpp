@@ -3,9 +3,11 @@
 #include "spatial/core/functions/cast.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+#include "spatial/core/geometry/wkb_reader.hpp"
 
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
+#include "duckdb/common/operator/cast_operators.hpp"
 
 namespace spatial {
 
@@ -16,12 +18,25 @@ namespace core {
 //------------------------------------------------------------------------------
 static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+	WKBReader reader(lstate.factory.allocator);
 
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.FromWKB(input.GetDataUnsafe(), input.GetSize());
-		return lstate.factory.Serialize(result, geometry);
-	});
-	return true;
+	bool success = true;
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
+	    source, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
+		    try {
+			    auto geometry = reader.Deserialize(input);
+			    return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
+		    } catch (SerializationException &e) {
+			    if (success) {
+				    success = false;
+				    ErrorData error(e);
+				    HandleCastError::AssignError(error.RawMessage(), parameters.error_message);
+			    }
+			    mask.SetInvalid(idx);
+			    return geometry_t {};
+		    }
+	    });
+	return success;
 }
 
 //------------------------------------------------------------------------------
@@ -29,16 +44,8 @@ static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastP
 //------------------------------------------------------------------------------
 static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-
-	UnaryExecutor::Execute<string_t, string_t>(source, result, count, [&](string_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		auto size = WKBWriter::GetRequiredSize(geometry);
-		auto str = StringVector::EmptyString(result, size);
-		auto ptr = (data_ptr_t)(str.GetDataUnsafe());
-		WKBWriter::Write(geometry, ptr);
-		return str;
-	});
+	UnaryExecutor::Execute<geometry_t, string_t>(source, result, count,
+	                                             [&](geometry_t input) { return WKBWriter::Write(input, result); });
 
 	return true;
 }
@@ -48,9 +55,8 @@ static bool GeometryToWKBCast(Vector &source, Vector &result, idx_t count, CastP
 //------------------------------------------------------------------------------
 void CoreCastFunctions::RegisterWKBCasts(DatabaseInstance &db) {
 	// Geometry <-> WKB is explicitly castable
-	ExtensionUtil::RegisterCastFunction(
-	    db, GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
-	    BoundCastInfo(GeometryToWKBCast, nullptr, GeometryFunctionLocalState::InitCast));
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::GEOMETRY(), GeoTypes::WKB_BLOB(),
+	                                    BoundCastInfo(GeometryToWKBCast));
 
 	ExtensionUtil::RegisterCastFunction(
 	    db, GeoTypes::WKB_BLOB(), GeoTypes::GEOMETRY(),

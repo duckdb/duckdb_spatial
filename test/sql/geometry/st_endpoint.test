@@ -29,3 +29,21 @@ SELECT st_astext(st_endpoint(NULL));
 NULL
 
 endloop
+
+# With Z
+query I
+SELECT st_astext(st_endpoint(ST_GeomFromText('LINESTRING Z (0 0 0, 1 1 1, 2 2 2, 3 3 3)')));
+----
+POINT Z (3 3 3)
+
+# With M
+query I
+SELECT st_astext(st_endpoint(ST_GeomFromText('LINESTRING M (0 0 0, 1 1 1, 2 2 2, 3 3 3)')));
+----
+POINT M (3 3 3)
+
+# With Z and M
+query I
+SELECT st_astext(st_endpoint(ST_GeomFromText('LINESTRING ZM (0 0 0 0, 1 1 1 1, 2 2 2 2, 3 3 3 3)')));
+----
+POINT ZM (3 3 3 3)

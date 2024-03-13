@@ -17,7 +17,7 @@ using namespace spatial::core;
 static void IsClosedFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto &ctx = lstate.ctx.GetCtx();
-	UnaryExecutor::Execute<string_t, bool>(args.data[0], result, args.size(), [&](string_t input) {
+	UnaryExecutor::Execute<geometry_t, bool>(args.data[0], result, args.size(), [&](geometry_t input) {
 		auto geom = lstate.ctx.Deserialize(input);
 		return GEOSisClosed_r(ctx, geom.get());
 	});

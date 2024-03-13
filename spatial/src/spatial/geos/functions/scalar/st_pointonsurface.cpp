@@ -16,7 +16,7 @@ using namespace spatial::core;
 static void PointOnSurfaceFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
 	auto ctx = lstate.ctx.GetCtx();
-	UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(), [&](string_t &geometry_blob) {
+	UnaryExecutor::Execute<geometry_t, geometry_t>(args.data[0], result, args.size(), [&](geometry_t &geometry_blob) {
 		auto geometry = lstate.ctx.Deserialize(geometry_blob);
 		auto result_geom = make_uniq_geos(ctx, GEOSPointOnSurface_r(ctx, geometry.get()));
 		return lstate.ctx.Serialize(result, result_geom);
