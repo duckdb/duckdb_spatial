@@ -188,6 +188,7 @@ public:
 	bool IsClosed() const;
 	double Length() const;
 	string ToString() const;
+    string ToString(uint32_t count) const;
 
 	// Potentially allocating methods
 	void Append(ArenaAllocator &alloc, const VertexArray &other);

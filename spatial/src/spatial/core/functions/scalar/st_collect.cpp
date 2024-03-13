@@ -72,6 +72,8 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			}
 		}
 
+        // TODO: Dont upcast the children, just append them.
+
 		if (all_points) {
 			MultiPoint collection(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {

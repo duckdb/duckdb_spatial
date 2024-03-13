@@ -91,6 +91,7 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto &point_left = geometry_left.As<Point>();
 		    auto &point_right = geometry_right.As<Point>();
 
+            // TODO: Dont upcast the child geometries, just append and let the append function handle upcasting of the target instead.
             point_left.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
             point_right.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
 

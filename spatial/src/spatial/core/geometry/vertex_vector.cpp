@@ -17,6 +17,12 @@ void VertexArray::Append(ArenaAllocator &alloc, const VertexArray &other) {
 
     D_ASSERT(properties.HasZ() == other.properties.HasZ());
     D_ASSERT(properties.HasM() == other.properties.HasM());
+#ifdef DEBUG
+    if(properties.HasZ() != other.properties.HasZ()) {
+        // This is mostly here to prevent the ToString() method to be optimized out.
+        throw InternalException("Cannot append vertex arrays with different Z properties. self: %s, other: %s", ToString(vertex_count), other.ToString(other.vertex_count));
+    }
+#endif
     auto old_count = vertex_count;
     auto new_count = vertex_count + other.vertex_count;
     Resize(alloc, new_count);
@@ -79,11 +85,15 @@ void VertexArray::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, d
 			for (int64_t i = vertex_count - 1; i >= 0; i--) {
 				auto old_offset = i * old_vertex_size;
 				auto new_offset = i * new_vertex_size;
-				memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
-				auto z_offset = old_offset + sizeof(double) * 2;
-				auto m_offset = old_offset + sizeof(double) * 3;
-				memcpy(vertex_data + new_offset + m_offset, vertex_data + z_offset, sizeof(double));
-				memcpy(vertex_data + new_offset + z_offset, &default_z, sizeof(double));
+				auto old_m_offset = old_offset + sizeof(double) * 2;
+                auto new_z_offset = new_offset + sizeof(double) * 2;
+				auto new_m_offset = new_offset + sizeof(double) * 3;
+                // Move the M value
+				memcpy(vertex_data + new_m_offset, vertex_data + old_m_offset, sizeof(double));
+                // Set the new Z value
+				memcpy(vertex_data + new_z_offset, &default_z, sizeof(double));
+                // Move the X and Y values
+                memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
 			}
 		} else if (!used_to_have_z && has_z && !used_to_have_m && has_m) {
 			// 2. We go from XY to XYZM
@@ -190,48 +200,51 @@ double VertexArray::Length() const {
 }
 
 string VertexArray::ToString() const {
+    return ToString(vertex_count);
+}
+string VertexArray::ToString(uint32_t count) const {
 	auto has_z = properties.HasZ();
 	auto has_m = properties.HasM();
 
 	if (has_z && has_m) {
-		string result = StringUtil::Format("VertexArray XYZM (%d) [", vertex_count);
-		for (uint32_t i = 0; i < vertex_count; i++) {
+		string result = StringUtil::Format("VertexArray XYZM (%d/%d) [", count, vertex_count);
+		for (uint32_t i = 0; i < count; i++) {
 			auto vertex = GetExact<VertexXYZM>(i);
 			result += StringUtil::Format("(%f, %f, %f, %f)", vertex.x, vertex.y, vertex.z, vertex.m);
-			if (i < vertex_count - 1) {
+			if (i < count - 1) {
 				result += ", ";
 			}
 		}
 		result += "]";
 		return result;
 	} else if (has_z) {
-		string result = StringUtil::Format("VertexArray XYZ (%d) [", vertex_count);
-		for (uint32_t i = 0; i < vertex_count; i++) {
+		string result = StringUtil::Format("VertexArray XYZ (%d/%d) [", count, vertex_count);
+		for (uint32_t i = 0; i < count; i++) {
 			auto vertex = GetExact<VertexXYZ>(i);
 			result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.z);
-			if (i < vertex_count - 1) {
+			if (i < count - 1) {
 				result += ", ";
 			}
 		}
 		result += "]";
 		return result;
 	} else if (has_m) {
-		string result = StringUtil::Format("VertexArray XYM (%d/%d) [", vertex_count);
-		for (uint32_t i = 0; i < vertex_count; i++) {
+		string result = StringUtil::Format("VertexArray XYM (%d/%d) [", count, vertex_count);
+		for (uint32_t i = 0; i < count; i++) {
 			auto vertex = GetExact<VertexXYM>(i);
 			result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.m);
-			if (i < vertex_count - 1) {
+			if (i < count - 1) {
 				result += ", ";
 			}
 		}
 		result += "]";
 		return result;
 	} else {
-		string result = StringUtil::Format("VertexArray XY (%d/%d) [", vertex_count);
-		for (uint32_t i = 0; i < vertex_count; i++) {
+		string result = StringUtil::Format("VertexArray XY (%d/%d) [", count, vertex_count);
+		for (uint32_t i = 0; i < count; i++) {
 			auto vertex = GetExact<VertexXY>(i);
 			result += StringUtil::Format("(%f, %f)", vertex.x, vertex.y);
-			if (i < vertex_count - 1) {
+			if (i < count - 1) {
 				result += ", ";
 			}
 		}
