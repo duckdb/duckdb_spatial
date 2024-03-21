@@ -17,16 +17,13 @@ struct DocUtil {
     static void AddDocumentation(duckdb::DatabaseInstance &db, const char* function_name, const char* description, const char* example
         , const DocTag (& tags) [N]
     ) {
-
-        duckdb::vector<duckdb::Value> keys;
-        duckdb::vector<duckdb::Value> values;
+        auto kv_type = duckdb::LogicalType::STRUCT({{"key", duckdb::LogicalType::VARCHAR}, {"value", duckdb::LogicalType::VARCHAR}});
+        duckdb::vector<duckdb::Value> tag_values;
         for(size_t i = 0; i < N; i++) {
-            keys.push_back(duckdb::Value(tags[i].key));
-            values.push_back(duckdb::Value(tags[i].value));
+            auto &tag = tags[i];
+            tag_values.push_back(duckdb::Value::STRUCT(kv_type, {duckdb::Value(tag.key), duckdb::Value(tag.value)}));
         }
-
-        auto tag_map = duckdb::Value::MAP(duckdb::LogicalType::VARCHAR, duckdb::LogicalType::VARCHAR, keys, values);
-        AddDocumentation(db, function_name, description, example, tag_map);
+        AddDocumentation(db, function_name, description, example, duckdb::Value::LIST(kv_type, tag_values));
     }
 };
 
