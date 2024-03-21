@@ -52,7 +52,7 @@ static string RemoveIndentAndTrailingWhitespace(const char* text) {
 }
 
 void spatial::DocUtil::AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name, const char *description,
-                                        const char *example, const char *comment) {
+                                        const char *example, const Value &comment) {
     auto &func_entry = ExtensionUtil::GetFunction(db, function_name);
     if(description != nullptr) {
         func_entry.description = RemoveIndentAndTrailingWhitespace(description);
@@ -60,8 +60,8 @@ void spatial::DocUtil::AddDocumentation(duckdb::DatabaseInstance &db, const char
     if(example != nullptr) {
         func_entry.example = RemoveIndentAndTrailingWhitespace(example);
     }
-    if(comment != nullptr) {
-        func_entry.comment = RemoveIndentAndTrailingWhitespace(comment);
+    if(!comment.IsNull()) {
+        func_entry.comment = comment;
     }
 }
 
