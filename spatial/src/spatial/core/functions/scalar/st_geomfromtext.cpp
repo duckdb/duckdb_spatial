@@ -85,6 +85,23 @@ static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, Scal
 	return make_uniq<GeometryFromWKTBindData>(ignore_invalid);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Deserializes a GEOMETRY from a WKT string, optionally ignoring invalid geometries
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+static constexpr const DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
+
 void CoreScalarFunctions::RegisterStGeomFromText(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GeomFromText");
@@ -94,6 +111,8 @@ void CoreScalarFunctions::RegisterStGeomFromText(DatabaseInstance &db) {
 	                               GeometryFromWKTFunction, GeometryFromWKTBind, nullptr, nullptr,
                                    GeometryFunctionLocalState::Init));
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_GeomFromText", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
 }
 
 } // namespace geos

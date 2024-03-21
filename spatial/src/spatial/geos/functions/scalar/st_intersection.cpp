@@ -27,6 +27,22 @@ static void IntersectionFunction(DataChunk &args, ExpressionState &state, Vector
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Returns the "intersection" of geom1 and geom2
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStIntersection(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Intersection");
@@ -35,6 +51,8 @@ void GEOSScalarFunctions::RegisterStIntersection(DatabaseInstance &db) {
 	                               IntersectionFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_Intersection", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
 }
 
 } // namespace geos

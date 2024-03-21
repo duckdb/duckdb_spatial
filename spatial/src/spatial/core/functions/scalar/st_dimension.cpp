@@ -27,6 +27,24 @@ static void DimensionFunction(DataChunk &args, ExpressionState &state, Vector &r
 	});
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+Returns the dimension of a geometry.
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+select st_dimension('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+----
+2
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStDimension(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Dimension");
 
@@ -34,6 +52,7 @@ void CoreScalarFunctions::RegisterStDimension(DatabaseInstance &db) {
 	                               nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_Dimension", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

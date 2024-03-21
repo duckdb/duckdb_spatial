@@ -140,6 +140,27 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 	}
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+Dumps a geometry into a set of sub-geometries
+
+Dumps a geometry into a set of sub-geometries and their "path" in the original geometry.
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+select st_dump('MULTIPOINT(1 2,3 4)'::geometry);
+----
+[{'geom': 'POINT(1 2)', 'path': [0]}, {'geom': 'POINT(3 4)', 'path': [1]}]
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStDump(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Dump");
 
@@ -150,6 +171,7 @@ void CoreScalarFunctions::RegisterStDump(DatabaseInstance &db) {
 	                   DumpFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_Dump", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

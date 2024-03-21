@@ -23,6 +23,23 @@ static void IsClosedFunction(DataChunk &args, ExpressionState &state, Vector &re
 	});
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Returns true if a geometry is "closed"
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStIsClosed(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_IsClosed");
@@ -31,6 +48,7 @@ void GEOSScalarFunctions::RegisterStIsClosed(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_IsClosed", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

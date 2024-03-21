@@ -39,6 +39,22 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Returns a minimal bounding box polygon enclosing the input geometry
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStMakeEnvelope(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_MakeEnvelope");
@@ -48,6 +64,8 @@ void CoreScalarFunctions::RegisterStMakeEnvelope(DatabaseInstance &db) {
 	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_MakeEnvelope", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
 }
 
 } // namespace core

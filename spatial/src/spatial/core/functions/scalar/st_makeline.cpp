@@ -105,6 +105,22 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+Creates a LINESTRING geometry from a pair or list of input points
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStMakeLine(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_MakeLine");
@@ -116,6 +132,8 @@ void CoreScalarFunctions::RegisterStMakeLine(DatabaseInstance &db) {
 	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_MakeLine", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
 }
 
 } // namespace core

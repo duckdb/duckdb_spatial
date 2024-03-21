@@ -547,6 +547,33 @@ static void GeoJSONFragmentToGeometryFunction(DataChunk &args, ExpressionState &
 }
 
 //------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};
+
+// AsGeoJSON
+static constexpr const char* AS_DOC_DESCRIPTION = R"(
+    Returns the geometry as a GeoJSON fragment
+
+    This does not return a complete GeoJSON document, only the geometry fragment. To construct a complete GeoJSON document or feature, look into using the DuckDB JSON extension in conjunction with this function.
+)";
+
+static constexpr const char* AS_DOC_EXAMPLE = R"(
+select ST_AsGeoJSON('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+----
+{"type":"Polygon","coordinates":[[[0.0,0.0],[0.0,1.0],[1.0,1.0],[1.0,0.0],[0.0,0.0]]]}
+)";
+
+// FromGeoJSON
+static constexpr const char* FROM_DOC_DESCRIPTION = R"(
+    Deserializes a GEOMETRY from a GeoJSON fragment.
+)";
+
+static constexpr const char* FROM_DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+//------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
@@ -555,6 +582,7 @@ void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	                                      GeometryToGeoJSONFragmentFunction, nullptr, nullptr, nullptr,
 	                                      GeometryFunctionLocalState::Init));
 	ExtensionUtil::RegisterFunction(db, to_geojson);
+    DocUtil::AddDocumentation(db, "ST_AsGeoJSON", AS_DOC_DESCRIPTION, AS_DOC_EXAMPLE, DOC_TAGS);
 
 	ScalarFunctionSet from_geojson("ST_GeomFromGeoJSON");
 	from_geojson.AddFunction(ScalarFunction({LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
@@ -562,6 +590,7 @@ void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	                                        GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, from_geojson);
+    DocUtil::AddDocumentation(db, "ST_GeomFromGeoJSON", FROM_DOC_DESCRIPTION, FROM_DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

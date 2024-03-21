@@ -13,6 +13,58 @@
 #include "spatial/proj/module.hpp"
 #include "spatial/geographiclib/module.hpp"
 
+#include "spatial/doc_util.hpp"
+#include "duckdb/catalog/catalog_entry/scalar_function_catalog_entry.hpp"
+
+static string RemoveIndentAndTrailingWhitespace(const char* text) {
+    string result;
+    // Skip any empty first newlines if present
+    while(*text == '\n') {
+        text++;
+    }
+
+    // Track indent length
+    auto indent_start = text;
+    while (isspace(*text) && *text != '\n') {
+        text++;
+    }
+    auto indent_len = text - indent_start;
+    while (*text) {
+        result += *text;
+        if(*text++ == '\n') {
+            // Remove all indentation, but only if it matches the first line's indentation
+            bool matched_indent = true;
+            for(auto i = 0; i < indent_len; i++) {
+                if(*text != indent_start[i]) {
+                    matched_indent = false;
+                    break;
+                }
+            }
+            if(matched_indent) {
+                text += indent_len;
+            }
+        }
+    }
+
+    // Also remove any trailing whitespace
+    result.erase(result.find_last_not_of(" \n\r\t") + 1);
+    return result;
+}
+
+void spatial::DocUtil::AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name, const char *description,
+                                        const char *example, const char *comment) {
+    auto &func_entry = ExtensionUtil::GetFunction(db, function_name);
+    if(description != nullptr) {
+        func_entry.description = RemoveIndentAndTrailingWhitespace(description);
+    }
+    if(example != nullptr) {
+        func_entry.example = RemoveIndentAndTrailingWhitespace(example);
+    }
+    if(comment != nullptr) {
+        func_entry.comment = RemoveIndentAndTrailingWhitespace(comment);
+    }
+}
+
 namespace duckdb {
 
 static void LoadInternal(DatabaseInstance &instance) {

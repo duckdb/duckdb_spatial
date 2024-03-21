@@ -128,6 +128,23 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 	}
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Returns the length of the perimeter of the geometry
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStPerimeter(DatabaseInstance &db) {
 
 	// Perimiter
@@ -138,6 +155,8 @@ void CoreScalarFunctions::RegisterStPerimeter(DatabaseInstance &db) {
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+    DocUtil::AddDocumentation(db, "ST_Perimeter", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
 }
 
 } // namespace core

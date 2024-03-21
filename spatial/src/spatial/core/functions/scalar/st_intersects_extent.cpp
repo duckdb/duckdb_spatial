@@ -31,13 +31,31 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Returns true if the extent of two geometries intersects
+)";
+
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStIntersectsExtent(DatabaseInstance &db) {
 	ScalarFunction intersects_func("ST_Intersects_Extent", {GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()},
 	                               LogicalType::BOOLEAN, IntersectsExtentFunction);
 
 	ExtensionUtil::RegisterFunction(db, intersects_func);
+    DocUtil::AddDocumentation(db, "ST_Intersects_Extent", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
-	// So because this is a macro, we cant overload it. crap.
+    // So because this is a macro, we cant overload it. crap.
 	// Provide a "&&" macro
 	/*
 	vector<unique_ptr<ParsedExpression>> args;
