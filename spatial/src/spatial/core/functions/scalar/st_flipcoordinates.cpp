@@ -221,11 +221,11 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns a new geometry with the coordinates of the input geometry "flipped" so that x = y and y = x.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
+static constexpr const char *DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ void CoreScalarFunctions::RegisterStFlipCoordinates(DatabaseInstance &db) {
 	                                             GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, flip_function_set);
-    DocUtil::AddDocumentation(db, "ST_FlipCoordinates", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_FlipCoordinates", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

@@ -72,7 +72,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			}
 		}
 
-        // TODO: Dont upcast the children, just append them.
+		// TODO: Dont upcast the children, just append them.
 
 		if (all_points) {
 			MultiPoint collection(arena, geometries.size(), has_z, has_m);
@@ -106,7 +106,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Collects geometries into a collection geometry
 
 Collects a list of geometries into a collection geometry.
@@ -118,7 +118,7 @@ Collects a list of geometries into a collection geometry.
 Empty and `NULL` geometries are ignored. If all geometries are empty or `NULL`, a `GEOMETRYCOLLECTION EMPTY` is returned.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 -- With all POINT's, a MULTIPOINT is returned
 SELECT ST_Collect([ST_Point(1, 2), ST_Point(3, 4)]);
 ----
@@ -150,7 +150,6 @@ SELECT ST_Collect(list(geom)) FROM points;
 MULTIPOINT (1 2, 3 4)
 )";
 
-
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
 // Register functions
@@ -163,7 +162,7 @@ void CoreScalarFunctions::RegisterStCollect(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Collect", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Collect", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

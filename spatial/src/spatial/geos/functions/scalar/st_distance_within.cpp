@@ -66,14 +66,13 @@ static void DistanceWithinFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns if two geometries are within a target distance of each-other
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
 //------------------------------------------------------------------------------
@@ -88,8 +87,7 @@ void GEOSScalarFunctions::RegisterStDistanceWithin(DatabaseInstance &db) {
 	                               GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_DWithin", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_DWithin", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

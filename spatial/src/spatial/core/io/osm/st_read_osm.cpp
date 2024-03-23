@@ -859,7 +859,7 @@ static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, co
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     The ST_ReadOsm() table function enables reading compressed OpenStreetMap data directly from a `.osm.pbf file.`
 
     This function uses multithreading and zero-copy protobuf parsing which makes it a lot faster than using the `ST_Read()` OSM driver, however it only outputs the raw OSM data (Nodes, Ways, Relations), without constructing any geometries. For simple node entities (like PoI's) you can trivially construct POINT geometries, but it is also possible to construct LINESTRING and POLYGON geometries by manually joining refs and nodes together in SQL, although with available memory usually being a limiting factor.
@@ -870,7 +870,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     ```
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
     SELECT *
     FROM ST_ReadOSM('tmp/data/germany.osm.pbf')
     WHERE tags['highway'] != []
@@ -898,7 +898,7 @@ void CoreTableFunctions::RegisterOsmTableFunction(DatabaseInstance &db) {
 	read.table_scan_progress = Progress;
 
 	ExtensionUtil::RegisterFunction(db, read);
-    DocUtil::AddDocumentation(db, "ST_ReadOSM", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_ReadOSM", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	// Replacement scan
 	auto &config = DBConfig::GetConfig(db);

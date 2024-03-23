@@ -282,11 +282,11 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Deserializes a GEOMETRY from a WKB encoded blob
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
 
@@ -316,8 +316,7 @@ void CoreScalarFunctions::RegisterStGeomFromWKB(DatabaseInstance &db) {
 	                                            nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, st_geom_from_wkb);
-    DocUtil::AddDocumentation(db, "ST_GeomFromWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_GeomFromWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

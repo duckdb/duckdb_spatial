@@ -464,12 +464,11 @@ void GenerateSpatialRefSysTable::Register(DatabaseInstance &db) {
 	*/
 }
 
-
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Transforms a geometry between two coordinate systems
 
 The source and target coordinate systems can be specified using any format that the [PROJ library](https://proj.org) supports.
@@ -479,7 +478,7 @@ The optional `always_xy` parameter can be used to force the input and output geo
 DuckDB spatial vendors its own static copy of the PROJ database of coordinate systems, so if you have your own installation of PROJ on your system the available coordinate systems may differ to what's available in other GIS software.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 -- Transform a geometry from EPSG:4326 to EPSG:3857 (WGS84 to WebMercator)
 -- Note that since WGS84 is defined as having a [latitude, longitude] axis order
 -- we follow the standard and provide the input geometry using that axis order,
@@ -547,9 +546,9 @@ void ProjFunctions::Register(DatabaseInstance &db) {
 	    GeometryTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Transform", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Transform", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
-    GenerateSpatialRefSysTable::Register(db);
+	GenerateSpatialRefSysTable::Register(db);
 }
 
 } // namespace proj

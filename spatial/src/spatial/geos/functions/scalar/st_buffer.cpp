@@ -88,7 +88,7 @@ static void BufferFunctionWithArgs(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns a buffer around the input geometry at the target distance
 
     `geom` is the input geometry.
@@ -106,10 +106,9 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     This is a planar operation and will not take into account the curvature of the earth.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
@@ -131,8 +130,7 @@ void GEOSScalarFunctions::RegisterStBuffer(DatabaseInstance &db) {
 	                               GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Buffer", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_Buffer", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

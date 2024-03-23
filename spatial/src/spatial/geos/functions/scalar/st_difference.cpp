@@ -30,14 +30,13 @@ static void DifferenceFunction(DataChunk &args, ExpressionState &state, Vector &
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the "difference" between two geometries
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 
@@ -52,7 +51,7 @@ void GEOSScalarFunctions::RegisterStDifference(DatabaseInstance &db) {
 	                               DifferenceFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Difference", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Difference", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

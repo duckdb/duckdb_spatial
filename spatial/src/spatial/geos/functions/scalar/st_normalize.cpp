@@ -30,11 +30,11 @@ static void NormalizeFunction(DataChunk &args, ExpressionState &state, Vector &r
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns a "normalized" version of the input geometry.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
+static constexpr const char *DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ void GEOSScalarFunctions::RegisterStNormalize(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Normalize", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Normalize", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

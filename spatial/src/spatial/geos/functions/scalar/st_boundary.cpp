@@ -34,14 +34,13 @@ static void BoundaryFunction(DataChunk &args, ExpressionState &state, Vector &re
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Returns the "boundary" of a geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 
@@ -56,7 +55,7 @@ void GEOSScalarFunctions::RegisterStBoundary(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Boundary", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Boundary", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

@@ -49,16 +49,16 @@ struct WKBSpatialFilter : SpatialFilter {
 	}
 };
 
-static void TryApplySpatialFilter(OGRLayer* layer, SpatialFilter *spatial_filter) {
-    if (spatial_filter != nullptr) {
-        if (spatial_filter->type == SpatialFilterType::Rectangle) {
-            auto &rect = (RectangleSpatialFilter &)*spatial_filter;
-            layer->SetSpatialFilterRect(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
-        } else if (spatial_filter->type == SpatialFilterType::Wkb) {
-            auto &filter = (WKBSpatialFilter &)*spatial_filter;
-            layer->SetSpatialFilter(OGRGeometry::FromHandle(filter.geom));
-        }
-    }
+static void TryApplySpatialFilter(OGRLayer *layer, SpatialFilter *spatial_filter) {
+	if (spatial_filter != nullptr) {
+		if (spatial_filter->type == SpatialFilterType::Rectangle) {
+			auto &rect = (RectangleSpatialFilter &)*spatial_filter;
+			layer->SetSpatialFilterRect(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+		} else if (spatial_filter->type == SpatialFilterType::Wkb) {
+			auto &filter = (WKBSpatialFilter &)*spatial_filter;
+			layer->SetSpatialFilter(OGRGeometry::FromHandle(filter.geom));
+		}
+	}
 }
 
 // TODO: Verify that this actually corresponds to the same sql subset expected by OGR SQL
@@ -303,13 +303,13 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	// Get the schema for the selected layer
 	auto layer = dataset->GetLayer(result->layer_idx);
 
-    TryApplySpatialFilter(layer, result->spatial_filter.get());
+	TryApplySpatialFilter(layer, result->spatial_filter.get());
 
 	// Check if we can get an approximate feature count
 	result->approximate_feature_count = 0;
 	result->has_approximate_feature_count = false;
 	if (!result->sequential_layer_scan) {
-        // Dont force compute the count if its expensive
+		// Dont force compute the count if its expensive
 		auto count = layer->GetFeatureCount(false);
 		if (count > -1) {
 			result->approximate_feature_count = count;
@@ -566,16 +566,17 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				state.factory.allocator.Reset();
 				auto &wkb_vec = output.data[col_idx];
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
-				UnaryExecutor::ExecuteWithNulls<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input, ValidityMask &validity, idx_t out_idx) {
-                    if(input.Empty()) {
-                        validity.SetInvalid(out_idx);
-                        return core::geometry_t { };
-                    }
-					auto geometry = state.wkb_reader.Deserialize(input);
-					auto has_z = state.wkb_reader.GeomHasZ();
-					auto has_m = state.wkb_reader.GeomHasM();
-					return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
-				});
+				UnaryExecutor::ExecuteWithNulls<string_t, core::geometry_t>(
+				    wkb_vec, geom_vec, output_size, [&](string_t input, ValidityMask &validity, idx_t out_idx) {
+					    if (input.Empty()) {
+						    validity.SetInvalid(out_idx);
+						    return core::geometry_t {};
+					    }
+					    auto geometry = state.wkb_reader.Deserialize(input);
+					    auto has_z = state.wkb_reader.GeomHasZ();
+					    auto has_m = state.wkb_reader.GeomHasM();
+					    return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
+				    });
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}
 		}
@@ -618,7 +619,7 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 //------------------------------------------------------------------------------
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Read and import a variety of geospatial file formats using the GDAL library.
 
     The `ST_Read` table function is based on the [GDAL](https://gdal.org/index.html) translator library and enables reading spatial data from a variety of geospatial vector file formats as if they were DuckDB tables.
@@ -658,14 +659,13 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     | FlatGeoBuf | .fgb |
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
     -- Read a Shapefile
     SELECT * FROM ST_Read('some/file/path/filename.shp');
 
     -- Read a GeoJSON file
     CREATE TABLE my_geojson_table AS SELECT * FROM ST_Read('some/file/path/filename.json');
 )";
-
 
 //------------------------------------------------------------------------------
 // Register
@@ -695,7 +695,7 @@ void GdalTableFunction::Register(DatabaseInstance &db) {
 	set.AddFunction(scan);
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Read", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Read", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	// Replacement scan
 	auto &config = DBConfig::GetConfig(db);

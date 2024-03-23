@@ -69,11 +69,11 @@ static void GeometryAsTextFunction(DataChunk &args, ExpressionState &state, Vect
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the geometry as a WKT string
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 SELECT ST_AsText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 )";
 
@@ -96,8 +96,7 @@ void CoreScalarFunctions::RegisterStAsText(DatabaseInstance &db) {
 	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsTextFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_text_function_set);
-    DocUtil::AddDocumentation(db, "ST_AsText", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_AsText", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

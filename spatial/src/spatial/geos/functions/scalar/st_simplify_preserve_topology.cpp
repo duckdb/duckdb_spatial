@@ -28,12 +28,11 @@ static void SimplifyPreserveTopologyFunction(DataChunk &args, ExpressionState &s
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Returns a simplified geometry but avoids creating invalid topologies
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
-
+static constexpr const char *DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
@@ -48,8 +47,7 @@ void GEOSScalarFunctions::RegisterStSimplifyPreserveTopology(DatabaseInstance &d
 	                               GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_SimplifyPreserveTopology", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_SimplifyPreserveTopology", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

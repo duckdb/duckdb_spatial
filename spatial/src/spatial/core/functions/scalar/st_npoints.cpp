@@ -117,14 +117,13 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the number of points within a geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
@@ -147,7 +146,7 @@ void CoreScalarFunctions::RegisterStNPoints(DatabaseInstance &db) {
 		                                             GeometryFunctionLocalState::Init));
 
 		ExtensionUtil::RegisterFunction(db, area_function_set);
-        DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+		DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 	}
 }
 

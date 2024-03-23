@@ -211,14 +211,14 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 //------------------------------------------------------------------------------
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Read and the metadata from a variety of geospatial file formats using the GDAL library.
 
     The `ST_Read_Meta` table function accompanies the `ST_Read` table function, but instead of reading the contents of a file, this function scans the metadata instead.
     Since the data model of the underlying GDAL library is quite flexible, most of the interesting metadata is within the returned `layers` column, which is a somewhat complex nested structure of DuckDB `STRUCT` and `LIST` types.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
     -- Find the coordinate reference system authority name and code for the first layers first geometry column in the file
     SELECT
         layers[1].geometry_fields[1].crs.auth_name as name,
@@ -232,7 +232,7 @@ static constexpr const char* DOC_EXAMPLE = R"(
 void GdalMetadataFunction::Register(DatabaseInstance &db) {
 	TableFunction func("ST_Read_Meta", {LogicalType::VARCHAR}, Scan, Bind, Init);
 	ExtensionUtil::RegisterFunction(db, MultiFileReader::CreateFunctionSet(func));
-    DocUtil::AddDocumentation(db, "ST_Read_Meta", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Read_Meta", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

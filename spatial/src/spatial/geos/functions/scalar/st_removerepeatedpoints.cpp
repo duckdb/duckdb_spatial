@@ -48,12 +48,11 @@ static void RemoveRepeatedPointsFunctionWithTolerance(DataChunk &args, Expressio
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns a new geometry with repeated points removed, optionally within a target distance of eachother.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
-
+static constexpr const char *DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
@@ -70,7 +69,7 @@ void GEOSScalarFunctions::RegisterStRemoveRepeatedPoints(DatabaseInstance &db) {
 	                               GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::AddFunctionOverload(db, set);
-    DocUtil::AddDocumentation(db, "ST_RemoveRepeatedPoints", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_RemoveRepeatedPoints", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

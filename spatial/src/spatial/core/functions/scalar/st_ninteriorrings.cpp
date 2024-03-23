@@ -48,14 +48,13 @@ static void GeometryInteriorRingsFunction(DataChunk &args, ExpressionState &stat
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the number if interior rings of a polygon
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -71,8 +70,8 @@ void CoreScalarFunctions::RegisterStNInteriorRings(DatabaseInstance &db) {
 		                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 		ExtensionUtil::RegisterFunction(db, set);
-        DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-    }
+		DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	}
 }
 
 } // namespace core

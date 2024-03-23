@@ -26,14 +26,13 @@ static void IsRingFunction(DataChunk &args, ExpressionState &state, Vector &resu
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns true if the input line geometry is a ring (both ST_IsClosed and ST_IsSimple).
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -47,7 +46,7 @@ void GEOSScalarFunctions::RegisterStIsRing(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_IsRing", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_IsRing", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

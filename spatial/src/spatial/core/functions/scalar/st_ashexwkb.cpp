@@ -49,11 +49,11 @@ void GeometryAsHEXWKBFunction(DataChunk &args, ExpressionState &state, Vector &r
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the geometry as a HEXWKB string
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 SELECT ST_AsHexWKB('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 )";
 
@@ -65,7 +65,7 @@ static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversi
 void CoreScalarFunctions::RegisterStAsHEXWKB(DatabaseInstance &db) {
 	ScalarFunction func("ST_AsHEXWKB", {GeoTypes::GEOMETRY()}, LogicalType::VARCHAR, GeometryAsHEXWKBFunction);
 	ExtensionUtil::RegisterFunction(db, func);
-    DocUtil::AddDocumentation(db, "ST_AsHEXWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_AsHEXWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

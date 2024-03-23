@@ -61,11 +61,11 @@ static void GeometryTypeFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
+static constexpr const char *DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -84,7 +84,7 @@ void CoreScalarFunctions::RegisterStGeometryType(DatabaseInstance &db) {
 	    ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::ANY, GeometryTypeFunction, GeometryTypeFunctionBind));
 
 	ExtensionUtil::RegisterFunction(db, geometry_type_set);
-    DocUtil::AddDocumentation(db, "ST_GeometryType", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_GeometryType", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

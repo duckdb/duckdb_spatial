@@ -48,14 +48,13 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the number of component geometries in a collection geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -70,8 +69,8 @@ void CoreScalarFunctions::RegisterStNGeometries(DatabaseInstance &db) {
 		                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 		ExtensionUtil::RegisterFunction(db, set);
-        DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-    }
+		DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	}
 }
 
 } // namespace core

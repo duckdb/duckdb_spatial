@@ -95,14 +95,13 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the length of the input line geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -118,8 +117,7 @@ void CoreScalarFunctions::RegisterStLength(DatabaseInstance &db) {
 	                                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, length_function_set);
-    DocUtil::AddDocumentation(db, "ST_Length", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_Length", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

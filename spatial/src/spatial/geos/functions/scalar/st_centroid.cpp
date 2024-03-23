@@ -29,16 +29,15 @@ static void CentroidFunction(DataChunk &args, ExpressionState &state, Vector &re
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Calculates the centroid of a geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 select st_centroid('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 ----
  POINT(0.5 0.5)
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
@@ -52,7 +51,7 @@ void GEOSScalarFunctions::RegisterStCentroid(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::AddFunctionOverload(db, set);
-    DocUtil::AddDocumentation(db, "ST_Centroid", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Centroid", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

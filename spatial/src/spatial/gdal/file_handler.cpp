@@ -104,13 +104,9 @@ public:
 //--------------------------------------------------------------------------
 // GDAL DuckDB File system wrapper
 //--------------------------------------------------------------------------
-static bool IsStdCharDev(const char* file_name) {
-    return
-        !strcmp(file_name, "/dev/stdin") ||
-        !strcmp(file_name, "/dev/stdout") ||
-        !strcmp(file_name, "/dev/stderr") ||
-        !strcmp(file_name, "/dev/null") ||
-        !strcmp(file_name, "/dev/zero");
+static bool IsStdCharDev(const char *file_name) {
+	return !strcmp(file_name, "/dev/stdin") || !strcmp(file_name, "/dev/stdout") || !strcmp(file_name, "/dev/stderr") ||
+	       !strcmp(file_name, "/dev/null") || !strcmp(file_name, "/dev/zero");
 }
 
 class DuckDBFileSystemHandler : public VSIFilesystemHandler {
@@ -120,8 +116,7 @@ private:
 
 public:
 	DuckDBFileSystemHandler(string client_prefix, ClientContext &context)
-	    : client_prefix(std::move(client_prefix)), context(context) {
-    };
+	    : client_prefix(std::move(client_prefix)), context(context) {};
 
 	const char *StripPrefix(const char *pszFilename) {
 		return pszFilename + client_prefix.size();
@@ -130,7 +125,7 @@ public:
 	VSIVirtualHandle *Open(const char *prefixed_file_name, const char *access, bool bSetError,
 	                       CSLConstList /* papszOptions */) override {
 		auto file_name = StripPrefix(prefixed_file_name);
-        auto file_name_str = string(file_name);
+		auto file_name_str = string(file_name);
 		auto &fs = FileSystem::GetFileSystem(context);
 
 		// TODO: Double check that this is correct
@@ -147,9 +142,9 @@ public:
 			}
 		} else if (access[0] == 'w') {
 			flags = FileFlags::FILE_FLAGS_WRITE;
-            if(!IsStdCharDev(file_name)) {
-                flags |= FileFlags::FILE_FLAGS_FILE_CREATE_NEW;
-            }
+			if (!IsStdCharDev(file_name)) {
+				flags |= FileFlags::FILE_FLAGS_FILE_CREATE_NEW;
+			}
 			if (len > 1 && access[1] == '+') {
 				flags |= FileFlags::FILE_FLAGS_READ;
 			}
@@ -174,7 +169,8 @@ public:
 			// Check if the file is a directory
 
 #ifdef _WIN32
-			if (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(path) && (flags & FileFlags::FILE_FLAGS_READ)) {
+			if (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(path) &&
+			    (flags & FileFlags::FILE_FLAGS_READ)) {
 				// We can't open a directory for reading on windows without special flags
 				// so just open nul instead, gdal will reject it when it tries to read
 				auto file = fs.OpenFile("nul", flags);
@@ -182,14 +178,15 @@ public:
 			}
 #endif
 			auto file = fs.OpenFile(file_name, flags, FileSystem::DEFAULT_LOCK, FileCompressionType::AUTO_DETECT);
-            // If the file is remote and NOT in write mode, we can cache it.
-            if(!file->OnDiskFile() && !(flags & FileFlags::FILE_FLAGS_WRITE) && !(flags & FileFlags::FILE_FLAGS_APPEND)) {
-                return VSICreateCachedFile(new DuckDBFileHandle(std::move(file)));
-            } else {
-                return new DuckDBFileHandle(std::move(file));
-            }
-  		} catch (std::exception &ex) {
-            // Failed to open file via DuckDB File System. If this doesnt have a VSI prefix we can return an error here.
+			// If the file is remote and NOT in write mode, we can cache it.
+			if (!file->OnDiskFile() && !(flags & FileFlags::FILE_FLAGS_WRITE) &&
+			    !(flags & FileFlags::FILE_FLAGS_APPEND)) {
+				return VSICreateCachedFile(new DuckDBFileHandle(std::move(file)));
+			} else {
+				return new DuckDBFileHandle(std::move(file));
+			}
+		} catch (std::exception &ex) {
+			// Failed to open file via DuckDB File System. If this doesnt have a VSI prefix we can return an error here.
 			if (strncmp(file_name, "/vsi", 4) != 0 && !IsStdCharDev(file_name)) {
 				if (bSetError) {
 					VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
@@ -216,10 +213,10 @@ public:
 
 		memset(pstatbuf, 0, sizeof(VSIStatBufL));
 
-        if(IsStdCharDev(file_name)) {
-            pstatbuf->st_mode = S_IFCHR;
-            return 0;
-        }
+		if (IsStdCharDev(file_name)) {
+			pstatbuf->st_mode = S_IFCHR;
+			return 0;
+		}
 
 		if (!(fs.FileExists(file_name) || (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(file_name)))) {
 			return -1;
@@ -271,10 +268,10 @@ public:
 		return 0;
 	}
 
-    bool IsLocal(const char *prefixed_file_name) override {
-        auto file_name = StripPrefix(prefixed_file_name);
-        return !FileSystem::IsRemoteFile(file_name);
-    }
+	bool IsLocal(const char *prefixed_file_name) override {
+		auto file_name = StripPrefix(prefixed_file_name);
+		return !FileSystem::IsRemoteFile(file_name);
+	}
 
 	int Mkdir(const char *prefixed_dir_name, long mode) override {
 		auto dir_name = StripPrefix(prefixed_dir_name);

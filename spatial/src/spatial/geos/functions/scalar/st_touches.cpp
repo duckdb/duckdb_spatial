@@ -27,13 +27,14 @@ static void TouchesFunction(DataChunk &args, ExpressionState &state, Vector &res
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Returns true if geom1 "touches" geom2
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
+static constexpr const char *DOC_EXAMPLE = R"()";
 
-static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};;
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+;
 //------------------------------------------------------------------------------
 // Register Functions
 //------------------------------------------------------------------------------
@@ -45,7 +46,7 @@ void GEOSScalarFunctions::RegisterStTouches(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Touches", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Touches", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

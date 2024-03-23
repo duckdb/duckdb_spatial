@@ -260,15 +260,14 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Extracts a sub-geometry from a collection geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 select st_collectionextract('MULTIPOINT(1 2,3 4)'::geometry, 1);
 -- POINT(1 2)
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 
@@ -285,7 +284,7 @@ void CoreScalarFunctions::RegisterStCollectionExtract(DatabaseInstance &db) {
 	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_CollectionExtract", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_CollectionExtract", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

@@ -8,15 +8,10 @@ namespace spatial {
 
 namespace core {
 
-enum class VertexType : uint8_t {
-    XY,
-    XYZ,
-    XYM,
-    XYZM
-};
+enum class VertexType : uint8_t { XY, XYZ, XYM, XYZM };
 
 struct VertexXY {
-    static const constexpr VertexType TYPE = VertexType::XY;
+	static const constexpr VertexType TYPE = VertexType::XY;
 	static const constexpr bool IS_VERTEX = true;
 	static const constexpr bool HAS_Z = false;
 	static const constexpr bool HAS_M = false;
@@ -26,9 +21,9 @@ struct VertexXY {
 };
 
 struct VertexXYZ {
-    static const constexpr VertexType TYPE = VertexType::XYZ;
+	static const constexpr VertexType TYPE = VertexType::XYZ;
 	static const constexpr bool IS_VERTEX = true;
-    static const constexpr bool HAS_Z = true;
+	static const constexpr bool HAS_Z = true;
 	static const constexpr bool HAS_M = false;
 
 	double x;
@@ -37,9 +32,9 @@ struct VertexXYZ {
 };
 
 struct VertexXYM {
-    static const constexpr VertexType TYPE = VertexType::XYM;
+	static const constexpr VertexType TYPE = VertexType::XYM;
 	static const constexpr bool IS_VERTEX = true;
-    static const constexpr bool HAS_Z = false;
+	static const constexpr bool HAS_Z = false;
 	static const constexpr bool HAS_M = true;
 
 	double x;
@@ -48,7 +43,7 @@ struct VertexXYM {
 };
 
 struct VertexXYZM {
-    static const constexpr VertexType TYPE = VertexType::XYZM;
+	static const constexpr VertexType TYPE = VertexType::XYZM;
 	static const constexpr bool IS_VERTEX = true;
 	static const constexpr bool HAS_Z = true;
 	static const constexpr bool HAS_M = true;
@@ -125,9 +120,9 @@ public:
 
 	// Create a new vertex vector with the given count and properties
 	static VertexArray Create(ArenaAllocator &allocator, uint32_t count, bool has_z, bool has_m) {
-        auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
+		auto vertex_size = sizeof(double) * (2 + (has_z ? 1 : 0) + (has_m ? 1 : 0));
 		auto data = allocator.AllocateAligned(count * vertex_size);
-        memset(data, 0, count * vertex_size);
+		memset(data, 0, count * vertex_size);
 		return VertexArray(data, count, has_z, has_m, true);
 	}
 
@@ -188,7 +183,7 @@ public:
 	bool IsClosed() const;
 	double Length() const;
 	string ToString() const;
-    string ToString(uint32_t count) const;
+	string ToString(uint32_t count) const;
 
 	// Potentially allocating methods
 	void Append(ArenaAllocator &alloc, const VertexArray &other);
@@ -317,106 +312,105 @@ public:
 // Specialize for VertexXY
 template <>
 inline VertexXY VertexArray::Get<VertexXY>(uint32_t i) const {
-    D_ASSERT(i < vertex_count);
-    auto offset = i * properties.VertexSize();
-    VertexXY result = {0};
-    // Every vertex type has a x and y component so we can memcpy constant size
-    memcpy(&result, vertex_data + offset, sizeof(VertexXY));
-    return result;
+	D_ASSERT(i < vertex_count);
+	auto offset = i * properties.VertexSize();
+	VertexXY result = {0};
+	// Every vertex type has a x and y component so we can memcpy constant size
+	memcpy(&result, vertex_data + offset, sizeof(VertexXY));
+	return result;
 }
 
 // Specialize for VertexXYZ
 template <>
 inline VertexXYZ VertexArray::Get<VertexXYZ>(uint32_t i) const {
-    D_ASSERT(i < vertex_count);
-    auto has_z = properties.HasZ();
-    auto has_m = properties.HasM();
+	D_ASSERT(i < vertex_count);
+	auto has_z = properties.HasZ();
+	auto has_m = properties.HasM();
 
-    VertexXYZ result = {0};
-    if (has_z && has_m) {
-        auto size = sizeof(VertexXYZM);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, sizeof(VertexXYZ));
-    } else if (has_z) {
-        auto size = sizeof(VertexXYZ);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    } else if (has_m) {
-        auto size = sizeof(VertexXYM);
-        auto offset = i * size;
-        // Only copy the X and Y components
-        memcpy(&result, vertex_data + offset, sizeof(VertexXY));
-    } else {
-        auto size = sizeof(VertexXY);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    }
-    return result;
+	VertexXYZ result = {0};
+	if (has_z && has_m) {
+		auto size = sizeof(VertexXYZM);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, sizeof(VertexXYZ));
+	} else if (has_z) {
+		auto size = sizeof(VertexXYZ);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	} else if (has_m) {
+		auto size = sizeof(VertexXYM);
+		auto offset = i * size;
+		// Only copy the X and Y components
+		memcpy(&result, vertex_data + offset, sizeof(VertexXY));
+	} else {
+		auto size = sizeof(VertexXY);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	}
+	return result;
 }
 
 // Specialize for VertexXYM
 template <>
 inline VertexXYM VertexArray::Get<VertexXYM>(uint32_t i) const {
-    D_ASSERT(i < vertex_count);
-    auto has_z = properties.HasZ();
-    auto has_m = properties.HasM();
+	D_ASSERT(i < vertex_count);
+	auto has_z = properties.HasZ();
+	auto has_m = properties.HasM();
 
-    VertexXYM result = {0};
-    if (has_z && has_m) {
-        auto size = sizeof(VertexXYZM);
-        auto offset = i * size;
-        // Copy the X and Y components
-        memcpy(&result, vertex_data + offset, sizeof(VertexXY));
-        // Copy the M component
-        memcpy(&result.m, vertex_data + offset + sizeof(VertexXYZ), sizeof(double));
-    } else if (has_z) {
-        auto size = sizeof(VertexXYZ);
-        auto offset = i * size;
-        // Only copy the X and Y components
-        memcpy(&result, vertex_data + offset, sizeof(VertexXY));
-    } else if (has_m) {
-        auto size = sizeof(VertexXYM);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    } else {
-        auto size = sizeof(VertexXY);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    }
-    return result;
+	VertexXYM result = {0};
+	if (has_z && has_m) {
+		auto size = sizeof(VertexXYZM);
+		auto offset = i * size;
+		// Copy the X and Y components
+		memcpy(&result, vertex_data + offset, sizeof(VertexXY));
+		// Copy the M component
+		memcpy(&result.m, vertex_data + offset + sizeof(VertexXYZ), sizeof(double));
+	} else if (has_z) {
+		auto size = sizeof(VertexXYZ);
+		auto offset = i * size;
+		// Only copy the X and Y components
+		memcpy(&result, vertex_data + offset, sizeof(VertexXY));
+	} else if (has_m) {
+		auto size = sizeof(VertexXYM);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	} else {
+		auto size = sizeof(VertexXY);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	}
+	return result;
 }
 
 // Specialize for VertexXYZM
 template <>
 inline VertexXYZM VertexArray::Get<VertexXYZM>(uint32_t i) const {
-    D_ASSERT(i < vertex_count);
-    auto has_z = properties.HasZ();
-    auto has_m = properties.HasM();
+	D_ASSERT(i < vertex_count);
+	auto has_z = properties.HasZ();
+	auto has_m = properties.HasM();
 
-    VertexXYZM result = {0};
-    if (has_z && has_m) {
-        auto size = sizeof(VertexXYZM);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    } else if (has_z) {
-        auto size = sizeof(VertexXYZ);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    } else if (has_m) {
-        auto size = sizeof(VertexXYM);
-        auto offset = i * size;
-        // Copy the X and Y components
-        memcpy(&result, vertex_data + offset, sizeof(VertexXY));
-        // Copy the M component
-        memcpy(&result.m, vertex_data + offset + sizeof(VertexXY), sizeof(double));
-    } else {
-        auto size = sizeof(VertexXY);
-        auto offset = i * size;
-        memcpy(&result, vertex_data + offset, size);
-    }
-    return result;
+	VertexXYZM result = {0};
+	if (has_z && has_m) {
+		auto size = sizeof(VertexXYZM);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	} else if (has_z) {
+		auto size = sizeof(VertexXYZ);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	} else if (has_m) {
+		auto size = sizeof(VertexXYM);
+		auto offset = i * size;
+		// Copy the X and Y components
+		memcpy(&result, vertex_data + offset, sizeof(VertexXY));
+		// Copy the M component
+		memcpy(&result.m, vertex_data + offset + sizeof(VertexXY), sizeof(double));
+	} else {
+		auto size = sizeof(VertexXY);
+		auto offset = i * size;
+		memcpy(&result, vertex_data + offset, size);
+	}
+	return result;
 }
-
 
 } // namespace core
 

@@ -97,12 +97,11 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the n'th vertex from the input geometry as a point geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"()";
-
+static constexpr const char *DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
@@ -120,8 +119,7 @@ void CoreScalarFunctions::RegisterStPointN(DatabaseInstance &db) {
 	                               LineStringPointNFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_PointN", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_PointN", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

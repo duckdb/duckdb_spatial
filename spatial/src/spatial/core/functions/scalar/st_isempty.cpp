@@ -66,14 +66,13 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns true if the geometry is "empty"
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -92,7 +91,7 @@ void CoreScalarFunctions::RegisterStIsEmpty(DatabaseInstance &db) {
 	                                                 GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, is_empty_function_set);
-    DocUtil::AddDocumentation(db, "ST_IsEmpty", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_IsEmpty", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

@@ -178,7 +178,7 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the area of a geometry.
 
     Compute the area of a geometry.
@@ -188,7 +188,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     The `POINT_2D` and `LINESTRING_2D` variants of this function always return `0.0` but are included for completeness.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
     select ST_Area('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 )";
 
@@ -207,7 +207,7 @@ void CoreScalarFunctions::RegisterStArea(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, BoxAreaFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_Area", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Area", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

@@ -92,7 +92,7 @@ static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
 Computes a quadkey from a given lon/lat point.
 
 Compute the [quadkey](https://learn.microsoft.com/en-us/bingmaps/articles/bing-maps-tile-system) for a given lon/lat point at a given level.
@@ -105,12 +105,11 @@ The input coordinates will be clamped to the lon/lat bounds of the earth (longit
 Throws for any geometry that is not a `POINT`
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 SELECT ST_QuadKey(st_point(11.08, 49.45), 10);
 ----
 1333203202
 )";
-
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
@@ -127,8 +126,7 @@ void CoreScalarFunctions::RegisterStQuadKey(DatabaseInstance &db) {
 	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_QuadKey", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_QuadKey", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

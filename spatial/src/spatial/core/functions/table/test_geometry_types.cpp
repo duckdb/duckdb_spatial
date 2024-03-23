@@ -9,7 +9,7 @@ namespace core {
 
 void CoreTableFunctions::RegisterTestTableFunctions(DatabaseInstance &db) {
 
-    // TODO:
+	// TODO:
 	// TableFunction test_geometry_types("test_geometry_types", {}, Execute, Bind, Init);
 	// ExtensionUtil::RegisterFunction(db, test_geometry_types);
 }

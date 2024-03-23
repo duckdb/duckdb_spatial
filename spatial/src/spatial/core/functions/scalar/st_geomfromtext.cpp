@@ -39,20 +39,20 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-    WKTReader reader(lstate.factory.allocator);
-	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(input, result, count,
-          [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
-          try {
-              auto geom = reader.Parse(wkt);
-              return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
-          } catch (InvalidInputException &error) {
-              if (!info.ignore_invalid) {
-                  throw;
-              }
-              mask.SetInvalid(idx);
-              return geometry_t {};
-          }
-      });
+	WKTReader reader(lstate.factory.allocator);
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
+	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
+		    try {
+			    auto geom = reader.Parse(wkt);
+			    return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
+		    } catch (InvalidInputException &error) {
+			    if (!info.ignore_invalid) {
+				    throw;
+			    }
+			    mask.SetInvalid(idx);
+			    return geometry_t {};
+		    }
+	    });
 }
 
 static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, ScalarFunction &bound_function,
@@ -88,11 +88,11 @@ static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, Scal
 //------------------------------------------------------------------------------
 // Documentation
 //------------------------------------------------------------------------------
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Deserializes a GEOMETRY from a WKT string, optionally ignoring invalid geometries
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 
 )";
 
@@ -109,12 +109,11 @@ void CoreScalarFunctions::RegisterStGeomFromText(DatabaseInstance &db) {
 	                               GeometryFromWKTBind, nullptr, nullptr, GeometryFunctionLocalState::Init));
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR, LogicalType::BOOLEAN}, core::GeoTypes::GEOMETRY(),
 	                               GeometryFromWKTFunction, GeometryFromWKTBind, nullptr, nullptr,
-                                   GeometryFunctionLocalState::Init));
+	                               GeometryFunctionLocalState::Init));
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_GeomFromText", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_GeomFromText", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
-} // namespace geos
+} // namespace core
 
 } // namespace spatial

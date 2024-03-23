@@ -27,11 +27,11 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 // Documentation
 //------------------------------------------------------------------------------
 
-static constexpr const char* DOC_DESCRIPTION = R"(
+static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the geometry as a WKB blob
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
+static constexpr const char *DOC_EXAMPLE = R"(
 SELECT ST_AsWKB('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 )";
 
@@ -47,8 +47,7 @@ void CoreScalarFunctions::RegisterStAsWKB(DatabaseInstance &db) {
 	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_wkb_function_set);
-    DocUtil::AddDocumentation(db, "ST_AsWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
-
+	DocUtil::AddDocumentation(db, "ST_AsWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core
