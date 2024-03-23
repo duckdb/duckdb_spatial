@@ -1,3 +1,0 @@
-{"type":"aggregate_function","id":"st_intersection_agg","title":"ST_Intersection_Agg","signatures":[{"returns":"GEOMETRY","parameters":["GEOMETRY"]}]}
-{"type":"aggregate_function","id":"st_envelope_agg","title":"ST_Envelope_Agg","signatures":[{"returns":"GEOMETRY","parameters":["GEOMETRY"]}]}
-{"type":"aggregate_function","id":"st_union_agg","title":"ST_Union_Agg","signatures":[{"returns":"GEOMETRY","parameters":["GEOMETRY"]}]}
