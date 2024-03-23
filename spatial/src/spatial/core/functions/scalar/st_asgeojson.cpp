@@ -578,7 +578,7 @@ static constexpr const char *FROM_DOC_EXAMPLE = R"(
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	ScalarFunctionSet to_geojson("ST_AsGeoJSON");
-	to_geojson.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::VARCHAR,
+	to_geojson.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::JSON(),
 	                                      GeometryToGeoJSONFragmentFunction, nullptr, nullptr, nullptr,
 	                                      GeometryFunctionLocalState::Init));
 	ExtensionUtil::RegisterFunction(db, to_geojson);
