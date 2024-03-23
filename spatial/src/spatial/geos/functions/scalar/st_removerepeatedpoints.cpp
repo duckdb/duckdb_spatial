@@ -52,9 +52,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Returns a new geometry with repeated points removed, optionally within a target distance of eachother.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-    TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};

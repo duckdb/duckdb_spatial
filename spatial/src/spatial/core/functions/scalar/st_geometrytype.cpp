@@ -65,9 +65,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------

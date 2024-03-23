@@ -110,7 +110,7 @@ This function will drop any Z and M values from the input geometry, if present. 
 )";
 
 static constexpr const char* FORCE2D_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 // FORCE_3DZ
@@ -125,7 +125,7 @@ The following cases apply:
 )";
 
 static constexpr const char* FORCE3DZ_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 // FORCE_3DM
@@ -140,7 +140,7 @@ The following cases apply:
 )";
 
 static constexpr const char* FORCE3DM_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 // FORCE_4D
@@ -155,7 +155,7 @@ The following cases apply:
 )";
 
 static constexpr const char* FORCE4D_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 //------------------------------------------------------------------------------

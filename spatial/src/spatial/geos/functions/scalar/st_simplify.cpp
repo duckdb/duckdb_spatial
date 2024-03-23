@@ -32,9 +32,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
 Simplifies the input geometry by collapsing edges smaller than 'distance'
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};

@@ -39,7 +39,7 @@ Returns the "boundary" of a geometry
 )";
 
 static constexpr const char* DOC_EXAMPLE = R"(
-TODO: EXAMPLE MISSING
+
 )";
 
 

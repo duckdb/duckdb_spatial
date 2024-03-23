@@ -166,7 +166,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: EXAMPLE MISSING
+
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}, {"category", "spheroid"}};

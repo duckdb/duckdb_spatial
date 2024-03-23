@@ -101,7 +101,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries
 )";
 static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 //------------------------------------------------------------------------

@@ -171,12 +171,6 @@ The input geometry is assumed to be in the [EPSG:4326](https://en.wikipedia.org/
 
 Returns `0.0` for any geometry that is not a `POLYGON`, `MULTIPOLYGON` or `GEOMETRYCOLLECTION` containing polygon geometries.
 
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
-
 
 
 ### ST_AsGeoJSON
@@ -289,12 +283,6 @@ GEOMETRY ST_Boundary (col0 GEOMETRY)
 
 Returns the "boundary" of a geometry
 
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
-
 
 
 ### ST_Buffer
@@ -326,12 +314,6 @@ Returns a buffer around the input geometry at the target distance
 `mite_limit` only applies when `join_style` is "JOIN_MITRE". It is the ratio of the distance from the corner to the miter point to the corner radius. The default value is 1.0.
 
 This is a planar operation and will not take into account the curvature of the earth.
-
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
 
 
 
@@ -484,12 +466,6 @@ BOOLEAN ST_ContainsProperly (col0 GEOMETRY, col1 GEOMETRY)
 
 Returns true if geom1 "properly contains" geom2
 
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
-
 
 
 ### ST_ConvexHull
@@ -505,12 +481,6 @@ GEOMETRY ST_ConvexHull (col0 GEOMETRY)
 #### Description
 
 Returns the convex hull enclosing the geometry
-
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
 
 
 
@@ -528,12 +498,6 @@ BOOLEAN ST_CoveredBy (col0 GEOMETRY, col1 GEOMETRY)
 
 Returns true if geom1 is "covered" by geom2
 
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
-
 
 
 ### ST_Covers
@@ -549,12 +513,6 @@ BOOLEAN ST_Covers (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns if geom1 "covers" geom2
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -572,12 +530,6 @@ BOOLEAN ST_Crosses (col0 GEOMETRY, col1 GEOMETRY)
 
 Returns true if geom1 "crosses" geom2
 
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
-
 
 
 ### ST_DWithin
@@ -593,12 +545,6 @@ BOOLEAN ST_DWithin (col0 GEOMETRY, col1 GEOMETRY, col2 DOUBLE)
 #### Description
 
 Returns if two geometries are within a target distance of each-other
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -616,12 +562,6 @@ DOUBLE ST_DWithin_Spheroid (col0 POINT_2D, col1 POINT_2D, col2 DOUBLE)
 
 Returns if two POINT_2D's are within a target distance in meters, using an ellipsoidal model of the earths surface
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Difference
@@ -637,12 +577,6 @@ GEOMETRY ST_Difference (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns the "difference" between two geometries
-
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
 
 
 
@@ -683,12 +617,6 @@ BOOLEAN ST_Disjoint (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns if two geometries are disjoint
-
-#### Example
-
-```sql
-TODO: EXAMPLE MISSING
-```
 
 
 
@@ -815,12 +743,6 @@ GEOMETRY ST_Envelope (col0 GEOMETRY)
 
 Returns the minimum bounding box for the input geometry as a polygon geometry.
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Equals
@@ -836,12 +758,6 @@ BOOLEAN ST_Equals (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Compares two geometries for equality
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -859,12 +775,6 @@ BOX_2D ST_Extent (col0 GEOMETRY)
 
 Returns the minimal bounding box enclosing the input geometry
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_ExteriorRing
@@ -881,12 +791,6 @@ GEOMETRY ST_ExteriorRing (col0 GEOMETRY)
 #### Description
 
 Returns the exterior ring (shell) of a polygon geometry.
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -908,12 +812,6 @@ GEOMETRY ST_FlipCoordinates (col0 GEOMETRY)
 
 Returns a new geometry with the coordinates of the input geometry "flipped" so that x = y and y = x.
 
-#### Example
-
-```sql
-TODO
-```
-
 
 
 ### ST_Force2D
@@ -931,12 +829,6 @@ GEOMETRY ST_Force2D (col0 GEOMETRY)
 Forces the vertices of a geometry to have X and Y components
 
 This function will drop any Z and M values from the input geometry, if present. If the input geometry is already 2D, it will be returned as is.
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -960,12 +852,6 @@ The following cases apply:
 - If the input geometry has both a Z component and a M component, the Z component will be removed.
 - Otherwise, if the input geometry has neither a Z or M component, the new M value will be added to the vertices of the input geometry.
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Force3DZ
@@ -987,12 +873,6 @@ The following cases apply:
 - If the input geometry has a Z component but no M component, it will be returned as is.
 - If the input geometry has both a Z component and a M component, the M component will be removed.
 - Otherwise, if the input geometry has neither a Z or M component, the new Z value will be added to the vertices of the input geometry.
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1016,12 +896,6 @@ The following cases apply:
 - If the input geometry has both a Z component and a M component, the geometry will be returned as is.
 - Otherwise, if the input geometry has neither a Z or M component, the new Z and M values will be added to the vertices of the input geometry.
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_GeomFromGeoJSON
@@ -1037,12 +911,6 @@ GEOMETRY ST_GeomFromGeoJSON (col0 VARCHAR)
 #### Description
 
 Deserializes a GEOMETRY from a GeoJSON fragment.
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1060,12 +928,6 @@ GEOMETRY ST_GeomFromHEXEWKB (col0 VARCHAR)
 
 Deserialize a GEOMETRY from a HEXEWKB encoded string
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_GeomFromHEXWKB
@@ -1081,12 +943,6 @@ GEOMETRY ST_GeomFromHEXWKB (col0 VARCHAR)
 #### Description
 
 Creates a GEOMETRY from a HEXWKB string
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1105,12 +961,6 @@ GEOMETRY ST_GeomFromText (col0 VARCHAR, col1 BOOLEAN)
 
 Deserializes a GEOMETRY from a WKT string, optionally ignoring invalid geometries
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_GeomFromWKB
@@ -1127,12 +977,6 @@ GEOMETRY ST_GeomFromWKB (col0 BLOB)
 #### Description
 
 Deserializes a GEOMETRY from a WKB encoded blob
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1153,12 +997,6 @@ ANY ST_GeometryType (col0 GEOMETRY)
 
 Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type.
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Hilbert
@@ -1175,12 +1013,6 @@ UINTEGER ST_Hilbert (col0 DOUBLE, col1 DOUBLE, col2 BOX_2D)
 
 Encodes the X and Y values as the hilbert curve index for a curve covering the given bounding box
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Intersection
@@ -1196,12 +1028,6 @@ GEOMETRY ST_Intersection (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns the "intersection" of geom1 and geom2
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1220,12 +1046,6 @@ BOOLEAN ST_Intersects (col0 GEOMETRY, col1 GEOMETRY)
 
 Returns true if two geometries intersects
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Intersects_Extent
@@ -1242,12 +1062,6 @@ BOOLEAN ST_Intersects_Extent (col0 GEOMETRY, col1 GEOMETRY)
 
 Returns true if the extent of two geometries intersects
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_IsClosed
@@ -1263,12 +1077,6 @@ BOOLEAN ST_IsClosed (col0 GEOMETRY)
 #### Description
 
 Returns true if a geometry is "closed"
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1288,12 +1096,6 @@ BOOLEAN ST_IsEmpty (col0 GEOMETRY)
 
 Returns true if the geometry is "empty"
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_IsRing
@@ -1309,12 +1111,6 @@ BOOLEAN ST_IsRing (col0 GEOMETRY)
 #### Description
 
 Returns true if the input line geometry is a ring (both ST_IsClosed and ST_IsSimple).
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1332,12 +1128,6 @@ BOOLEAN ST_IsSimple (col0 GEOMETRY)
 
 Returns true if the input geometry is "simple"
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_IsValid
@@ -1353,12 +1143,6 @@ BOOLEAN ST_IsValid (col0 GEOMETRY)
 #### Description
 
 Returns true if the geometry is topologically "valid"
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1376,12 +1160,6 @@ DOUBLE ST_Length (col0 GEOMETRY)
 #### Description
 
 Returns the length of the input line geometry
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1404,12 +1182,6 @@ The input geometry is assumed to be in the [EPSG:4326](https://en.wikipedia.org/
 
 Returns `0.0` for any geometry that is not a `LINESTRING`, `MULTILINESTRING` or `GEOMETRYCOLLECTION` containing line geometries.
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_LineMerge
@@ -1426,12 +1198,6 @@ GEOMETRY ST_LineMerge (col0 GEOMETRY, col1 BOOLEAN)
 #### Description
 
 "Merges" the input line geometry, optionally taking direction into account.
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1497,12 +1263,6 @@ GEOMETRY ST_MakeEnvelope (col0 DOUBLE, col1 DOUBLE, col2 DOUBLE, col3 DOUBLE)
 
 Returns a minimal bounding box polygon enclosing the input geometry
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_MakeLine
@@ -1519,12 +1279,6 @@ GEOMETRY ST_MakeLine (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Creates a LINESTRING geometry from a pair or list of input points
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1543,12 +1297,6 @@ GEOMETRY ST_MakePolygon (col0 GEOMETRY)
 
 Creates a polygon from a shell geometry and an optional set of holes
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_MakeValid
@@ -1564,12 +1312,6 @@ GEOMETRY ST_MakeValid (col0 GEOMETRY)
 #### Description
 
 Attempts to make an invalid geometry valid without removing any vertices
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1587,12 +1329,6 @@ INTEGER ST_NGeometries (col0 GEOMETRY)
 
 Returns the number of component geometries in a collection geometry
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_NInteriorRings
@@ -1609,12 +1345,6 @@ INTEGER ST_NInteriorRings (col0 GEOMETRY)
 #### Description
 
 Returns the number if interior rings of a polygon
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1636,12 +1366,6 @@ UINTEGER ST_NPoints (col0 GEOMETRY)
 
 Returns the number of points within a geometry
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Normalize
@@ -1657,12 +1381,6 @@ GEOMETRY ST_Normalize (col0 GEOMETRY)
 #### Description
 
 Returns a "normalized" version of the input geometry.
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -1680,12 +1398,6 @@ INTEGER ST_NumGeometries (col0 GEOMETRY)
 
 Returns the number of component geometries in a collection geometry
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_NumInteriorRings
@@ -1702,12 +1414,6 @@ INTEGER ST_NumInteriorRings (col0 GEOMETRY)
 #### Description
 
 Returns the number if interior rings of a polygon
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1729,12 +1435,6 @@ UINTEGER ST_NumPoints (col0 GEOMETRY)
 
 Returns the number of points within a geometry
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Overlaps
@@ -1750,12 +1450,6 @@ BOOLEAN ST_Overlaps (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns true if geom1 "overlaps" geom2
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1774,12 +1468,6 @@ DOUBLE ST_Perimeter (col0 GEOMETRY)
 #### Description
 
 Returns the length of the perimeter of the geometry
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1801,12 +1489,6 @@ Returns the length of the perimeter in meters using an ellipsoidal model of the 
 The input geometry is assumed to be in the [EPSG:4326](https://en.wikipedia.org/wiki/World_Geodetic_System) coordinate system (WGS84), with [latitude, longitude] axis order and the length is returned in meters. This function uses the [GeographicLib](https://geographiclib.sourceforge.io/) library, calculating the perimeter using an ellipsoidal model of the earth. This is a highly accurate method for calculating the perimeter of a polygon taking the curvature of the earth into account, but is also the slowest.
 
 Returns `0.0` for any geometry that is not a `POLYGON`, `MULTIPOLYGON` or `GEOMETRYCOLLECTION` containing polygon geometries.
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -1889,12 +1571,6 @@ POINT_2D ST_PointN (col0 LINESTRING_2D, col1 INTEGER)
 
 Returns the n'th vertex from the input geometry as a point geometry
 
-#### Example
-
-```sql
-TODO
-```
-
 
 
 ### ST_PointOnSurface
@@ -1910,12 +1586,6 @@ GEOMETRY ST_PointOnSurface (col0 GEOMETRY)
 #### Description
 
 Returns a point that is guaranteed to be on the surface of the input geometry. Sometimes a useful alternative to ST_Centroid.
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 
@@ -1967,12 +1637,6 @@ GEOMETRY ST_ReducePrecision (col0 GEOMETRY, col1 DOUBLE)
 
 Returns the geometry with all vertices reduced to the target precision
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_RemoveRepeatedPoints
@@ -1992,12 +1656,6 @@ GEOMETRY ST_RemoveRepeatedPoints (col0 GEOMETRY, col1 DOUBLE)
 
 Returns a new geometry with repeated points removed, optionally within a target distance of eachother.
 
-#### Example
-
-```sql
-TODO
-```
-
 
 
 ### ST_Reverse
@@ -2013,12 +1671,6 @@ GEOMETRY ST_Reverse (col0 GEOMETRY)
 #### Description
 
 Returns a new version of the input geometry with the order of its vertices reversed
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -2036,12 +1688,6 @@ GEOMETRY ST_Simplify (col0 GEOMETRY, col1 DOUBLE)
 
 Simplifies the input geometry by collapsing edges smaller than 'distance'
 
-#### Example
-
-```sql
-TODO
-```
-
 
 
 ### ST_SimplifyPreserveTopology
@@ -2057,12 +1703,6 @@ GEOMETRY ST_SimplifyPreserveTopology (col0 GEOMETRY, col1 DOUBLE)
 #### Description
 
 Returns a simplified geometry but avoids creating invalid topologies
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -2081,12 +1721,6 @@ POINT_2D ST_StartPoint (col0 LINESTRING_2D)
 
 Returns the first point of a line geometry
 
-#### Example
-
-```sql
-TODO
-```
-
 
 
 ### ST_Touches
@@ -2102,12 +1736,6 @@ BOOLEAN ST_Touches (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns true if geom1 "touches" geom2
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -2219,12 +1847,6 @@ BOOLEAN ST_Within (col0 GEOMETRY, col1 GEOMETRY)
 #### Description
 
 Returns true if geom1 is "within" geom2
-
-#### Example
-
-```sql
-TODO
-```
 
 
 
@@ -2406,12 +2028,6 @@ GEOMETRY ST_Envelope_Agg (col0 GEOMETRY)
 
 Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Intersection_Agg
@@ -2428,12 +2044,6 @@ GEOMETRY ST_Intersection_Agg (col0 GEOMETRY)
 
 Computes the intersection of a set of geometries
 
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
-
 
 
 ### ST_Union_Agg
@@ -2449,12 +2059,6 @@ GEOMETRY ST_Union_Agg (col0 GEOMETRY)
 #### Description
 
 Computes the union of a set of input geometries
-
-#### Example
-
-```sql
-TODO: MISSING EXAMPLE
-```
 
 
 

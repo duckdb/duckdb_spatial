@@ -113,7 +113,7 @@ Creates a LINESTRING geometry from a pair or list of input points
 )";
 
 static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 

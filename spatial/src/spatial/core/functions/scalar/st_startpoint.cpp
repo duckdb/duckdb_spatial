@@ -91,9 +91,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
 Returns the first point of a line geometry
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};

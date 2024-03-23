@@ -129,7 +129,7 @@ Returns `0.0` for any geometry that is not a `LINESTRING`, `MULTILINESTRING` or 
 )";
 
 static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}, {"category", "spheroid"}};

@@ -110,7 +110,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Encodes the X and Y values as the hilbert curve index for a curve covering the given bounding box
 )";
 static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 //------------------------------------------------------------------------------
 // Register functions

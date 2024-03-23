@@ -225,9 +225,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Returns a new geometry with the coordinates of the input geometry "flipped" so that x = y and y = x.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-    TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------

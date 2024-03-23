@@ -148,9 +148,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Returns `0.0` for any geometry that is not a `POLYGON`, `MULTIPOLYGON` or `GEOMETRYCOLLECTION` containing polygon geometries.
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-    TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}, {"category", "spheroid"}};
 //------------------------------------------------------------------------------

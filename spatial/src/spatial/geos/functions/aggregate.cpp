@@ -178,7 +178,7 @@ static constexpr const char* INTERSECTION_DOC_DESCRIPTION = R"(
     Computes the intersection of a set of geometries
 )";
 static constexpr const char* INTERSECTION_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 static constexpr const char* UNION_DOC_DESCRIPTION = R"(
@@ -186,7 +186,7 @@ static constexpr const char* UNION_DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char* UNION_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 //------------------------------------------------------------------------

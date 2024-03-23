@@ -65,7 +65,7 @@ Creates a GEOMETRY from a HEXWKB string
 )";
 
 static constexpr const char* DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 // HexEWKB
@@ -74,7 +74,7 @@ static constexpr const char* EXTENDED_DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char* EXTENDED_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 //------------------------------------------------------------------------------

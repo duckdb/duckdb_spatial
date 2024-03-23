@@ -31,9 +31,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
     Returns if geom1 "covers" geom2
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-    TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};

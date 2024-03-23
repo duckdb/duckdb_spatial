@@ -32,9 +32,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
 Returns a simplified geometry but avoids creating invalid topologies
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};

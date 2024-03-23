@@ -31,7 +31,7 @@ Returns a point that is guaranteed to be on the surface of the input geometry. S
 )";
 
 static constexpr const char* DOC_EXAMPLE = R"(
-TODO: MISSING EXAMPLE
+
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};

@@ -38,9 +38,7 @@ static constexpr const char* DOC_DESCRIPTION = R"(
 Returns a new version of the input geometry with the order of its vertices reversed
 )";
 
-static constexpr const char* DOC_EXAMPLE = R"(
-TODO
-)";
+static constexpr const char* DOC_EXAMPLE = R"()";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------

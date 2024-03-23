@@ -570,7 +570,7 @@ static constexpr const char* FROM_DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char* FROM_DOC_EXAMPLE = R"(
-    TODO: MISSING EXAMPLE
+
 )";
 
 //------------------------------------------------------------------------------
