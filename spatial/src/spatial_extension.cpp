@@ -53,7 +53,24 @@ static string RemoveIndentAndTrailingWhitespace(const char* text) {
 
 void spatial::DocUtil::AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name, const char *description,
                                         const char *example, const Value &comment) {
-    auto &func_entry = ExtensionUtil::GetFunction(db, function_name);
+
+    auto &system_catalog = Catalog::GetSystemCatalog(db);
+    auto data = CatalogTransaction::GetSystemTransaction(db);
+    auto &schema = system_catalog.GetSchema(data, DEFAULT_SCHEMA);
+    auto catalog_entry = schema.GetEntry(data, CatalogType::SCALAR_FUNCTION_ENTRY, function_name);
+    if (!catalog_entry) {
+        // Try get a aggregate function
+        catalog_entry = schema.GetEntry(data, CatalogType::AGGREGATE_FUNCTION_ENTRY, function_name);
+        if(!catalog_entry) {
+            // Try get a table function
+            catalog_entry = schema.GetEntry(data, CatalogType::TABLE_FUNCTION_ENTRY, function_name);
+            if(!catalog_entry) {
+                throw duckdb::InvalidInputException("Function with name \"%s\" not found in DocUtil::AddDocumentation", function_name);
+            }
+        }
+    }
+
+    auto &func_entry = catalog_entry->Cast<FunctionEntry>();
     if(description != nullptr) {
         func_entry.description = RemoveIndentAndTrailingWhitespace(description);
     }

@@ -3,6 +3,7 @@
 #include "duckdb/common/mutex.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/common/types/uuid.hpp"
+#include "duckdb/main/client_data.hpp"
 
 #include "cpl_vsi.h"
 #include "cpl_vsi_virtual.h"
@@ -110,7 +111,8 @@ private:
 
 public:
 	DuckDBFileSystemHandler(string client_prefix, ClientContext &context)
-	    : client_prefix(std::move(client_prefix)), context(context) {};
+	    : client_prefix(std::move(client_prefix)), context(context) {
+    };
 
 	const char *StripPrefix(const char *pszFilename) {
 		return pszFilename + client_prefix.size();
@@ -134,7 +136,13 @@ public:
 				flags |= FileFlags::FILE_FLAGS_WRITE;
 			}
 		} else if (access[0] == 'w') {
-			flags = FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_FILE_CREATE_NEW;
+			flags = FileFlags::FILE_FLAGS_WRITE;
+            if(fs.IsPipe(file_name)) {
+                // So we dont try to create a new /stdin/ or /stdout/ file and hit permission errors
+                flags |= FileFlags::FILE_FLAGS_FILE_CREATE;
+            } else {
+                flags |= FileFlags::FILE_FLAGS_FILE_CREATE_NEW;
+            }
 			if (len > 1 && access[1] == '+') {
 				flags |= FileFlags::FILE_FLAGS_READ;
 			}
@@ -168,9 +176,14 @@ public:
 			}
 #endif
 			auto file = fs.OpenFile(file_name, flags, FileSystem::DEFAULT_LOCK, FileCompressionType::AUTO_DETECT);
-			return new DuckDBFileHandle(std::move(file));
-		} catch (std::exception &ex) {
-			// Failed to open file via DuckDB File System. If this doesnt have a VSI prefix we can return an error here.
+            // If the file is remote and NOT in write mode, we can cache it.
+            if(!file->OnDiskFile() && !(flags & FileFlags::FILE_FLAGS_WRITE) && !(flags & FileFlags::FILE_FLAGS_APPEND)) {
+                return VSICreateCachedFile(new DuckDBFileHandle(std::move(file)));
+            } else {
+                return new DuckDBFileHandle(std::move(file));
+            }
+  		} catch (std::exception &ex) {
+            // Failed to open file via DuckDB File System. If this doesnt have a VSI prefix we can return an error here.
 			if (strncmp(file_name, "/vsi", 4) != 0) {
 				if (bSetError) {
 					VSIError(VSIE_FileError, "Failed to open file %s: %s", file_name, ex.what());
@@ -245,6 +258,11 @@ public:
 
 		return 0;
 	}
+
+    bool IsLocal(const char *prefixed_file_name) override {
+        auto file_name = StripPrefix(prefixed_file_name);
+        return !FileSystem::IsRemoteFile(file_name);
+    }
 
 	int Mkdir(const char *prefixed_dir_name, long mode) override {
 		auto dir_name = StripPrefix(prefixed_dir_name);

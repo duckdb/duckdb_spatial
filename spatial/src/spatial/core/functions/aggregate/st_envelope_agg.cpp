@@ -93,6 +93,17 @@ struct EnvelopeAggFunction {
 	}
 };
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+static constexpr const char* DOC_DESCRIPTION = R"(
+    Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries
+)";
+static constexpr const char* DOC_EXAMPLE = R"(
+    TODO: MISSING EXAMPLE
+)";
+
 //------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------
@@ -104,6 +115,7 @@ void CoreAggregateFunctions::RegisterStEnvelopeAgg(DatabaseInstance &db) {
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_envelope_agg);
+    DocUtil::AddDocumentation(db, "ST_Envelope_Agg", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

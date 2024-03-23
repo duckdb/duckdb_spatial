@@ -11,6 +11,7 @@
 #include "duckdb/planner/operator/logical_get.hpp"
 #include "duckdb/planner/operator/logical_join.hpp"
 #include "spatial/common.hpp"
+#include "spatial/core/types.hpp"
 #include "spatial/core/optimizer_rules.hpp"
 
 namespace spatial {
@@ -144,6 +145,10 @@ public:
 
 					// Lookup the st_xmin, st_xmax, st_ymin, st_ymax functions in the catalog
 					auto &catalog = Catalog::GetSystemCatalog(context);
+
+                    auto &extent_func_set = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_extent")
+                        .Cast<ScalarFunctionCatalogEntry>();
+
 					auto &xmin_func_set =
 					    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")
 					        .Cast<ScalarFunctionCatalogEntry>();
@@ -160,57 +165,70 @@ public:
 					auto &left_arg_type = left_pred_expr->return_type;
 					auto &right_arg_type = right_pred_expr->return_type;
 
-					auto xmin_func_left = xmin_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
-					auto xmax_func_left = xmax_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
-					auto ymin_func_left = ymin_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
-					auto ymax_func_left = ymax_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
+                    auto extent_func_left = extent_func_set.functions.GetFunctionByArguments(context, {left_arg_type});
+                    auto extent_func_right = extent_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
 
-					auto xmin_func_right = xmin_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
-					auto xmax_func_right = xmax_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
-					auto ymin_func_right = ymin_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
-					auto ymax_func_right = ymax_func_set.functions.GetFunctionByArguments(context, {right_arg_type});
+					auto xmin_func_left = xmin_func_set.functions.GetFunctionByArguments(context, {extent_func_left.return_type});
+					auto xmax_func_left = xmax_func_set.functions.GetFunctionByArguments(context, {extent_func_left.return_type});
+					auto ymin_func_left = ymin_func_set.functions.GetFunctionByArguments(context, {extent_func_left.return_type});
+					auto ymax_func_left = ymax_func_set.functions.GetFunctionByArguments(context, {extent_func_left.return_type});
+
+					auto xmin_func_right = xmin_func_set.functions.GetFunctionByArguments(context, {extent_func_right.return_type});
+					auto xmax_func_right = xmax_func_set.functions.GetFunctionByArguments(context, {extent_func_right.return_type});
+					auto ymin_func_right = ymin_func_set.functions.GetFunctionByArguments(context, {extent_func_right.return_type});
+					auto ymax_func_right = ymax_func_set.functions.GetFunctionByArguments(context, {extent_func_right.return_type});
 
 					// Create the new join condition
+                    vector<unique_ptr<Expression>> left_extent_args;
+                    left_extent_args.push_back(left_pred_expr->Copy());
+                    auto left_extent = make_uniq<BoundFunctionExpression>(GeoTypes::BOX_2D(), std::move(extent_func_left),
+                        std::move(left_extent_args), nullptr);
+
+                    vector<unique_ptr<Expression>> right_extent_args;
+                    right_extent_args.push_back(right_pred_expr->Copy());
+                    auto right_extent = make_uniq<BoundFunctionExpression>(GeoTypes::BOX_2D(), std::move(extent_func_right),
+                        std::move(right_extent_args), nullptr);
+
 
 					// Left
 					vector<unique_ptr<Expression>> left_xmin_args;
-					left_xmin_args.push_back(left_pred_expr->Copy());
+					left_xmin_args.push_back(left_extent->Copy());
 					auto a_x_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmin_func_left),
 					                                                  std::move(left_xmin_args), nullptr);
 
 					vector<unique_ptr<Expression>> left_xmax_args;
-					left_xmax_args.push_back(left_pred_expr->Copy());
+					left_xmax_args.push_back(left_extent->Copy());
 					auto a_x_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmax_func_left),
 					                                                  std::move(left_xmax_args), nullptr);
 
 					vector<unique_ptr<Expression>> left_ymin_args;
-					left_ymin_args.push_back(left_pred_expr->Copy());
+					left_ymin_args.push_back(left_extent->Copy());
 					auto a_y_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymin_func_left),
 					                                                  std::move(left_ymin_args), nullptr);
 
 					vector<unique_ptr<Expression>> left_ymax_args;
-					left_ymax_args.push_back(left_pred_expr->Copy());
+					left_ymax_args.push_back(left_extent->Copy());
 					auto a_y_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymax_func_left),
 					                                                  std::move(left_ymax_args), nullptr);
 
 					// Right
 					vector<unique_ptr<Expression>> right_xmin_args;
-					right_xmin_args.push_back(right_pred_expr->Copy());
+					right_xmin_args.push_back(right_extent->Copy());
 					auto b_x_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmin_func_right),
 					                                                  std::move(right_xmin_args), nullptr);
 
 					vector<unique_ptr<Expression>> right_xmax_args;
-					right_xmax_args.push_back(right_pred_expr->Copy());
+					right_xmax_args.push_back(right_extent->Copy());
 					auto b_x_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(xmax_func_right),
 					                                                  std::move(right_xmax_args), nullptr);
 
 					vector<unique_ptr<Expression>> right_ymin_args;
-					right_ymin_args.push_back(right_pred_expr->Copy());
+					right_ymin_args.push_back(right_extent->Copy());
 					auto b_y_min = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymin_func_right),
 					                                                  std::move(right_ymin_args), nullptr);
 
 					vector<unique_ptr<Expression>> right_ymax_args;
-					right_ymax_args.push_back(right_pred_expr->Copy());
+					right_ymax_args.push_back(right_extent->Copy());
 					auto b_y_max = make_uniq<BoundFunctionExpression>(LogicalType::DOUBLE, std::move(ymax_func_right),
 					                                                  std::move(right_ymax_args), nullptr);
 
