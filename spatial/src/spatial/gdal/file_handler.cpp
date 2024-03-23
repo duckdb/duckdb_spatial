@@ -169,7 +169,7 @@ public:
 			// Check if the file is a directory
 
 #ifdef _WIN32
-			if (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(path) &&
+			if (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(file_name_str) &&
 			    (flags & FileFlags::FILE_FLAGS_READ)) {
 				// We can't open a directory for reading on windows without special flags
 				// so just open nul instead, gdal will reject it when it tries to read
