@@ -35,6 +35,23 @@ static void GeodesicPoint2DFunction(DataChunk &args, ExpressionState &state, Vec
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns if two POINT_2D's are within a target distance in meters, using an ellipsoidal model of the earths surface
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}, {"category", "spheroid"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GeographicLibFunctions::RegisterDistanceWithin(DatabaseInstance &db) {
 
 	// Distance
@@ -44,6 +61,7 @@ void GeographicLibFunctions::RegisterDistanceWithin(DatabaseInstance &db) {
 	                   LogicalType::DOUBLE, GeodesicPoint2DFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_DWithin_Spheroid", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geographiclib

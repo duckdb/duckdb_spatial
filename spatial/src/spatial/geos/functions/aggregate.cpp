@@ -170,11 +170,29 @@ struct UnionAggFunction {
 	}
 };
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+static constexpr const char *INTERSECTION_DOC_DESCRIPTION = R"(
+    Computes the intersection of a set of geometries
+)";
+static constexpr const char *INTERSECTION_DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr const char *UNION_DOC_DESCRIPTION = R"(
+    Computes the union of a set of input geometries
+)";
+
+static constexpr const char *UNION_DOC_EXAMPLE = R"(
+
+)";
+
 //------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------
 void GeosAggregateFunctions::Register(DatabaseInstance &db) {
-	;
 
 	AggregateFunctionSet st_intersection_agg("ST_Intersection_Agg");
 	st_intersection_agg.AddFunction(
@@ -182,6 +200,8 @@ void GeosAggregateFunctions::Register(DatabaseInstance &db) {
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_intersection_agg);
+	DocUtil::AddDocumentation(db, "ST_Intersection_Agg", INTERSECTION_DOC_DESCRIPTION, INTERSECTION_DOC_EXAMPLE,
+	                          DOC_TAGS);
 
 	AggregateFunctionSet st_union_agg("ST_Union_Agg");
 	st_union_agg.AddFunction(
@@ -189,6 +209,7 @@ void GeosAggregateFunctions::Register(DatabaseInstance &db) {
 	        core::GeoTypes::GEOMETRY(), core::GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_union_agg);
+	DocUtil::AddDocumentation(db, "ST_Union_Agg", UNION_DOC_DESCRIPTION, UNION_DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

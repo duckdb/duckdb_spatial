@@ -24,6 +24,21 @@ static void CoveredByFunction(DataChunk &args, ExpressionState &state, Vector &r
 	                                                GEOSPreparedCoveredBy_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if geom1 is "covered" by geom2
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStCoveredBy(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_CoveredBy");
@@ -32,6 +47,7 @@ void GEOSScalarFunctions::RegisterStCoveredBy(DatabaseInstance &db) {
 	                               CoveredByFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_CoveredBy", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

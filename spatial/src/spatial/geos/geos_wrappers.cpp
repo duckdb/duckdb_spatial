@@ -126,7 +126,6 @@ public:
 	}
 };
 
-
 GEOSGeometry *DeserializeGEOSGeometry(const geometry_t &blob, GEOSContextHandle_t ctx) {
 	GEOSDeserializer deserializer(ctx);
 	return deserializer.Execute(blob).release();

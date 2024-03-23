@@ -55,12 +55,36 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 }
 
 //------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};
+
+// HexWKB
+static constexpr const char *DOC_DESCRIPTION = R"(
+Creates a GEOMETRY from a HEXWKB string
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+// HexEWKB
+static constexpr const char *EXTENDED_DOC_DESCRIPTION = R"(
+    Deserialize a GEOMETRY from a HEXEWKB encoded string
+)";
+
+static constexpr const char *EXTENDED_DOC_EXAMPLE = R"(
+
+)";
+
+//------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStGeomFromHEXWKB(DatabaseInstance &db) {
 	ScalarFunction hexwkb("ST_GeomFromHEXWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(), GeometryFromHEXWKB,
 	                      nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init);
 	ExtensionUtil::RegisterFunction(db, hexwkb);
+	DocUtil::AddDocumentation(db, "ST_GeomFromHEXWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	// Our WKB reader also parses EWKB, even though it will just ignore SRID's.
 	// so we'll just add an alias for now. In the future, once we actually handle
@@ -69,6 +93,7 @@ void CoreScalarFunctions::RegisterStGeomFromHEXWKB(DatabaseInstance &db) {
 	ScalarFunction ewkb("ST_GeomFromHEXEWKB", {LogicalType::VARCHAR}, GeoTypes::GEOMETRY(), GeometryFromHEXWKB, nullptr,
 	                    nullptr, nullptr, GeometryFunctionLocalState::Init);
 	ExtensionUtil::RegisterFunction(db, ewkb);
+	DocUtil::AddDocumentation(db, "ST_GeomFromHEXEWKB", EXTENDED_DOC_DESCRIPTION, EXTENDED_DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

@@ -8,7 +8,7 @@ namespace core {
 
 struct CoreScalarMacros {
 public:
-    static void Register(DatabaseInstance &db);
+	static void Register(DatabaseInstance &db);
 };
 
 } // namespace core

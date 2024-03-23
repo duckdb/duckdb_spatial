@@ -15,41 +15,42 @@ void VertexArray::Append(ArenaAllocator &alloc, const VertexArray &other) {
 		MakeOwning(alloc);
 	}
 
-    D_ASSERT(properties.HasZ() == other.properties.HasZ());
-    D_ASSERT(properties.HasM() == other.properties.HasM());
+	D_ASSERT(properties.HasZ() == other.properties.HasZ());
+	D_ASSERT(properties.HasM() == other.properties.HasM());
 #ifdef DEBUG
-    if(properties.HasZ() != other.properties.HasZ()) {
-        // This is mostly here to prevent the ToString() method to be optimized out.
-        throw InternalException("Cannot append vertex arrays with different Z properties. self: %s, other: %s", ToString(vertex_count), other.ToString(other.vertex_count));
-    }
+	if (properties.HasZ() != other.properties.HasZ()) {
+		// This is mostly here to prevent the ToString() method to be optimized out.
+		throw InternalException("Cannot append vertex arrays with different Z properties. self: %s, other: %s",
+		                        ToString(vertex_count), other.ToString(other.vertex_count));
+	}
 #endif
-    auto old_count = vertex_count;
-    auto new_count = vertex_count + other.vertex_count;
-    Resize(alloc, new_count);
-    auto vertex_size = properties.VertexSize();
-    memcpy(vertex_data + old_count * vertex_size, other.vertex_data, vertex_size * other.vertex_count);
-    vertex_count = new_count;
+	auto old_count = vertex_count;
+	auto new_count = vertex_count + other.vertex_count;
+	Resize(alloc, new_count);
+	auto vertex_size = properties.VertexSize();
+	memcpy(vertex_data + old_count * vertex_size, other.vertex_data, vertex_size * other.vertex_count);
+	vertex_count = new_count;
 }
 
 void VertexArray::Resize(ArenaAllocator &alloc, uint32_t new_count) {
 	auto vertex_size = properties.VertexSize();
-    if(new_count == vertex_count) {
-        return;
-    }
-    if(vertex_data == nullptr) {
-        vertex_data = alloc.AllocateAligned(vertex_size * new_count);
-        vertex_count = new_count;
-        properties.SetOwning(true);
-        memset(vertex_data, 0, vertex_size * new_count);
-        return;
-    }
+	if (new_count == vertex_count) {
+		return;
+	}
+	if (vertex_data == nullptr) {
+		vertex_data = alloc.AllocateAligned(vertex_size * new_count);
+		vertex_count = new_count;
+		properties.SetOwning(true);
+		memset(vertex_data, 0, vertex_size * new_count);
+		return;
+	}
 
 	if (IsOwning()) {
 		vertex_data = alloc.Reallocate(vertex_data, vertex_count * vertex_size, vertex_size * new_count);
 		vertex_count = new_count;
 	} else {
 		auto new_data = alloc.AllocateAligned(vertex_size * new_count);
-        memset(new_data, 0, vertex_size * new_count);
+		memset(new_data, 0, vertex_size * new_count);
 		auto copy_count = std::min(vertex_count, new_count);
 		memcpy(new_data, vertex_data, vertex_size * copy_count);
 		vertex_data = new_data;
@@ -86,14 +87,14 @@ void VertexArray::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, d
 				auto old_offset = i * old_vertex_size;
 				auto new_offset = i * new_vertex_size;
 				auto old_m_offset = old_offset + sizeof(double) * 2;
-                auto new_z_offset = new_offset + sizeof(double) * 2;
+				auto new_z_offset = new_offset + sizeof(double) * 2;
 				auto new_m_offset = new_offset + sizeof(double) * 3;
-                // Move the M value
+				// Move the M value
 				memcpy(vertex_data + new_m_offset, vertex_data + old_m_offset, sizeof(double));
-                // Set the new Z value
+				// Set the new Z value
 				memcpy(vertex_data + new_z_offset, &default_z, sizeof(double));
-                // Move the X and Y values
-                memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
+				// Move the X and Y values
+				memcpy(vertex_data + new_offset, vertex_data + old_offset, sizeof(double) * 2);
 			}
 		} else if (!used_to_have_z && has_z && !used_to_have_m && has_m) {
 			// 2. We go from XY to XYZM
@@ -134,7 +135,7 @@ void VertexArray::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, d
 	// In this case we need to allocate new memory and copy the data over to not lose any data
 	else {
 		auto new_data = alloc.AllocateAligned(vertex_count * new_vertex_size);
-        memset(new_data, 0, vertex_count * new_vertex_size);
+		memset(new_data, 0, vertex_count * new_vertex_size);
 
 		// Special case: If we go from XYZM to XYM, we need to slide the M value to the end of each vertex
 		if (used_to_have_z && used_to_have_m && !has_z && has_m) {
@@ -200,7 +201,7 @@ double VertexArray::Length() const {
 }
 
 string VertexArray::ToString() const {
-    return ToString(vertex_count);
+	return ToString(vertex_count);
 }
 string VertexArray::ToString(uint32_t count) const {
 	auto has_z = properties.HasZ();

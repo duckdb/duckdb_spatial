@@ -49,6 +49,18 @@ struct WKBSpatialFilter : SpatialFilter {
 	}
 };
 
+static void TryApplySpatialFilter(OGRLayer *layer, SpatialFilter *spatial_filter) {
+	if (spatial_filter != nullptr) {
+		if (spatial_filter->type == SpatialFilterType::Rectangle) {
+			auto &rect = (RectangleSpatialFilter &)*spatial_filter;
+			layer->SetSpatialFilterRect(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
+		} else if (spatial_filter->type == SpatialFilterType::Wkb) {
+			auto &filter = (WKBSpatialFilter &)*spatial_filter;
+			layer->SetSpatialFilter(OGRGeometry::FromHandle(filter.geom));
+		}
+	}
+}
+
 // TODO: Verify that this actually corresponds to the same sql subset expected by OGR SQL
 static string FilterToGdal(const TableFilter &filter, const string &column_name) {
 
@@ -291,11 +303,14 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	// Get the schema for the selected layer
 	auto layer = dataset->GetLayer(result->layer_idx);
 
+	TryApplySpatialFilter(layer, result->spatial_filter.get());
+
 	// Check if we can get an approximate feature count
 	result->approximate_feature_count = 0;
 	result->has_approximate_feature_count = false;
 	if (!result->sequential_layer_scan) {
-		auto count = layer->GetFeatureCount();
+		// Dont force compute the count if its expensive
+		auto count = layer->GetFeatureCount(false);
 		if (count > -1) {
 			result->approximate_feature_count = count;
 			result->has_approximate_feature_count = true;
@@ -382,7 +397,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	result->all_types = return_types;
 
 	return std::move(result);
-};
+}
 
 void GdalTableFunction::RenameColumns(vector<string> &names) {
 	unordered_map<string, idx_t> name_map;
@@ -421,7 +436,7 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	auto &data = input.bind_data->Cast<GdalScanFunctionData>();
 
 	auto dataset = GDALDatasetUniquePtr(
-	    GDALDataset::Open(data.prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR,
+	    GDALDataset::Open(data.prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR | GDAL_OF_READONLY,
 	                      data.dataset_allowed_drivers, data.dataset_open_options, data.dataset_sibling_files));
 	if (dataset == nullptr) {
 		auto error = string(CPLGetLastErrorMsg());
@@ -453,15 +468,7 @@ unique_ptr<GlobalTableFunctionState> GdalTableFunction::InitGlobal(ClientContext
 	}
 
 	// Apply spatial filter (if we got one)
-	if (data.spatial_filter != nullptr) {
-		if (data.spatial_filter->type == SpatialFilterType::Rectangle) {
-			auto &rect = (RectangleSpatialFilter &)*data.spatial_filter;
-			layer->SetSpatialFilterRect(rect.min_x, rect.min_y, rect.max_x, rect.max_y);
-		} else if (data.spatial_filter->type == SpatialFilterType::Wkb) {
-			auto &filter = (WKBSpatialFilter &)*data.spatial_filter;
-			layer->SetSpatialFilter(OGRGeometry::FromHandle(filter.geom));
-		}
-	}
+	TryApplySpatialFilter(layer, data.spatial_filter.get());
 	// TODO: Apply projection pushdown
 
 	// Apply predicate pushdown
@@ -559,12 +566,17 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 				state.factory.allocator.Reset();
 				auto &wkb_vec = output.data[col_idx];
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
-				UnaryExecutor::Execute<string_t, core::geometry_t>(wkb_vec, geom_vec, output_size, [&](string_t input) {
-					auto geometry = state.wkb_reader.Deserialize(input);
-					auto has_z = state.wkb_reader.GeomHasZ();
-					auto has_m = state.wkb_reader.GeomHasM();
-					return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
-				});
+				UnaryExecutor::ExecuteWithNulls<string_t, core::geometry_t>(
+				    wkb_vec, geom_vec, output_size, [&](string_t input, ValidityMask &validity, idx_t out_idx) {
+					    if (input.Empty()) {
+						    validity.SetInvalid(out_idx);
+						    return core::geometry_t {};
+					    }
+					    auto geometry = state.wkb_reader.Deserialize(input);
+					    auto has_z = state.wkb_reader.GeomHasZ();
+					    auto has_m = state.wkb_reader.GeomHasM();
+					    return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
+				    });
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}
 		}
@@ -602,6 +614,63 @@ unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const s
 	return nullptr;
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Read and import a variety of geospatial file formats using the GDAL library.
+
+    The `ST_Read` table function is based on the [GDAL](https://gdal.org/index.html) translator library and enables reading spatial data from a variety of geospatial vector file formats as if they were DuckDB tables.
+
+    > See [ST_Drivers](##st_drivers) for a list of supported file formats and drivers.
+
+    Except for the `path` parameter, all parameters are optional.
+
+    | Parameter | Type | Description |
+    | --------- | -----| ----------- |
+    | `path` | VARCHAR | The path to the file to read. Mandatory |
+    | `sequential_layer_scan` | BOOLEAN | If set to true, the table function will scan through all layers sequentially and return the first layer that matches the given layer name. This is required for some drivers to work properly, e.g., the OSM driver. |
+    | `spatial_filter` | WKB_BLOB | If set to a WKB blob, the table function will only return rows that intersect with the given WKB geometry. Some drivers may support efficient spatial filtering natively, in which case it will be pushed down. Otherwise the filtering is done by GDAL which may be much slower. |
+    | `open_options` | VARCHAR[] | A list of key-value pairs that are passed to the GDAL driver to control the opening of the file. E.g., the GeoJSON driver supports a FLATTEN_NESTED_ATTRIBUTES=YES option to flatten nested attributes. |
+    | `layer` | VARCHAR | The name of the layer to read from the file. If NULL, the first layer is returned. Can also be a layer index (starting at 0). |
+    | `allowed_drivers` | VARCHAR[] | A list of GDAL driver names that are allowed to be used to open the file. If empty, all drivers are allowed. |
+    | `sibling_files` | VARCHAR[] | A list of sibling files that are required to open the file. E.g., the ESRI Shapefile driver requires a .shx file to be present. Although most of the time these can be discovered automatically. |
+    | `spatial_filter_box` | BOX_2D | If set to a BOX_2D, the table function will only return rows that intersect with the given bounding box. Similar to spatial_filter. |
+    | `keep_wkb` | BOOLEAN | If set, the table function will return geometries in a wkb_geometry column with the type WKB_BLOB (which can be cast to BLOB) instead of GEOMETRY. This is useful if you want to use DuckDB with more exotic geometry subtypes that DuckDB spatial doesnt support representing in the GEOMETRY type yet. |
+
+    Note that GDAL is single-threaded, so this table function will not be able to make full use of parallelism.
+
+    By using `ST_Read`, the spatial extension also provides “replacement scans” for common geospatial file formats, allowing you to query files of these formats as if they were tables directly.
+
+    ```sql
+    SELECT * FROM './path/to/some/shapefile/dataset.shp';
+    ```
+
+    In practice this is just syntax-sugar for calling ST_Read, so there is no difference in performance. If you want to pass additional options, you should use the ST_Read table function directly.
+
+    The following formats are currently recognized by their file extension:
+
+    | Format | Extension |
+    | ------ | --------- |
+    | ESRI ShapeFile | .shp |
+    | GeoPackage | .gpkg |
+    | FlatGeoBuf | .fgb |
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+    -- Read a Shapefile
+    SELECT * FROM ST_Read('some/file/path/filename.shp');
+
+    -- Read a GeoJSON file
+    CREATE TABLE my_geojson_table AS SELECT * FROM ST_Read('some/file/path/filename.json');
+)";
+
+//------------------------------------------------------------------------------
+// Register
+//------------------------------------------------------------------------------
+
 void GdalTableFunction::Register(DatabaseInstance &db) {
 
 	TableFunctionSet set("ST_Read");
@@ -626,6 +695,7 @@ void GdalTableFunction::Register(DatabaseInstance &db) {
 	set.AddFunction(scan);
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Read", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	// Replacement scan
 	auto &config = DBConfig::GetConfig(db);

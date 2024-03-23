@@ -121,6 +121,19 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 }
 
 //------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the exterior ring (shell) of a polygon geometry.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+
+//------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStExteriorRing(DatabaseInstance &db) {
@@ -132,6 +145,7 @@ void CoreScalarFunctions::RegisterStExteriorRing(DatabaseInstance &db) {
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_ExteriorRing", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

@@ -32,6 +32,16 @@ static void GeometryReverseFunction(DataChunk &args, ExpressionState &state, Vec
 }
 
 //------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns a new version of the input geometry with the order of its vertices reversed
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"()";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+//------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStReverse(DatabaseInstance &db) {
@@ -42,6 +52,7 @@ void GEOSScalarFunctions::RegisterStReverse(DatabaseInstance &db) {
 	                               nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Reverse", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

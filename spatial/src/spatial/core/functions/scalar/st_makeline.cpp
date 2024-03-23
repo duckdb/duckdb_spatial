@@ -25,7 +25,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 
 		LineString line_geom(lstate.factory.allocator, length, false, false);
 
-        uint32_t vertex_idx = 0;
+		uint32_t vertex_idx = 0;
 		for (idx_t i = offset; i < offset + length; i++) {
 
 			auto mapped_idx = format.sel->get_index(i);
@@ -34,9 +34,9 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			}
 			auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
 
-            if(geometry_blob.GetType() != GeometryType::POINT) {
-                throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
-            }
+			if (geometry_blob.GetType() != GeometryType::POINT) {
+				throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
+			}
 
 			// TODO: Support Z and M
 			if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
@@ -51,8 +51,8 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			line_geom.Vertices().Set(vertex_idx++, vertex.x, vertex.y);
 		}
 
-        // Shrink the vertex array to the actual size
-        line_geom.Vertices().Resize(lstate.factory.allocator, vertex_idx);
+		// Shrink the vertex array to the actual size
+		line_geom.Vertices().Resize(lstate.factory.allocator, vertex_idx);
 
 		if (line_geom.Vertices().Count() == 1) {
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
@@ -91,9 +91,10 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto &point_left = geometry_left.As<Point>();
 		    auto &point_right = geometry_right.As<Point>();
 
-            // TODO: Dont upcast the child geometries, just append and let the append function handle upcasting of the target instead.
-            point_left.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
-            point_right.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
+		    // TODO: Dont upcast the child geometries, just append and let the append function handle upcasting of the
+		    // target instead.
+		    point_left.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
+		    point_right.Vertices().SetVertexType(lstate.factory.allocator, has_z, has_m);
 
 		    auto vertices = VertexArray::Empty(has_z, has_m);
 		    vertices.Append(lstate.factory.allocator, point_left.Vertices());
@@ -105,6 +106,21 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Creates a LINESTRING geometry from a pair or list of input points
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStMakeLine(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_MakeLine");
@@ -116,6 +132,7 @@ void CoreScalarFunctions::RegisterStMakeLine(DatabaseInstance &db) {
 	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_MakeLine", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

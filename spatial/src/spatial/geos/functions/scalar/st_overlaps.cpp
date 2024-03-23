@@ -24,6 +24,22 @@ static void OverlapsFunction(DataChunk &args, ExpressionState &state, Vector &re
 	                                             GEOSPreparedOverlaps_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if geom1 "overlaps" geom2
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
+
 void GEOSScalarFunctions::RegisterStOverlaps(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Overlaps");
@@ -32,6 +48,7 @@ void GEOSScalarFunctions::RegisterStOverlaps(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Overlaps", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

@@ -1,7 +1,6 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 
 #include "spatial/common.hpp"
-#include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
 
 #include "ogrsf_frmts.h"
@@ -79,10 +78,29 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 	output.SetCardinality(count);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the list of supported GDAL drivers and file formats
+
+    Note that far from all of these drivers have been tested properly, and some may require additional options to be passed to work as expected. If you run into any issues please first consult the [consult the GDAL docs](https://gdal.org/drivers/vector/index.html).
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+    SELECT * FROM ST_Drivers();
+)";
+
+//------------------------------------------------------------------------------
+// Register
+//------------------------------------------------------------------------------
 void GdalDriversTableFunction::Register(DatabaseInstance &db) {
 	TableFunction func("ST_Drivers", {}, Execute, Bind, Init);
 
 	ExtensionUtil::RegisterFunction(db, func);
+	DocUtil::AddDocumentation(db, "ST_Drivers", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

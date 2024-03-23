@@ -84,6 +84,19 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
 	    });
 }
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns the end point of a line.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+select st_endpoint('LINESTRING(0 0, 1 1)'::geometry);
+-- POINT(1 1)
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -97,6 +110,7 @@ void CoreScalarFunctions::RegisterStEndPoint(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringEndPointFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_EndPoint", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core
