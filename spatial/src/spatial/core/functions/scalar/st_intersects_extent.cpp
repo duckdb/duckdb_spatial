@@ -1,11 +1,11 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/scalar.hpp"
-#include "spatial/core/functions/common.hpp"
+#include "spatial/core/geometry/bbox.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
 
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_macro_info.hpp"
-#include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 #include "duckdb/function/scalar_macro_function.hpp"
 #include "duckdb/parser/expression/function_expression.hpp"
@@ -23,8 +23,8 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 	    left, right, result, count, [&](geometry_t left, geometry_t right) {
 		    BoundingBox left_bbox;
 		    BoundingBox right_bbox;
-		    if (GeometryFactory::TryGetSerializedBoundingBox(left, left_bbox) &&
-		        GeometryFactory::TryGetSerializedBoundingBox(right, right_bbox)) {
+		    if (left.TryGetCachedBounds(left_bbox) &&
+		        right.TryGetCachedBounds(right_bbox)) {
 			    return left_bbox.Intersects(right_bbox);
 		    }
 		    return false;

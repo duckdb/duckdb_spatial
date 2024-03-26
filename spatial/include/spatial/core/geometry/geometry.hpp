@@ -186,6 +186,13 @@ public:
     // Print this geometry as a string, starting at the specified index and printing the specified number of vertices
     // (useful for debugging)
     string ToString(uint32_t start = 0, uint32_t count = 0) const;
+
+    // Check if the geometry is closed (first and last vertex are the same)
+    // A geometry with 1 vertex is considered closed, 0 vertices are considered open
+    bool IsClosed() const;
+
+    // Return the planar length of the geometry
+    double Length() const;
 };
 
 // A multi-part geometry, contains multiple parts
@@ -270,6 +277,12 @@ public:
     static Point CopyFromData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z, bool has_m) {
         Point point(alloc, has_z, has_m);
         point.CopyData(alloc, data, 1);
+        return point;
+    }
+
+    static Point FromReference(const SinglePartGeometry &other, uint32_t offset) {
+        Point point(other.GetProperties().HasZ(), other.GetProperties().HasM());
+        point.Reference(other, offset, 1);
         return point;
     }
 };
@@ -603,20 +616,20 @@ public:
         return Visit<op>();
     }
 
-    Geometry& SetVertexType(ArenaAllocator &arena, bool has_z, bool has_m) {
+    Geometry& SetVertexType(ArenaAllocator &arena, bool has_z, bool has_m, double default_z = 0, double default_m = 0) {
         struct op {
-            static void Apply(SinglePartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m) {
+            static void Apply(SinglePartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m, double default_z, double default_m) {
                 g.SetVertexType(arena, has_z, has_m);
             }
-            static void Apply(MultiPartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m) {
+            static void Apply(MultiPartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m, double default_z, double default_m) {
                 g.properties.SetZ(has_z);
                 g.properties.SetM(has_m);
                 for (auto &part : g) {
-                    part.SetVertexType(arena, has_z, has_m);
+                    part.SetVertexType(arena, has_z, has_m, default_z, default_m);
                 }
             }
         };
-        Visit<op>(arena, has_z, has_m);
+        Visit<op>(arena, has_z, has_m, default_z, default_m);
         return *this;
     }
 

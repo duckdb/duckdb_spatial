@@ -108,10 +108,10 @@ void WKTReader::ParseVertex(vector<double> &coords) {
 	}
 }
 
-vector<double> WKTReader::ParseVertices() {
+pair<uint32_t, vector<double>> WKTReader::ParseVertices() {
     vector<double> coords;
 	if (MatchCI("EMPTY")) {
-        return coords;
+        return {0, coords};
 	}
 	Expect('(');
 	uint32_t count = 0;
@@ -122,7 +122,7 @@ vector<double> WKTReader::ParseVertices() {
 		count++;
 	}
 	Expect(')');
-    return coords;
+    return {count, coords};
 }
 
 Point WKTReader::ParsePoint() {
@@ -138,7 +138,7 @@ Point WKTReader::ParsePoint() {
 
 LineString WKTReader::ParseLineString() {
     auto verts = ParseVertices();
-    return LineString::CopyFromData(arena, data_ptr_cast(verts.data()), verts.size(), has_z, has_m);
+    return LineString::CopyFromData(arena, data_ptr_cast(verts.second.data()), verts.first, has_z, has_m);
 }
 
 Polygon WKTReader::ParsePolygon() {
@@ -146,7 +146,7 @@ Polygon WKTReader::ParsePolygon() {
 		return Polygon(has_z, has_m);
 	}
 	Expect('(');
-	vector<vector<double>> rings;
+	vector<pair<uint32_t, vector<double>>> rings;
 	rings.push_back(ParseVertices());
 	while (Match(',')) {
 		rings.push_back(ParseVertices());
@@ -154,7 +154,7 @@ Polygon WKTReader::ParsePolygon() {
 	Expect(')');
 	Polygon result(arena, rings.size(), has_z, has_m);
 	for (uint32_t i = 0; i < rings.size(); i++) {
-		result[i].CopyData(arena, data_ptr_cast(rings[i].data()), rings[i].size());
+		result[i].CopyData(arena, data_ptr_cast(rings[i].second.data()), rings[i].first);
 	}
 	return result;
 }

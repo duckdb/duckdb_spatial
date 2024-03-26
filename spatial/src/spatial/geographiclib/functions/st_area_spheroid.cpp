@@ -4,7 +4,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 
 #include "spatial/geographiclib/functions.hpp"
@@ -83,7 +82,7 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 //------------------------------------------------------------------------------
 static double PolygonArea(const Polygon &poly, GeographicLib::PolygonArea &comp) {
 	double total_area = 0;
-	for (uint32_t ring_idx = 0; ring_idx < poly.RingCount(); ring_idx++) {
+	for (uint32_t ring_idx = 0; ring_idx < poly.Count(); ring_idx++) {
 		comp.Clear();
 		auto &ring = poly[ring_idx];
 		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
@@ -106,36 +105,9 @@ static double PolygonArea(const Polygon &poly, GeographicLib::PolygonArea &comp)
 	return std::abs(total_area);
 }
 
-static double GeometryArea(const Geometry &geom, GeographicLib::PolygonArea &comp) {
-	switch (geom.Type()) {
-	case GeometryType::POLYGON: {
-		auto &poly = geom.As<Polygon>();
-		return PolygonArea(poly, comp);
-	}
-	case GeometryType::MULTIPOLYGON: {
-		auto &mpoly = geom.As<MultiPolygon>();
-		double total_area = 0;
-		for (auto &poly : mpoly) {
-			total_area += PolygonArea(poly, comp);
-		}
-		return total_area;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &coll = geom.As<GeometryCollection>();
-		double total_area = 0;
-		for (auto &item : coll) {
-			total_area += GeometryArea(item, comp);
-		}
-		return total_area;
-	}
-	default: {
-		return 0.0;
-	}
-	}
-}
-
 static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
@@ -143,9 +115,34 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, false);
 
+    struct op {
+        static double Apply(const Polygon &poly, GeographicLib::PolygonArea &comp) {
+            return PolygonArea(poly, comp);
+        }
+
+        static double Apply(const MultiPolygon &mpoly, GeographicLib::PolygonArea &comp) {
+            double total_area = 0;
+            for (auto &poly : mpoly) {
+                total_area += PolygonArea(poly, comp);
+            }
+            return total_area;
+        }
+
+        static double Apply(const GeometryCollection &coll, GeographicLib::PolygonArea &comp) {
+            double total_area = 0;
+            for (auto &item : coll) {
+                total_area += item.Visit<op>(comp);
+            }
+            return total_area;
+        }
+
+        static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
+            return 0.0;
+        }
+    };
+
 	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		return GeometryArea(geometry, comp);
+		return Geometry::Deserialize(arena, input).Visit<op>(comp);
 	});
 
 	if (count == 1) {

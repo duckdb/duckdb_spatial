@@ -12,7 +12,6 @@
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/functions.hpp"
 #include "spatial/gdal/file_handler.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/geometry_writer.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
 
@@ -132,12 +131,12 @@ struct GdalScanFunctionData : public TableFunctionData {
 };
 
 struct GdalScanLocalState : ArrowScanLocalState {
-	core::GeometryFactory factory;
+	ArenaAllocator arena;
 	// We trust GDAL to produce valid WKB
 	core::WKBReader wkb_reader;
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
-	    : ArrowScanLocalState(std::move(current_chunk)), factory(BufferAllocator::Get(context)),
-	      wkb_reader(factory.allocator) {
+	    : ArrowScanLocalState(std::move(current_chunk)), arena(BufferAllocator::Get(context)),
+	      wkb_reader(arena) {
 	}
 };
 
@@ -563,7 +562,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 			if (data.geometry_column_ids.find(mapped_idx) != data.geometry_column_ids.end()) {
 				// Found a geometry column
 				// Convert the WKB columns to a geometry column
-				state.factory.allocator.Reset();
+				state.arena.Reset();
 				auto &wkb_vec = output.data[col_idx];
 				Vector geom_vec(core::GeoTypes::GEOMETRY(), output_size);
 				UnaryExecutor::ExecuteWithNulls<string_t, core::geometry_t>(
@@ -572,10 +571,7 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 						    validity.SetInvalid(out_idx);
 						    return core::geometry_t {};
 					    }
-					    auto geometry = state.wkb_reader.Deserialize(input);
-					    auto has_z = state.wkb_reader.GeomHasZ();
-					    auto has_m = state.wkb_reader.GeomHasM();
-					    return state.factory.Serialize(geom_vec, geometry, has_z, has_m);
+					    return state.wkb_reader.Deserialize(input).Serialize(geom_vec);
 				    });
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}

@@ -3,7 +3,6 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/geographiclib/functions.hpp"
 #include "spatial/geographiclib/module.hpp"
 

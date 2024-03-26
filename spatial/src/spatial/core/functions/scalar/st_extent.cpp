@@ -36,7 +36,7 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 			auto &blob = input_data[row_idx];
 
 			// Try to get the cached bounding box from the blob
-			if (GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
+			if (blob.TryGetCachedBounds(bbox)) {
 				min_x_data[i] = bbox.minx;
 				min_y_data[i] = bbox.miny;
 				max_x_data[i] = bbox.maxx;

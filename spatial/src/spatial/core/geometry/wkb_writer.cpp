@@ -1,5 +1,4 @@
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"

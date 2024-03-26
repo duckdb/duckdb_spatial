@@ -1,9 +1,6 @@
 #pragma once
 
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/geometry_properties.hpp"
-#include "spatial/core/geometry/cursor.hpp"
-#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/geometry/vertex.hpp"
 
 namespace spatial {

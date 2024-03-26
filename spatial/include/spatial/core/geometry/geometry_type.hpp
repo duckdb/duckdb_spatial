@@ -1,6 +1,8 @@
 #pragma once
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/bbox.hpp"
+#include "spatial/core/geometry/geometry_properties.hpp"
+#include "spatial/core/geometry/cursor.hpp"
 
 namespace spatial {
 

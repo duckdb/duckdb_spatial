@@ -24,7 +24,7 @@ private:
 	bool MatchCI(const char *str);
 	void Expect(char c);
 	void ParseVertex(vector<double> &coords);
-	vector<double> ParseVertices();
+    pair<uint32_t, vector<double>> ParseVertices();
 	Point ParsePoint();
 	LineString ParseLineString();
 	Polygon ParsePolygon();

@@ -210,6 +210,30 @@ void SinglePartGeometry::MakeMutable(ArenaAllocator &alloc) {
     is_readonly = false;
 }
 
+
+bool SinglePartGeometry::IsClosed() const {
+    switch(Count()) {
+        case 0: return false;
+        case 1: return true;
+        default:
+            auto first = Get(0);
+            auto last = Get(Count() - 1);
+            // TODO: Approximate comparison?
+            return first.x == last.x && first.y == last.y;
+    }
+}
+
+double SinglePartGeometry::Length() const {
+    double length = 0;
+    for (uint32_t i = 1; i < Count(); i++) {
+        auto p1 = Get(i - 1);
+        auto p2 = Get(i);
+        length += sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y));
+    }
+    return length;
+}
+
+
 string SinglePartGeometry::ToString(uint32_t start, uint32_t count) const {
     auto has_z = properties.HasZ();
     auto has_m = properties.HasM();

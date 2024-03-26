@@ -60,7 +60,8 @@ static void CoordinateQuadKeyFunction(DataChunk &args, ExpressionState &state, V
 // GEOMETRY
 //------------------------------------------------------------------------------
 static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &ctx = GeometryFunctionLocalState::ResetAndGet(state);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 
 	auto &geom = args.data[0];
 	auto &level = args.data[1];
@@ -71,11 +72,11 @@ static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vec
 		    if (input.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_QuadKey: Only POINT geometries are supported");
 		    }
-		    auto point = ctx.factory.Deserialize(input);
+		    auto point = Geometry::Deserialize(arena, input);
 		    if (point.IsEmpty()) {
 			    throw InvalidInputException("ST_QuadKey: Empty geometries are not supported");
 		    }
-		    auto vertex = point.As<Point>().Vertices().Get(0);
+		    auto vertex = point.As<Point>().Get(0);
 		    auto x = vertex.x;
 		    auto y = vertex.y;
 

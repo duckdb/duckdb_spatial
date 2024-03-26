@@ -3,7 +3,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -50,41 +49,39 @@ static void LineLengthFunction(DataChunk &args, ExpressionState &state, Vector &
 static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
+    struct op {
+        static double Apply(const LineString &line) {
+            return line.Length();
+        }
+
+        static double Apply(const MultiLineString &mline) {
+            double sum = 0.0;
+            for (const auto &line : mline) {
+                sum += line.Length();
+            }
+            return sum;
+        }
+
+        static double Apply(const GeometryCollection &collection) {
+            double sum = 0.0;
+            for (const auto &geom : collection) {
+                sum += geom.Visit<op>();
+            }
+            return sum;
+        }
+
+        static double Apply(const BaseGeometry &) {
+            return 0.0;
+        }
+    };
+
 	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		switch (geometry.Type()) {
-		case GeometryType::LINESTRING:
-			return geometry.As<LineString>().Vertices().Length();
-		case GeometryType::MULTILINESTRING: {
-			double sum = 0.0;
-			for (const auto &line : geometry.As<MultiLineString>()) {
-				sum += line.Vertices().Length();
-			}
-			return sum;
-		}
-		case GeometryType::GEOMETRYCOLLECTION:
-			return geometry.As<GeometryCollection>().Aggregate(
-			    [](const Geometry &geom, double state) {
-				    if (geom.Type() == GeometryType::LINESTRING) {
-					    return state + geom.As<LineString>().Vertices().Length();
-				    } else if (geom.Type() == GeometryType::MULTILINESTRING) {
-					    auto sum = 0.0;
-					    for (const auto &line : geom.As<MultiLineString>()) {
-						    sum += line.Vertices().Length();
-					    }
-					    return state + sum;
-				    } else {
-					    return state;
-				    }
-			    },
-			    0.0);
-		default:
-			return 0.0;
-		}
+		return Geometry::Deserialize(arena, input).Visit<op>();
 	});
 
 	if (count == 1) {
