@@ -231,7 +231,7 @@ public:
 		cursor.Skip<GeometryType>();
 		cursor.Skip<GeometryProperties>();
 		cursor.Skip<uint16_t>();
-		cursor.Skip(4);
+		cursor.Skip<uint32_t>();
 
 		auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
 		auto has_bbox = geom.GetProperties().HasBBox();

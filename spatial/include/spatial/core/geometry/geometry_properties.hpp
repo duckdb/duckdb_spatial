@@ -38,6 +38,8 @@ public:
 	inline void SetBBox(bool value) {
 		flags = value ? (flags | BBOX) : (flags & ~BBOX);
 	}
+
+    uint32_t VertexSize() const { return sizeof(double) * (2 + HasZ() + HasM()); }
 };
 
 } // namespace core
