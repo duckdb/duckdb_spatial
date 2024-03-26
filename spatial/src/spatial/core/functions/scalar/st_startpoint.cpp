@@ -73,7 +73,7 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 
 		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
 
-		    if (line.IsEmpty() == 0) {
+		    if (line.IsEmpty()) {
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }

@@ -41,7 +41,7 @@ struct GetRequiredSizeOp {
         // 4 bytes for the type
         // 4 bytes for the length
         // sizeof(vertex) * count
-        return 4 + 4 + geom.Count() * sizeof(VERTEX);
+        return 4 + 4 + (geom.Count() * sizeof(VERTEX));
     }
 
     static uint32_t Apply(const Polygon &polygon) {
@@ -80,7 +80,7 @@ struct GetRequiredSizeOp {
         // sizeof(geometry) * count
         uint32_t size = 4 + 4;
         for (const auto &geom : collection) {
-            geom.Visit<GetRequiredSizeOp<VERTEX>>();
+            size += geom.Visit<GetRequiredSizeOp<VERTEX>>();
         }
         return size;
     }
@@ -109,7 +109,7 @@ struct SerializeOp {
 
     static void Apply(const Point &point, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
         D_ASSERT(point.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(point.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(point.GetProperties().HasM() == VERTEX::HAS_M);
 
 
         // Write type (4 bytes)
@@ -125,7 +125,7 @@ struct SerializeOp {
 
     static void Apply(const LineString &linestring, Cursor &cursor, BoundingBox &bbox, uint32_t) {
         D_ASSERT(linestring.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(linestring.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(linestring.GetProperties().HasM() == VERTEX::HAS_M);
 
         // Write type (4 bytes)
         cursor.Write<SerializedGeometryType>(SerializedGeometryType::LINESTRING);
@@ -139,7 +139,7 @@ struct SerializeOp {
 
     static void Apply(const Polygon &polygon, Cursor &cursor, BoundingBox &bbox, uint32_t) {
         D_ASSERT(polygon.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(polygon.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(polygon.GetProperties().HasM() == VERTEX::HAS_M);
 
         // Write type (4 bytes)
         cursor.Write<SerializedGeometryType>(SerializedGeometryType::POLYGON);
@@ -167,7 +167,7 @@ struct SerializeOp {
 
     static void Apply(const MultiPoint &multipoint, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
         D_ASSERT(multipoint.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(multipoint.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(multipoint.GetProperties().HasM() == VERTEX::HAS_M);
 
         // Write type (4 bytes)
         cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTIPOINT);
@@ -183,7 +183,7 @@ struct SerializeOp {
 
     static void Apply(const MultiLineString &multilinestring, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
         D_ASSERT(multilinestring.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(multilinestring.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(multilinestring.GetProperties().HasM() == VERTEX::HAS_M);
 
         // Write type (4 bytes)
         cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTILINESTRING);
@@ -199,7 +199,7 @@ struct SerializeOp {
 
     static void Apply(const MultiPolygon &multipolygon, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
         D_ASSERT(multipolygon.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(multipolygon.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(multipolygon.GetProperties().HasM() == VERTEX::HAS_M);
 
         // Write type (4 bytes)
         cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTIPOLYGON);
@@ -215,7 +215,7 @@ struct SerializeOp {
 
     static void Apply(const GeometryCollection &collection, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
         D_ASSERT(collection.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(collection.GetProperties().HasZ() == VERTEX::HAS_M);
+        D_ASSERT(collection.GetProperties().HasM() == VERTEX::HAS_M);
 
         // TODO: Maybe make this configurable?
         if(depth > MAX_DEPTH) {

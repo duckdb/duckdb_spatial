@@ -23,7 +23,7 @@ static void DimensionFunction(DataChunk &args, ExpressionState &state, Vector &r
 
 	UnaryExecutor::Execute<geometry_t, int32_t>(input, result, count, [&](geometry_t input) {
 		auto geometry = Geometry::Deserialize(lstate.arena, input);
-		return geometry.GetDimension(true);
+		return geometry.GetDimension(false);
 	});
 }
 

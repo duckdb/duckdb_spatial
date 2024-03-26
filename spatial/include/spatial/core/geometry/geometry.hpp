@@ -321,11 +321,12 @@ public:
     static Polygon FromBox(ArenaAllocator &alloc, double minx, double miny, double maxx, double maxy) {
         Polygon box(alloc, 1, false, false);
         auto &ring = box[0];
-        ring.Set(0, minx, miny);
-        ring.Set(1, minx, maxy);
-        ring.Set(2, maxx, maxy);
-        ring.Set(3, maxx, miny);
-        ring.Set(4, minx, miny);
+        ring.Resize(alloc, 5);
+        ring.SetExact(0, VertexXY { minx, miny });
+        ring.SetExact(1, VertexXY { minx, maxy });
+        ring.SetExact(2, VertexXY { maxx, maxy });
+        ring.SetExact(3, VertexXY { maxx, miny });
+        ring.SetExact(4, VertexXY { minx, miny });
         return box;
     }
 };
@@ -586,7 +587,7 @@ public:
     }
 
     uint32_t GetDimension(bool skip_empty) const {
-        if(IsEmpty()) {
+        if(skip_empty && IsEmpty()) {
             return 0;
         }
         struct op {

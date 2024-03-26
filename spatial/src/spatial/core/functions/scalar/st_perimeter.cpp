@@ -80,7 +80,11 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 
     struct op {
         static double Apply(const Polygon &poly) {
-            return poly.Count() == 0 ? 0.0 : poly[0].Length();
+            double sum = 0;
+            for (const auto &ring : poly) {
+                sum += ring.Length();
+            }
+            return sum;
         }
 
         static double Apply(const MultiPolygon &mline) {

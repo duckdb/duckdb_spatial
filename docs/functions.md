@@ -906,6 +906,7 @@ _Deserializes a GEOMETRY from a GeoJSON fragment._
 
 ```sql
 GEOMETRY ST_GeomFromGeoJSON (col0 VARCHAR)
+GEOMETRY ST_GeomFromGeoJSON (col0 JSON)
 ```
 
 #### Description

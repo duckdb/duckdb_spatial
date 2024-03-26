@@ -580,6 +580,7 @@ void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	to_geojson.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::JSON(),
 	                                      GeometryToGeoJSONFragmentFunction, nullptr, nullptr, nullptr,
 	                                      GeometryFunctionLocalState::Init));
+
 	ExtensionUtil::RegisterFunction(db, to_geojson);
 	DocUtil::AddDocumentation(db, "ST_AsGeoJSON", AS_DOC_DESCRIPTION, AS_DOC_EXAMPLE, DOC_TAGS);
 
@@ -587,6 +588,10 @@ void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	from_geojson.AddFunction(ScalarFunction({LogicalType::VARCHAR}, GeoTypes::GEOMETRY(),
 	                                        GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
 	                                        GeometryFunctionLocalState::Init));
+
+    from_geojson.AddFunction(ScalarFunction({LogicalType::JSON()}, GeoTypes::GEOMETRY(),
+                                            GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
+                                            GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, from_geojson);
 	DocUtil::AddDocumentation(db, "ST_GeomFromGeoJSON", FROM_DOC_DESCRIPTION, FROM_DOC_EXAMPLE, DOC_TAGS);
