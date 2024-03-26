@@ -6,7 +6,7 @@ namespace spatial {
 namespace core {
 
 GeometryFunctionLocalState::GeometryFunctionLocalState(ClientContext &context)
-    : factory(BufferAllocator::Get(context)) {
+    : arena(BufferAllocator::Get(context)) {
 }
 
 unique_ptr<FunctionLocalState>
@@ -19,14 +19,14 @@ unique_ptr<FunctionLocalState> GeometryFunctionLocalState::InitCast(CastLocalSta
 }
 
 GeometryFunctionLocalState &GeometryFunctionLocalState::ResetAndGet(CastParameters &parameters) {
-	auto &local_state = (GeometryFunctionLocalState &)*parameters.local_state;
-	local_state.factory.allocator.Reset();
+	auto &local_state = parameters.local_state->Cast<GeometryFunctionLocalState>();
+	local_state.arena.Reset();
 	return local_state;
 }
 
 GeometryFunctionLocalState &GeometryFunctionLocalState::ResetAndGet(ExpressionState &state) {
-	auto &local_state = (GeometryFunctionLocalState &)*ExecuteFunctionState::GetFunctionState(state);
-	local_state.factory.allocator.Reset();
+	auto &local_state = ExecuteFunctionState::GetFunctionState(state)->Cast<GeometryFunctionLocalState>();
+	local_state.arena.Reset();
 	return local_state;
 }
 

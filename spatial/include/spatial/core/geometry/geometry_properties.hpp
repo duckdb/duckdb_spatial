@@ -19,6 +19,10 @@ private:
 public:
 	explicit GeometryProperties(uint8_t flags = 0) : flags(flags) {
 	}
+    GeometryProperties(bool has_z, bool has_m) {
+        SetZ(has_z);
+        SetM(has_m);
+    }
 
 	inline bool HasZ() const {
 		return (flags & Z) != 0;

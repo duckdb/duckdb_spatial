@@ -268,6 +268,20 @@ string SinglePartGeometry::ToString(uint32_t start, uint32_t count) const {
 // Multi Part Geometry
 //------------------------------------------------------------------------------
 
+void MultiPartGeometry::Resize(ArenaAllocator &alloc, uint32_t new_count) {
+    if (new_count == data_count) {
+        return;
+    }
+    if (data.part_data == nullptr) {
+        data.part_data = reinterpret_cast<Geometry*>(alloc.AllocateAligned(sizeof(Geometry) * new_count));
+    } else {
+        data.part_data = reinterpret_cast<Geometry *>(alloc.ReallocateAligned(data_ptr_cast(data.part_data),
+                                                                              data_count * sizeof(Geometry),
+                                                                              new_count * sizeof(Geometry)));
+    }
+    data_count = new_count;
+}
+
 
 /*
 string Point::ToString() const {
