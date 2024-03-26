@@ -89,7 +89,7 @@ public:
     uint32_t Count() const { return data_count; }
 };
 
-static_assert(sizeof(BaseGeometry) == 16, "GeometryBase should be 16 bytes");
+static_assert(sizeof(BaseGeometry) <= 16, "GeometryBase should be at most 16 bytes (can be less in WASM)");
 
 //------------------------------------------------------------------------------
 // All of the following classes are just to provide a type-safe interface to the underlying geometry data, and to
