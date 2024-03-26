@@ -235,13 +235,7 @@ class TypedCollectionGeometry : public CollectionGeometry {
 protected:
     TypedCollectionGeometry(GeometryType type, bool has_z, bool has_m)
         : CollectionGeometry(type, has_z, has_m) {}
-    TypedCollectionGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-        : CollectionGeometry(type, alloc, count, has_z, has_m) {
-        auto ptr = data.part_data;
-        for (uint32_t i = 0; i < count; i++) {
-            new(ptr++) T(has_z, has_m);
-        }
-    }
+    TypedCollectionGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
 
 public:
     T &operator[](uint32_t index);
@@ -489,7 +483,9 @@ public:
                 new(&collection) GeometryCollection(std::move(other.collection));
                 break;
             default:
-                throw NotImplementedException("Geometry::Geometry(Geometry&&)");
+                D_ASSERT(false);
+                new(&point) Point(std::move(other.point));
+                break;
         }
     }
 
@@ -522,7 +518,9 @@ public:
                 new(&collection) GeometryCollection(std::move(other.collection));
                 break;
             default:
-                throw NotImplementedException("Geometry::operator=(Geometry&&)");
+                D_ASSERT(false);
+                new(&point) Point(std::move(other.point));
+                break;
         }
         return *this;
     }
@@ -656,6 +654,15 @@ inline GeometryCollection::GeometryCollection(ArenaAllocator &alloc, uint32_t co
         auto ptr = data.part_data;
         for (uint32_t i = 0; i < count; i++) {
         new(ptr++) Point(has_z, has_m);
+    }
+}
+
+template<class T>
+inline TypedCollectionGeometry<T>::TypedCollectionGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
+    : CollectionGeometry(type, alloc, count, has_z, has_m) {
+    auto ptr = data.part_data;
+    for (uint32_t i = 0; i < count; i++) {
+        new(ptr++) T(has_z, has_m);
     }
 }
 
