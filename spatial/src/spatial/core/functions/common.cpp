@@ -5,8 +5,7 @@ namespace spatial {
 
 namespace core {
 
-GeometryFunctionLocalState::GeometryFunctionLocalState(ClientContext &context)
-    : arena(BufferAllocator::Get(context)) {
+GeometryFunctionLocalState::GeometryFunctionLocalState(ClientContext &context) : arena(BufferAllocator::Get(context)) {
 }
 
 unique_ptr<FunctionLocalState>

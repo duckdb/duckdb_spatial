@@ -14,7 +14,7 @@ namespace core {
 
 static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	auto count = args.size();
 
 	auto &child_vec = ListVector::GetEntry(args.data[1]);
@@ -93,7 +93,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 
 static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto count = args.size();
 

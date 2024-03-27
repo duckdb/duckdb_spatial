@@ -135,8 +135,7 @@ struct GdalScanLocalState : ArrowScanLocalState {
 	// We trust GDAL to produce valid WKB
 	core::WKBReader wkb_reader;
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
-	    : ArrowScanLocalState(std::move(current_chunk)), arena(BufferAllocator::Get(context)),
-	      wkb_reader(arena) {
+	    : ArrowScanLocalState(std::move(current_chunk)), arena(BufferAllocator::Get(context)), wkb_reader(arena) {
 	}
 };
 

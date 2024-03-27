@@ -53,7 +53,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 
 		if (geometries.empty()) {
 			GeometryCollection empty(has_z, has_m);
-            return Geometry(empty).Serialize(result);
+			return Geometry(empty).Serialize(result);
 		}
 
 		bool all_points = true;
@@ -79,7 +79,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Point>();
 			}
-            return Geometry(collection).Serialize(result);
+			return Geometry(collection).Serialize(result);
 		} else if (all_lines) {
 			MultiLineString collection(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {

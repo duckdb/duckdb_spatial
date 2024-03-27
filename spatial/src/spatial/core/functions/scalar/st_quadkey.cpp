@@ -61,7 +61,7 @@ static void CoordinateQuadKeyFunction(DataChunk &args, ExpressionState &state, V
 //------------------------------------------------------------------------------
 static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &geom = args.data[0];
 	auto &level = args.data[1];

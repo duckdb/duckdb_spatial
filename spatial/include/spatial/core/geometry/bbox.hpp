@@ -21,42 +21,42 @@ struct BoundingBox {
 		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);
 	}
 
-    // Update the bounding box to include the specified vertex
-    void Stretch(const VertexXY &vertex) {
-        minx = std::min(minx, vertex.x);
-        miny = std::min(miny, vertex.y);
-        maxx = std::max(maxx, vertex.x);
-        maxy = std::max(maxy, vertex.y);
-    }
+	// Update the bounding box to include the specified vertex
+	void Stretch(const VertexXY &vertex) {
+		minx = std::min(minx, vertex.x);
+		miny = std::min(miny, vertex.y);
+		maxx = std::max(maxx, vertex.x);
+		maxy = std::max(maxy, vertex.y);
+	}
 
-    void Stretch(const VertexXYZ &vertex) {
-        minx = std::min(minx, vertex.x);
-        miny = std::min(miny, vertex.y);
-        maxx = std::max(maxx, vertex.x);
-        maxy = std::max(maxy, vertex.y);
-        minz = std::min(minz, vertex.z);
-        maxz = std::max(maxz, vertex.z);
-    }
+	void Stretch(const VertexXYZ &vertex) {
+		minx = std::min(minx, vertex.x);
+		miny = std::min(miny, vertex.y);
+		maxx = std::max(maxx, vertex.x);
+		maxy = std::max(maxy, vertex.y);
+		minz = std::min(minz, vertex.z);
+		maxz = std::max(maxz, vertex.z);
+	}
 
-    void Stretch(const VertexXYM &vertex) {
-        minx = std::min(minx, vertex.x);
-        miny = std::min(miny, vertex.y);
-        maxx = std::max(maxx, vertex.x);
-        maxy = std::max(maxy, vertex.y);
-        minm = std::min(minm, vertex.m);
-        maxm = std::max(maxm, vertex.m);
-    }
+	void Stretch(const VertexXYM &vertex) {
+		minx = std::min(minx, vertex.x);
+		miny = std::min(miny, vertex.y);
+		maxx = std::max(maxx, vertex.x);
+		maxy = std::max(maxy, vertex.y);
+		minm = std::min(minm, vertex.m);
+		maxm = std::max(maxm, vertex.m);
+	}
 
-    void Stretch(const VertexXYZM &vertex) {
-        minx = std::min(minx, vertex.x);
-        miny = std::min(miny, vertex.y);
-        maxx = std::max(maxx, vertex.x);
-        maxy = std::max(maxy, vertex.y);
-        minz = std::min(minz, vertex.z);
-        maxz = std::max(maxz, vertex.z);
-        minm = std::min(minm, vertex.m);
-        maxm = std::max(maxm, vertex.m);
-    }
+	void Stretch(const VertexXYZM &vertex) {
+		minx = std::min(minx, vertex.x);
+		miny = std::min(miny, vertex.y);
+		maxx = std::max(maxx, vertex.x);
+		maxy = std::max(maxy, vertex.y);
+		minz = std::min(minz, vertex.z);
+		maxz = std::max(maxz, vertex.z);
+		minm = std::min(minm, vertex.m);
+		maxm = std::max(maxm, vertex.m);
+	}
 };
 
 } // namespace core

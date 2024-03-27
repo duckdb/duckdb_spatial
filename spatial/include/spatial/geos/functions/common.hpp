@@ -9,7 +9,7 @@ namespace geos {
 struct GEOSFunctionLocalState : FunctionLocalState {
 public:
 	GeosContextWrapper ctx;
-    ArenaAllocator arena;
+	ArenaAllocator arena;
 
 public:
 	explicit GEOSFunctionLocalState(ClientContext &context);

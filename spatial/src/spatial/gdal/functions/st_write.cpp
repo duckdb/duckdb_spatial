@@ -38,7 +38,7 @@ struct BindData : public TableFunctionData {
 };
 
 struct LocalState : public LocalFunctionData {
-    ArenaAllocator arena;
+	ArenaAllocator arena;
 	explicit LocalState(ClientContext &context) : arena(BufferAllocator::Get(context)) {
 	}
 };
@@ -337,8 +337,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 // Sink
 //===--------------------------------------------------------------------===//
 
-static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value,
-                                                 ArenaAllocator &arena) {
+static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value, ArenaAllocator &arena) {
 	if (type == core::GeoTypes::WKB_BLOB()) {
 		auto str = value.GetValueUnsafe<string_t>();
 

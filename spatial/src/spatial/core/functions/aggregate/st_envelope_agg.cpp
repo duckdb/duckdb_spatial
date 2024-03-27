@@ -75,8 +75,8 @@ struct EnvelopeAggFunction {
 			finalize_data.ReturnNull();
 		} else {
 			auto &arena = finalize_data.input.allocator;
-            auto box = Polygon::FromBox(arena, state.xmin, state.ymin, state.xmax, state.ymax);
-            target = Geometry(box).Serialize(finalize_data.result);
+			auto box = Polygon::FromBox(arena, state.xmin, state.ymin, state.xmax, state.ymax);
+			target = Geometry(box).Serialize(finalize_data.result);
 		}
 	}
 
@@ -103,7 +103,8 @@ void CoreAggregateFunctions::RegisterStEnvelopeAgg(DatabaseInstance &db) {
 
 	AggregateFunctionSet st_envelope_agg("ST_Envelope_Agg");
 	st_envelope_agg.AddFunction(
-	    AggregateFunction::UnaryAggregate<EnvelopeAggState, geometry_t, geometry_t, EnvelopeAggFunction>(GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()));
+	    AggregateFunction::UnaryAggregate<EnvelopeAggState, geometry_t, geometry_t, EnvelopeAggFunction>(
+	        GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()));
 
 	ExtensionUtil::RegisterFunction(db, st_envelope_agg);
 	DocUtil::AddDocumentation(db, "ST_Envelope_Agg", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);

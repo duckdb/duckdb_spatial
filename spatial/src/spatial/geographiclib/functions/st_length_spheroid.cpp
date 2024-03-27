@@ -72,7 +72,7 @@ static double LineLength(const LineString &line, GeographicLib::PolygonArea &com
 
 static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
@@ -80,35 +80,34 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, true);
 
-    struct op {
-        static double Apply(const LineString &line, GeographicLib::PolygonArea &comp) {
-            return LineLength(line, comp);
-        }
+	struct op {
+		static double Apply(const LineString &line, GeographicLib::PolygonArea &comp) {
+			return LineLength(line, comp);
+		}
 
-        static double Apply(const MultiLineString &mline, GeographicLib::PolygonArea &comp) {
-            double sum = 0.0;
-            for (const auto &line : mline) {
-                sum += LineLength(line, comp);
-            }
-            return sum;
-        }
+		static double Apply(const MultiLineString &mline, GeographicLib::PolygonArea &comp) {
+			double sum = 0.0;
+			for (const auto &line : mline) {
+				sum += LineLength(line, comp);
+			}
+			return sum;
+		}
 
-        static double Apply(const GeometryCollection &collection, GeographicLib::PolygonArea &comp) {
-            double sum = 0.0;
-            for (const auto &geom : collection) {
-                sum += geom.Visit<op>(comp);
-            }
-            return sum;
-        }
+		static double Apply(const GeometryCollection &collection, GeographicLib::PolygonArea &comp) {
+			double sum = 0.0;
+			for (const auto &geom : collection) {
+				sum += geom.Visit<op>(comp);
+			}
+			return sum;
+		}
 
-        static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
-            return 0.0;
-        }
-    };
+		static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
+			return 0.0;
+		}
+	};
 
-	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-        return Geometry::Deserialize(arena, input).Visit<op>(comp);
-	});
+	UnaryExecutor::Execute<geometry_t, double>(
+	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(comp); });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

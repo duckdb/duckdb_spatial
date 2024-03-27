@@ -101,13 +101,13 @@ static void Point4DFunction(DataChunk &args, ExpressionState &state, Vector &res
 //------------------------------------------------------------------------------
 static void PointFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	auto &x = args.data[0];
 	auto &y = args.data[1];
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, geometry_t>(x, y, result, count, [&](double x, double y) {
-		return Geometry(Point::FromVertex(arena, VertexXY { x, y })).Serialize(result);
+		return Geometry(Point::FromVertex(arena, VertexXY {x, y})).Serialize(result);
 	});
 }
 

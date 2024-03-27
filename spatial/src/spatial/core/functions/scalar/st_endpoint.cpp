@@ -79,7 +79,7 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    return geometry_t {};
 		    }
 
-            auto point = Point::FromReference(line, point_count - 1);
+		    auto point = Point::FromReference(line, point_count - 1);
 		    return Geometry(point).Serialize(result);
 	    });
 }

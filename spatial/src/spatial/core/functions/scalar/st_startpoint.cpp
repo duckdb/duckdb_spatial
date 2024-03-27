@@ -78,7 +78,7 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 			    return geometry_t {};
 		    }
 
-            auto point = Point::FromReference(line, 0);
+		    auto point = Point::FromReference(line, 0);
 
 		    return Geometry(point).Serialize(result);
 	    });

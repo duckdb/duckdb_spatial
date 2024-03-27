@@ -234,19 +234,19 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 
 struct TransformOp {
 	static void Apply(SinglePartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
-        geom.MakeMutable(arena);
+		geom.MakeMutable(arena);
 		for (uint32_t i = 0; i < geom.Count(); i++) {
 			auto vertex = geom.Get(i);
 			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
 			// we own the array, so we can use SetUnsafe
-            geom.Set(i, transformed.x, transformed.y);
+			geom.Set(i, transformed.x, transformed.y);
 		}
 	}
-    static void Apply(MultiPartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
-        for (auto &part : geom) {
-            part.Visit<TransformOp>(crs, arena);
-        }
-    }
+	static void Apply(MultiPartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
+		for (auto &part : geom) {
+			part.Visit<TransformOp>(crs, arena);
+		}
+	}
 };
 
 struct ProjCRSDelete {

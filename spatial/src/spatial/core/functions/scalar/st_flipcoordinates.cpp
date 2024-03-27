@@ -154,8 +154,6 @@ static void BoxFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, 
 // GEOMETRY
 //------------------------------------------------------------------------------
 
-
-
 static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
@@ -163,21 +161,21 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto input = args.data[0];
 	auto count = args.size();
 
-    struct FlipOp {
-        static void Apply(SinglePartGeometry &geom, ArenaAllocator &arena) {
-            geom.MakeMutable(arena);
-            for (idx_t i = 0; i < geom.Count(); i++) {
-                auto vertex = geom.Get(i);
-                std::swap(vertex.x, vertex.y);
-                geom.Set(i, vertex);
-            }
-        }
-        static void Apply(MultiPartGeometry &geom, ArenaAllocator &arena) {
-            for (auto &part : geom) {
-                part.Visit<FlipOp>(arena);
-            }
-        }
-    };
+	struct FlipOp {
+		static void Apply(SinglePartGeometry &geom, ArenaAllocator &arena) {
+			geom.MakeMutable(arena);
+			for (idx_t i = 0; i < geom.Count(); i++) {
+				auto vertex = geom.Get(i);
+				std::swap(vertex.x, vertex.y);
+				geom.Set(i, vertex);
+			}
+		}
+		static void Apply(MultiPartGeometry &geom, ArenaAllocator &arena) {
+			for (auto &part : geom) {
+				part.Visit<FlipOp>(arena);
+			}
+		}
+	};
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		auto geom = Geometry::Deserialize(lstate.arena, input);

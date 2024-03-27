@@ -54,50 +54,50 @@ public:
 		return Load<uint16_t>(const_data_ptr_cast(data.GetPrefix() + 2));
 	}
 
-    bool TryGetCachedBounds(BoundingBox &bbox) const {
-        Cursor cursor(data);
+	bool TryGetCachedBounds(BoundingBox &bbox) const {
+		Cursor cursor(data);
 
-        // Read the header
-        auto header_type = cursor.Read<GeometryType>();
-        auto properties = cursor.Read<GeometryProperties>();
-        auto hash = cursor.Read<uint16_t>();
-        (void)hash;
+		// Read the header
+		auto header_type = cursor.Read<GeometryType>();
+		auto properties = cursor.Read<GeometryProperties>();
+		auto hash = cursor.Read<uint16_t>();
+		(void)hash;
 
-        if (properties.HasBBox()) {
-            cursor.Skip(4); // skip padding
+		if (properties.HasBBox()) {
+			cursor.Skip(4); // skip padding
 
-            // Now set the bounding box
-            bbox.minx = cursor.Read<float>();
-            bbox.miny = cursor.Read<float>();
-            bbox.maxx = cursor.Read<float>();
-            bbox.maxy = cursor.Read<float>();
-            return true;
-        }
+			// Now set the bounding box
+			bbox.minx = cursor.Read<float>();
+			bbox.miny = cursor.Read<float>();
+			bbox.maxx = cursor.Read<float>();
+			bbox.maxy = cursor.Read<float>();
+			return true;
+		}
 
-        if (header_type == GeometryType::POINT) {
-            cursor.Skip(4); // skip padding
+		if (header_type == GeometryType::POINT) {
+			cursor.Skip(4); // skip padding
 
-            // Read the point
-            auto type = cursor.Read<SerializedGeometryType>();
-            D_ASSERT(type == SerializedGeometryType::POINT);
-            (void)type;
+			// Read the point
+			auto type = cursor.Read<SerializedGeometryType>();
+			D_ASSERT(type == SerializedGeometryType::POINT);
+			(void)type;
 
-            auto count = cursor.Read<uint32_t>();
-            if (count == 0) {
-                // If the point is empty, there is no bounding box
-                return false;
-            }
+			auto count = cursor.Read<uint32_t>();
+			if (count == 0) {
+				// If the point is empty, there is no bounding box
+				return false;
+			}
 
-            auto x = cursor.Read<double>();
-            auto y = cursor.Read<double>();
-            bbox.minx = x;
-            bbox.miny = y;
-            bbox.maxx = x;
-            bbox.maxy = y;
-            return true;
-        }
-        return false;
-    }
+			auto x = cursor.Read<double>();
+			auto y = cursor.Read<double>();
+			bbox.minx = x;
+			bbox.miny = y;
+			bbox.maxx = x;
+			bbox.maxy = y;
+			return true;
+		}
+		return false;
+	}
 };
 
 static_assert(sizeof(geometry_t) == sizeof(string_t), "geometry_t should be the same size as string_t");

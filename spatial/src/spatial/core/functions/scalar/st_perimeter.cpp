@@ -73,44 +73,43 @@ static void Box2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = core::GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
-    struct op {
-        static double Apply(const Polygon &poly) {
-            double sum = 0;
-            for (const auto &ring : poly) {
-                sum += ring.Length();
-            }
-            return sum;
-        }
+	struct op {
+		static double Apply(const Polygon &poly) {
+			double sum = 0;
+			for (const auto &ring : poly) {
+				sum += ring.Length();
+			}
+			return sum;
+		}
 
-        static double Apply(const MultiPolygon &mline) {
-            double sum = 0.0;
-            for (const auto &poly : mline) {
-                sum += Apply(poly);
-            }
-            return sum;
-        }
+		static double Apply(const MultiPolygon &mline) {
+			double sum = 0.0;
+			for (const auto &poly : mline) {
+				sum += Apply(poly);
+			}
+			return sum;
+		}
 
-        static double Apply(const GeometryCollection &collection) {
-            double sum = 0.0;
-            for (const auto &geom : collection) {
-                sum += geom.Visit<op>();
-            }
-            return sum;
-        }
+		static double Apply(const GeometryCollection &collection) {
+			double sum = 0.0;
+			for (const auto &geom : collection) {
+				sum += geom.Visit<op>();
+			}
+			return sum;
+		}
 
-        static double Apply(const BaseGeometry &) {
-            return 0.0;
-        }
-    };
+		static double Apply(const BaseGeometry &) {
+			return 0.0;
+		}
+	};
 
-	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		return Geometry::Deserialize(arena, input).Visit<op>();
-	});
+	UnaryExecutor::Execute<geometry_t, double>(
+	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(); });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

@@ -19,10 +19,10 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	GenericExecutor::ExecuteUnary<POINT_TYPE, GEOMETRY_TYPE>(source, result, count, [&](POINT_TYPE &point) {
-        Point geom(arena, point.a_val, point.b_val);
+		Point geom(arena, point.a_val, point.b_val);
 		return Geometry(geom).Serialize(result);
 	});
 	return true;
@@ -36,7 +36,7 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	GenericExecutor::ExecuteUnary<GEOMETRY_TYPE, POINT_TYPE>(source, result, count, [&](GEOMETRY_TYPE &geometry) {
 		auto geom = Geometry::Deserialize(arena, geometry.val);
@@ -45,7 +45,7 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 		}
 		auto &point = geom.As<Point>();
 		if (point.IsEmpty()) {
-            // TODO: Maybe make this return NULL instead
+			// TODO: Maybe make this return NULL instead
 			throw ConversionException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
 		auto vertex = point.Get(0);
@@ -68,11 +68,11 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, geometry_t>(source, result, count, [&](list_entry_t &line) {
-        LineString geom(arena, line.length, false, false);
+		LineString geom(arena, line.length, false, false);
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.SetExact(i, VertexXY { x, y });
+			geom.SetExact(i, VertexXY {x, y});
 		}
 		return Geometry(geom).Serialize(result);
 	});
@@ -84,7 +84,7 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 //------------------------------------------------------------------------------
 static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &coord_vec = ListVector::GetEntry(result);
 	auto &coord_vec_children = StructVector::GetEntries(coord_vec);
@@ -105,7 +105,7 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 		ListVector::Reserve(result, total_coords);
 
 		for (idx_t i = 0; i < line_size; i++) {
-            auto vertex = line.Get(i);
+			auto vertex = line.Get(i);
 			x_data[entry.offset + i] = vertex.x;
 			y_data[entry.offset + i] = vertex.y;
 		}
@@ -120,7 +120,7 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 //------------------------------------------------------------------------------
 static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &ring_vec = ListVector::GetEntry(source);
 	auto ring_entries = ListVector::GetData(ring_vec);
@@ -139,7 +139,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-				ring_array.SetExact(j, VertexXY { x, y });
+				ring_array.SetExact(j, VertexXY {x, y});
 			}
 		}
 		return Geometry(geom).Serialize(result);
@@ -152,7 +152,7 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 //------------------------------------------------------------------------------
 static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &ring_vec = ListVector::GetEntry(result);
 
@@ -216,8 +216,8 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto miny = box.b_val;
 		auto maxx = box.c_val;
 		auto maxy = box.d_val;
-        auto polygon = Polygon::FromBox(arena, minx, miny, maxx, maxy);
-        return Geometry(polygon).Serialize(result);
+		auto polygon = Polygon::FromBox(arena, minx, miny, maxx, maxy);
+		return Geometry(polygon).Serialize(result);
 	});
 	return true;
 }

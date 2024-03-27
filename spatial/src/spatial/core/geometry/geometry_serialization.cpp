@@ -35,225 +35,223 @@ namespace core {
 //    NumGeometries (4 bytes)
 //    Geometries (variable length)
 
-template<class VERTEX>
+template <class VERTEX>
 struct GetRequiredSizeOp {
-    static uint32_t Apply(const SinglePartGeometry &geom) {
-        // 4 bytes for the type
-        // 4 bytes for the length
-        // sizeof(vertex) * count
-        return 4 + 4 + (geom.Count() * sizeof(VERTEX));
-    }
+	static uint32_t Apply(const SinglePartGeometry &geom) {
+		// 4 bytes for the type
+		// 4 bytes for the length
+		// sizeof(vertex) * count
+		return 4 + 4 + (geom.Count() * sizeof(VERTEX));
+	}
 
-    static uint32_t Apply(const Polygon &polygon) {
-        // Polygons are special because they may pad between the rings and the ring data
-        // 4 bytes for the type
-        // 4 bytes for the number of rings
-        // 4 bytes for the number of vertices in each ring
-        // - sizeof(vertex) * count for each ring
-        // (+ 4 bytes for padding if num_rings is odd)
-        uint32_t size = 4 + 4;
-        for (const auto &ring : polygon) {
-            size += 4;
-            size += ring.Count() * sizeof(VERTEX);
-        }
-        if (polygon.Count() % 2 == 1) {
-            size += 4;
-        }
-        return size;
-    }
+	static uint32_t Apply(const Polygon &polygon) {
+		// Polygons are special because they may pad between the rings and the ring data
+		// 4 bytes for the type
+		// 4 bytes for the number of rings
+		// 4 bytes for the number of vertices in each ring
+		// - sizeof(vertex) * count for each ring
+		// (+ 4 bytes for padding if num_rings is odd)
+		uint32_t size = 4 + 4;
+		for (const auto &ring : polygon) {
+			size += 4;
+			size += ring.Count() * sizeof(VERTEX);
+		}
+		if (polygon.Count() % 2 == 1) {
+			size += 4;
+		}
+		return size;
+	}
 
-    template<class ITEM>
-    static uint32_t Apply(const TypedCollectionGeometry<ITEM> &collection) {
-        // 4 bytes for the type
-        // 4 bytes for the number of items
-        // recursive call for each item
-        uint32_t size = 4 + 4;
-        for (const auto &item : collection) {
-            size += Apply(item);
-        }
-        return size;
-    }
+	template <class ITEM>
+	static uint32_t Apply(const TypedCollectionGeometry<ITEM> &collection) {
+		// 4 bytes for the type
+		// 4 bytes for the number of items
+		// recursive call for each item
+		uint32_t size = 4 + 4;
+		for (const auto &item : collection) {
+			size += Apply(item);
+		}
+		return size;
+	}
 
-    static uint32_t Apply(const GeometryCollection &collection) {
-        // 4 bytes for the type
-        // 4 bytes for the number of geometries
-        // sizeof(geometry) * count
-        uint32_t size = 4 + 4;
-        for (const auto &geom : collection) {
-            size += geom.Visit<GetRequiredSizeOp<VERTEX>>();
-        }
-        return size;
-    }
+	static uint32_t Apply(const GeometryCollection &collection) {
+		// 4 bytes for the type
+		// 4 bytes for the number of geometries
+		// sizeof(geometry) * count
+		uint32_t size = 4 + 4;
+		for (const auto &geom : collection) {
+			size += geom.Visit<GetRequiredSizeOp<VERTEX>>();
+		}
+		return size;
+	}
 };
 
-
-
-template<class VERTEX>
+template <class VERTEX>
 struct SerializeOp {
-    static constexpr uint32_t MAX_DEPTH = 256;
+	static constexpr uint32_t MAX_DEPTH = 256;
 
-    static void SerializeVertices(const SinglePartGeometry &verts, Cursor &cursor, BoundingBox &bbox, bool update_bounds) {
-        // Write the vertex data
-        auto byte_size = verts.ByteSize();
-        memcpy(cursor.GetPtr(), verts.GetData(), byte_size);
-        // Move the cursor forward
-        cursor.Skip(byte_size);
-        // Also update the bounds real quick
-        if (update_bounds) {
-            for (uint32_t i = 0; i < verts.Count(); i++) {
-                auto vertex = verts.GetExact<VERTEX>(i);
-                bbox.Stretch(vertex);
-            }
-        }
-    }
+	static void SerializeVertices(const SinglePartGeometry &verts, Cursor &cursor, BoundingBox &bbox,
+	                              bool update_bounds) {
+		// Write the vertex data
+		auto byte_size = verts.ByteSize();
+		memcpy(cursor.GetPtr(), verts.GetData(), byte_size);
+		// Move the cursor forward
+		cursor.Skip(byte_size);
+		// Also update the bounds real quick
+		if (update_bounds) {
+			for (uint32_t i = 0; i < verts.Count(); i++) {
+				auto vertex = verts.GetExact<VERTEX>(i);
+				bbox.Stretch(vertex);
+			}
+		}
+	}
 
-    static void Apply(const Point &point, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
-        D_ASSERT(point.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(point.GetProperties().HasM() == VERTEX::HAS_M);
+	static void Apply(const Point &point, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+		D_ASSERT(point.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(point.GetProperties().HasM() == VERTEX::HAS_M);
 
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::POINT);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::POINT);
+		// Write point count (0 or 1) (4 bytes)
+		cursor.Write<uint32_t>(point.Count());
 
-        // Write point count (0 or 1) (4 bytes)
-        cursor.Write<uint32_t>(point.Count());
+		// write data
+		// We only update the bounds if this is a point part of a larger geometry
+		SerializeVertices(point, cursor, bbox, depth != 0);
+	}
 
-        // write data
-        // We only update the bounds if this is a point part of a larger geometry
-        SerializeVertices(point, cursor, bbox, depth != 0);
-    }
+	static void Apply(const LineString &linestring, Cursor &cursor, BoundingBox &bbox, uint32_t) {
+		D_ASSERT(linestring.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(linestring.GetProperties().HasM() == VERTEX::HAS_M);
 
-    static void Apply(const LineString &linestring, Cursor &cursor, BoundingBox &bbox, uint32_t) {
-        D_ASSERT(linestring.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(linestring.GetProperties().HasM() == VERTEX::HAS_M);
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::LINESTRING);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::LINESTRING);
+		// Write point count (4 bytes)
+		cursor.Write<uint32_t>(linestring.Count());
 
-        // Write point count (4 bytes)
-        cursor.Write<uint32_t>(linestring.Count());
+		// write data
+		SerializeVertices(linestring, cursor, bbox, true);
+	}
 
-        // write data
-        SerializeVertices(linestring, cursor, bbox, true);
-    }
+	static void Apply(const Polygon &polygon, Cursor &cursor, BoundingBox &bbox, uint32_t) {
+		D_ASSERT(polygon.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(polygon.GetProperties().HasM() == VERTEX::HAS_M);
 
-    static void Apply(const Polygon &polygon, Cursor &cursor, BoundingBox &bbox, uint32_t) {
-        D_ASSERT(polygon.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(polygon.GetProperties().HasM() == VERTEX::HAS_M);
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::POLYGON);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::POLYGON);
+		// Write number of rings (4 bytes)
+		cursor.Write<uint32_t>(polygon.Count());
 
-        // Write number of rings (4 bytes)
-        cursor.Write<uint32_t>(polygon.Count());
+		// Write ring lengths
+		for (const auto &ring : polygon) {
+			cursor.Write<uint32_t>(ring.Count());
+		}
 
-        // Write ring lengths
-        for (const auto &ring : polygon) {
-            cursor.Write<uint32_t>(ring.Count());
-        }
+		if (polygon.Count() % 2 == 1) {
+			// Write padding (4 bytes)
+			cursor.Write<uint32_t>(0);
+		}
 
-        if (polygon.Count() % 2 == 1) {
-            // Write padding (4 bytes)
-            cursor.Write<uint32_t>(0);
-        }
+		// Write ring data
+		for (uint32_t i = 0; i < polygon.Count(); i++) {
+			// The first ring is always the shell, and must be the only ring contributing to the bounding box
+			// or the geometry is invalid.
+			SerializeVertices(polygon[i], cursor, bbox, i == 0);
+		}
+	}
 
-        // Write ring data
-        for (uint32_t i = 0; i < polygon.Count(); i++) {
-            // The first ring is always the shell, and must be the only ring contributing to the bounding box
-            // or the geometry is invalid.
-            SerializeVertices(polygon[i], cursor, bbox, i == 0);
-        }
-    }
+	static void Apply(const MultiPoint &multipoint, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+		D_ASSERT(multipoint.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(multipoint.GetProperties().HasM() == VERTEX::HAS_M);
 
-    static void Apply(const MultiPoint &multipoint, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
-        D_ASSERT(multipoint.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(multipoint.GetProperties().HasM() == VERTEX::HAS_M);
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTIPOINT);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTIPOINT);
+		// Write number of points (4 bytes)
+		cursor.Write<uint32_t>(multipoint.Count());
 
-        // Write number of points (4 bytes)
-        cursor.Write<uint32_t>(multipoint.Count());
+		// Write point data
+		for (const auto &point : multipoint) {
+			Apply(point, cursor, bbox, depth + 1);
+		}
+	}
 
-        // Write point data
-        for (const auto &point : multipoint) {
-            Apply(point, cursor, bbox, depth + 1);
-        }
-    }
+	static void Apply(const MultiLineString &multilinestring, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+		D_ASSERT(multilinestring.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(multilinestring.GetProperties().HasM() == VERTEX::HAS_M);
 
-    static void Apply(const MultiLineString &multilinestring, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
-        D_ASSERT(multilinestring.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(multilinestring.GetProperties().HasM() == VERTEX::HAS_M);
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTILINESTRING);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTILINESTRING);
+		// Write number of linestrings (4 bytes)
+		cursor.Write<uint32_t>(multilinestring.Count());
 
-        // Write number of linestrings (4 bytes)
-        cursor.Write<uint32_t>(multilinestring.Count());
+		// Write linestring data
+		for (const auto &linestring : multilinestring) {
+			Apply(linestring, cursor, bbox, depth + 1);
+		}
+	}
 
-        // Write linestring data
-        for (const auto &linestring : multilinestring) {
-            Apply(linestring, cursor, bbox, depth + 1);
-        }
-    }
+	static void Apply(const MultiPolygon &multipolygon, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+		D_ASSERT(multipolygon.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(multipolygon.GetProperties().HasM() == VERTEX::HAS_M);
 
-    static void Apply(const MultiPolygon &multipolygon, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
-        D_ASSERT(multipolygon.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(multipolygon.GetProperties().HasM() == VERTEX::HAS_M);
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTIPOLYGON);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::MULTIPOLYGON);
+		// Write number of polygons (4 bytes)
+		cursor.Write<uint32_t>(multipolygon.Count());
 
-        // Write number of polygons (4 bytes)
-        cursor.Write<uint32_t>(multipolygon.Count());
+		// Write polygon data
+		for (const auto &polygon : multipolygon) {
+			Apply(polygon, cursor, bbox, depth + 1);
+		}
+	}
 
-        // Write polygon data
-        for (const auto &polygon : multipolygon) {
-            Apply(polygon, cursor, bbox, depth + 1);
-        }
-    }
+	static void Apply(const GeometryCollection &collection, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+		D_ASSERT(collection.GetProperties().HasZ() == VERTEX::HAS_Z);
+		D_ASSERT(collection.GetProperties().HasM() == VERTEX::HAS_M);
 
-    static void Apply(const GeometryCollection &collection, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
-        D_ASSERT(collection.GetProperties().HasZ() == VERTEX::HAS_Z);
-        D_ASSERT(collection.GetProperties().HasM() == VERTEX::HAS_M);
+		// TODO: Maybe make this configurable?
+		if (depth > MAX_DEPTH) {
+			throw SerializationException("GeometryCollection depth exceeded 256!");
+		}
 
-        // TODO: Maybe make this configurable?
-        if(depth > MAX_DEPTH) {
-            throw SerializationException("GeometryCollection depth exceeded 256!");
-        }
+		// Write type (4 bytes)
+		cursor.Write<SerializedGeometryType>(SerializedGeometryType::GEOMETRYCOLLECTION);
 
-        // Write type (4 bytes)
-        cursor.Write<SerializedGeometryType>(SerializedGeometryType::GEOMETRYCOLLECTION);
+		// Write number of geometries (4 bytes)
+		cursor.Write<uint32_t>(collection.Count());
 
-        // Write number of geometries (4 bytes)
-        cursor.Write<uint32_t>(collection.Count());
-
-        // write geometry data
-        for (const auto &geom : collection) {
-            geom.Visit<SerializeOp<VERTEX>>(cursor, bbox, depth + 1);
-        }
-    }
+		// write geometry data
+		for (const auto &geom : collection) {
+			geom.Visit<SerializeOp<VERTEX>>(cursor, bbox, depth + 1);
+		}
+	}
 };
 
 geometry_t Geometry::Serialize(Vector &result) {
 	auto type = GetType();
 	bool has_bbox = type != GeometryType::POINT && !IsEmpty();
 
-    auto properties = GetProperties();
-    auto has_z = properties.HasZ();
-    auto has_m = properties.HasM();
-    properties.SetBBox(has_bbox);
+	auto properties = GetProperties();
+	auto has_z = properties.HasZ();
+	auto has_m = properties.HasM();
+	properties.SetBBox(has_bbox);
 
-    uint32_t geom_size = 0;
-    if(has_z && has_m) {
-        geom_size = Visit<GetRequiredSizeOp<VertexXYZM>>();
-    } else if(has_z) {
-        geom_size = Visit<GetRequiredSizeOp<VertexXYZ>>();
-    } else if(has_m) {
-        geom_size = Visit<GetRequiredSizeOp<VertexXYM>>();
-    } else {
-        geom_size = Visit<GetRequiredSizeOp<VertexXY>>();
-    }
+	uint32_t geom_size = 0;
+	if (has_z && has_m) {
+		geom_size = Visit<GetRequiredSizeOp<VertexXYZM>>();
+	} else if (has_z) {
+		geom_size = Visit<GetRequiredSizeOp<VertexXYZ>>();
+	} else if (has_m) {
+		geom_size = Visit<GetRequiredSizeOp<VertexXYM>>();
+	} else {
+		geom_size = Visit<GetRequiredSizeOp<VertexXY>>();
+	}
 
 	auto header_size = 4;
 	auto dims = 2 + (has_z ? 1 : 0) + (has_m ? 1 : 0);
@@ -278,15 +276,15 @@ geometry_t Geometry::Serialize(Vector &result) {
 	// we will come back and write it later
 	cursor.Skip(bbox_size);
 
-    if(has_z && has_m) {
-        Visit<SerializeOp<VertexXYZM>>(cursor, bbox, 0);
-    } else if(has_z) {
-        Visit<SerializeOp<VertexXYZ>>(cursor, bbox, 0);
-    } else if(has_m) {
-        Visit<SerializeOp<VertexXYM>>(cursor, bbox, 0);
-    } else {
-        Visit<SerializeOp<VertexXY>>(cursor, bbox, 0);
-    }
+	if (has_z && has_m) {
+		Visit<SerializeOp<VertexXYZM>>(cursor, bbox, 0);
+	} else if (has_z) {
+		Visit<SerializeOp<VertexXYZ>>(cursor, bbox, 0);
+	} else if (has_m) {
+		Visit<SerializeOp<VertexXYM>>(cursor, bbox, 0);
+	} else {
+		Visit<SerializeOp<VertexXY>>(cursor, bbox, 0);
+	}
 
 	// Now write the bounding box
 	if (has_bbox) {
@@ -317,28 +315,28 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	ArenaAllocator &allocator;
 
 	Geometry ProcessPoint(const VertexData &vertices) override {
-        Point point(HasZ(), HasM());
+		Point point(HasZ(), HasM());
 		if (!vertices.IsEmpty()) {
-            point.ReferenceData(vertices.data[0], vertices.count);
+			point.ReferenceData(vertices.data[0], vertices.count);
 		}
-        return point;
+		return point;
 	}
 
 	Geometry ProcessLineString(const VertexData &vertices) override {
-        LineString line_string(allocator, vertices.count, HasZ(), HasM());
-        if (!vertices.IsEmpty()) {
-            line_string.ReferenceData(vertices.data[0], vertices.count);
-        }
-        return line_string;
+		LineString line_string(allocator, vertices.count, HasZ(), HasM());
+		if (!vertices.IsEmpty()) {
+			line_string.ReferenceData(vertices.data[0], vertices.count);
+		}
+		return line_string;
 	}
 
 	Geometry ProcessPolygon(PolygonState &state) override {
 		Polygon polygon(allocator, state.RingCount(), HasZ(), HasM());
 		for (auto i = 0; i < state.RingCount(); i++) {
-            auto vertices = state.Next();
-            if (!vertices.IsEmpty()) {
-                polygon[i].ReferenceData(vertices.data[0], vertices.count);
-            }
+			auto vertices = state.Next();
+			if (!vertices.IsEmpty()) {
+				polygon[i].ReferenceData(vertices.data[0], vertices.count);
+			}
 		}
 		return polygon;
 	}
@@ -377,6 +375,7 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 			throw NotImplementedException("GeometryDeserializer: Unimplemented geometry type: %d", CurrentType());
 		}
 	}
+
 public:
 	explicit GeometryDeserializer(ArenaAllocator &allocator) : allocator(allocator) {
 	}

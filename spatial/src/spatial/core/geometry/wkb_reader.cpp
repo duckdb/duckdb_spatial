@@ -89,7 +89,7 @@ Point WKBReader::ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool 
 	if (all_nan) {
 		return Point(has_z, has_m);
 	} else {
-        return Point::CopyFromData(arena, data_ptr_cast(coords), 1, has_z, has_m);
+		return Point::CopyFromData(arena, data_ptr_cast(coords), 1, has_z, has_m);
 	}
 }
 

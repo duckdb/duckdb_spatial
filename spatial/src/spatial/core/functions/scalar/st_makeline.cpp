@@ -14,7 +14,7 @@ namespace core {
 
 static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto count = args.size();
 	auto &child_vec = ListVector::GetEntry(args.data[0]);
@@ -66,7 +66,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 
 static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto count = args.size();
 
@@ -100,9 +100,9 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    point_left.SetVertexType(arena, has_z, has_m);
 		    point_right.SetVertexType(arena, has_z, has_m);
 
-            LineString line_geom(has_z, has_m);
-            line_geom.Append(arena, point_left);
-            line_geom.Append(arena, point_right);
+		    LineString line_geom(has_z, has_m);
+		    line_geom.Append(arena, point_left);
+		    line_geom.Append(arena, point_right);
 		    return Geometry(line_geom).Serialize(result);
 	    });
 }
