@@ -22,6 +22,7 @@ private:
 	uint32_t ReadInt(Cursor &cursor, bool little_endian);
 	double ReadDouble(Cursor &cursor, bool little_endian);
 	WKBType ReadType(Cursor &cursor, bool little_endian);
+	void ReadVertices(Cursor &cursor, bool little_endian, bool has_z, bool has_m, SinglePartGeometry &geometry);
 
 	// Geometries
 	Point ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
