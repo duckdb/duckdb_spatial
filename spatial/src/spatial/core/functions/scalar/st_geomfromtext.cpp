@@ -38,22 +38,22 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 	const auto &info = func_expr.bind_info->Cast<GeometryFromWKTBindData>();
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	WKTReader reader(arena);
-	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
-	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
-		    try {
-			    auto geom = reader.Parse(wkt);
-			    return geom.Serialize(result);
-		    } catch (InvalidInputException &error) {
-			    if (!info.ignore_invalid) {
-				    throw;
-			    }
-			    mask.SetInvalid(idx);
-			    return geometry_t {};
-		    }
-	    });
+	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(input, result, count,
+	                                                      [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
+		                                                      try {
+			                                                      auto geom = reader.Parse(wkt);
+			                                                      return geom.Serialize(result);
+		                                                      } catch (InvalidInputException &error) {
+			                                                      if (!info.ignore_invalid) {
+				                                                      throw;
+			                                                      }
+			                                                      mask.SetInvalid(idx);
+			                                                      return geometry_t {};
+		                                                      }
+	                                                      });
 }
 
 static unique_ptr<FunctionData> GeometryFromWKTBind(ClientContext &context, ScalarFunction &bound_function,

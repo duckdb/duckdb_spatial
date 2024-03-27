@@ -30,7 +30,7 @@ static void PolygonInteriorRingsFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 static void GeometryInteriorRingsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	auto &input = args.data[0];
 	auto count = args.size();
 

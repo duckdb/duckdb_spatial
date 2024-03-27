@@ -180,7 +180,7 @@ struct ShapefileGlobalState : public GlobalTableFunctionState {
 	int shape_idx;
 	SHPHandlePtr shp_handle;
 	DBFHandlePtr dbf_handle;
-    ArenaAllocator arena;
+	ArenaAllocator arena;
 	vector<idx_t> column_ids;
 
 	explicit ShapefileGlobalState(ClientContext &context, const string &file_name, vector<idx_t> column_ids_p)
@@ -208,7 +208,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 
 struct ConvertPoint {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
-		return Point::FromVertex(arena, VertexXY { shape->padfX[0], shape->padfY[0] });
+		return Point::FromVertex(arena, VertexXY {shape->padfX[0], shape->padfY[0]});
 	}
 };
 
@@ -218,7 +218,7 @@ struct ConvertLineString {
 			// Single LineString
 			LineString line(arena, shape->nVertices, false, false);
 			for (int i = 0; i < shape->nVertices; i++) {
-				line.SetExact(i, VertexXY { shape->padfX[i], shape->padfY[i] });
+				line.SetExact(i, VertexXY {shape->padfX[i], shape->padfY[i]});
 			}
 			return line;
 		} else {
@@ -229,10 +229,10 @@ struct ConvertLineString {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
 				auto line_size = end - start;
 				auto &line = multi_line_string[i];
-                line.Resize(arena, line_size);
+				line.Resize(arena, line_size);
 				for (int j = 0; j < line_size; j++) {
 					auto offset = start + j;
-					line.SetExact(j, VertexXY { shape->padfX[offset], shape->padfY[offset] });
+					line.SetExact(j, VertexXY {shape->padfX[offset], shape->padfY[offset]});
 				}
 				start = end;
 			}
@@ -294,7 +294,7 @@ struct ConvertPolygon {
 					ring.Resize(arena, ring_size);
 					for (int j = 0; j < ring_size; j++) {
 						auto offset = start + j;
-						ring.SetExact(j, VertexXY { shape->padfX[offset], shape->padfY[offset] });
+						ring.SetExact(j, VertexXY {shape->padfX[offset], shape->padfY[offset]});
 					}
 				}
 				multi_polygon[polygon_idx] = polygon;
@@ -308,7 +308,7 @@ struct ConvertMultiPoint {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
 		MultiPoint multi_point(arena, shape->nVertices, false, false);
 		for (int i = 0; i < shape->nVertices; i++) {
-			multi_point[i] = Point::FromVertex(arena, VertexXY { shape->padfX[i], shape->padfY[i] });
+			multi_point[i] = Point::FromVertex(arena, VertexXY {shape->padfX[i], shape->padfY[i]});
 		}
 		return multi_point;
 	}

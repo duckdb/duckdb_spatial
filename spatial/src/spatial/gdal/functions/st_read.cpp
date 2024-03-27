@@ -135,8 +135,7 @@ struct GdalScanLocalState : ArrowScanLocalState {
 	// We trust GDAL to produce valid WKB
 	core::WKBReader wkb_reader;
 	explicit GdalScanLocalState(unique_ptr<ArrowArrayWrapper> current_chunk, ClientContext &context)
-	    : ArrowScanLocalState(std::move(current_chunk)), arena(BufferAllocator::Get(context)),
-	      wkb_reader(arena) {
+	    : ArrowScanLocalState(std::move(current_chunk)), arena(BufferAllocator::Get(context)), wkb_reader(arena) {
 	}
 };
 
@@ -187,7 +186,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 
 	result->raw_file_name = input.inputs[0].GetValue<string>();
-	result->prefixed_file_name = ctx_state.GetPrefix() + result->raw_file_name;
+	result->prefixed_file_name = ctx_state.GetPrefix(result->raw_file_name);
 
 	auto dataset = GDALDatasetUniquePtr(GDALDataset::Open(
 	    result->prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR, result->dataset_allowed_drivers,

@@ -14,7 +14,7 @@ namespace core {
 
 static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	auto count = args.size();
 
 	auto &geom_vec = args.data[0];

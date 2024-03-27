@@ -26,8 +26,8 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	GenericExecutor::ExecuteQuaternary<DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, DOUBLE_TYPE, GEOMETRY_TYPE>(
 	    min_x_vec, min_y_vec, max_x_vec, max_y_vec, result, count,
 	    [&](DOUBLE_TYPE x_min, DOUBLE_TYPE y_min, DOUBLE_TYPE x_max, DOUBLE_TYPE y_max) {
-            auto box = Polygon::FromBox(lstate.arena, x_min.val, y_min.val, x_max.val, y_max.val);
-            return Geometry(box).Serialize(result);
+		    auto box = Polygon::FromBox(lstate.arena, x_min.val, y_min.val, x_max.val, y_max.val);
+		    return Geometry(box).Serialize(result);
 	    });
 }
 

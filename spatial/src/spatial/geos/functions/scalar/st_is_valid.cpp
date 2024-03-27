@@ -63,7 +63,7 @@ static bool IsValidForGeos(Geometry &geometry) {
 
 static void IsValidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	UnaryExecutor::Execute<geometry_t, bool>(args.data[0], result, args.size(), [&](geometry_t input) {
 		auto geom = Geometry::Deserialize(arena, input);
 

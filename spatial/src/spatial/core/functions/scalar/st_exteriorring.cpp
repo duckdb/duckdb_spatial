@@ -92,7 +92,7 @@ static void PolygonExteriorRingFunction(DataChunk &args, ExpressionState &state,
 //------------------------------------------------------------------------------
 static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	auto &input = args.data[0];
 	auto count = args.size();
 
@@ -105,12 +105,12 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 
 		    auto polygon = Geometry::Deserialize(arena, input).As<Polygon>();
 		    if (polygon.IsEmpty()) {
-                LineString empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM());
-                return Geometry(empty).Serialize(result);
+			    LineString empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM());
+			    return Geometry(empty).Serialize(result);
 		    }
 
-            auto &shell = polygon[0];
-            return Geometry(shell).Serialize(result);
+		    auto &shell = polygon[0];
+		    return Geometry(shell).Serialize(result);
 	    });
 }
 

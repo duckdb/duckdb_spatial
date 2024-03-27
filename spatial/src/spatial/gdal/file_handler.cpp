@@ -177,12 +177,18 @@ public:
 				return new DuckDBFileHandle(std::move(file));
 			}
 #endif
-			auto file = fs.OpenFile(file_name, flags, FileSystem::DEFAULT_LOCK, FileCompressionType::AUTO_DETECT);
+
 			// If the file is remote and NOT in write mode, we can cache it.
-			if (!file->OnDiskFile() && !(flags & FileFlags::FILE_FLAGS_WRITE) &&
+			if (FileSystem::IsRemoteFile(file_name_str) && !(flags & FileFlags::FILE_FLAGS_WRITE) &&
 			    !(flags & FileFlags::FILE_FLAGS_APPEND)) {
+
+				// Pass the direct IO flag to the file system since we use GDAL's caching instead
+				flags |= FileFlags::FILE_FLAGS_DIRECT_IO;
+
+				auto file = fs.OpenFile(file_name, flags, FileSystem::DEFAULT_LOCK, FileCompressionType::AUTO_DETECT);
 				return VSICreateCachedFile(new DuckDBFileHandle(std::move(file)));
 			} else {
+				auto file = fs.OpenFile(file_name, flags, FileSystem::DEFAULT_LOCK, FileCompressionType::AUTO_DETECT);
 				return new DuckDBFileHandle(std::move(file));
 			}
 		} catch (std::exception &ex) {
@@ -373,8 +379,12 @@ void GDALClientContextState::QueryEnd() {
 
 };
 
-const string &GDALClientContextState::GetPrefix() const {
-	return client_prefix;
+string GDALClientContextState::GetPrefix(const string &value) const {
+	// If the user explicitly asked for a VSI prefix, we don't add our own
+	if (StringUtil::StartsWith(value, "/vsi")) {
+		return value;
+	}
+	return client_prefix + value;
 }
 
 GDALClientContextState &GDALClientContextState::GetOrCreate(ClientContext &context) {

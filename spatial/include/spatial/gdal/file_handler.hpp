@@ -17,7 +17,7 @@ public:
 	explicit GDALClientContextState(ClientContext &context);
 	~GDALClientContextState() override;
 	void QueryEnd() override;
-	const string &GetPrefix() const;
+	string GetPrefix(const string &value) const;
 	static GDALClientContextState &GetOrCreate(ClientContext &context);
 };
 

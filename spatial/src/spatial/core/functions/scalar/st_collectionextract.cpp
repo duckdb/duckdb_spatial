@@ -93,7 +93,7 @@ static void CollectPolygons(Geometry &geom, vector<Polygon> &polys) {
 // Collection extract with a specific dimension
 static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 	auto count = args.size();
 	auto &input = args.data[0];
 	auto &dim = args.data[1];
@@ -117,19 +117,20 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoint[i] = points[i];
 					    }
-                        return Geometry(mpoint).Serialize(result);
+					    return Geometry(mpoint).Serialize(result);
 				    }
 				    // otherwise, we return an empty multipoint
 				    MultiPoint empty(props.HasZ(), props.HasM());
-                    return Geometry(empty).Serialize(result);
+				    return Geometry(empty).Serialize(result);
 			    } else {
 				    // otherwise if its not a collection, we return an empty point
 				    Point empty(props.HasZ(), props.HasM());
-                    return Geometry(empty).Serialize(result);
+				    return Geometry(empty).Serialize(result);
 			    }
 		    }
 		    case 2: {
-			    if (geometry.GetType() == GeometryType::MULTILINESTRING || geometry.GetType() == GeometryType::LINESTRING) {
+			    if (geometry.GetType() == GeometryType::MULTILINESTRING ||
+			        geometry.GetType() == GeometryType::LINESTRING) {
 				    return input;
 			    } else if (geometry.IsCollection()) {
 				    // if it is a geometry collection, we need to collect all lines
@@ -142,15 +143,15 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    for (uint32_t i = 0; i < size; i++) {
 						    mline[i] = lines[i];
 					    }
-                        return Geometry(mline).Serialize(result);
+					    return Geometry(mline).Serialize(result);
 				    }
 				    // otherwise, we return an empty multilinestring
 				    MultiLineString empty(props.HasZ(), props.HasM());
-                    return Geometry(empty).Serialize(result);
+				    return Geometry(empty).Serialize(result);
 			    } else {
 				    // otherwise if its not a collection, we return an empty linestring
 				    LineString empty(props.HasZ(), props.HasM());
-                    return Geometry(empty).Serialize(result);
+				    return Geometry(empty).Serialize(result);
 			    }
 		    }
 		    case 3: {
@@ -167,15 +168,15 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoly[i] = polys[i];
 					    }
-                        return Geometry(mpoly).Serialize(result);
+					    return Geometry(mpoly).Serialize(result);
 				    }
 				    // otherwise, we return an empty multipolygon
 				    MultiPolygon empty(props.HasZ(), props.HasM());
-                    return Geometry(empty).Serialize(result);
+				    return Geometry(empty).Serialize(result);
 			    } else {
 				    // otherwise if its not a collection, we return an empty polygon
 				    Polygon empty(props.HasZ(), props.HasM());
-                    return Geometry(empty).Serialize(result);
+				    return Geometry(empty).Serialize(result);
 			    }
 		    }
 		    default:
@@ -188,7 +189,7 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 // Note: We're being smart here and reusing the memory from the input geometry
 static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto count = args.size();
 	auto &input = args.data[0];
@@ -216,7 +217,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				for (uint32_t i = 0; i < size; i++) {
 					mpoint[i] = points[i];
 				}
-                return Geometry(mpoint).Serialize(result);
+				return Geometry(mpoint).Serialize(result);
 			}
 			// LineString case
 			case 1: {
@@ -238,7 +239,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				for (uint32_t i = 0; i < size; i++) {
 					mpoly[i] = polys[i];
 				}
-                return Geometry(mpoly).Serialize(result);
+				return Geometry(mpoly).Serialize(result);
 			}
 			default: {
 				throw InternalException("Invalid dimension in collection extract");

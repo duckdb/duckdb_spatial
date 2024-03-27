@@ -26,20 +26,20 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 		TernaryExecutor::Execute<geometry_t, double, double, geometry_t>(
 		    input, z_values, m_values, result, count, [&](const geometry_t &blob, double default_z, double default_m) {
 			    return Geometry::Deserialize(arena, blob)
-                    .SetVertexType(arena, HAS_Z, HAS_M, default_z, default_m)
-                    .Serialize(result);
+			        .SetVertexType(arena, HAS_Z, HAS_M, default_z, default_m)
+			        .Serialize(result);
 		    });
 
 	} else if (HAS_Z || HAS_M) {
 		auto &z_values = args.data[1];
 		BinaryExecutor::Execute<geometry_t, double, geometry_t>(
 		    input, z_values, result, count, [&](const geometry_t &blob, double default_value) {
-                auto def_z = HAS_Z ? default_value : 0;
-                auto def_m = HAS_M ? default_value : 0;
+			    auto def_z = HAS_Z ? default_value : 0;
+			    auto def_m = HAS_M ? default_value : 0;
 
 			    return Geometry::Deserialize(arena, blob)
-                    .SetVertexType(arena, HAS_Z, HAS_M, def_z, def_m)
-                    .Serialize(result);
+			        .SetVertexType(arena, HAS_Z, HAS_M, def_z, def_m)
+			        .Serialize(result);
 		    });
 	} else {
 		UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](const geometry_t &blob) {

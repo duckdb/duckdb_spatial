@@ -273,14 +273,14 @@ static Point PointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, co
 			                            raw.GetString());
 		}
 		auto z = yyjson_get_num(z_val);
-		return Point::FromVertex(arena, VertexXYZ{ x, y, z});
+		return Point::FromVertex(arena, VertexXYZ {x, y, z});
 	} else {
-		return Point::FromVertex(arena, VertexXY{ x, y });
+		return Point::FromVertex(arena, VertexXY {x, y});
 	}
 }
 
 static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
-                                       bool &has_z) {
+                                      bool &has_z) {
 	auto len = yyjson_arr_size(coord_array);
 	if (len == 0) {
 		// Empty
@@ -335,9 +335,9 @@ static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &a
 				z = yyjson_get_num(z_val);
 			}
 			if (has_any_z) {
-				vertices.SetExact(idx, VertexXYZ { x, y, z });
+				vertices.SetExact(idx, VertexXYZ {x, y, z});
 			} else {
-				vertices.SetExact(idx, VertexXY { x, y });
+				vertices.SetExact(idx, VertexXY {x, y});
 			}
 		}
 		return vertices;
@@ -397,8 +397,8 @@ static MultiPoint MultiPointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator 
 	}
 }
 
-static MultiLineString MultiLineStringFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena,
-                                                  const string_t &raw, bool &has_z) {
+static MultiLineString MultiLineStringFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
+                                                  bool &has_z) {
 	auto num_linestrings = yyjson_arr_size(coord_array);
 	if (num_linestrings == 0) {
 		// Empty
@@ -589,9 +589,9 @@ void CoreScalarFunctions::RegisterStAsGeoJSON(DatabaseInstance &db) {
 	                                        GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
 	                                        GeometryFunctionLocalState::Init));
 
-    from_geojson.AddFunction(ScalarFunction({LogicalType::JSON()}, GeoTypes::GEOMETRY(),
-                                            GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
-                                            GeometryFunctionLocalState::Init));
+	from_geojson.AddFunction(ScalarFunction({LogicalType::JSON()}, GeoTypes::GEOMETRY(),
+	                                        GeoJSONFragmentToGeometryFunction, nullptr, nullptr, nullptr,
+	                                        GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, from_geojson);
 	DocUtil::AddDocumentation(db, "ST_GeomFromGeoJSON", FROM_DOC_DESCRIPTION, FROM_DOC_EXAMPLE, DOC_TAGS);

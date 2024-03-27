@@ -49,40 +49,39 @@ static void LineLengthFunction(DataChunk &args, ExpressionState &state, Vector &
 static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
-    struct op {
-        static double Apply(const LineString &line) {
-            return line.Length();
-        }
+	struct op {
+		static double Apply(const LineString &line) {
+			return line.Length();
+		}
 
-        static double Apply(const MultiLineString &mline) {
-            double sum = 0.0;
-            for (const auto &line : mline) {
-                sum += line.Length();
-            }
-            return sum;
-        }
+		static double Apply(const MultiLineString &mline) {
+			double sum = 0.0;
+			for (const auto &line : mline) {
+				sum += line.Length();
+			}
+			return sum;
+		}
 
-        static double Apply(const GeometryCollection &collection) {
-            double sum = 0.0;
-            for (const auto &geom : collection) {
-                sum += geom.Visit<op>();
-            }
-            return sum;
-        }
+		static double Apply(const GeometryCollection &collection) {
+			double sum = 0.0;
+			for (const auto &geom : collection) {
+				sum += geom.Visit<op>();
+			}
+			return sum;
+		}
 
-        static double Apply(const BaseGeometry &) {
-            return 0.0;
-        }
-    };
+		static double Apply(const BaseGeometry &) {
+			return 0.0;
+		}
+	};
 
-	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		return Geometry::Deserialize(arena, input).Visit<op>();
-	});
+	UnaryExecutor::Execute<geometry_t, double>(
+	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(); });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

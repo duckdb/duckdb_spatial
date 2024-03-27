@@ -23,8 +23,7 @@ static void IntersectsExtentFunction(DataChunk &args, ExpressionState &state, Ve
 	    left, right, result, count, [&](geometry_t left, geometry_t right) {
 		    BoundingBox left_bbox;
 		    BoundingBox right_bbox;
-		    if (left.TryGetCachedBounds(left_bbox) &&
-		        right.TryGetCachedBounds(right_bbox)) {
+		    if (left.TryGetCachedBounds(left_bbox) && right.TryGetCachedBounds(right_bbox)) {
 			    return left_bbox.Intersects(right_bbox);
 		    }
 		    return false;

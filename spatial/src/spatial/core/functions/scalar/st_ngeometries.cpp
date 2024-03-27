@@ -21,18 +21,18 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 	auto count = args.size();
 
 	UnaryExecutor::Execute<geometry_t, int32_t>(input, result, count, [&](geometry_t input) {
-        struct op {
-            static int32_t Apply(const CollectionGeometry &collection) {
-                return static_cast<int32_t>(collection.Count());
-            }
-            static int32_t Apply(const Polygon &geom) {
-                return geom.IsEmpty() ? 0 : 1;
-            }
-            static int32_t Apply(const SinglePartGeometry &geom) {
-                return geom.IsEmpty() ? 0 : 1;
-            }
-        };
-        return Geometry::Deserialize(ctx.arena, input).Visit<op>();
+		struct op {
+			static int32_t Apply(const CollectionGeometry &collection) {
+				return static_cast<int32_t>(collection.Count());
+			}
+			static int32_t Apply(const Polygon &geom) {
+				return geom.IsEmpty() ? 0 : 1;
+			}
+			static int32_t Apply(const SinglePartGeometry &geom) {
+				return geom.IsEmpty() ? 0 : 1;
+			}
+		};
+		return Geometry::Deserialize(ctx.arena, input).Visit<op>();
 	});
 }
 

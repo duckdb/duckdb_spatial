@@ -52,6 +52,27 @@ public:
 	}
 
 	template <class T>
+	T ReadBigEndian() {
+		static_assert(std::is_floating_point<T>::value || std::is_integral<T>::value,
+		              "T must be a floating point or integral type");
+		if (ptr + sizeof(T) > end) {
+			throw SerializationException("Trying to read past end of buffer");
+		}
+
+		uint8_t in[sizeof(T)];
+		uint8_t out[sizeof(T)];
+		memcpy(in, ptr, sizeof(T));
+		ptr += sizeof(T);
+
+		for (size_t i = 0; i < sizeof(T); i++) {
+			out[i] = in[sizeof(T) - i - 1];
+		}
+		T swapped = 0;
+		memcpy(&swapped, out, sizeof(T));
+		return swapped;
+	}
+
+	template <class T>
 	void Write(T value) {
 		static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
 		if (ptr + sizeof(T) > end) {

@@ -70,27 +70,26 @@ static void BoxNumPointsFunction(DataChunk &args, ExpressionState &state, Vector
 
 static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-    auto &arena = lstate.arena;
+	auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
-    struct op {
-        static uint32_t Apply(const SinglePartGeometry &geom) {
-            return geom.Count();
-        }
-        static uint32_t Apply(const MultiPartGeometry &geom) {
-            uint32_t count = 0;
-            for (const auto &part : geom) {
-                count += part.Visit<op>();
-            }
-            return count;
-        }
-    };
+	struct op {
+		static uint32_t Apply(const SinglePartGeometry &geom) {
+			return geom.Count();
+		}
+		static uint32_t Apply(const MultiPartGeometry &geom) {
+			uint32_t count = 0;
+			for (const auto &part : geom) {
+				count += part.Visit<op>();
+			}
+			return count;
+		}
+	};
 
-	UnaryExecutor::Execute<geometry_t, uint32_t>(input, result, count, [&](geometry_t input) {
-		return Geometry::Deserialize(arena, input).Visit<op>();
-	});
+	UnaryExecutor::Execute<geometry_t, uint32_t>(
+	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(); });
 }
 
 //------------------------------------------------------------------------------
