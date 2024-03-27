@@ -285,7 +285,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 
 	// Create the dataset
 	auto &client_ctx = GDALClientContextState::GetOrCreate(context);
-	auto prefixed_path = client_ctx.GetPrefix() + file_path;
+	auto prefixed_path = client_ctx.GetPrefix(file_path);
 	auto dataset = GDALDatasetUniquePtr(
 	    driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, gdal_data.dataset_creation_options));
 	if (!dataset) {

@@ -187,7 +187,7 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 
 	result->raw_file_name = input.inputs[0].GetValue<string>();
-	result->prefixed_file_name = ctx_state.GetPrefix() + result->raw_file_name;
+	result->prefixed_file_name = ctx_state.GetPrefix(result->raw_file_name);
 
 	auto dataset = GDALDatasetUniquePtr(GDALDataset::Open(
 	    result->prefixed_file_name.c_str(), GDAL_OF_VECTOR | GDAL_OF_VERBOSE_ERROR, result->dataset_allowed_drivers,
