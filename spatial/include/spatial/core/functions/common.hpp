@@ -1,6 +1,5 @@
 #pragma once
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 
 namespace spatial {
 
@@ -8,7 +7,7 @@ namespace core {
 
 struct GeometryFunctionLocalState : FunctionLocalState {
 public:
-	GeometryFactory factory;
+	ArenaAllocator arena;
 
 public:
 	explicit GeometryFunctionLocalState(ClientContext &context);

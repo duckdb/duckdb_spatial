@@ -67,11 +67,11 @@
 | [ST_MakeValid](#st_makevalid) | Attempts to make an invalid geometry valid without removing any vertices |
 | [ST_NGeometries](#st_ngeometries) | Returns the number of component geometries in a collection geometry |
 | [ST_NInteriorRings](#st_ninteriorrings) | Returns the number if interior rings of a polygon |
-| [ST_NPoints](#st_npoints) | Returns the number of points within a geometry |
+| [ST_NPoints](#st_npoints) | Returns the number of vertices within a geometry |
 | [ST_Normalize](#st_normalize) | Returns a "normalized" version of the input geometry. |
 | [ST_NumGeometries](#st_numgeometries) | Returns the number of component geometries in a collection geometry |
 | [ST_NumInteriorRings](#st_numinteriorrings) | Returns the number if interior rings of a polygon |
-| [ST_NumPoints](#st_numpoints) | Returns the number of points within a geometry |
+| [ST_NumPoints](#st_numpoints) | Returns the number of vertices within a geometry |
 | [ST_Overlaps](#st_overlaps) | Returns true if geom1 "overlaps" geom2 |
 | [ST_Perimeter](#st_perimeter) | Returns the length of the perimeter of the geometry |
 | [ST_Perimeter_Spheroid](#st_perimeter_spheroid) | Returns the length of the perimeter in meters using an ellipsoidal model of the earths surface |
@@ -180,7 +180,7 @@ _Returns the geometry as a GeoJSON fragment_
 #### Signature
 
 ```sql
-VARCHAR ST_AsGeoJSON (col0 GEOMETRY)
+JSON ST_AsGeoJSON (col0 GEOMETRY)
 ```
 
 #### Description
@@ -906,6 +906,7 @@ _Deserializes a GEOMETRY from a GeoJSON fragment._
 
 ```sql
 GEOMETRY ST_GeomFromGeoJSON (col0 VARCHAR)
+GEOMETRY ST_GeomFromGeoJSON (col0 JSON)
 ```
 
 #### Description
@@ -1328,6 +1329,7 @@ INTEGER ST_NGeometries (col0 GEOMETRY)
 #### Description
 
 Returns the number of component geometries in a collection geometry
+If the input geometry is not a collection, returns 1 if the geometry is not empty, otherwise 0
 
 
 
@@ -1350,7 +1352,7 @@ Returns the number if interior rings of a polygon
 
 ### ST_NPoints
 
-_Returns the number of points within a geometry_
+_Returns the number of vertices within a geometry_
 
 #### Signature
 
@@ -1364,7 +1366,7 @@ UINTEGER ST_NPoints (col0 GEOMETRY)
 
 #### Description
 
-Returns the number of points within a geometry
+Returns the number of vertices within a geometry
 
 
 
@@ -1397,6 +1399,7 @@ INTEGER ST_NumGeometries (col0 GEOMETRY)
 #### Description
 
 Returns the number of component geometries in a collection geometry
+If the input geometry is not a collection, returns 1 if the geometry is not empty, otherwise 0
 
 
 
@@ -1419,7 +1422,7 @@ Returns the number if interior rings of a polygon
 
 ### ST_NumPoints
 
-_Returns the number of points within a geometry_
+_Returns the number of vertices within a geometry_
 
 #### Signature
 
@@ -1433,7 +1436,7 @@ UINTEGER ST_NumPoints (col0 GEOMETRY)
 
 #### Description
 
-Returns the number of points within a geometry
+Returns the number of vertices within a geometry
 
 
 

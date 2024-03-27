@@ -3,7 +3,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -54,8 +53,7 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 	auto count = args.size();
 
 	UnaryExecutor::Execute<geometry_t, bool>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		return geometry.IsEmpty();
+		return Geometry::Deserialize(lstate.arena, input).IsEmpty();
 	});
 
 	if (count == 1) {

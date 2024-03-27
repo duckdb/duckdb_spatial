@@ -108,12 +108,12 @@ void WKTReader::ParseVertex(vector<double> &coords) {
 	}
 }
 
-VertexArray WKTReader::ParseVertices() {
+pair<uint32_t, vector<double>> WKTReader::ParseVertices() {
+    vector<double> coords;
 	if (MatchCI("EMPTY")) {
-		return VertexArray::Empty(has_z, has_m);
+        return {0, coords};
 	}
 	Expect('(');
-	vector<double> coords;
 	uint32_t count = 0;
 	ParseVertex(coords);
 	count++;
@@ -122,7 +122,7 @@ VertexArray WKTReader::ParseVertices() {
 		count++;
 	}
 	Expect(')');
-	return VertexArray::Copy(arena, data_ptr_cast(coords.data()), count, has_z, has_m);
+    return {count, coords};
 }
 
 Point WKTReader::ParsePoint() {
@@ -133,11 +133,12 @@ Point WKTReader::ParsePoint() {
 	vector<double> coords;
 	ParseVertex(coords);
 	Expect(')');
-	return Point(VertexArray::Copy(arena, data_ptr_cast(coords.data()), 1, has_z, has_m));
+    return Point::CopyFromData(arena, data_ptr_cast(coords.data()), 1, has_z, has_m);
 }
 
 LineString WKTReader::ParseLineString() {
-	return LineString(ParseVertices());
+    auto verts = ParseVertices();
+    return LineString::CopyFromData(arena, data_ptr_cast(verts.second.data()), verts.first, has_z, has_m);
 }
 
 Polygon WKTReader::ParsePolygon() {
@@ -145,7 +146,7 @@ Polygon WKTReader::ParsePolygon() {
 		return Polygon(has_z, has_m);
 	}
 	Expect('(');
-	vector<VertexArray> rings;
+	vector<pair<uint32_t, vector<double>>> rings;
 	rings.push_back(ParseVertices());
 	while (Match(',')) {
 		rings.push_back(ParseVertices());
@@ -153,7 +154,7 @@ Polygon WKTReader::ParsePolygon() {
 	Expect(')');
 	Polygon result(arena, rings.size(), has_z, has_m);
 	for (uint32_t i = 0; i < rings.size(); i++) {
-		result[i] = rings[i];
+		result[i].CopyData(arena, data_ptr_cast(rings[i].second.data()), rings[i].first);
 	}
 	return result;
 }
@@ -176,7 +177,7 @@ MultiPoint WKTReader::ParseMultiPoint() {
 		Expect(')');
 		optional_paren = false;
 	}
-	points.push_back(Point(VertexArray::Copy(arena, data_ptr_cast(coords.data()), 1, has_z, has_m)));
+	points.push_back(Point::CopyFromData(arena, data_ptr_cast(coords.data()), 1, has_z, has_m));
 	coords.clear();
 	while (Match(',')) {
 		if (Match('(')) {
@@ -187,7 +188,7 @@ MultiPoint WKTReader::ParseMultiPoint() {
 			Expect(')');
 			optional_paren = false;
 		}
-		points.push_back(Point(VertexArray::Copy(arena, data_ptr_cast(coords.data()), 1, has_z, has_m)));
+        points.push_back(Point::CopyFromData(arena, data_ptr_cast(coords.data()), 1, has_z, has_m));
 		coords.clear();
 	}
 	Expect(')');

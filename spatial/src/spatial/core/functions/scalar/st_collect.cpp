@@ -14,7 +14,7 @@ namespace core {
 
 static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-	auto &arena = lstate.factory.allocator;
+	auto &arena = lstate.arena;
 	auto count = args.size();
 	auto &child_vec = ListVector::GetEntry(args.data[0]);
 	UnifiedVectorFormat format;
@@ -43,7 +43,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			auto mapped_idx = format.sel->get_index(i);
 			if (format.validity.RowIsValid(mapped_idx)) {
 				auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
-				auto geometry = lstate.factory.Deserialize(geometry_blob);
+				auto geometry = Geometry::Deserialize(arena, geometry_blob);
 				// Dont add empty geometries
 				if (!geometry.IsEmpty()) {
 					geometries.push_back(geometry);
@@ -53,7 +53,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 
 		if (geometries.empty()) {
 			GeometryCollection empty(has_z, has_m);
-			return lstate.factory.Serialize(result, empty, has_z, has_m);
+            return Geometry(empty).Serialize(result);
 		}
 
 		bool all_points = true;
@@ -61,13 +61,13 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		bool all_polygons = true;
 
 		for (auto &geometry : geometries) {
-			if (geometry.Type() != GeometryType::POINT) {
+			if (geometry.GetType() != GeometryType::POINT) {
 				all_points = false;
 			}
-			if (geometry.Type() != GeometryType::LINESTRING) {
+			if (geometry.GetType() != GeometryType::LINESTRING) {
 				all_lines = false;
 			}
-			if (geometry.Type() != GeometryType::POLYGON) {
+			if (geometry.GetType() != GeometryType::POLYGON) {
 				all_polygons = false;
 			}
 		}
@@ -79,25 +79,25 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Point>();
 			}
-			return lstate.factory.Serialize(result, collection, has_z, has_m);
+            return Geometry(collection).Serialize(result);
 		} else if (all_lines) {
 			MultiLineString collection(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<LineString>();
 			}
-			return lstate.factory.Serialize(result, collection, has_z, has_m);
+			return Geometry(collection).Serialize(result);
 		} else if (all_polygons) {
 			MultiPolygon collection(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Polygon>();
 			}
-			return lstate.factory.Serialize(result, collection, has_z, has_m);
+			return Geometry(collection).Serialize(result);
 		} else {
 			GeometryCollection collection(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m);
 			}
-			return lstate.factory.Serialize(result, collection, has_z, has_m);
+			return Geometry(collection).Serialize(result);
 		}
 	});
 }

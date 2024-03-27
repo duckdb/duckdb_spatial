@@ -71,17 +71,16 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 			    return geometry_t {};
 		    }
 
-		    auto props = input.GetProperties();
-		    auto line = lstate.factory.Deserialize(input).As<LineString>();
-		    auto point_count = line.Vertices().Count();
+		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
 
-		    if (point_count == 0) {
+		    if (line.IsEmpty()) {
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
 
-		    Point point(VertexArray::Reference(line.Vertices(), 0, 1));
-		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
+            auto point = Point::FromReference(line, 0);
+
+		    return Geometry(point).Serialize(result);
 	    });
 }
 //------------------------------------------------------------------------------

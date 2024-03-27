@@ -1,6 +1,5 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
-#include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 
 namespace spatial {
@@ -90,18 +89,17 @@ Point WKBReader::ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool 
 	if (all_nan) {
 		return Point(has_z, has_m);
 	} else {
-		auto vertices = VertexArray::Copy(arena, data_ptr_cast(coords), 1, has_z, has_m);
-		return Point(vertices);
+        return Point::CopyFromData(arena, data_ptr_cast(coords), 1, has_z, has_m);
 	}
 }
 
 LineString WKBReader::ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m) {
 	auto count = ReadInt(cursor, little_endian);
 	auto ptr = cursor.GetPtr();
-	auto vertices = VertexArray::Copy(arena, ptr, count, has_z, has_m);
+	auto vertices = LineString::CopyFromData(arena, ptr, count, has_z, has_m);
 	// Move the cursor forwards
 	cursor.Skip(vertices.ByteSize());
-	return LineString(vertices);
+	return vertices;
 }
 
 Polygon WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m) {
@@ -109,7 +107,7 @@ Polygon WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, b
 	Polygon polygon(arena, ring_count, has_z, has_m);
 	for (uint32_t i = 0; i < ring_count; i++) {
 		auto point_count = ReadInt(cursor, little_endian);
-		auto vertices = VertexArray::Copy(arena, cursor.GetPtr(), point_count, has_z, has_m);
+		auto vertices = LineString::CopyFromData(arena, cursor.GetPtr(), point_count, has_z, has_m);
 		cursor.Skip(vertices.ByteSize());
 		polygon[i] = vertices;
 	}

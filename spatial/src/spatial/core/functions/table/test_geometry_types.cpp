@@ -1,7 +1,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/table.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 
 namespace spatial {
 

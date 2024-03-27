@@ -4,7 +4,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
 
@@ -72,55 +71,45 @@ static void Box2DPerimeterFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static double PolygonPerimeter(const Polygon &poly) {
-	double perimeter = 0;
-	for (const auto &ring : poly) {
-		for (uint32_t i = 0; i < ring.Count() - 1; i++) {
-			auto v1 = ring.Get(i);
-			auto v2 = ring.Get(i + 1);
-			perimeter += std::sqrt(std::pow(v1.x - v2.x, 2) + std::pow(v1.y - v2.y, 2));
-		}
-	}
-	return perimeter;
-}
-
-static double GeometryPerimeter(const Geometry &geom) {
-	switch (geom.Type()) {
-	case core::GeometryType::POLYGON: {
-		auto &poly = geom.As<Polygon>();
-		return PolygonPerimeter(poly);
-	}
-	case core::GeometryType::MULTIPOLYGON: {
-		auto &mpoly = geom.As<MultiPolygon>();
-		double total_perimeter = 0;
-		for (const auto &poly : mpoly) {
-			total_perimeter += PolygonPerimeter(poly);
-		}
-		return total_perimeter;
-	}
-	case core::GeometryType::GEOMETRYCOLLECTION: {
-		auto &coll = geom.As<GeometryCollection>();
-		double total_perimeter = 0;
-		for (const auto &subgeom : coll) {
-			total_perimeter += GeometryPerimeter(subgeom);
-		}
-		return total_perimeter;
-	}
-	default: {
-		return 0.0;
-	}
-	}
-}
-
 static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = core::GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
 
+    struct op {
+        static double Apply(const Polygon &poly) {
+            double sum = 0;
+            for (const auto &ring : poly) {
+                sum += ring.Length();
+            }
+            return sum;
+        }
+
+        static double Apply(const MultiPolygon &mline) {
+            double sum = 0.0;
+            for (const auto &poly : mline) {
+                sum += Apply(poly);
+            }
+            return sum;
+        }
+
+        static double Apply(const GeometryCollection &collection) {
+            double sum = 0.0;
+            for (const auto &geom : collection) {
+                sum += geom.Visit<op>();
+            }
+            return sum;
+        }
+
+        static double Apply(const BaseGeometry &) {
+            return 0.0;
+        }
+    };
+
 	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		return GeometryPerimeter(geometry);
+		return Geometry::Deserialize(arena, input).Visit<op>();
 	});
 
 	if (count == 1) {

@@ -38,13 +38,14 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 	const auto &info = func_expr.bind_info->Cast<GeometryFromWKTBindData>();
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 
-	WKTReader reader(lstate.factory.allocator);
+	WKTReader reader(arena);
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    input, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
 			    auto geom = reader.Parse(wkt);
-			    return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
+			    return geom.Serialize(result);
 		    } catch (InvalidInputException &error) {
 			    if (!info.ignore_invalid) {
 				    throw;

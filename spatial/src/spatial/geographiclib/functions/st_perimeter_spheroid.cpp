@@ -4,7 +4,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/geographiclib/functions.hpp"
 #include "spatial/geographiclib/module.hpp"
@@ -90,36 +89,9 @@ static double PolygonPerimeter(const Polygon &poly, GeographicLib::PolygonArea &
 	return total_perimeter;
 }
 
-static double GeometryPerimeter(const Geometry &geom, GeographicLib::PolygonArea &comp) {
-	switch (geom.Type()) {
-	case GeometryType::POLYGON: {
-		auto &poly = geom.As<Polygon>();
-		return PolygonPerimeter(poly, comp);
-	}
-	case GeometryType::MULTIPOLYGON: {
-		auto &mpoly = geom.As<MultiPolygon>();
-		double total_perimeter = 0;
-		for (auto &poly : mpoly) {
-			total_perimeter += PolygonPerimeter(poly, comp);
-		}
-		return total_perimeter;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &coll = geom.As<GeometryCollection>();
-		double total_perimeter = 0;
-		for (auto &item : coll) {
-			total_perimeter += GeometryPerimeter(item, comp);
-		}
-		return total_perimeter;
-	}
-	default: {
-		return 0.0;
-	}
-	}
-}
-
 static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
@@ -127,9 +99,34 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, false);
 
+    struct op {
+        static double Apply(const Polygon &poly, GeographicLib::PolygonArea &comp) {
+            return PolygonPerimeter(poly, comp);
+        }
+
+        static double Apply(const MultiPolygon &mpoly, GeographicLib::PolygonArea &comp) {
+            double total_perimeter = 0;
+            for (auto &poly : mpoly) {
+                total_perimeter += PolygonPerimeter(poly, comp);
+            }
+            return total_perimeter;
+        }
+
+        static double Apply(const GeometryCollection &coll, GeographicLib::PolygonArea &comp) {
+            double total_perimeter = 0;
+            for (auto &item : coll) {
+                total_perimeter += item.Visit<op>(comp);
+            }
+            return total_perimeter;
+        }
+
+        static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
+            return 0.0;
+        }
+    };
+
 	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		return GeometryPerimeter(geometry, comp);
+		return Geometry::Deserialize(arena, input).Visit<op>(comp);
 	});
 
 	if (count == 1) {

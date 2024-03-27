@@ -2,6 +2,7 @@
 #include "duckdb/parser/parsed_data/create_aggregate_function_info.hpp"
 
 #include "spatial/common.hpp"
+#include "spatial/core/types.hpp"
 #include "spatial/geos/functions/aggregate.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
 

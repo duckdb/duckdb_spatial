@@ -1,8 +1,6 @@
 #pragma once
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 
 namespace spatial {
 
@@ -26,7 +24,7 @@ private:
 	bool MatchCI(const char *str);
 	void Expect(char c);
 	void ParseVertex(vector<double> &coords);
-	VertexArray ParseVertices();
+    pair<uint32_t, vector<double>> ParseVertices();
 	Point ParsePoint();
 	LineString ParseLineString();
 	Polygon ParsePolygon();

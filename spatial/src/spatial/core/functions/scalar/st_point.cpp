@@ -3,7 +3,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -102,14 +101,13 @@ static void Point4DFunction(DataChunk &args, ExpressionState &state, Vector &res
 //------------------------------------------------------------------------------
 static void PointFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-
+    auto &arena = lstate.arena;
 	auto &x = args.data[0];
 	auto &y = args.data[1];
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, geometry_t>(x, y, result, count, [&](double x, double y) {
-		Point point(lstate.factory.allocator, x, y);
-		return lstate.factory.Serialize(result, point, false, false);
+		return Geometry(Point::FromVertex(arena, VertexXY { x, y })).Serialize(result);
 	});
 }
 

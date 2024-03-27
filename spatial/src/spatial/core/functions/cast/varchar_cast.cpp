@@ -317,13 +317,13 @@ void CoreVectorOperations::GeometryToVarchar(Vector &source, Vector &result, idx
 static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-	WKTReader reader(lstate.factory.allocator);
+	WKTReader reader(lstate.arena);
+
 	bool success = true;
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    source, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
-			    auto geom = reader.Parse(wkt);
-			    return lstate.factory.Serialize(result, geom, reader.GeomHasZ(), reader.GeomHasM());
+			    return reader.Parse(wkt).Serialize(result);
 		    } catch (InvalidInputException &e) {
 			    if (success) {
 				    success = false;

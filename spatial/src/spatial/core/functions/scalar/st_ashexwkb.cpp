@@ -5,8 +5,6 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
-#include "spatial/core/functions/common.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
 

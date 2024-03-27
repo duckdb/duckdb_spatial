@@ -268,13 +268,13 @@ static void Polygon2DFromWKBFunction(DataChunk &args, ExpressionState &state, Ve
 //------------------------------------------------------------------------------
 static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	WKBReader reader(lstate.factory.allocator);
+	WKBReader reader(arena);
 	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
-		auto geometry = reader.Deserialize(input);
-		return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
+		return reader.Deserialize(input).Serialize(result);
 	});
 }
 

@@ -1,9 +1,8 @@
 set(EXTENSION_SOURCES
     ${EXTENSION_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/geometry.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/geometry_factory.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/geometry_serialization.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/geometry_processor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/vertex_vector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wkb_reader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wkb_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wkt_reader.cpp

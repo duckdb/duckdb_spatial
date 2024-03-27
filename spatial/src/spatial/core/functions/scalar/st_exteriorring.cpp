@@ -92,6 +92,7 @@ static void PolygonExteriorRingFunction(DataChunk &args, ExpressionState &state,
 //------------------------------------------------------------------------------
 static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+    auto &arena = lstate.arena;
 	auto &input = args.data[0];
 	auto count = args.size();
 
@@ -101,22 +102,15 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 			    validity.SetInvalid(idx);
 			    return geometry_t {};
 		    }
-		    auto props = input.GetProperties();
-		    auto polygon = lstate.factory.Deserialize(input);
-		    auto &poly = polygon.As<Polygon>();
-		    if (poly.IsEmpty()) {
-			    return lstate.factory.Serialize(result, LineString(props.HasZ(), props.HasM()), props.HasZ(),
-			                                    props.HasM());
+
+		    auto polygon = Geometry::Deserialize(arena, input).As<Polygon>();
+		    if (polygon.IsEmpty()) {
+                LineString empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM());
+                return Geometry(empty).Serialize(result);
 		    }
 
-		    auto &shell = poly[0];
-		    auto num_points = shell.Count();
-
-		    LineString line(lstate.factory.allocator, num_points, props.HasZ(), props.HasM());
-		    for (uint32_t i = 0; i < num_points; i++) {
-			    line.Vertices().Set(i, shell.Get(i));
-		    }
-		    return lstate.factory.Serialize(result, line, props.HasZ(), props.HasM());
+            auto &shell = polygon[0];
+            return Geometry(shell).Serialize(result);
 	    });
 }
 
