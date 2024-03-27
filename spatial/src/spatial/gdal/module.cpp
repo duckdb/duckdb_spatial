@@ -17,7 +17,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	static std::once_flag loaded;
 	std::call_once(loaded, [&]() {
 		// Register all embedded drivers (dont go looking for plugins)
-		OGRRegisterAllInternal();
+		GDALAllRegister();
 
 		// Set GDAL error handler
 
