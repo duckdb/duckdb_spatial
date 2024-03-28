@@ -1,6 +1,8 @@
 #pragma once
 #include "spatial/common.hpp"
 
+class GDALDataset;
+
 namespace spatial {
 
 namespace gdal {
@@ -9,6 +11,12 @@ namespace gdal {
 //! Does not take ownership of the pointer.
 class RasterFactory {
 public:
+
+	//! Given a file path, returns a GDALDataset
+	static GDALDataset *FromFile(const std::string &file_path,
+	                             const std::vector<std::string> &allowed_drivers = std::vector<std::string>(),
+	                             const std::vector<std::string> &open_options = std::vector<std::string>(),
+	                             const std::vector<std::string> &sibling_files = std::vector<std::string>());
 
 	//! Transforms a vector of strings as a vector of const char pointers.
 	static std::vector<char const *> FromVectorOfStrings(const std::vector<std::string> &input);
