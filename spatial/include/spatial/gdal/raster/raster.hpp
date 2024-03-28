@@ -74,6 +74,11 @@ public:
 	static GDALDataset *Warp(GDALDataset *dataset,
 	                         const std::vector<std::string> &options = std::vector<std::string>());
 
+	//! Returns a raster that is clipped by the input geometry
+	static GDALDataset *Clip(GDALDataset *dataset,
+	                         const Geometry &geometry,
+	                         const std::vector<std::string> &options = std::vector<std::string>());
+
 	//! Get the last error message.
 	static string GetLastErrorMsg();
 

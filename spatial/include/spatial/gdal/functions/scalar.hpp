@@ -23,6 +23,7 @@ public:
 		RegisterStRasterFromFile(db);
 		RegisterStRasterAsFile(db);
 		RegisterStRasterWarp(db);
+		RegisterStRasterClip(db);
 	}
 
 private:
@@ -73,6 +74,9 @@ private:
 
 	// ST_RasterWarp
 	static void RegisterStRasterWarp(DatabaseInstance &db);
+
+	// ST_RasterClip
+	static void RegisterStRasterClip(DatabaseInstance &db);
 };
 
 } // namespace gdal
