@@ -22,6 +22,7 @@ public:
 		RegisterStGetValue(db);
 		RegisterStRasterFromFile(db);
 		RegisterStRasterAsFile(db);
+		RegisterStRasterWarp(db);
 	}
 
 private:
@@ -69,6 +70,9 @@ private:
 
 	// ST_RasterAsFile
 	static void RegisterStRasterAsFile(DatabaseInstance &db);
+
+	// ST_RasterWarp
+	static void RegisterStRasterWarp(DatabaseInstance &db);
 };
 
 } // namespace gdal

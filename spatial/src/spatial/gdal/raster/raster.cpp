@@ -1,3 +1,4 @@
+#include "duckdb/common/types/uuid.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/gdal/types.hpp"
 #include "spatial/gdal/raster/raster.hpp"
@@ -182,6 +183,43 @@ GDALDataset *Raster::BuildVRT(const std::vector<GDALDataset *> &datasets,
 			nullptr, psOptions, nullptr)));
 
 	GDALBuildVRTOptionsFree(psOptions);
+
+	if (result.get() != nullptr) {
+		result->FlushCache();
+	}
+	return result.release();
+}
+
+GDALDataset *Raster::Warp(GDALDataset *dataset,
+                          const std::vector<std::string> &options) {
+
+	GDALDatasetH hDataset = GDALDataset::ToHandle(dataset);
+
+	auto driver = GetGDALDriverManager()->GetDriverByName("MEM");
+	if (!driver) {
+		throw InvalidInputException("Unknown driver 'MEM'");
+	}
+
+	char** papszArgv = nullptr;
+	papszArgv = CSLAddString(papszArgv, "-of");
+	papszArgv = CSLAddString(papszArgv, "MEM");
+
+	for (auto it = options.begin(); it != options.end(); ++it) {
+		papszArgv = CSLAddString(papszArgv, (*it).c_str());
+	}
+
+	CPLErrorReset();
+
+	GDALWarpAppOptions *psOptions = GDALWarpAppOptionsNew(papszArgv, nullptr);
+	CSLDestroy(papszArgv);
+
+	auto ds_name = UUID::ToString(UUID::GenerateRandomUUID());
+
+	auto result =
+		GDALDatasetUniquePtr(GDALDataset::FromHandle(
+			GDALWarp(ds_name.c_str(), nullptr, 1, &hDataset, psOptions, nullptr)));
+
+	GDALWarpAppOptionsFree(psOptions);
 
 	if (result.get() != nullptr) {
 		result->FlushCache();

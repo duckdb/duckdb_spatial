@@ -70,6 +70,10 @@ public:
 	static GDALDataset *BuildVRT(const std::vector<GDALDataset *> &datasets,
 	                             const std::vector<std::string> &options = std::vector<std::string>());
 
+	//! Performs mosaicing, reprojection and/or warping on a raster
+	static GDALDataset *Warp(GDALDataset *dataset,
+	                         const std::vector<std::string> &options = std::vector<std::string>());
+
 	//! Get the last error message.
 	static string GetLastErrorMsg();
 

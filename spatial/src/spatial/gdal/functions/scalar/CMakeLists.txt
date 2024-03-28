@@ -9,6 +9,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_from_file.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_geometry.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_to_world_coord.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_warp.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_srid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_value.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_world_to_raster_coord.cpp
