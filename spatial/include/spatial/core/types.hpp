@@ -16,6 +16,7 @@ struct GeoTypes {
 	static LogicalType WKB_BLOB();
 
 	static LogicalType RASTER();
+	static LogicalType RASTER_COORD();
 
 	static void Register(DatabaseInstance &db);
 

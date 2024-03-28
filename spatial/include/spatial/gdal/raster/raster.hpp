@@ -2,6 +2,7 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/gdal/types.hpp"
 
 class GDALDataset;
 
@@ -42,10 +43,25 @@ public:
 	//! Gets the geometric transform matrix (double[6]) of the raster
 	bool GetGeoTransform(double *matrix) const;
 
+	//! Gets the inverse geometric transform matrix (double[6]) of the raster
+	bool GetInvGeoTransform(double *inv_matrix) const;
+
 	//! Returns the polygon representation of the extent of the raster
 	Polygon GetGeometry(GeometryFactory &factory) const;
 
+	//! Returns the geometric X and Y (longitude and latitude) given a column and row
+	bool RasterToWorldCoord(PointXY &point, int32_t col, int32_t row) const;
+
+	//! Returns the upper left corner as column and row given geometric X and Y
+	bool WorldToRasterCoord(RasterCoord &coord, double x, double y) const;
+
 public:
+
+	//! Returns the geometric X and Y (longitude and latitude) given a column and row
+	static bool RasterToWorldCoord(PointXY &point, double matrix[], int32_t col, int32_t row);
+
+	//! Returns the upper left corner as column and row given geometric X and Y
+	static bool WorldToRasterCoord(RasterCoord &coord, double inv_matrix[], double x, double y);
 
 	//! Get the last error message.
 	static string GetLastErrorMsg();

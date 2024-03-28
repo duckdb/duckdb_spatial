@@ -1,7 +1,9 @@
 #include "spatial/core/types.hpp"
+#include "spatial/gdal/types.hpp"
 #include "spatial/gdal/raster/raster.hpp"
 
 #include "gdal_priv.h"
+#include <float.h> /* for FLT_EPSILON */
 
 using namespace spatial::core;
 
@@ -60,6 +62,16 @@ bool Raster::GetGeoTransform(double *matrix) const {
 	return true;
 }
 
+bool Raster::GetInvGeoTransform(double *inv_matrix) const {
+	double gt[6] = {0};
+	GetGeoTransform(gt);
+
+	if (!GDALInvGeoTransform(gt, inv_matrix)) {
+		return false;
+	}
+	return true;
+}
+
 static VertexXY rasterToWorldVertex(double matrix[], int32_t col, int32_t row) {
 	double xgeo = matrix[0] + matrix[1] * col + matrix[2] * row;
 	double ygeo = matrix[3] + matrix[4] * col + matrix[5] * row;
@@ -83,6 +95,57 @@ Polygon Raster::GetGeometry(GeometryFactory &factory) const {
 	ring.Set(4, rasterToWorldVertex(gt, 0, 0));
 
 	return polygon;
+}
+
+bool Raster::RasterToWorldCoord(PointXY &point, int32_t col, int32_t row) const {
+	double gt[6] = {0};
+	GetGeoTransform(gt);
+	return Raster::RasterToWorldCoord(point, gt, col, row);
+}
+
+bool Raster::RasterToWorldCoord(PointXY &point, double matrix[], int32_t col, int32_t row) {
+	point.x = matrix[0] + matrix[1] * col + matrix[2] * row;
+	point.y = matrix[3] + matrix[4] * col + matrix[5] * row;
+	return true;
+}
+
+bool Raster::WorldToRasterCoord(RasterCoord &coord, double x, double y) const {
+	double inv_gt[6] = {0};
+
+	if (GetInvGeoTransform(inv_gt)) {
+		return Raster::WorldToRasterCoord(coord, inv_gt, x, y);
+	}
+	return false;
+}
+
+bool Raster::WorldToRasterCoord(RasterCoord &coord, double inv_matrix[], double x, double y) {
+	double xr = 0, yr = 0;
+	GDALApplyGeoTransform(inv_matrix, x, y, &xr, &yr);
+
+	// Source:
+	// https://github.com/postgis/postgis/blob/stable-3.4/raster/rt_core/rt_raster.c#L808
+	double rnd = 0;
+
+	// Helper macro for symmetrical rounding
+	#define ROUND(x, y) (((x > 0.0) ? floor((x * pow(10, y) + 0.5)) : ceil((x * pow(10, y) - 0.5))) / pow(10, y))
+	// Helper macro for consistent floating point equality checks
+	#define FLT_EQ(x, y) ((x == y) || (isnan(x) && isnan(y)) || (fabs(x - y) <= FLT_EPSILON))
+
+	rnd = ROUND(xr, 0);
+	if (FLT_EQ(rnd, xr))
+		xr = rnd;
+	else
+		xr = floor(xr);
+
+	rnd = ROUND(yr, 0);
+	if (FLT_EQ(rnd, yr))
+		yr = rnd;
+	else
+		yr = floor(yr);
+
+	coord.col = (int32_t)xr;
+	coord.row = (int32_t)yr;
+	return true;
 }
 
 string Raster::GetLastErrorMsg() {

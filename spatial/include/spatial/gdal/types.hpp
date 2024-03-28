@@ -54,6 +54,14 @@ typedef enum
 //! Returns the name of given ColorInterp
 std::string GetColorInterpName(const ColorInterp& color_interp);
 
+//! Position of a cell in a Raster (upper left corner as column and row)
+struct RasterCoord {
+	int32_t col;
+	int32_t row;
+	explicit RasterCoord(int32_t col, int32_t row) : col(col), row(row) {
+	}
+};
+
 } // namespace gdal
 
 } // namespace spatial

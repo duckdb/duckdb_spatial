@@ -70,6 +70,12 @@ LogicalType GeoTypes::RASTER() {
 	return type;
 }
 
+LogicalType GeoTypes::RASTER_COORD() {
+	auto type = LogicalType::STRUCT({{"col", LogicalType::INTEGER}, {"row", LogicalType::INTEGER}});
+	type.SetAlias("RASTER_COORD");
+	return type;
+}
+
 LogicalType GeoTypes::CreateEnumType(const string &name, const vector<string> &members) {
 	auto varchar_vector = Vector(LogicalType::VARCHAR, members.size());
 	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
