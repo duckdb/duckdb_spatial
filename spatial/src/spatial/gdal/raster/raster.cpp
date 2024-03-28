@@ -1,6 +1,9 @@
+#include "spatial/core/types.hpp"
 #include "spatial/gdal/raster/raster.hpp"
 
 #include "gdal_priv.h"
+
+using namespace spatial::core;
 
 namespace spatial {
 
@@ -55,6 +58,31 @@ bool Raster::GetGeoTransform(double *matrix) const {
 		return false;
 	}
 	return true;
+}
+
+static VertexXY rasterToWorldVertex(double matrix[], int32_t col, int32_t row) {
+	double xgeo = matrix[0] + matrix[1] * col + matrix[2] * row;
+	double ygeo = matrix[3] + matrix[4] * col + matrix[5] * row;
+	return VertexXY {xgeo, ygeo};
+}
+
+Polygon Raster::GetGeometry(GeometryFactory &factory) const {
+	auto cols = dataset_->GetRasterXSize();
+	auto rows = dataset_->GetRasterYSize();
+
+	double gt[6] = {0};
+	GetGeoTransform(gt);
+
+	Polygon polygon(factory.allocator, 1, false, false);
+	auto &ring = polygon[0];
+	ring.Resize(factory.allocator, 5); // 4 vertices + 1 for closing the polygon
+	ring.Set(0, rasterToWorldVertex(gt, 0, 0));
+	ring.Set(1, rasterToWorldVertex(gt, cols, 0));
+	ring.Set(2, rasterToWorldVertex(gt, cols, rows));
+	ring.Set(3, rasterToWorldVertex(gt, 0, rows));
+	ring.Set(4, rasterToWorldVertex(gt, 0, 0));
+
+	return polygon;
 }
 
 string Raster::GetLastErrorMsg() {

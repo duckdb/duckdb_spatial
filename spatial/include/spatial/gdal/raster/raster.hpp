@@ -1,7 +1,11 @@
 #pragma once
 #include "spatial/common.hpp"
+#include "spatial/core/geometry/geometry.hpp"
+#include "spatial/core/geometry/geometry_factory.hpp"
 
 class GDALDataset;
+
+using namespace spatial::core;
 
 namespace spatial {
 
@@ -37,6 +41,9 @@ public:
 
 	//! Gets the geometric transform matrix (double[6]) of the raster
 	bool GetGeoTransform(double *matrix) const;
+
+	//! Returns the polygon representation of the extent of the raster
+	Polygon GetGeometry(GeometryFactory &factory) const;
 
 public:
 

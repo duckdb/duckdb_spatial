@@ -27,6 +27,20 @@ static bool RasterToVarcharCast(Vector &source, Vector &result, idx_t count, Cas
 }
 
 //------------------------------------------------------------------------------
+// RASTER -> GEOMETRY
+//------------------------------------------------------------------------------
+
+static bool RasterToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+    auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+
+    UnaryExecutor::Execute<uintptr_t, geometry_t>(source, result, count, [&](uintptr_t &input) {
+        Raster raster(reinterpret_cast<GDALDataset *>(input));
+        return lstate.factory.Serialize(result, raster.GetGeometry(lstate.factory), false, false);
+    });
+    return true;
+}
+
+//------------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------------
 
@@ -34,6 +48,10 @@ void GdalCastFunctions::Register(DatabaseInstance &db) {
 
     ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), LogicalType::VARCHAR,
                                         RasterToVarcharCast, 1);
+
+    ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), GeoTypes::GEOMETRY(),
+                                        BoundCastInfo(RasterToGeometryCast, nullptr,
+                                        GeometryFunctionLocalState::InitCast), 1);
 
     // POINTER -> RASTER is implicitly castable
     ExtensionUtil::RegisterCastFunction(db, LogicalType::POINTER, GeoTypes::RASTER(),
