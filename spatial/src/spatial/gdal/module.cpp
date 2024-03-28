@@ -73,6 +73,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	GdalCastFunctions::Register(db);
 	GdalScalarFunctions::Register(db);
 	GdalAggregateFunctions::Register(db);
+	GdalRasterCopyFunction::Register(db);
 }
 
 } // namespace gdal

@@ -9,5 +9,6 @@ set(EXTENSION_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/st_read_raster.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/st_read_raster_meta.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/st_write.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/st_write_raster.cpp
         PARENT_SCOPE
         )
