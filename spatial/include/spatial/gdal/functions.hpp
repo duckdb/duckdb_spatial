@@ -76,6 +76,10 @@ struct GdalMetadataFunction {
 	static void Register(DatabaseInstance &db);
 };
 
+struct GdalRasterMetadataFunction {
+	static void Register(DatabaseInstance &db);
+};
+
 } // namespace gdal
 
 } // namespace spatial

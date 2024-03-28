@@ -64,6 +64,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	// Register functions
 	GdalTableFunction::Register(db);
 	GdalRasterTableFunction::Register(db);
+	GdalRasterMetadataFunction::Register(db);
 	GdalDriversTableFunction::Register(db);
 	GdalCopyFunction::Register(db);
 	GdalMetadataFunction::Register(db);
