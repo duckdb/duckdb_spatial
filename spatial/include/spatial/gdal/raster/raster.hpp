@@ -66,6 +66,10 @@ public:
 	//! Returns the upper left corner as column and row given geometric X and Y
 	static bool WorldToRasterCoord(RasterCoord &coord, double inv_matrix[], double x, double y);
 
+	//! Builds a VRT from a list of Rasters
+	static GDALDataset *BuildVRT(const std::vector<GDALDataset *> &datasets,
+	                             const std::vector<std::string> &options = std::vector<std::string>());
+
 	//! Get the last error message.
 	static string GetLastErrorMsg();
 

@@ -1,3 +1,4 @@
+add_subdirectory(aggregate)
 add_subdirectory(scalar)
 set(EXTENSION_SOURCES
         ${EXTENSION_SOURCES}

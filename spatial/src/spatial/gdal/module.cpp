@@ -1,5 +1,6 @@
 #include "spatial/gdal/module.hpp"
 #include "spatial/gdal/functions.hpp"
+#include "spatial/gdal/functions/aggregate.hpp"
 #include "spatial/gdal/functions/cast.hpp"
 #include "spatial/gdal/functions/scalar.hpp"
 #include "spatial/gdal/file_handler.hpp"
@@ -71,6 +72,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	GdalMetadataFunction::Register(db);
 	GdalCastFunctions::Register(db);
 	GdalScalarFunctions::Register(db);
+	GdalAggregateFunctions::Register(db);
 }
 
 } // namespace gdal

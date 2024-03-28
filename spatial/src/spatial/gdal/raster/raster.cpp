@@ -3,6 +3,8 @@
 #include "spatial/gdal/raster/raster.hpp"
 
 #include "gdal_priv.h"
+#include "gdal_utils.h"
+#include "gdalwarper.h"
 #include <float.h> /* for FLT_EPSILON */
 
 using namespace spatial::core;
@@ -158,6 +160,33 @@ bool Raster::GetValue(double &value, int32_t band_num, int32_t col, int32_t row)
 		return true;
 	}
 	return false;
+}
+
+GDALDataset *Raster::BuildVRT(const std::vector<GDALDataset *> &datasets,
+                              const std::vector<std::string> &options) {
+
+	char** papszArgv = nullptr;
+
+	for (auto it = options.begin(); it != options.end(); ++it) {
+		papszArgv = CSLAddString(papszArgv, (*it).c_str());
+	}
+
+	CPLErrorReset();
+
+	GDALBuildVRTOptions* psOptions = GDALBuildVRTOptionsNew(papszArgv, nullptr);
+	CSLDestroy(papszArgv);
+
+	auto result =
+		GDALDatasetUniquePtr(GDALDataset::FromHandle(
+			GDALBuildVRT(nullptr, datasets.size(), (GDALDatasetH *)&datasets[0],
+			nullptr, psOptions, nullptr)));
+
+	GDALBuildVRTOptionsFree(psOptions);
+
+	if (result.get() != nullptr) {
+		result->FlushCache();
+	}
+	return result.release();
 }
 
 string Raster::GetLastErrorMsg() {
