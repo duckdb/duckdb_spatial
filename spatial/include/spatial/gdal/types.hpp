@@ -54,6 +54,28 @@ typedef enum
 //! Returns the name of given ColorInterp
 std::string GetColorInterpName(const ColorInterp& color_interp);
 
+//! Supported Warp Resampling Algorithm (GDALResampleAlg).
+typedef enum
+{
+	NearestNeighbour = 0, /**< Nearest neighbour (select on one input pixel) */
+	Bilinear = 1,         /**< Bilinear (2x2 kernel) */
+	Cubic = 2,            /**< Cubic Convolution Approximation (4x4 kernel) */
+	CubicSpline = 3,      /**< Cubic B-Spline Approximation (4x4 kernel) */
+	Lanczos = 4,          /**< Lanczos windowed sinc interpolation (6x6 kernel) */
+	Average = 5,          /**< Average (computes the weighted average of all non-NODATA contributing pixels) */
+	Mode = 6,             /**< Mode (selects the value which appears most often of all the sampled points) */
+	Max = 8,              /**< Max (selects maximum of all non-NODATA contributing pixels) */
+ 	Min = 9,              /**< Min (selects minimum of all non-NODATA contributing pixels) */
+	Med = 10,             /**< Med (selects median of all non-NODATA contributing pixels) */
+	Q1 = 11,              /**< Q1 (selects first quartile of all non-NODATA contributing pixels) */
+	Q3 = 12,              /**< Q3 (selects third quartile of all non-NODATA contributing pixels) */
+	Sum = 13,             /**< Sum (weighed sum of all non-NODATA contributing pixels) */
+	RMS = 14,             /**< RMS (weighted root mean square (quadratic mean) of all non-NODATA contributing pixels) */
+} ResampleAlg;
+
+//! Returns the name of given ResampleAlg
+std::string GetResampleAlgName(const ResampleAlg& resample_alg);
+
 //! Position of a cell in a Raster (upper left corner as column and row)
 struct RasterCoord {
 	int32_t col;
