@@ -148,6 +148,18 @@ bool Raster::WorldToRasterCoord(RasterCoord &coord, double inv_matrix[], double 
 	return true;
 }
 
+bool Raster::GetValue(double &value, int32_t band_num, int32_t col, int32_t row) const {
+
+	GDALRasterBand *raster_band = dataset_->GetRasterBand(band_num);
+	double pixel_value = raster_band->GetNoDataValue();
+
+	if (raster_band->RasterIO(GF_Read, col, row, 1, 1, &pixel_value, 1, 1, GDT_Float64, 0, 0) == CE_None) {
+		value = pixel_value;
+		return true;
+	}
+	return false;
+}
+
 string Raster::GetLastErrorMsg() {
 	return string(CPLGetLastErrorMsg());
 }

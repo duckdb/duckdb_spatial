@@ -19,6 +19,7 @@ public:
 		RegisterStBandColorInterpName(db);
 		RegisterStRasterToWorldCoord(db);
 		RegisterStWorldToRasterCoord(db);
+		RegisterStGetValue(db);
 	}
 
 private:
@@ -57,6 +58,9 @@ private:
 
 	// ST_WorldToRasterCoord[XY]
 	static void RegisterStWorldToRasterCoord(DatabaseInstance &db);
+
+	// ST_Value
+	static void RegisterStGetValue(DatabaseInstance &db);
 };
 
 } // namespace gdal

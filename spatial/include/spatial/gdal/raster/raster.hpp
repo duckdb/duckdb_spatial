@@ -55,6 +55,9 @@ public:
 	//! Returns the upper left corner as column and row given geometric X and Y
 	bool WorldToRasterCoord(RasterCoord &coord, double x, double y) const;
 
+	//! Returns the value of a given band in a given col and row pixel
+	bool GetValue(double &value, int32_t band_num, int32_t col, int32_t row) const;
+
 public:
 
 	//! Returns the geometric X and Y (longitude and latitude) given a column and row
