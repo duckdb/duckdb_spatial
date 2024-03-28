@@ -1,5 +1,6 @@
 #include "spatial/gdal/module.hpp"
 #include "spatial/gdal/functions.hpp"
+#include "spatial/gdal/functions/cast.hpp"
 #include "spatial/gdal/file_handler.hpp"
 #include "spatial/common.hpp"
 
@@ -62,9 +63,11 @@ void GdalModule::Register(DatabaseInstance &db) {
 
 	// Register functions
 	GdalTableFunction::Register(db);
+	GdalRasterTableFunction::Register(db);
 	GdalDriversTableFunction::Register(db);
 	GdalCopyFunction::Register(db);
 	GdalMetadataFunction::Register(db);
+	GdalCastFunctions::Register(db);
 }
 
 } // namespace gdal

@@ -64,6 +64,12 @@ LogicalType GeoTypes::WKB_BLOB() {
 	return blob_type;
 }
 
+LogicalType GeoTypes::RASTER() {
+	auto type = LogicalType(LogicalTypeId::POINTER);
+	type.SetAlias("RASTER");
+	return type;
+}
+
 LogicalType GeoTypes::CreateEnumType(const string &name, const vector<string> &members) {
 	auto varchar_vector = Vector(LogicalType::VARCHAR, members.size());
 	auto varchar_data = FlatVector::GetData<string_t>(varchar_vector);
@@ -101,6 +107,9 @@ void GeoTypes::Register(DatabaseInstance &db) {
 
 	// WKB_BLOB
 	ExtensionUtil::RegisterType(db, "WKB_BLOB", GeoTypes::WKB_BLOB());
+
+	// RASTER
+	ExtensionUtil::RegisterType(db, "RASTER", GeoTypes::RASTER());
 }
 
 } // namespace core

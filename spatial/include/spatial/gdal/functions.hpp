@@ -33,6 +33,22 @@ public:
 	static void Register(DatabaseInstance &db);
 };
 
+struct GdalRasterTableFunction {
+private:
+	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
+	                                     vector<LogicalType> &return_types, vector<string> &names);
+
+	static void Execute(ClientContext &context, TableFunctionInput &input, DataChunk &output);
+
+	static unique_ptr<NodeStatistics> Cardinality(ClientContext &context, const FunctionData *data);
+
+	static unique_ptr<TableRef> ReplacementScan(ClientContext &context, const string &table_name,
+	                                            ReplacementScanData *data);
+
+public:
+	static void Register(DatabaseInstance &db);
+};
+
 struct GdalDriversTableFunction {
 
 	struct BindData : public TableFunctionData {
