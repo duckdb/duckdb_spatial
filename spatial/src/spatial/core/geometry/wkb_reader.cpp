@@ -79,7 +79,7 @@ Point WKBReader::ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool 
 		}
 	}
 	if (all_nan) {
-		return Point(has_z, has_m);
+		return Point::Empty(has_z, has_m);
 	} else {
 		return Point::CopyFromData(arena, data_ptr_cast(coords), 1, has_z, has_m);
 	}
@@ -113,14 +113,14 @@ void WKBReader::ReadVertices(Cursor &cursor, bool little_endian, bool has_z, boo
 
 LineString WKBReader::ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m) {
 	auto count = ReadInt(cursor, little_endian);
-	LineString vertices(arena, count, has_z, has_m);
+	auto vertices = LineString::Create(arena, count, has_z, has_m);
 	ReadVertices(cursor, little_endian, has_z, has_m, vertices);
 	return vertices;
 }
 
 Polygon WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m) {
 	auto ring_count = ReadInt(cursor, little_endian);
-	Polygon polygon(arena, ring_count, has_z, has_m);
+	auto polygon = Polygon::Create(arena, ring_count, has_z, has_m);
 	for (uint32_t i = 0; i < ring_count; i++) {
 		auto point_count = ReadInt(cursor, little_endian);
 		polygon[i].Resize(arena, point_count);
@@ -131,7 +131,7 @@ Polygon WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, b
 
 MultiPoint WKBReader::ReadMultiPoint(Cursor &cursor, bool little_endian) {
 	uint32_t count = ReadInt(cursor, little_endian);
-	MultiPoint multi_point(arena, count, false, false);
+	auto multi_point = MultiPoint::Create(arena, count, false, false);
 	for (uint32_t i = 0; i < count; i++) {
 		bool point_order = cursor.Read<uint8_t>();
 		auto point_type = ReadType(cursor, point_order);
@@ -142,7 +142,7 @@ MultiPoint WKBReader::ReadMultiPoint(Cursor &cursor, bool little_endian) {
 
 MultiLineString WKBReader::ReadMultiLineString(Cursor &cursor, bool little_endian) {
 	uint32_t count = ReadInt(cursor, little_endian);
-	MultiLineString multi_line_string(arena, count, false, false);
+    auto multi_line_string = MultiLineString::Create(arena, count, false, false);
 	for (uint32_t i = 0; i < count; i++) {
 		bool line_order = cursor.Read<uint8_t>();
 		auto line_type = ReadType(cursor, line_order);
@@ -153,7 +153,7 @@ MultiLineString WKBReader::ReadMultiLineString(Cursor &cursor, bool little_endia
 
 MultiPolygon WKBReader::ReadMultiPolygon(Cursor &cursor, bool little_endian) {
 	uint32_t count = ReadInt(cursor, little_endian);
-	MultiPolygon multi_polygon(arena, count, false, false);
+	auto multi_polygon = MultiPolygon::Create(arena, count, false, false);
 	for (uint32_t i = 0; i < count; i++) {
 		bool polygon_order = cursor.Read<uint8_t>();
 		auto polygon_type = ReadType(cursor, polygon_order);
@@ -164,7 +164,7 @@ MultiPolygon WKBReader::ReadMultiPolygon(Cursor &cursor, bool little_endian) {
 
 GeometryCollection WKBReader::ReadGeometryCollection(Cursor &cursor, bool byte_order) {
 	uint32_t count = ReadInt(cursor, byte_order);
-	GeometryCollection geometry_collection(arena, count, false, false);
+	auto geometry_collection = GeometryCollection::Create(arena, count, false, false);
 	for (uint32_t i = 0; i < count; i++) {
 		geometry_collection[i] = ReadGeometry(cursor);
 	}

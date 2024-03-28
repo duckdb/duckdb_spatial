@@ -22,7 +22,7 @@ class Geometry;
 
 class BaseGeometry {
 	friend class Geometry;
-
+    friend class Wrap;
 protected:
 	GeometryType type;
 	GeometryProperties properties;
@@ -272,25 +272,32 @@ public:
 // These are the actual Geometry types that are instantiated and used in practice
 
 class Point : public SinglePartGeometry {
+protected:
+    friend class TypedCollectionGeometry<Point>;
+    friend class GeometryCollection;
+
+    Point(bool has_z = false, bool has_m = false) : SinglePartGeometry(TYPE, has_z, has_m) {
+    }
+    Point(ArenaAllocator &alloc, uint32_t size, bool has_z, bool has_m) : SinglePartGeometry(TYPE, alloc, size, has_z, has_m) {
+    }
+
 public:
 	static constexpr GeometryType TYPE = GeometryType::POINT;
 
-	Point(bool has_z = false, bool has_m = false) : SinglePartGeometry(TYPE, has_z, has_m) {
-	}
-	Point(ArenaAllocator &alloc, bool has_z, bool has_m) : SinglePartGeometry(TYPE, alloc, 1, has_z, has_m) {
-	}
+    static Point Empty(bool has_z = false, bool has_m = false) { return Point(has_z, has_m); }
+    static Point Create(ArenaAllocator &alloc, uint32_t size, bool has_z, bool has_m) { return Point(alloc, size, has_z, has_m); }
 
 	// Helpers
 	template <class V>
 	static Point FromVertex(ArenaAllocator &alloc, const V &vertex) {
 		static_assert(V::IS_VERTEX, "V must be a vertex type");
-		Point point(alloc, V::HAS_Z, V::HAS_M);
+		auto point = Point::Create(alloc, 1, V::HAS_Z, V::HAS_M);
 		point.SetExact(0, vertex);
 		return point;
 	}
 
 	static Point CopyFromData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z, bool has_m) {
-		Point point(alloc, has_z, has_m);
+		auto point = Point::Create(alloc, 1, has_z, has_m);
 		point.CopyData(alloc, data, 1);
 		return point;
 	}
@@ -303,14 +310,21 @@ public:
 };
 
 class LineString : public SinglePartGeometry {
+protected:
+    friend class TypedCollectionGeometry<LineString>;
+    friend class Polygon;
+
+    LineString(bool has_z = false, bool has_m = false) : SinglePartGeometry(TYPE, has_z, has_m) {
+    }
+    LineString(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
+            : SinglePartGeometry(TYPE, alloc, count, has_z, has_m) {
+    }
+
 public:
 	static constexpr GeometryType TYPE = GeometryType::LINESTRING;
 
-	LineString(bool has_z = false, bool has_m = false) : SinglePartGeometry(TYPE, has_z, has_m) {
-	}
-	LineString(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : SinglePartGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
+    static LineString Empty(bool has_z = false, bool has_m = false) { return LineString(has_z, has_m); }
+    static LineString Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) { return LineString(alloc, count, has_z, has_m); }
 
 	static LineString CopyFromData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z,
 	                               bool has_m) {
@@ -321,12 +335,18 @@ public:
 };
 
 class Polygon : public MultiPartGeometry {
+protected:
+    friend class TypedCollectionGeometry<Polygon>;
+
+    Polygon(bool has_z = false, bool has_m = false) : MultiPartGeometry(TYPE, has_z, has_m) {
+    }
+    Polygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+
 public:
 	static constexpr GeometryType TYPE = GeometryType::POLYGON;
 
-	Polygon(bool has_z = false, bool has_m = false) : MultiPartGeometry(TYPE, has_z, has_m) {
-	}
-	Polygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+    static Polygon Empty(bool has_z = false, bool has_m = false) { return Polygon(has_z, has_m); }
+    static Polygon Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) { return Polygon(alloc, count, has_z, has_m); }
 
 	LineString &operator[](uint32_t index);
 	LineString *begin();
@@ -351,45 +371,61 @@ public:
 };
 
 class MultiPoint : public TypedCollectionGeometry<Point> {
+protected:
+
+    MultiPoint(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
+    }
+    MultiPoint(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
+            : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
+    }
+
 public:
 	static constexpr GeometryType TYPE = GeometryType::MULTIPOINT;
 
-	MultiPoint(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
-	}
-	MultiPoint(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
+    static MultiPoint Empty(bool has_z = false, bool has_m = false) { return MultiPoint(has_z, has_m); }
+    static MultiPoint Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) { return MultiPoint(alloc, count, has_z, has_m); }
 };
 
 class MultiLineString : public TypedCollectionGeometry<LineString> {
+protected:
+    MultiLineString(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
+    }
+    MultiLineString(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
+            : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
+    }
 public:
 	static constexpr GeometryType TYPE = GeometryType::MULTILINESTRING;
 
-	MultiLineString(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
-	}
-	MultiLineString(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
+    static MultiLineString Empty(bool has_z = false, bool has_m = false) { return MultiLineString(has_z, has_m); }
+    static MultiLineString Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) { return MultiLineString(alloc, count, has_z, has_m); }
 };
 
 class MultiPolygon : public TypedCollectionGeometry<Polygon> {
+protected:
+
+    MultiPolygon(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
+    }
+    MultiPolygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
+            : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
+    }
+
 public:
 	static constexpr GeometryType TYPE = GeometryType::MULTIPOLYGON;
 
-	MultiPolygon(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
-	}
-	MultiPolygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
+    static MultiPolygon Empty(bool has_z = false, bool has_m = false) { return MultiPolygon(has_z, has_m); }
+    static MultiPolygon Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) { return MultiPolygon(alloc, count, has_z, has_m); }
 };
 
 class GeometryCollection : public CollectionGeometry {
+protected:
+    GeometryCollection(bool has_z = false, bool has_m = false) : CollectionGeometry(TYPE, has_z, has_m) {
+    }
+    GeometryCollection(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
 public:
 	static constexpr GeometryType TYPE = GeometryType::GEOMETRYCOLLECTION;
 
-	GeometryCollection(bool has_z = false, bool has_m = false) : CollectionGeometry(TYPE, has_z, has_m) {
-	}
-	GeometryCollection(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+    static GeometryCollection Empty(bool has_z = false, bool has_m = false) { return GeometryCollection(has_z, has_m); }
+    static GeometryCollection Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) { return GeometryCollection(alloc, count, has_z, has_m); }
 };
 
 class Geometry {

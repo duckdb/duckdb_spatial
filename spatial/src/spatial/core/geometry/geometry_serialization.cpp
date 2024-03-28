@@ -315,7 +315,7 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	ArenaAllocator &allocator;
 
 	Geometry ProcessPoint(const VertexData &vertices) override {
-		Point point(HasZ(), HasM());
+		auto point = Point::Empty(HasZ(), HasM());
 		if (!vertices.IsEmpty()) {
 			point.ReferenceData(vertices.data[0], vertices.count);
 		}
@@ -323,7 +323,7 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	}
 
 	Geometry ProcessLineString(const VertexData &vertices) override {
-		LineString line_string(allocator, vertices.count, HasZ(), HasM());
+		auto line_string = LineString::Create(allocator, vertices.count, HasZ(), HasM());
 		if (!vertices.IsEmpty()) {
 			line_string.ReferenceData(vertices.data[0], vertices.count);
 		}
@@ -331,7 +331,7 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	}
 
 	Geometry ProcessPolygon(PolygonState &state) override {
-		Polygon polygon(allocator, state.RingCount(), HasZ(), HasM());
+		auto polygon = Polygon::Create(allocator, state.RingCount(), HasZ(), HasM());
 		for (auto i = 0; i < state.RingCount(); i++) {
 			auto vertices = state.Next();
 			if (!vertices.IsEmpty()) {
@@ -344,28 +344,28 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	Geometry ProcessCollection(CollectionState &state) override {
 		switch (CurrentType()) {
 		case GeometryType::MULTIPOINT: {
-			MultiPoint multi_point(allocator, state.ItemCount(), HasZ(), HasM());
+			auto multi_point = MultiPoint::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
 				multi_point[i] = state.Next().As<Point>();
 			}
 			return multi_point;
 		}
 		case GeometryType::MULTILINESTRING: {
-			MultiLineString multi_line_string(allocator, state.ItemCount(), HasZ(), HasM());
+			auto multi_line_string = MultiLineString::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
 				multi_line_string[i] = state.Next().As<LineString>();
 			}
 			return multi_line_string;
 		}
 		case GeometryType::MULTIPOLYGON: {
-			MultiPolygon multi_polygon(allocator, state.ItemCount(), HasZ(), HasM());
+            auto multi_polygon = MultiPolygon::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
 				multi_polygon[i] = state.Next().As<Polygon>();
 			}
 			return multi_polygon;
 		}
 		case GeometryType::GEOMETRYCOLLECTION: {
-			GeometryCollection collection(allocator, state.ItemCount(), HasZ(), HasM());
+			auto collection = GeometryCollection::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
 				collection[i] = state.Next();
 			}

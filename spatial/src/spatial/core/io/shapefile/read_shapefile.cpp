@@ -216,14 +216,14 @@ struct ConvertLineString {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
 		if (shape->nParts == 1) {
 			// Single LineString
-			LineString line(arena, shape->nVertices, false, false);
+			auto line = LineString::Create(arena, shape->nVertices, false, false);
 			for (int i = 0; i < shape->nVertices; i++) {
 				line.SetExact(i, VertexXY {shape->padfX[i], shape->padfY[i]});
 			}
 			return line;
 		} else {
 			// MultiLineString
-			MultiLineString multi_line_string(arena, shape->nParts, false, false);
+            auto multi_line_string = MultiLineString::Create(arena, shape->nParts, false, false);
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
@@ -262,7 +262,7 @@ struct ConvertPolygon {
 			// Single polygon, every part is an interior ring
 			// Even if the polygon is counter-clockwise (which should not happen for shapefiles).
 			// we still fall back and convert it to a single polygon.
-			Polygon polygon(arena, shape->nParts, false, false);
+			auto polygon = Polygon::Create(arena, shape->nParts, false, false);
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
@@ -278,13 +278,13 @@ struct ConvertPolygon {
 			return polygon;
 		} else {
 			// MultiPolygon
-			MultiPolygon multi_polygon(arena, polygon_part_starts.size(), false, false);
+            auto multi_polygon = MultiPolygon::Create(arena, polygon_part_starts.size(), false, false);
 			for (size_t polygon_idx = 0; polygon_idx < polygon_part_starts.size(); polygon_idx++) {
 				auto part_start = polygon_part_starts[polygon_idx];
 				auto part_end = polygon_idx == polygon_part_starts.size() - 1 ? shape->nParts
 				                                                              : polygon_part_starts[polygon_idx + 1];
 
-				Polygon polygon(arena, part_end - part_start, false, false);
+				auto polygon = Polygon::Create(arena, part_end - part_start, false, false);
 
 				for (auto ring_idx = part_start; ring_idx < part_end; ring_idx++) {
 					auto start = shape->panPartStart[ring_idx];
@@ -306,7 +306,7 @@ struct ConvertPolygon {
 
 struct ConvertMultiPoint {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
-		MultiPoint multi_point(arena, shape->nVertices, false, false);
+		auto multi_point = MultiPoint::Create(arena, shape->nVertices, false, false);
 		for (int i = 0; i < shape->nVertices; i++) {
 			multi_point[i] = Point::FromVertex(arena, VertexXY {shape->padfX[i], shape->padfY[i]});
 		}

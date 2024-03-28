@@ -246,7 +246,7 @@ static Point PointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, co
 	auto len = yyjson_arr_size(coord_array);
 	if (len == 0) {
 		// empty point
-		return Point(has_z, false);
+		return Point::Empty(has_z, false);
 	}
 	if (len < 2) {
 		throw InvalidInputException("GeoJSON input coordinates field is not an array of at least length 2: %s",
@@ -284,7 +284,7 @@ static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &a
 	auto len = yyjson_arr_size(coord_array);
 	if (len == 0) {
 		// Empty
-		return LineString(false, false);
+		return LineString::Empty(false, false);
 	} else {
 		// Sniff the coordinates to see if we have Z
 		bool has_any_z = false;
@@ -308,7 +308,7 @@ static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &a
 			has_z = true;
 		}
 
-		LineString vertices(arena, len, has_any_z, false);
+        auto vertices = LineString::Create(arena, len, has_any_z, false);
 
 		yyjson_arr_foreach(coord_array, idx, max, coord) {
 			auto coord_len = yyjson_arr_size(coord);
@@ -353,10 +353,10 @@ static Polygon PolygonFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena
 	auto num_rings = yyjson_arr_size(coord_array);
 	if (num_rings == 0) {
 		// Empty
-		return Polygon(has_z, false);
+		return Polygon::Empty(has_z, false);
 	} else {
 		// Polygon
-		Polygon polygon(arena, num_rings, has_z, false);
+		auto polygon = Polygon::Create(arena, num_rings, has_z, false);
 		size_t idx, max;
 		yyjson_val *ring_val;
 		yyjson_arr_foreach(coord_array, idx, max, ring_val) {
@@ -376,10 +376,10 @@ static MultiPoint MultiPointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator 
 	auto num_points = yyjson_arr_size(coord_array);
 	if (num_points == 0) {
 		// Empty
-		return MultiPoint(has_z, false);
+		return MultiPoint::Empty(has_z, false);
 	} else {
 		// MultiPoint
-		MultiPoint multi_point(arena, num_points, has_z, false);
+        auto multi_point = MultiPoint::Create(arena, num_points, has_z, false);
 		size_t idx, max;
 		yyjson_val *point_val;
 		yyjson_arr_foreach(coord_array, idx, max, point_val) {
@@ -402,10 +402,10 @@ static MultiLineString MultiLineStringFromGeoJSON(yyjson_val *coord_array, Arena
 	auto num_linestrings = yyjson_arr_size(coord_array);
 	if (num_linestrings == 0) {
 		// Empty
-		return MultiLineString(has_z, false);
+		return MultiLineString::Empty(has_z, false);
 	} else {
 		// MultiLineString
-		MultiLineString multi_linestring(arena, num_linestrings, has_z, false);
+		auto multi_linestring = MultiLineString::Create(arena, num_linestrings, has_z, false);
 		size_t idx, max;
 		yyjson_val *linestring_val;
 		yyjson_arr_foreach(coord_array, idx, max, linestring_val) {
@@ -425,10 +425,10 @@ static MultiPolygon MultiPolygonFromGeoJSON(yyjson_val *coord_array, ArenaAlloca
 	auto num_polygons = yyjson_arr_size(coord_array);
 	if (num_polygons == 0) {
 		// Empty
-		return MultiPolygon(has_z, false);
+		return MultiPolygon::Empty(has_z, false);
 	} else {
 		// MultiPolygon
-		MultiPolygon multi_polygon(arena, num_polygons, has_z, false);
+		auto multi_polygon = MultiPolygon::Create(arena, num_polygons, has_z, false);
 		size_t idx, max;
 		yyjson_val *polygon_val;
 		yyjson_arr_foreach(coord_array, idx, max, polygon_val) {
@@ -457,10 +457,10 @@ static GeometryCollection GeometryCollectionFromGeoJSON(yyjson_val *root, ArenaA
 	auto num_geometries = yyjson_arr_size(geometries_val);
 	if (num_geometries == 0) {
 		// Empty
-		return GeometryCollection(has_z, false);
+		return GeometryCollection::Empty(has_z, false);
 	} else {
 		// GeometryCollection
-		GeometryCollection geometry_collection(arena, num_geometries, has_z, false);
+		auto geometry_collection = GeometryCollection::Create(arena, num_geometries, has_z, false);
 		size_t idx, max;
 		yyjson_val *geometry_val;
 		yyjson_arr_foreach(geometries_val, idx, max, geometry_val) {

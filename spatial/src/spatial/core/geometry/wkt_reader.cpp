@@ -127,7 +127,7 @@ pair<uint32_t, vector<double>> WKTReader::ParseVertices() {
 
 Point WKTReader::ParsePoint() {
 	if (MatchCI("EMPTY")) {
-		return Point(has_z, has_m);
+		return Point::Empty(has_z, has_m);
 	}
 	Expect('(');
 	vector<double> coords;
@@ -143,7 +143,7 @@ LineString WKTReader::ParseLineString() {
 
 Polygon WKTReader::ParsePolygon() {
 	if (MatchCI("EMPTY")) {
-		return Polygon(has_z, has_m);
+		return Polygon::Empty(has_z, has_m);
 	}
 	Expect('(');
 	vector<pair<uint32_t, vector<double>>> rings;
@@ -152,7 +152,7 @@ Polygon WKTReader::ParsePolygon() {
 		rings.push_back(ParseVertices());
 	}
 	Expect(')');
-	Polygon result(arena, rings.size(), has_z, has_m);
+	auto result = Polygon::Create(arena, rings.size(), has_z, has_m);
 	for (uint32_t i = 0; i < rings.size(); i++) {
 		result[i].CopyData(arena, data_ptr_cast(rings[i].second.data()), rings[i].first);
 	}
@@ -161,7 +161,7 @@ Polygon WKTReader::ParsePolygon() {
 
 MultiPoint WKTReader::ParseMultiPoint() {
 	if (MatchCI("EMPTY")) {
-		return MultiPoint(has_z, has_m);
+		return MultiPoint::Empty(has_z, has_m);
 	}
 	// Multipoints are special in that parens around each point is optional.
 	Expect('(');
@@ -192,7 +192,7 @@ MultiPoint WKTReader::ParseMultiPoint() {
 		coords.clear();
 	}
 	Expect(')');
-	MultiPoint result(arena, points.size(), has_z, has_m);
+	auto result = MultiPoint::Create(arena, points.size(), has_z, has_m);
 	for (uint32_t i = 0; i < points.size(); i++) {
 		result[i] = points[i];
 	}
@@ -201,7 +201,7 @@ MultiPoint WKTReader::ParseMultiPoint() {
 
 MultiLineString WKTReader::ParseMultiLineString() {
 	if (MatchCI("EMPTY")) {
-		return MultiLineString(has_z, has_m);
+		return MultiLineString::Empty(has_z, has_m);
 	}
 	Expect('(');
 	vector<LineString> lines;
@@ -210,7 +210,7 @@ MultiLineString WKTReader::ParseMultiLineString() {
 		lines.push_back(ParseLineString());
 	}
 	Expect(')');
-	MultiLineString result(arena, lines.size(), has_z, has_m);
+	auto result = MultiLineString::Create(arena, lines.size(), has_z, has_m);
 	for (uint32_t i = 0; i < lines.size(); i++) {
 		result[i] = lines[i];
 	}
@@ -219,7 +219,7 @@ MultiLineString WKTReader::ParseMultiLineString() {
 
 MultiPolygon WKTReader::ParseMultiPolygon() {
 	if (MatchCI("EMPTY")) {
-		return MultiPolygon(has_z, has_m);
+		return MultiPolygon::Empty(has_z, has_m);
 	}
 	Expect('(');
 	vector<Polygon> polygons;
@@ -228,7 +228,7 @@ MultiPolygon WKTReader::ParseMultiPolygon() {
 		polygons.push_back(ParsePolygon());
 	}
 	Expect(')');
-	MultiPolygon result(arena, polygons.size(), has_z, has_m);
+    auto result = MultiPolygon::Create(arena, polygons.size(), has_z, has_m);
 	for (uint32_t i = 0; i < polygons.size(); i++) {
 		result[i] = polygons[i];
 	}
@@ -237,7 +237,7 @@ MultiPolygon WKTReader::ParseMultiPolygon() {
 
 GeometryCollection WKTReader::ParseGeometryCollection() {
 	if (MatchCI("EMPTY")) {
-		return GeometryCollection(has_z, has_m);
+		return GeometryCollection::Empty(has_z, has_m);
 	}
 	Expect('(');
 	vector<Geometry> geometries;
@@ -246,7 +246,7 @@ GeometryCollection WKTReader::ParseGeometryCollection() {
 		geometries.push_back(ParseGeometry());
 	}
 	Expect(')');
-	GeometryCollection result(arena, geometries.size(), has_z, has_m);
+	auto result = GeometryCollection::Create(arena, geometries.size(), has_z, has_m);
 	for (uint32_t i = 0; i < geometries.size(); i++) {
 		result[i] = geometries[i];
 	}

@@ -52,8 +52,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		}
 
 		if (geometries.empty()) {
-			GeometryCollection empty(has_z, has_m);
-			return Geometry(empty).Serialize(result);
+			return Geometry(GeometryCollection::Empty(has_z, has_m)).Serialize(result);
 		}
 
 		bool all_points = true;
@@ -75,25 +74,25 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		// TODO: Dont upcast the children, just append them.
 
 		if (all_points) {
-			MultiPoint collection(arena, geometries.size(), has_z, has_m);
+			auto collection = MultiPoint::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Point>();
 			}
 			return Geometry(collection).Serialize(result);
 		} else if (all_lines) {
-			MultiLineString collection(arena, geometries.size(), has_z, has_m);
+			auto collection = MultiLineString::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<LineString>();
 			}
 			return Geometry(collection).Serialize(result);
 		} else if (all_polygons) {
-			MultiPolygon collection(arena, geometries.size(), has_z, has_m);
+            auto collection = MultiPolygon::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Polygon>();
 			}
 			return Geometry(collection).Serialize(result);
 		} else {
-			GeometryCollection collection(arena, geometries.size(), has_z, has_m);
+			auto collection = GeometryCollection::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m);
 			}
