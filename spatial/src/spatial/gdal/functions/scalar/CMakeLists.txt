@@ -5,6 +5,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_band_pixel_type.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_has_no_band.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_metadata.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_as_file.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_from_file.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_geometry.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_to_world_coord.cpp

@@ -21,6 +21,7 @@ public:
 		RegisterStWorldToRasterCoord(db);
 		RegisterStGetValue(db);
 		RegisterStRasterFromFile(db);
+		RegisterStRasterAsFile(db);
 	}
 
 private:
@@ -65,6 +66,9 @@ private:
 
 	// ST_RasterFromFile
 	static void RegisterStRasterFromFile(DatabaseInstance &db);
+
+	// ST_RasterAsFile
+	static void RegisterStRasterAsFile(DatabaseInstance &db);
 };
 
 } // namespace gdal
