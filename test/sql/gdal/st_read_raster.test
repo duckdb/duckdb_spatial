@@ -1,0 +1,31 @@
+require spatial
+
+query I
+SELECT raster FROM ST_ReadRaster('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff');
+----
+RASTER
+
+query I
+SELECT raster FROM '__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff';
+----
+RASTER
+
+query IIIIIIIIIIII
+SELECT
+	driver_short_name,
+	driver_long_name,
+	upper_left_x,
+	upper_left_y,
+	width,
+	height,
+	scale_x,
+	scale_y,
+	skew_x,
+	skew_y,
+	srid,
+	num_bands
+FROM
+	ST_ReadRaster_Meta('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff')
+;
+----
+GTiff	GeoTIFF	541020.0	4796640.0	3438	5322	20.0	-20.0	0.0	0.0	32630	1

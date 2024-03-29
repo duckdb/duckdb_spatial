@@ -1,0 +1,10 @@
+require spatial
+
+query I
+SELECT
+	ST_Srid(raster) AS srid
+FROM
+	ST_ReadRaster('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff')
+;
+----
+32630

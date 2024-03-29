@@ -1,0 +1,11 @@
+require spatial
+
+statement ok
+COPY (
+	SELECT * FROM '__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff'
+)
+TO
+	'__TEST_DIR__/copytoraster.tiff'
+WITH (
+	FORMAT RASTER, DRIVER 'COG', CREATION_OPTIONS ('COMPRESS=LZW')
+);
