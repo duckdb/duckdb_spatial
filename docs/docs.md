@@ -84,6 +84,7 @@ Note that this will overwrite any existing `spatial` extension installed for the
 | [ST_MakeEnvelope](##st_makeenvelope) | Returns a minimal bounding box polygon enclosing the input geometry |
 | [ST_MakeLine](##st_makeline) | Creates a LINESTRING geometry from a pair or list of input points |
 | [ST_MakePolygon](##st_makepolygon) | Creates a polygon from a shell geometry and an optional set of holes |
+| [ST_NearestPoints](##st_neasrestpoints) | Returns the two closest points on geom1 and geom2 to each other |
 | [ST_Normalize](##st_normalize) | Returns a "normalized" version of the input geometry. |
 | [ST_NumGeometries](##st_numgeometries) | Returns the number of component geometries in a collection geometry |
 | [ST_NumInteriorRings](##st_numinteriorrings) | Returns the number if interior rings of a polygon |
@@ -971,6 +972,20 @@ _Creates a polygon from a shell geometry and an optional set of holes_
 
 - __GEOMETRY__ ST_MakePolygon(shell __GEOMETRY__, holes __GEOMETRY[]__)
 - __GEOMETRY__ ST_MakePolygon(shell __GEOMETRY__)
+
+### Description
+
+TODO
+
+### Examples
+
+TODO
+
+## ST_NearestPoints
+
+_Returns the two closest points on geom1 and geom2 to each other_
+
+- __GEOMETRY__ ST_NearestPoints(geom1 __GEOMETRY__, geom2 __GEOMETRY__)
 
 ### Description
 

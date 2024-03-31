@@ -32,6 +32,7 @@ public:
 		RegisterStLineMerge(db);
 		RegisterStMakeValid(db);
 		RegisterStNormalize(db);
+		RegisterStNearestPoints(db);
 		RegisterStOverlaps(db);
 		RegisterStPointOnSurface(db);
 		RegisterStReducePrecision(db);
@@ -67,6 +68,7 @@ private:
 	static void RegisterStIsSimple(DatabaseInstance &db);
 	static void RegisterStIsValid(DatabaseInstance &db);
 	static void RegisterStNormalize(DatabaseInstance &db);
+	static void RegisterStNearestPoints(DatabaseInstance &db);
 	static void RegisterStOverlaps(DatabaseInstance &db);
 	static void RegisterStPointOnSurface(DatabaseInstance &db);
 	static void RegisterStReducePrecision(DatabaseInstance &db);

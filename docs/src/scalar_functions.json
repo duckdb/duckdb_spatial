@@ -68,6 +68,7 @@
 {"type":"scalar_function","id":"st_geomfromgeojson","title":"ST_GeomFromGeoJSON","signatures":[{"returns":"GEOMETRY","parameters":["VARCHAR"]}]}
 {"type":"scalar_function","id":"st_asgeojson","title":"ST_AsGeoJSON","signatures":[{"returns":"VARCHAR","parameters":["GEOMETRY"]}]}
 {"type":"scalar_function","id":"st_intersection","title":"ST_Intersection","signatures":[{"returns":"GEOMETRY","parameters":["GEOMETRY","GEOMETRY"]}]}
+{"type":"scalar_function","id":"st_nearestpoints","title":"ST_NearestPoints","signatures":[{"returns":"GEOMETRY","parameters":["GEOMETRY","GEOMETRY"]}]}
 {"type":"scalar_function","id":"st_boundary","title":"ST_Boundary","signatures":[{"returns":"GEOMETRY","parameters":["GEOMETRY"]}]}
 {"type":"scalar_function","id":"st_polygon2dfromwkb","title":"ST_Polygon2DFromWKB","signatures":[{"returns":"POLYGON_2D","parameters":["WKB_BLOB"]}]}
 {"type":"scalar_function","id":"st_exteriorring","title":"ST_ExteriorRing","signatures":[{"returns":"LINESTRING_2D","parameters":["POLYGON_2D"]},{"returns":"GEOMETRY","parameters":["GEOMETRY"]}]}
