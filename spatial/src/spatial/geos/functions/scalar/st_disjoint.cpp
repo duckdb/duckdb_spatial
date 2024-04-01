@@ -24,6 +24,21 @@ static void DisjointFunction(DataChunk &args, ExpressionState &state, Vector &re
 	                                             GEOSPreparedDisjoint_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns if two geometries are disjoint
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStDisjoint(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Disjoint");
@@ -32,6 +47,7 @@ void GEOSScalarFunctions::RegisterStDisjoint(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Disjoint", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

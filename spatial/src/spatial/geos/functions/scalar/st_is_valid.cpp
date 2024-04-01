@@ -15,10 +15,10 @@ namespace geos {
 using namespace spatial::core;
 
 static bool IsValidForGeos(Geometry &geometry) {
-	switch (geometry.Type()) {
+	switch (geometry.GetType()) {
 	case GeometryType::LINESTRING:
 		// Every linestring needs 0 or at least 2 points
-		return geometry.As<LineString>().Vertices().Count() != 1;
+		return geometry.As<LineString>().Count() != 1;
 
 	case GeometryType::POLYGON: {
 		// Every ring needs 0 or at least 4 points
@@ -32,7 +32,7 @@ static bool IsValidForGeos(Geometry &geometry) {
 	}
 	case GeometryType::MULTILINESTRING: {
 		for (const auto &linestring : geometry.As<MultiLineString>()) {
-			if (linestring.Vertices().Count() == 1) {
+			if (linestring.Count() == 1) {
 				return false;
 			}
 		}
@@ -63,8 +63,9 @@ static bool IsValidForGeos(Geometry &geometry) {
 
 static void IsValidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GEOSFunctionLocalState::ResetAndGet(state);
+	auto &arena = lstate.arena;
 	UnaryExecutor::Execute<geometry_t, bool>(args.data[0], result, args.size(), [&](geometry_t input) {
-		auto geom = lstate.factory.Deserialize(input);
+		auto geom = Geometry::Deserialize(arena, input);
 
 		// double check before calling into geos
 		if (!IsValidForGeos(geom)) {
@@ -76,6 +77,21 @@ static void IsValidFunction(DataChunk &args, ExpressionState &state, Vector &res
 	});
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if the geometry is topologically "valid"
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStIsValid(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_IsValid");
@@ -84,6 +100,7 @@ void GEOSScalarFunctions::RegisterStIsValid(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_IsValid", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

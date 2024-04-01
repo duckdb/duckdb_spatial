@@ -24,6 +24,23 @@ static void ContainsFunction(DataChunk &args, ExpressionState &state, Vector &re
 	                                                GEOSPreparedContains_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns true if geom1 contains geom2.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+select st_contains('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry, 'POINT(0.5 0.5)'::geometry);
+----
+true
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStContains(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Contains");
 
@@ -31,6 +48,7 @@ void GEOSScalarFunctions::RegisterStContains(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::AddFunctionOverload(db, set);
+	DocUtil::AddDocumentation(db, "ST_Contains", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

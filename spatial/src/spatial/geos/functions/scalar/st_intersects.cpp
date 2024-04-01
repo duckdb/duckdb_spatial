@@ -24,6 +24,21 @@ static void IntersectsFunction(DataChunk &args, ExpressionState &state, Vector &
 	                                             GEOSPreparedIntersects_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if two geometries intersects
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStIntersects(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Intersects");
@@ -32,6 +47,7 @@ void GEOSScalarFunctions::RegisterStIntersects(DatabaseInstance &db) {
 	                               IntersectsFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::AddFunctionOverload(db, set);
+	DocUtil::AddDocumentation(db, "ST_Intersects", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

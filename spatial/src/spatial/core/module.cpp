@@ -21,7 +21,7 @@ void CoreModule::Register(DatabaseInstance &db) {
 	CoreTableFunctions::Register(db);
 	CoreAggregateFunctions::Register(db);
 	CoreOptimizerRules::Register(db);
-    CoreScalarMacros::Register(db);
+	CoreScalarMacros::Register(db);
 }
 
 } // namespace core

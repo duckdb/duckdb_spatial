@@ -19,6 +19,10 @@ private:
 public:
 	explicit GeometryProperties(uint8_t flags = 0) : flags(flags) {
 	}
+	GeometryProperties(bool has_z, bool has_m) {
+		SetZ(has_z);
+		SetM(has_m);
+	}
 
 	inline bool HasZ() const {
 		return (flags & Z) != 0;
@@ -37,6 +41,10 @@ public:
 	}
 	inline void SetBBox(bool value) {
 		flags = value ? (flags | BBOX) : (flags & ~BBOX);
+	}
+
+	uint32_t VertexSize() const {
+		return sizeof(double) * (2 + HasZ() + HasM());
 	}
 };
 

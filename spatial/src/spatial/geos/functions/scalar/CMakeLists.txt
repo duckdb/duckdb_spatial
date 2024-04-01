@@ -24,7 +24,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_linemerge.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_makevalid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_normalize.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/st_nearestpoints.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_shortestline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_overlaps.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_pointonsurface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_reduceprecision.cpp

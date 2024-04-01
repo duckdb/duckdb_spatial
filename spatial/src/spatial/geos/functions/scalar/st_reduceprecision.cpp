@@ -25,6 +25,21 @@ static void ReducePrecisionFunction(DataChunk &args, ExpressionState &state, Vec
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the geometry with all vertices reduced to the target precision
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStReducePrecision(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_ReducePrecision");
@@ -33,6 +48,7 @@ void GEOSScalarFunctions::RegisterStReducePrecision(DatabaseInstance &db) {
 	                               ReducePrecisionFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_ReducePrecision", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

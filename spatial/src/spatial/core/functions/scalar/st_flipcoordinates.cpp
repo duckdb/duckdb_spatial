@@ -154,55 +154,6 @@ static void BoxFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, 
 // GEOMETRY
 //------------------------------------------------------------------------------
 
-struct FlipOp {
-	static void FlipVertexArray(VertexArray &vertices, ArenaAllocator &arena) {
-		vertices.MakeOwning(arena);
-		for (idx_t i = 0; i < vertices.Count(); i++) {
-			auto vertex = vertices.Get(i);
-			std::swap(vertex.x, vertex.y);
-			vertices.Set(i, vertex);
-		}
-	}
-
-	static void Apply(Point &point, ArenaAllocator &alloc) {
-		FlipVertexArray(point.Vertices(), alloc);
-	}
-
-	static void Apply(LineString &line, ArenaAllocator &alloc) {
-		FlipVertexArray(line.Vertices(), alloc);
-	}
-
-	static void Apply(Polygon &poly, ArenaAllocator &alloc) {
-		for (auto &ring : poly) {
-			FlipVertexArray(ring, alloc);
-		}
-	}
-
-	static void Apply(MultiPoint &multi_point, ArenaAllocator &alloc) {
-		for (auto &point : multi_point) {
-			Apply(point, alloc);
-		}
-	}
-
-	static void Apply(MultiLineString &multi_line, ArenaAllocator &alloc) {
-		for (auto &line : multi_line) {
-			Apply(line, alloc);
-		}
-	}
-
-	static void Apply(MultiPolygon &multi_poly, ArenaAllocator &alloc) {
-		for (auto &poly : multi_poly) {
-			Apply(poly, alloc);
-		}
-	}
-
-	static void Apply(GeometryCollection &geom, ArenaAllocator &alloc) {
-		for (auto &child : geom) {
-			child.Dispatch<FlipOp>(alloc);
-		}
-	}
-};
-
 static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
@@ -210,14 +161,39 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto input = args.data[0];
 	auto count = args.size();
 
+	struct FlipOp {
+		static void Apply(SinglePartGeometry &geom, ArenaAllocator &arena) {
+			geom.MakeMutable(arena);
+			for (idx_t i = 0; i < geom.Count(); i++) {
+				auto vertex = geom.Get(i);
+				std::swap(vertex.x, vertex.y);
+				geom.Set(i, vertex);
+			}
+		}
+		static void Apply(MultiPartGeometry &geom, ArenaAllocator &arena) {
+			for (auto &part : geom) {
+				part.Visit<FlipOp>(arena);
+			}
+		}
+	};
+
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
-		auto props = input.GetProperties();
-		auto geom = lstate.factory.Deserialize(input);
-		geom.Dispatch<FlipOp>(lstate.factory.allocator);
-		return lstate.factory.Serialize(result, geom, props.HasZ(), props.HasM());
+		auto geom = Geometry::Deserialize(lstate.arena, input);
+		geom.Visit<FlipOp>(lstate.arena);
+		return geom.Serialize(result);
 	});
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns a new geometry with the coordinates of the input geometry "flipped" so that x = y and y = x.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"()";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -235,6 +211,7 @@ void CoreScalarFunctions::RegisterStFlipCoordinates(DatabaseInstance &db) {
 	                                             GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, flip_function_set);
+	DocUtil::AddDocumentation(db, "ST_FlipCoordinates", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

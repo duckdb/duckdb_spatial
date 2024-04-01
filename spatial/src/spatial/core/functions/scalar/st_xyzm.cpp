@@ -4,7 +4,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
 #include "spatial/core/types.hpp"
 
@@ -253,6 +252,9 @@ static void GeometryAccessFunction(DataChunk &args, ExpressionState &state, Vect
 //------------------------------------------------------------------------------
 // Register Functions
 //------------------------------------------------------------------------------
+
+DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+
 void CoreScalarFunctions::RegisterStX(DatabaseInstance &db) {
 
 	ScalarFunctionSet st_x("ST_X");
@@ -260,6 +262,9 @@ void CoreScalarFunctions::RegisterStX(DatabaseInstance &db) {
 	st_x.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<0>));
 
 	ExtensionUtil::RegisterFunction(db, st_x);
+
+	auto DOC_DESCRIPTION = "Returns the X value of a point geometry, or NULL if not a point or empty";
+	DocUtil::AddDocumentation(db, "ST_X", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStXMax(DatabaseInstance &db) {
@@ -273,6 +278,9 @@ void CoreScalarFunctions::RegisterStXMax(DatabaseInstance &db) {
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<0, MaxOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_xmax);
+
+	auto DOC_DESCRIPTION = "Returns the maximum X value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_XMax", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStXMin(DatabaseInstance &db) {
@@ -286,6 +294,9 @@ void CoreScalarFunctions::RegisterStXMin(DatabaseInstance &db) {
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<0, MinOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_xmin);
+
+	auto DOC_DESCRIPTION = "Returns the minimum X value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_XMin", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStY(DatabaseInstance &db) {
@@ -295,6 +306,9 @@ void CoreScalarFunctions::RegisterStY(DatabaseInstance &db) {
 	st_y.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<1>));
 
 	ExtensionUtil::RegisterFunction(db, st_y);
+
+	auto DOC_DESCRIPTION = "Returns the Y value of a point geometry, or NULL if not a point or empty";
+	DocUtil::AddDocumentation(db, "ST_Y", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStYMax(DatabaseInstance &db) {
@@ -308,6 +322,9 @@ void CoreScalarFunctions::RegisterStYMax(DatabaseInstance &db) {
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<1, MaxOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_ymax);
+
+	auto DOC_DESCRIPTION = "Returns the maximum Y value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_YMax", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStYMin(DatabaseInstance &db) {
@@ -321,6 +338,9 @@ void CoreScalarFunctions::RegisterStYMin(DatabaseInstance &db) {
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<1, MinOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_ymin);
+
+	auto DOC_DESCRIPTION = "Returns the minimum Y value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_YMin", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStZ(DatabaseInstance &db) {
@@ -329,6 +349,9 @@ void CoreScalarFunctions::RegisterStZ(DatabaseInstance &db) {
 	st_z.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<2>));
 
 	ExtensionUtil::RegisterFunction(db, st_z);
+
+	auto DOC_DESCRIPTION = "Returns the Z value of a point geometry, or NULL if not a point or empty";
+	DocUtil::AddDocumentation(db, "ST_Z", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStZMax(DatabaseInstance &db) {
@@ -336,6 +359,9 @@ void CoreScalarFunctions::RegisterStZMax(DatabaseInstance &db) {
 	st_zmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<2, MaxOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_zmax);
+
+	auto DOC_DESCRIPTION = "Returns the maximum Z value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_ZMax", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStZMin(DatabaseInstance &db) {
@@ -343,6 +369,9 @@ void CoreScalarFunctions::RegisterStZMin(DatabaseInstance &db) {
 	st_zmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<2, MinOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_zmin);
+
+	auto DOC_DESCRIPTION = "Returns the minimum Z value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_ZMin", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStM(DatabaseInstance &db) {
@@ -350,6 +379,9 @@ void CoreScalarFunctions::RegisterStM(DatabaseInstance &db) {
 	st_m.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryAccessFunction<3>));
 
 	ExtensionUtil::RegisterFunction(db, st_m);
+
+	auto DOC_DESCRIPTION = "Returns the M value of a point geometry, or NULL if not a point or empty";
+	DocUtil::AddDocumentation(db, "ST_M", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStMMax(DatabaseInstance &db) {
@@ -357,6 +389,9 @@ void CoreScalarFunctions::RegisterStMMax(DatabaseInstance &db) {
 	st_mmax.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<3, MaxOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_mmax);
+
+	auto DOC_DESCRIPTION = "Returns the maximum M value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_MMax", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 void CoreScalarFunctions::RegisterStMMin(DatabaseInstance &db) {
@@ -364,6 +399,9 @@ void CoreScalarFunctions::RegisterStMMin(DatabaseInstance &db) {
 	st_mmin.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::DOUBLE, GeometryFunction<3, MinOp>));
 
 	ExtensionUtil::RegisterFunction(db, st_mmin);
+
+	auto DOC_DESCRIPTION = "Returns the minimum M value of a geometry";
+	DocUtil::AddDocumentation(db, "ST_MMin", DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 } // namespace core

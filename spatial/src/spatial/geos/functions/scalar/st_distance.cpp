@@ -62,6 +62,24 @@ static void DistanceFunction(DataChunk &args, ExpressionState &state, Vector &re
 	ExecutePreparedDistance(lstate, left, right, count, result);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the distance between two geometries.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+select st_distance('POINT(0 0)'::geometry, 'POINT(1 1)'::geometry);
+----
+1.4142135623731
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
+
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStDistance(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Distance");
@@ -70,6 +88,7 @@ void GEOSScalarFunctions::RegisterStDistance(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::AddFunctionOverload(db, set);
+	DocUtil::AddDocumentation(db, "ST_Distance", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

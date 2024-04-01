@@ -3,10 +3,9 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/functions/scalar.hpp"
-#include "spatial/core/functions/common.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+
 namespace spatial {
 
 namespace core {
@@ -24,6 +23,20 @@ void GeometryAsWBKFunction(DataChunk &args, ExpressionState &state, Vector &resu
 }
 
 //------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the geometry as a WKB blob
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+SELECT ST_AsWKB('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};
+
+//------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStAsWKB(DatabaseInstance &db) {
@@ -33,6 +46,7 @@ void CoreScalarFunctions::RegisterStAsWKB(DatabaseInstance &db) {
 	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::WKB_BLOB(), GeometryAsWBKFunction));
 
 	ExtensionUtil::RegisterFunction(db, as_wkb_function_set);
+	DocUtil::AddDocumentation(db, "ST_AsWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

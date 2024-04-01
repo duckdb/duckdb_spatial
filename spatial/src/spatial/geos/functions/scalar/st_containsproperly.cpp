@@ -52,6 +52,21 @@ static void ContainsProperlyFunction(DataChunk &args, ExpressionState &state, Ve
 	ExecuteContainsProperlyPrepared(lstate, left, right, count, result);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if geom1 "properly contains" geom2
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStContainsProperly(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_ContainsProperly");
@@ -60,6 +75,7 @@ void GEOSScalarFunctions::RegisterStContainsProperly(DatabaseInstance &db) {
 	                               ContainsProperlyFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_ContainsProperly", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

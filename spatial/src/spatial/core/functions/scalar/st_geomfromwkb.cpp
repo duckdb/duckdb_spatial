@@ -268,15 +268,28 @@ static void Polygon2DFromWKBFunction(DataChunk &args, ExpressionState &state, Ve
 //------------------------------------------------------------------------------
 static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+	auto &arena = lstate.arena;
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	WKBReader reader(lstate.factory.allocator);
-	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
-		auto geometry = reader.Deserialize(input);
-		return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
-	});
+	WKBReader reader(arena);
+	UnaryExecutor::Execute<string_t, geometry_t>(
+	    input, result, count, [&](string_t input) { return reader.Deserialize(input).Serialize(result); });
 }
+
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Deserializes a GEOMETRY from a WKB encoded blob
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr const DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -302,6 +315,7 @@ void CoreScalarFunctions::RegisterStGeomFromWKB(DatabaseInstance &db) {
 	                                            nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, st_geom_from_wkb);
+	DocUtil::AddDocumentation(db, "ST_GeomFromWKB", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

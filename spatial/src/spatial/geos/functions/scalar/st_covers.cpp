@@ -24,6 +24,19 @@ static void CoversFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	                                                GEOSPreparedCovers_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns if geom1 "covers" geom2
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"()";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStCovers(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Covers");
@@ -32,6 +45,7 @@ void GEOSScalarFunctions::RegisterStCovers(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Covers", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

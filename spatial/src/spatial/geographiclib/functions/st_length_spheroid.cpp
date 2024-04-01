@@ -4,7 +4,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/geographiclib/functions.hpp"
 #include "spatial/geographiclib/module.hpp"
@@ -61,8 +60,8 @@ static void GeodesicLineString2DFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 static double LineLength(const LineString &line, GeographicLib::PolygonArea &comp) {
 	comp.Clear();
-	for (uint32_t i = 0; i < line.Vertices().Count(); i++) {
-		auto vert = line.Vertices().Get(i);
+	for (uint32_t i = 0; i < line.Count(); i++) {
+		auto vert = line.Get(i);
 		comp.AddPoint(vert.x, vert.y);
 	}
 	double _area;
@@ -71,35 +70,9 @@ static double LineLength(const LineString &line, GeographicLib::PolygonArea &com
 	return linestring_length;
 }
 
-static double GeometryLength(const Geometry &geom, GeographicLib::PolygonArea &comp) {
-	switch (geom.Type()) {
-	case GeometryType::LINESTRING: {
-		return LineLength(geom.As<LineString>(), comp);
-	}
-	case GeometryType::MULTILINESTRING: {
-		auto &mline = geom.As<MultiLineString>();
-		double mline_length = 0;
-		for (auto &line : mline) {
-			mline_length += LineLength(line, comp);
-		}
-		return mline_length;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &coll = geom.As<GeometryCollection>();
-		auto sum = 0;
-		for (auto &item : coll) {
-			sum += GeometryLength(item, comp);
-		}
-		return sum;
-	}
-	default: {
-		return 0.0;
-	}
-	}
-}
-
 static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+	auto &arena = lstate.arena;
 
 	auto &input = args.data[0];
 	auto count = args.size();
@@ -107,16 +80,59 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, true);
 
-	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		return GeometryLength(geometry, comp);
-	});
+	struct op {
+		static double Apply(const LineString &line, GeographicLib::PolygonArea &comp) {
+			return LineLength(line, comp);
+		}
+
+		static double Apply(const MultiLineString &mline, GeographicLib::PolygonArea &comp) {
+			double sum = 0.0;
+			for (const auto &line : mline) {
+				sum += LineLength(line, comp);
+			}
+			return sum;
+		}
+
+		static double Apply(const GeometryCollection &collection, GeographicLib::PolygonArea &comp) {
+			double sum = 0.0;
+			for (const auto &geom : collection) {
+				sum += geom.Visit<op>(comp);
+			}
+			return sum;
+		}
+
+		static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
+			return 0.0;
+		}
+	};
+
+	UnaryExecutor::Execute<geometry_t, double>(
+	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(comp); });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns the length of the input geometry in meters, using a ellipsoidal model of the earth
+
+The input geometry is assumed to be in the [EPSG:4326](https://en.wikipedia.org/wiki/World_Geodetic_System) coordinate system (WGS84), with [latitude, longitude] axis order and the length is returned in square meters. This function uses the [GeographicLib](https://geographiclib.sourceforge.io/) library, calculating the length using an ellipsoidal model of the earth. This is a highly accurate method for calculating the length of a line geometry taking the curvature of the earth into account, but is also the slowest.
+
+Returns `0.0` for any geometry that is not a `LINESTRING`, `MULTILINESTRING` or `GEOMETRYCOLLECTION` containing line geometries.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}, {"category", "spheroid"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GeographicLibFunctions::RegisterLength(DatabaseInstance &db) {
 
 	// Length
@@ -126,6 +142,7 @@ void GeographicLibFunctions::RegisterLength(DatabaseInstance &db) {
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Length_Spheroid", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geographiclib

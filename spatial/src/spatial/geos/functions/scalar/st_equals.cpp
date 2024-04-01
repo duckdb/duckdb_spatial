@@ -25,12 +25,29 @@ static void EqualsFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	                                                      });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Compares two geometries for equality
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
+
 void GEOSScalarFunctions::RegisterStEquals(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Equals");
 
 	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, EqualsFunction,
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Equals", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

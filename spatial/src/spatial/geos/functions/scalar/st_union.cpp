@@ -26,6 +26,29 @@ static void UnionFunction(DataChunk &args, ExpressionState &state, Vector &resul
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns the union of two geometries.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+SELECT ST_AsText(
+    ST_Union(
+        ST_GeomFromText('POINT(1 2)'),
+        ST_GeomFromText('POINT(3 4)')
+    )
+);
+----
+MULTIPOINT (1 2, 3 4)
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStUnion(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Union");
@@ -34,6 +57,7 @@ void GEOSScalarFunctions::RegisterStUnion(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Union", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

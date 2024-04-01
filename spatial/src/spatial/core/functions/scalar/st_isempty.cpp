@@ -3,7 +3,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -53,16 +52,26 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<geometry_t, bool>(input, result, count, [&](geometry_t input) {
-		auto geometry = lstate.factory.Deserialize(input);
-		return geometry.IsEmpty();
-	});
+	UnaryExecutor::Execute<geometry_t, bool>(
+	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(lstate.arena, input).IsEmpty(); });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);
 	}
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if the geometry is "empty"
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -79,6 +88,7 @@ void CoreScalarFunctions::RegisterStIsEmpty(DatabaseInstance &db) {
 	                                                 GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, is_empty_function_set);
+	DocUtil::AddDocumentation(db, "ST_IsEmpty", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

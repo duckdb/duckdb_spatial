@@ -24,6 +24,21 @@ static void CrossesFunction(DataChunk &args, ExpressionState &state, Vector &res
 	                                             GEOSPreparedCrosses_r);
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns true if geom1 "crosses" geom2
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "relation"}};
+//------------------------------------------------------------------------------
+// Register functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStCrosses(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Crosses");
@@ -32,6 +47,7 @@ void GEOSScalarFunctions::RegisterStCrosses(DatabaseInstance &db) {
 	                               nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Crosses", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

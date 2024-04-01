@@ -36,7 +36,7 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 			auto &blob = input_data[row_idx];
 
 			// Try to get the cached bounding box from the blob
-			if (GeometryFactory::TryGetSerializedBoundingBox(blob, bbox)) {
+			if (blob.TryGetCachedBounds(bbox)) {
 				min_x_data[i] = bbox.minx;
 				min_y_data[i] = bbox.miny;
 				max_x_data[i] = bbox.maxx;
@@ -56,6 +56,22 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	}
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the minimal bounding box enclosing the input geometry
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStExtent(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Extent");
 
@@ -63,6 +79,7 @@ void CoreScalarFunctions::RegisterStExtent(DatabaseInstance &db) {
 	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2D(), ExtentFunction, nullptr, nullptr, nullptr));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Extent", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

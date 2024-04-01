@@ -1,6 +1,5 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/wkb_reader.hpp"
-#include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 
 namespace spatial {
@@ -29,9 +28,7 @@ uint32_t WKBReader::ReadInt(Cursor &cursor, bool little_endian) {
 	if (little_endian) {
 		return cursor.Read<uint32_t>();
 	} else {
-		auto data = cursor.template Read<uint32_t>();
-		// swap bytes
-		return (data >> 24) | ((data >> 8) & 0xFF00) | ((data << 8) & 0xFF0000) | (data << 24);
+		return cursor.ReadBigEndian<uint32_t>();
 	}
 }
 
@@ -39,13 +36,7 @@ double WKBReader::ReadDouble(Cursor &cursor, bool little_endian) {
 	if (little_endian) {
 		return cursor.Read<double>();
 	} else {
-		auto data = cursor.template Read<uint64_t>();
-		// swap bytes
-		data = (data & 0x00000000FF000000) << 24 | (data & 0x000000FF00000000) << 8 | (data & 0x0000FF0000000000) >> 8 |
-		       (data & 0xFF00000000000000) >> 24;
-		double result;
-		memcpy(&result, &data, sizeof(double));
-		return result;
+		return cursor.ReadBigEndian<double>();
 	}
 }
 
@@ -90,18 +81,41 @@ Point WKBReader::ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool 
 	if (all_nan) {
 		return Point(has_z, has_m);
 	} else {
-		auto vertices = VertexArray::Copy(arena, data_ptr_cast(coords), 1, has_z, has_m);
-		return Point(vertices);
+		return Point::CopyFromData(arena, data_ptr_cast(coords), 1, has_z, has_m);
+	}
+}
+
+void WKBReader::ReadVertices(Cursor &cursor, bool little_endian, bool has_z, bool has_m, SinglePartGeometry &geometry) {
+	for (uint32_t i = 0; i < geometry.Count(); i++) {
+		if (has_z && has_m) {
+			auto x = ReadDouble(cursor, little_endian);
+			auto y = ReadDouble(cursor, little_endian);
+			auto z = ReadDouble(cursor, little_endian);
+			auto m = ReadDouble(cursor, little_endian);
+			geometry.SetExact(i, VertexXYZM {x, y, z, m});
+		} else if (has_z) {
+			auto x = ReadDouble(cursor, little_endian);
+			auto y = ReadDouble(cursor, little_endian);
+			auto z = ReadDouble(cursor, little_endian);
+			geometry.SetExact(i, VertexXYZ {x, y, z});
+		} else if (has_m) {
+			auto x = ReadDouble(cursor, little_endian);
+			auto y = ReadDouble(cursor, little_endian);
+			auto m = ReadDouble(cursor, little_endian);
+			geometry.SetExact(i, VertexXYM {x, y, m});
+		} else {
+			auto x = ReadDouble(cursor, little_endian);
+			auto y = ReadDouble(cursor, little_endian);
+			geometry.SetExact(i, VertexXY {x, y});
+		}
 	}
 }
 
 LineString WKBReader::ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m) {
 	auto count = ReadInt(cursor, little_endian);
-	auto ptr = cursor.GetPtr();
-	auto vertices = VertexArray::Copy(arena, ptr, count, has_z, has_m);
-	// Move the cursor forwards
-	cursor.Skip(vertices.ByteSize());
-	return LineString(vertices);
+	LineString vertices(arena, count, has_z, has_m);
+	ReadVertices(cursor, little_endian, has_z, has_m, vertices);
+	return vertices;
 }
 
 Polygon WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m) {
@@ -109,9 +123,8 @@ Polygon WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, b
 	Polygon polygon(arena, ring_count, has_z, has_m);
 	for (uint32_t i = 0; i < ring_count; i++) {
 		auto point_count = ReadInt(cursor, little_endian);
-		auto vertices = VertexArray::Copy(arena, cursor.GetPtr(), point_count, has_z, has_m);
-		cursor.Skip(vertices.ByteSize());
-		polygon[i] = vertices;
+		polygon[i].Resize(arena, point_count);
+		ReadVertices(cursor, little_endian, has_z, has_m, polygon[i]);
 	}
 	return polygon;
 }

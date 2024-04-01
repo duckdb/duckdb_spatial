@@ -7,7 +7,7 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/geometry/geometry.hpp"
 #include "spatial/proj/functions.hpp"
 #include "spatial/proj/module.hpp"
 
@@ -22,10 +22,10 @@ using namespace core;
 struct ProjFunctionLocalState : public FunctionLocalState {
 
 	PJ_CONTEXT *proj_ctx;
-	GeometryFactory factory;
+	ArenaAllocator arena;
 
 	explicit ProjFunctionLocalState(ClientContext &context)
-	    : proj_ctx(ProjModule::GetThreadProjContext()), factory(BufferAllocator::Get(context)) {
+	    : proj_ctx(ProjModule::GetThreadProjContext()), arena(BufferAllocator::Get(context)) {
 	}
 
 	~ProjFunctionLocalState() override {
@@ -40,7 +40,7 @@ struct ProjFunctionLocalState : public FunctionLocalState {
 
 	static ProjFunctionLocalState &ResetAndGet(ExpressionState &state) {
 		auto &local_state = (ProjFunctionLocalState &)*ExecuteFunctionState::GetFunctionState(state);
-		local_state.factory.allocator.Reset();
+		local_state.arena.Reset();
 		return local_state;
 	}
 };
@@ -233,51 +233,18 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 }
 
 struct TransformOp {
-	static void Transform(VertexArray &array, PJ *crs, ArenaAllocator &arena) {
-		array.MakeOwning(arena);
-		for (uint32_t i = 0; i < array.Count(); i++) {
-			auto vertex = array.Get(i);
+	static void Apply(SinglePartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
+		geom.MakeMutable(arena);
+		for (uint32_t i = 0; i < geom.Count(); i++) {
+			auto vertex = geom.Get(i);
 			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
 			// we own the array, so we can use SetUnsafe
-			array.Set(i, transformed.x, transformed.y);
+			geom.Set(i, transformed.x, transformed.y);
 		}
 	}
-
-	static void Apply(Point &point, PJ *crs, ArenaAllocator &arena) {
-		Transform(point.Vertices(), crs, arena);
-	}
-
-	static void Apply(LineString &line, PJ *crs, ArenaAllocator &arena) {
-		Transform(line.Vertices(), crs, arena);
-	}
-
-	static void Apply(Polygon &poly, PJ *crs, ArenaAllocator &arena) {
-		for (auto &ring : poly) {
-			Transform(ring, crs, arena);
-		}
-	}
-
-	static void Apply(MultiPoint &multi_point, PJ *crs, ArenaAllocator &arena) {
-		for (auto &point : multi_point) {
-			Apply(point, crs, arena);
-		}
-	}
-
-	static void Apply(MultiLineString &multi_line, PJ *crs, ArenaAllocator &arena) {
-		for (auto &line : multi_line) {
-			Apply(line, crs, arena);
-		}
-	}
-
-	static void Apply(MultiPolygon &multi_poly, PJ *crs, ArenaAllocator &arena) {
-		for (auto &poly : multi_poly) {
-			Apply(poly, crs, arena);
-		}
-	}
-
-	static void Apply(GeometryCollection &geom, PJ *crs, ArenaAllocator &arena) {
-		for (auto &child : geom) {
-			child.Dispatch<TransformOp>(crs, arena);
+	static void Apply(MultiPartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
+		for (auto &part : geom) {
+			part.Visit<TransformOp>(crs, arena);
 		}
 	}
 };
@@ -302,7 +269,7 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 	auto &info = func_expr.bind_info->Cast<TransformFunctionData>();
 
 	auto &proj_ctx = local_state.proj_ctx;
-	auto &factory = local_state.factory;
+	auto &arena = local_state.arena;
 
 	if (proj_from_vec.GetVectorType() == VectorType::CONSTANT_VECTOR &&
 	    proj_to_vec.GetVectorType() == VectorType::CONSTANT_VECTOR && !ConstantVector::IsNull(proj_from_vec) &&
@@ -328,10 +295,9 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 		}
 
 		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
-			auto props = input_geom.GetProperties();
-			auto geom = factory.Deserialize(input_geom);
-			geom.Dispatch<TransformOp>(crs.get(), factory.allocator);
-			return factory.Serialize(result, geom, props.HasZ(), props.HasM());
+			auto geom = Geometry::Deserialize(arena, input_geom);
+			geom.Visit<TransformOp>(crs.get(), arena);
+			return geom.Serialize(result);
 		});
 	} else {
 		// General case: projections are not constant
@@ -355,11 +321,9 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 				    // otherwise fall back to the original CRS
 			    }
 
-			    auto props = input_geom.GetProperties();
-			    auto geom = factory.Deserialize(input_geom);
-			    geom.Dispatch<TransformOp>(crs.get(), factory.allocator);
-			    // TransformGeometry(crs.get(), geom);
-			    return factory.Serialize(result, geom, props.HasZ(), props.HasM());
+			    auto geom = Geometry::Deserialize(arena, input_geom);
+			    geom.Visit<TransformOp>(crs.get(), arena);
+			    return geom.Serialize(result);
 		    });
 	}
 }
@@ -464,6 +428,61 @@ void GenerateSpatialRefSysTable::Register(DatabaseInstance &db) {
 	*/
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+Transforms a geometry between two coordinate systems
+
+The source and target coordinate systems can be specified using any format that the [PROJ library](https://proj.org) supports.
+
+The optional `always_xy` parameter can be used to force the input and output geometries to be interpreted as having a [northing, easting] coordinate axis order regardless of what the source and target coordinate system definition says. This is particularly useful when transforming to/from the [WGS84/EPSG:4326](https://en.wikipedia.org/wiki/World_Geodetic_System) coordinate system (what most people think of when they hear "longitude"/"latitude" or "GPS coordinates"), which is defined as having a [latitude, longitude] axis order even though [longitude, latitude] is commonly used in practice (e.g. in [GeoJSON](https://tools.ietf.org/html/rfc7946)). More details available in the [PROJ documentation](https://proj.org/en/9.3/faq.html#why-is-the-axis-ordering-in-proj-not-consistent).
+
+DuckDB spatial vendors its own static copy of the PROJ database of coordinate systems, so if you have your own installation of PROJ on your system the available coordinate systems may differ to what's available in other GIS software.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+-- Transform a geometry from EPSG:4326 to EPSG:3857 (WGS84 to WebMercator)
+-- Note that since WGS84 is defined as having a [latitude, longitude] axis order
+-- we follow the standard and provide the input geometry using that axis order,
+-- but the output will be [northing, easting] because that is what's defined by
+-- WebMercator.
+
+SELECT ST_AsText(
+    ST_Transform(
+        st_point(52.373123, 4.892360),
+        'EPSG:4326',
+        'EPSG:3857'
+    )
+);
+----
+POINT (544615.0239773799 6867874.103539125)
+
+-- Alternatively, let's say we got our input point from e.g. a GeoJSON file,
+-- which uses WGS84 but with [longitude, latitude] axis order. We can use the
+-- `always_xy` parameter to force the input geometry to be interpreted as having
+-- a [northing, easting] axis order instead, even though the source coordinate
+-- system definition says otherwise.
+
+SELECT ST_AsText(
+    ST_Transform(
+        -- note the axis order is reversed here
+        st_point(4.892360, 52.373123),
+        'EPSG:4326',
+        'EPSG:3857',
+        always_xy := true
+    )
+);
+----
+POINT (544615.0239773799 6867874.103539125)
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};
+
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void ProjFunctions::Register(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Transform");
 
@@ -491,6 +510,7 @@ void ProjFunctions::Register(DatabaseInstance &db) {
 	    GeometryTransformFunction, TransformBind, nullptr, nullptr, ProjFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Transform", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	GenerateSpatialRefSysTable::Register(db);
 }

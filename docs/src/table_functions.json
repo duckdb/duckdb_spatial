@@ -1,4 +1,0 @@
-{"type":"table_function","id":"st_read","title":"ST_Read","signatures":[{"returns":null,"parameters":["VARCHAR","BOOLEAN","INTEGER","BOOLEAN","VARCHAR","VARCHAR[]","WKB_BLOB","BOX_2D","VARCHAR[]","VARCHAR[]"]}]}
-{"type":"table_function","id":"st_drivers","title":"ST_Drivers","signatures":[{"returns":null,"parameters":[]}]}
-{"type":"table_function","id":"st_list_proj_crs","title":"ST_List_Proj_CRS","signatures":[{"returns":null,"parameters":[]}]}
-{"type":"table_function","id":"st_readosm","title":"ST_ReadOSM","signatures":[{"returns":null,"parameters":["VARCHAR"]}]}
