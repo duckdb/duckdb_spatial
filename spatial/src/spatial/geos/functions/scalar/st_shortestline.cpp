@@ -21,7 +21,7 @@ static void ShortestLineFunction(DataChunk &args, ExpressionState &state, Vector
 		    auto left_geom = lstate.ctx.Deserialize(left);
 		    auto right_geom = lstate.ctx.Deserialize(right);
 
-            auto coord_seq =  GEOSNearestPoints_r(ctx, left_geom.get(), right_geom.get());
+		    auto coord_seq = GEOSNearestPoints_r(ctx, left_geom.get(), right_geom.get());
 		    auto result_geom = make_uniq_geos(ctx, GEOSGeom_createLineString_r(ctx, coord_seq));
 
 		    return lstate.ctx.Serialize(result, result_geom);
@@ -51,7 +51,7 @@ void GEOSScalarFunctions::RegisterStShortestLine(DatabaseInstance &db) {
 	                               ShortestLineFunction, nullptr, nullptr, nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
-    DocUtil::AddDocumentation(db, "ST_ShortestLine", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_ShortestLine", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

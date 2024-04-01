@@ -37,7 +37,7 @@ public:
 		RegisterStReducePrecision(db);
 		RegisterStRemoveRepeatedPoints(db);
 		RegisterStReverse(db);
-        RegisterStShortestLine(db);
+		RegisterStShortestLine(db);
 		RegisterStSimplifyPreserveTopology(db);
 		RegisterStSimplify(db);
 		RegisterStTouches(db);
@@ -75,8 +75,8 @@ private:
 	static void RegisterStReverse(DatabaseInstance &db);
 	static void RegisterStLineMerge(DatabaseInstance &db);
 	static void RegisterStMakeValid(DatabaseInstance &db);
-    static void RegisterStShortestLine(DatabaseInstance &db);
-    static void RegisterStSimplifyPreserveTopology(DatabaseInstance &db);
+	static void RegisterStShortestLine(DatabaseInstance &db);
+	static void RegisterStSimplifyPreserveTopology(DatabaseInstance &db);
 	static void RegisterStSimplify(DatabaseInstance &db);
 	static void RegisterStTouches(DatabaseInstance &db);
 	static void RegisterStUnion(DatabaseInstance &db);
