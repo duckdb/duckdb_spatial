@@ -22,7 +22,7 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 	auto &arena = lstate.arena;
 
 	GenericExecutor::ExecuteUnary<POINT_TYPE, GEOMETRY_TYPE>(source, result, count, [&](POINT_TYPE &point) {
-		auto geom = Point::FromVertex(arena, VertexXY { point.a_val, point.b_val });
+		auto geom = Point::FromVertex(arena, VertexXY {point.a_val, point.b_val});
 		return Geometry(geom).Serialize(result);
 	});
 	return true;
@@ -68,7 +68,7 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 	auto y_data = FlatVector::GetData<double>(*coord_vec_children[1]);
 
 	UnaryExecutor::Execute<list_entry_t, geometry_t>(source, result, count, [&](list_entry_t &line) {
-        auto geom = LineString::Create(arena, line.length, false, false);
+		auto geom = LineString::Create(arena, line.length, false, false);
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];

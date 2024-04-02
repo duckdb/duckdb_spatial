@@ -86,7 +86,7 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			}
 			return Geometry(collection).Serialize(result);
 		} else if (all_polygons) {
-            auto collection = MultiPolygon::Create(arena, geometries.size(), has_z, has_m);
+			auto collection = MultiPolygon::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
 				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Polygon>();
 			}

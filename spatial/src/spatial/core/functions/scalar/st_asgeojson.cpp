@@ -308,7 +308,7 @@ static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &a
 			has_z = true;
 		}
 
-        auto vertices = LineString::Create(arena, len, has_any_z, false);
+		auto vertices = LineString::Create(arena, len, has_any_z, false);
 
 		yyjson_arr_foreach(coord_array, idx, max, coord) {
 			auto coord_len = yyjson_arr_size(coord);
@@ -379,7 +379,7 @@ static MultiPoint MultiPointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator 
 		return MultiPoint::Empty(has_z, false);
 	} else {
 		// MultiPoint
-        auto multi_point = MultiPoint::Create(arena, num_points, has_z, false);
+		auto multi_point = MultiPoint::Create(arena, num_points, has_z, false);
 		size_t idx, max;
 		yyjson_val *point_val;
 		yyjson_arr_foreach(coord_array, idx, max, point_val) {

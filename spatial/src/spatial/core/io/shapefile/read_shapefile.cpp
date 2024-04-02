@@ -223,7 +223,7 @@ struct ConvertLineString {
 			return line;
 		} else {
 			// MultiLineString
-            auto multi_line_string = MultiLineString::Create(arena, shape->nParts, false, false);
+			auto multi_line_string = MultiLineString::Create(arena, shape->nParts, false, false);
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
@@ -278,7 +278,7 @@ struct ConvertPolygon {
 			return polygon;
 		} else {
 			// MultiPolygon
-            auto multi_polygon = MultiPolygon::Create(arena, polygon_part_starts.size(), false, false);
+			auto multi_polygon = MultiPolygon::Create(arena, polygon_part_starts.size(), false, false);
 			for (size_t polygon_idx = 0; polygon_idx < polygon_part_starts.size(); polygon_idx++) {
 				auto part_start = polygon_part_starts[polygon_idx];
 				auto part_end = polygon_idx == polygon_part_starts.size() - 1 ? shape->nParts

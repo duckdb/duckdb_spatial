@@ -228,7 +228,7 @@ MultiPolygon WKTReader::ParseMultiPolygon() {
 		polygons.push_back(ParsePolygon());
 	}
 	Expect(')');
-    auto result = MultiPolygon::Create(arena, polygons.size(), has_z, has_m);
+	auto result = MultiPolygon::Create(arena, polygons.size(), has_z, has_m);
 	for (uint32_t i = 0; i < polygons.size(); i++) {
 		result[i] = polygons[i];
 	}

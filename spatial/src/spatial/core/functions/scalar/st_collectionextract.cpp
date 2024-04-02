@@ -113,7 +113,7 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectPoints(geometry, points);
 					    uint32_t size = points.size();
 
-                        auto mpoint = MultiPoint::Create(arena, size, props.HasZ(), props.HasM());
+					    auto mpoint = MultiPoint::Create(arena, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoint[i] = points[i];
 					    }
@@ -160,7 +160,7 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectPolygons(geometry, polys);
 					    uint32_t size = polys.size();
 
-                        auto mpoly = MultiPolygon::Create(arena, size, props.HasZ(), props.HasM());
+					    auto mpoly = MultiPolygon::Create(arena, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoly[i] = polys[i];
 					    }
@@ -207,7 +207,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<Point> points;
 				CollectPoints(geometry, points);
 				uint32_t size = points.size();
-                auto mpoint = MultiPoint::Create(arena, size, props.HasZ(), props.HasM());
+				auto mpoint = MultiPoint::Create(arena, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mpoint[i] = points[i];
 				}

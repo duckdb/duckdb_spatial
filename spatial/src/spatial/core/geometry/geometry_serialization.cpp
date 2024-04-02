@@ -358,7 +358,7 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 			return multi_line_string;
 		}
 		case GeometryType::MULTIPOLYGON: {
-            auto multi_polygon = MultiPolygon::Create(allocator, state.ItemCount(), HasZ(), HasM());
+			auto multi_polygon = MultiPolygon::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
 				multi_polygon[i] = state.Next().As<Polygon>();
 			}

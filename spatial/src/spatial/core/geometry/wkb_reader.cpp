@@ -142,7 +142,7 @@ MultiPoint WKBReader::ReadMultiPoint(Cursor &cursor, bool little_endian) {
 
 MultiLineString WKBReader::ReadMultiLineString(Cursor &cursor, bool little_endian) {
 	uint32_t count = ReadInt(cursor, little_endian);
-    auto multi_line_string = MultiLineString::Create(arena, count, false, false);
+	auto multi_line_string = MultiLineString::Create(arena, count, false, false);
 	for (uint32_t i = 0; i < count; i++) {
 		bool line_order = cursor.Read<uint8_t>();
 		auto line_type = ReadType(cursor, line_order);

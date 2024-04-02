@@ -46,6 +46,7 @@
 | [ST_GeomFromText](#st_geomfromtext) | Deserializes a GEOMETRY from a WKT string, optionally ignoring invalid geometries |
 | [ST_GeomFromWKB](#st_geomfromwkb) | Deserializes a GEOMETRY from a WKB encoded blob |
 | [ST_GeometryType](#st_geometrytype) | Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type. |
+| [ST_Haversine](#st_haversine) | Returns the haversine distance between two geometries. |
 | [ST_Hilbert](#st_hilbert) | Encodes the X and Y values as the hilbert curve index for a curve covering the given bounding box |
 | [ST_Intersection](#st_intersection) | Returns the "intersection" of geom1 and geom2 |
 | [ST_Intersects](#st_intersects) | Returns true if two geometries intersects |
@@ -997,6 +998,27 @@ ANY ST_GeometryType (col0 GEOMETRY)
 #### Description
 
 Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type.
+
+
+
+### ST_Haversine
+
+_Returns the haversine distance between two geometries._
+
+#### Signature
+
+```sql
+DOUBLE ST_Haversine (col0 POINT_2D, col1 POINT_2D)
+DOUBLE ST_Haversine (col0 GEOMETRY, col1 GEOMETRY)
+```
+
+#### Description
+
+Returns the haversine distance between two geometries.
+
+- Only supports POINT geometries.
+- Returns the distance in meters.
+- The input is expected to be in WGS84 (EPSG:4326) coordinates, using a [latitude, longitude] axis order.
 
 
 
