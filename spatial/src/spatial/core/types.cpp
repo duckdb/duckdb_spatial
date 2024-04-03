@@ -116,6 +116,9 @@ void GeoTypes::Register(DatabaseInstance &db) {
 
 	// RASTER
 	ExtensionUtil::RegisterType(db, "RASTER", GeoTypes::RASTER());
+
+	// RASTER_COORD
+	ExtensionUtil::RegisterType(db, "RASTER_COORD", GeoTypes::RASTER_COORD());
 }
 
 } // namespace core
