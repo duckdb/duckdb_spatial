@@ -21,7 +21,6 @@ namespace gdal {
 
 static void RasterClipFunction_01(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &context = state.GetContext();
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 
 	using POINTER_TYPE = PrimitiveType<uintptr_t>;
@@ -33,7 +32,7 @@ static void RasterClipFunction_01(DataChunk &args, ExpressionState &state, Vecto
 	GenericExecutor::ExecuteBinary<POINTER_TYPE, GEOMETRY_TYPE, POINTER_TYPE>(p1, p2, result, args.size(),
 		[&](POINTER_TYPE p1, GEOMETRY_TYPE p2) {
 			auto input = p1.val;
-			auto geometry = lstate.factory.Deserialize(p2.val);
+			auto geometry = p2.val;
 
 			GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
@@ -58,7 +57,6 @@ static void RasterClipFunction_01(DataChunk &args, ExpressionState &state, Vecto
 
 static void RasterClipFunction_02(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &context = state.GetContext();
-	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 
 	using POINTER_TYPE = PrimitiveType<uintptr_t>;
@@ -73,7 +71,7 @@ static void RasterClipFunction_02(DataChunk &args, ExpressionState &state, Vecto
 	GenericExecutor::ExecuteTernary<POINTER_TYPE, GEOMETRY_TYPE, LIST_TYPE, POINTER_TYPE>(p1, p2, p3, result, args.size(),
 		[&](POINTER_TYPE p1, GEOMETRY_TYPE p2, LIST_TYPE p3_offlen) {
 			auto input = p1.val;
-			auto geometry = lstate.factory.Deserialize(p2.val);
+			auto geometry = p2.val;
 			auto offlen = p3_offlen.val;
 
 			GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
@@ -112,13 +110,13 @@ static void RasterClipFunction_02(DataChunk &args, ExpressionState &state, Vecto
 void GdalScalarFunctions::RegisterStRasterClip(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_RasterClip");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY()}, GeoTypes::RASTER(), RasterClipFunction_01,
-	                               nullptr, nullptr, nullptr,
-	                               GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY()},
+	                               GeoTypes::RASTER(),
+	                               RasterClipFunction_01));
 
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY(), LogicalType::LIST(LogicalType::VARCHAR)}, GeoTypes::RASTER(), RasterClipFunction_02,
-	                               nullptr, nullptr, nullptr,
-	                               GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY(), LogicalType::LIST(LogicalType::VARCHAR)},
+	                               GeoTypes::RASTER(),
+	                               RasterClipFunction_02));
 
 	ExtensionUtil::RegisterFunction(db, set);
 }

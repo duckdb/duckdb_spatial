@@ -89,7 +89,7 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 
 	for (idx_t out_idx = 0; out_idx < out_size; out_idx++, state.current_file_idx++) {
 		auto file_name = bind_data.file_names[state.current_file_idx];
-		auto prefixed_file_name = GDALClientContextState::GetOrCreate(context).GetPrefix() + file_name;
+		auto prefixed_file_name = GDALClientContextState::GetOrCreate(context).GetPrefix(file_name);
 
 		GDALDatasetUniquePtr dataset;
 		try {

@@ -145,7 +145,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 
 				auto raw_file_name = bind_data.file_path;
 				auto &client_ctx = GDALClientContextState::GetOrCreate(context.client);
-				auto prefixed_file_name = client_ctx.GetPrefix() + raw_file_name;
+				auto prefixed_file_name = client_ctx.GetPrefix(raw_file_name);
 				auto driver_name = bind_data.driver_name;
 				auto creation_options = bind_data.creation_options;
 

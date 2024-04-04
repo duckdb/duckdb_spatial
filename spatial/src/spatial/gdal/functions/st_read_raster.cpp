@@ -80,7 +80,7 @@ void GdalRasterTableFunction::Execute(ClientContext &context, TableFunctionInput
 	// Now we can open the dataset
 	auto raw_file_name = bind_data.file_name;
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
-	auto prefixed_file_name = ctx_state.GetPrefix() + raw_file_name;
+	auto prefixed_file_name = ctx_state.GetPrefix(raw_file_name);
 	auto dataset =
 		GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR,
 		                  gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),

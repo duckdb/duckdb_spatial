@@ -1,5 +1,6 @@
 #include "duckdb/common/types/uuid.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/geometry/wkb_writer.hpp"
 #include "spatial/gdal/types.hpp"
 #include "spatial/gdal/raster/raster.hpp"
 
@@ -81,16 +82,16 @@ static VertexXY rasterToWorldVertex(double matrix[], int32_t col, int32_t row) {
 	return VertexXY {xgeo, ygeo};
 }
 
-Polygon Raster::GetGeometry(GeometryFactory &factory) const {
+Polygon Raster::GetGeometry(ArenaAllocator &allocator) const {
 	auto cols = dataset_->GetRasterXSize();
 	auto rows = dataset_->GetRasterYSize();
 
 	double gt[6] = {0};
 	GetGeoTransform(gt);
 
-	Polygon polygon(factory.allocator, 1, false, false);
+	Polygon polygon(allocator, 1, false, false);
 	auto &ring = polygon[0];
-	ring.Resize(factory.allocator, 5); // 4 vertices + 1 for closing the polygon
+	ring.Resize(allocator, 5); // 4 vertices + 1 for closing the polygon
 	ring.Set(0, rasterToWorldVertex(gt, 0, 0));
 	ring.Set(1, rasterToWorldVertex(gt, cols, 0));
 	ring.Set(2, rasterToWorldVertex(gt, cols, rows));
@@ -268,7 +269,7 @@ class CutlineTransformer : public OGRCoordinateTransformation
 };
 
 GDALDataset *Raster::Clip(GDALDataset *dataset,
-                          const Geometry &geometry,
+                          const geometry_t &geometry,
                           const std::vector<std::string> &options) {
 
 	GDALDatasetH hDataset = GDALDataset::ToHandle(dataset);
@@ -287,7 +288,9 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 	}
 
 	// Add Bounds & Geometry in pixel/line coordinates to the options.
-	if (!geometry.IsEmpty()) {
+	if (geometry.GetType() == GeometryType::POLYGON ||
+	    geometry.GetType() == GeometryType::MULTIPOLYGON) {
+
 		OGRGeometryUniquePtr ogr_geom;
 
 		OGRSpatialReference srs;
@@ -297,10 +300,13 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 			srs.importFromWkt(&proj_ref, nullptr);
 		}
 
+		vector<data_t> buffer;
+		WKBWriter::Write(geometry, buffer);
+
 		OGRGeometry *ptr_geom = nullptr;
-		std::string wkt_geom = geometry.ToString();
-		const char *cpszWkt = wkt_geom.c_str();
-		if (OGRGeometryFactory::createFromWkt(&cpszWkt, &srs, &ptr_geom) != CE_None) {
+		if (OGRGeometryFactory::createFromWkb(
+			buffer.data(), &srs, &ptr_geom, buffer.size(), wkbVariantIso) != OGRERR_NONE) {
+
 			CSLDestroy(papszArgv);
 			throw InvalidInputException("Input Geometry could not imported");
 		} else {
@@ -324,7 +330,7 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 			CPLFree(pszWkt);
 			throw InvalidInputException("Input Geometry could not loaded");
 		}
-		wkt_geom = pszWkt;
+		std::string wkt_geom = pszWkt;
 		CPLFree(pszWkt);
 
 		std::string wkt_option = "CUTLINE=" + wkt_geom;

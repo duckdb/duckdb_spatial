@@ -1,7 +1,8 @@
 #pragma once
 #include "spatial/common.hpp"
+#include "spatial/core/types.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/gdal/types.hpp"
 
 class GDALDataset;
@@ -47,7 +48,7 @@ public:
 	bool GetInvGeoTransform(double *inv_matrix) const;
 
 	//! Returns the polygon representation of the extent of the raster
-	Polygon GetGeometry(GeometryFactory &factory) const;
+	Polygon GetGeometry(ArenaAllocator &allocator) const;
 
 	//! Returns the geometric X and Y (longitude and latitude) given a column and row
 	bool RasterToWorldCoord(PointXY &point, int32_t col, int32_t row) const;
@@ -76,7 +77,7 @@ public:
 
 	//! Returns a raster that is clipped by the input geometry
 	static GDALDataset *Clip(GDALDataset *dataset,
-	                         const Geometry &geometry,
+	                         const geometry_t &geometry,
 	                         const std::vector<std::string> &options = std::vector<std::string>());
 
 	//! Get the last error message.

@@ -3,6 +3,7 @@
 #include "spatial/common.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/common.hpp"
+#include "spatial/core/geometry/geometry.hpp"
 #include "spatial/gdal/functions/scalar.hpp"
 #include "spatial/gdal/raster/raster.hpp"
 
@@ -23,7 +24,7 @@ static void RasterGetGeometryFunction(DataChunk &args, ExpressionState &state, V
 
     UnaryExecutor::Execute<uintptr_t, geometry_t>(args.data[0], result, args.size(), [&](uintptr_t input) {
         Raster raster(reinterpret_cast<GDALDataset *>(input));
-        return lstate.factory.Serialize(result, raster.GetGeometry(lstate.factory), false, false);
+        return Geometry(raster.GetGeometry(lstate.arena)).Serialize(result);
     });
 }
 

@@ -32,7 +32,7 @@ static void RasterAsFileFunction_01(DataChunk &args, ExpressionState &state, Vec
 
 			auto raw_file_name = file_name.GetString();
 			auto &client_ctx = GDALClientContextState::GetOrCreate(context);
-			auto prefixed_file_name = client_ctx.GetPrefix() + raw_file_name;
+			auto prefixed_file_name = client_ctx.GetPrefix(raw_file_name);
 
 			if (!RasterFactory::WriteFile(dataset, prefixed_file_name, gdal_driver_name)) {
 				auto error = Raster::GetLastErrorMsg();
@@ -75,7 +75,7 @@ static void RasterAsFileFunction_02(DataChunk &args, ExpressionState &state, Vec
 
 			auto raw_file_name = file_name.GetString();
 			auto &client_ctx = GDALClientContextState::GetOrCreate(context);
-			auto prefixed_file_name = client_ctx.GetPrefix() + raw_file_name;
+			auto prefixed_file_name = client_ctx.GetPrefix(raw_file_name);
 
 			auto options = std::vector<std::string>();
 

@@ -3,7 +3,6 @@
 #include "spatial/core/types.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/vertex_vector.hpp"
 #include "spatial/gdal/functions/cast.hpp"
 #include "spatial/gdal/raster/raster.hpp"
 
@@ -35,7 +34,7 @@ static bool RasterToGeometryCast(Vector &source, Vector &result, idx_t count, Ca
 
 	UnaryExecutor::Execute<uintptr_t, geometry_t>(source, result, count, [&](uintptr_t &input) {
 		Raster raster(reinterpret_cast<GDALDataset *>(input));
-		return lstate.factory.Serialize(result, raster.GetGeometry(lstate.factory), false, false);
+		return Geometry(raster.GetGeometry(lstate.arena)).Serialize(result);
 	});
 	return true;
 }

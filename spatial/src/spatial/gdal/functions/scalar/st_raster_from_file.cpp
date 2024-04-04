@@ -25,7 +25,7 @@ static void RasterFromFileFunction(DataChunk &args, ExpressionState &state, Vect
 		auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 
 		auto raw_file_name = input.GetString();
-		auto prefixed_file_name = ctx_state.GetPrefix() + raw_file_name;
+		auto prefixed_file_name = ctx_state.GetPrefix(raw_file_name);
 
 		GDALDataset *dataset = RasterFactory::FromFile(prefixed_file_name);
 		if (dataset == nullptr) {
