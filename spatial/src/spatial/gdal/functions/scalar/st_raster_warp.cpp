@@ -64,6 +64,34 @@ static void RasterWarpFunction(DataChunk &args, ExpressionState &state, Vector &
 	);
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Performs mosaicing, reprojection and/or warping on a raster.
+
+	`options` is optional, an array of parameters like [GDALWarp](https://gdal.org/programs/gdalwarp.html).
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	WITH __input AS (
+		SELECT
+			raster
+		FROM
+			ST_ReadRaster('./test/data/mosaic/SCL.tif-land-clip00.tiff')
+	),
+	SELECT
+		ST_RasterWarp(raster, options => ['-r', 'bilinear', '-tr', '40.0', '40.0']) AS warp
+	FROM
+		__input
+	;
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "construction"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -79,6 +107,8 @@ void GdalScalarFunctions::RegisterStRasterWarp(DatabaseInstance &db) {
 	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_RasterWarp", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

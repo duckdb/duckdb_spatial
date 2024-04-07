@@ -40,6 +40,28 @@ static void RasterFromFileFunction(DataChunk &args, ExpressionState &state, Vect
 	});
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Loads a raster from a file path.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	WITH __input AS (
+		SELECT
+			ST_RasterFromFile(file) AS raster
+		FROM
+			glob('./test/data/mosaic/*.tiff')
+	)
+	SELECT raster from __input;
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "construction"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -49,6 +71,8 @@ void GdalScalarFunctions::RegisterStRasterFromFile(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_RasterFromFile");
 	set.AddFunction(ScalarFunction({LogicalType::VARCHAR}, GeoTypes::RASTER(), RasterFromFileFunction));
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_RasterFromFile", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

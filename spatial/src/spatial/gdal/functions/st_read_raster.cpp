@@ -140,6 +140,47 @@ unique_ptr<TableRef> GdalRasterTableFunction::ReplacementScan(ClientContext &, c
 	return nullptr;
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	The `ST_ReadRaster` table function is based on the [GDAL](https://gdal.org/index.html) translator library and enables reading spatial data from a variety of geospatial raster file formats as if they were DuckDB tables.
+	See `ST_Drivers` for a list of supported file formats and drivers.
+
+	Except for the `path` parameter, all parameters are optional.
+
+	| Parameter | Type | Description |
+	| --------- | -----| ----------- |
+	| `path` | VARCHAR | The path to the file to read. Mandatory |
+	| `open_options` | VARCHAR[] | A list of key-value pairs that are passed to the GDAL driver to control the opening of the file. |
+	| `allowed_drivers` | VARCHAR[] | A list of GDAL driver names that are allowed to be used to open the file. If empty, all drivers are allowed. |
+	| `sibling_files` | VARCHAR[] | A list of sibling files that are required to open the file. E.g., the ESRI Shapefile driver requires a .shx file to be present. Although most of the time these can be discovered automatically. |
+
+	Note that GDAL is single-threaded, so this table function will not be able to make full use of parallelism.
+
+	By using `ST_ReadRaster`, the spatial extension also provides “replacement scans” for common raster file formats, allowing you to query files of these formats as if they were tables directly.
+	In practice this is just syntax-sugar for calling ST_ReadRaster, so there is no difference in performance. If you want to pass additional options, you should use the ST_ReadRaster table function directly.
+
+	The following formats are currently recognized by their file extension:
+
+	| Format | Extension |
+	| ------ | --------- |
+	| GeoTiff COG | .tif, .tiff |
+	| Erdas Imagine | .img |
+	| GDAL Virtual | .vrt |
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	SELECT * FROM ST_ReadRaster('some/file/path/filename.tiff');
+
+	SELECT * FROM './path/to/some/shapefile/dataset.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}
+};
+
 //------------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------------
@@ -156,6 +197,8 @@ void GdalRasterTableFunction::Register(DatabaseInstance &db) {
 	set.AddFunction(func);
 
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_ReadRaster", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	// Replacement scan
 	auto &config = DBConfig::GetConfig(db);

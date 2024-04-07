@@ -34,6 +34,22 @@ static void RasterGetBandNoDataFunction(DataChunk &args, ExpressionState &state,
 	});
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Returns the NODATA value of a band in the raster.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	SELECT ST_GetBandNoDataValue(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "property"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -43,6 +59,8 @@ void GdalScalarFunctions::RegisterStBandNoDataValue(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_GetBandNoDataValue");
 	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::DOUBLE, RasterGetBandNoDataFunction));
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_GetBandNoDataValue", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

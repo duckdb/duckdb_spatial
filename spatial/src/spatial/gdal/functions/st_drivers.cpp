@@ -97,7 +97,7 @@ static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the list of supported GDAL drivers and file formats
 
-    Note that far from all of these drivers have been tested properly, and some may require additional options to be passed to work as expected. If you run into any issues please first consult the [consult the GDAL docs](https://gdal.org/drivers/vector/index.html).
+    Note that far from all of these drivers have been tested properly, and some may require additional options to be passed to work as expected. If you run into any issues please first consult the GDAL docs for [vector drivers](https://gdal.org/drivers/vector/index.html) and [raster drivers](https://gdal.org/drivers/raster/index.html).
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(

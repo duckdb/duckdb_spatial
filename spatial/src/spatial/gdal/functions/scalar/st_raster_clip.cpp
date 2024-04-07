@@ -103,6 +103,43 @@ static void RasterClipFunction_02(DataChunk &args, ExpressionState &state, Vecto
 	);
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Returns a raster that is clipped by the input geometry.
+
+	`options` is optional, an array of parameters like [GDALWarp](https://gdal.org/programs/gdalwarp.html).
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	WITH __input AS (
+		SELECT
+			ST_RasterFromFile(file) AS raster
+		FROM
+			glob('./test/data/mosaic/SCL.tif-land-clip00.tiff')
+	),
+	__geometry AS (
+		SELECT geom FROM ST_Read('./test/data/mosaic/CATAST_Pol_Township-PNA.gpkg')
+	)
+	SELECT
+		ST_RasterClip(mosaic,
+					(SELECT geom FROM __geometry LIMIT 1),
+					options =>
+						[
+							'-r', 'bilinear', '-crop_to_cutline', '-wo', 'CUTLINE_ALL_TOUCHED=TRUE'
+						]
+		) AS clip
+	FROM
+		__input
+	;
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "construction"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -119,6 +156,8 @@ void GdalScalarFunctions::RegisterStRasterClip(DatabaseInstance &db) {
 	                               RasterClipFunction_02));
 
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_RasterClip", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

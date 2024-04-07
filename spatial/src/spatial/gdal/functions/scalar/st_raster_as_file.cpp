@@ -97,6 +97,34 @@ static void RasterAsFileFunction_02(DataChunk &args, ExpressionState &state, Vec
 	);
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Writes a raster to a file path.
+
+	`write_options` is optional, an array of parameters for the GDAL driver specified.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	WITH __input AS (
+		SELECT
+			ST_RasterFromFile(file) AS raster
+		FROM
+			glob('./test/data/mosaic/SCL.tif-land-clip00.tiff')
+	)
+	SELECT
+		ST_RasterAsFile(raster, './rasterasfile.tiff', 'Gtiff', ['COMPRESS=LZW']) AS result
+	FROM
+		__input
+	;
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "construction"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -114,6 +142,8 @@ void GdalScalarFunctions::RegisterStRasterAsFile(DatabaseInstance &db) {
 	                               RasterAsFileFunction_02));
 
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_RasterAsFile", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

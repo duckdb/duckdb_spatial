@@ -20,13 +20,29 @@ namespace gdal {
 //------------------------------------------------------------------------------
 
 static void RasterGetGeometryFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
 
-    UnaryExecutor::Execute<uintptr_t, geometry_t>(args.data[0], result, args.size(), [&](uintptr_t input) {
-        Raster raster(reinterpret_cast<GDALDataset *>(input));
-        return Geometry(raster.GetGeometry(lstate.arena)).Serialize(result);
-    });
+	UnaryExecutor::Execute<uintptr_t, geometry_t>(args.data[0], result, args.size(), [&](uintptr_t input) {
+		Raster raster(reinterpret_cast<GDALDataset *>(input));
+		return Geometry(raster.GetGeometry(lstate.arena)).Serialize(result);
+	});
 }
+
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Returns the polygon representation of the extent of the raster.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	SELECT ST_GetGeometry(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "property"}
+};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -34,12 +50,14 @@ static void RasterGetGeometryFunction(DataChunk &args, ExpressionState &state, V
 
 void GdalScalarFunctions::RegisterStGetGeometry(DatabaseInstance &db) {
 
-    ScalarFunctionSet set("ST_GetGeometry");
-    set.AddFunction(ScalarFunction({GeoTypes::RASTER()}, GeoTypes::GEOMETRY(), RasterGetGeometryFunction,
-                                   nullptr, nullptr, nullptr,
-                                   GeometryFunctionLocalState::Init));
+	ScalarFunctionSet set("ST_GetGeometry");
+	set.AddFunction(ScalarFunction({GeoTypes::RASTER()}, GeoTypes::GEOMETRY(), RasterGetGeometryFunction,
+	                               nullptr, nullptr, nullptr,
+	                               GeometryFunctionLocalState::Init));
 
-    ExtensionUtil::RegisterFunction(db, set);
+	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_GetGeometry", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

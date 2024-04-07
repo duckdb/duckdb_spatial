@@ -76,6 +76,49 @@ static void RasterRasterToWorldCoordYFunction(DataChunk &args, ExpressionState &
 	);
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION_1 = R"(
+	Returns the upper left corner as geometric X and Y (longitude and latitude) given a column and row.
+	Returned X and Y are in geometric units of the georeferenced raster.
+)";
+
+static constexpr const char *DOC_EXAMPLE_1 = R"(
+	SELECT ST_RasterToWorldCoord(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS_1[] = {
+	{"ext", "spatial"}, {"category", "position"}
+};
+
+static constexpr const char *DOC_DESCRIPTION_2 = R"(
+	Returns the upper left X coordinate of a raster column row in geometric units of the georeferenced raster.
+	Returned X is in geometric units of the georeferenced raster.
+)";
+
+static constexpr const char *DOC_EXAMPLE_2 = R"(
+	SELECT ST_RasterToWorldCoordX(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS_2[] = {
+	{"ext", "spatial"}, {"category", "position"}
+};
+
+static constexpr const char *DOC_DESCRIPTION_3 = R"(
+	Returns the upper left Y coordinate of a raster column row in geometric units of the georeferenced raster.
+	Returned Y is in geometric units of the georeferenced raster.
+)";
+
+static constexpr const char *DOC_EXAMPLE_3 = R"(
+	SELECT ST_RasterToWorldCoordY(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS_3[] = {
+	{"ext", "spatial"}, {"category", "position"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -86,13 +129,19 @@ void GdalScalarFunctions::RegisterStRasterToWorldCoord(DatabaseInstance &db) {
 	set01.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER, LogicalType::INTEGER}, GeoTypes::POINT_2D(), RasterRasterToWorldCoordFunction));
 	ExtensionUtil::RegisterFunction(db, set01);
 
+	DocUtil::AddDocumentation(db, "ST_RasterToWorldCoord", DOC_DESCRIPTION_1, DOC_EXAMPLE_1, DOC_TAGS_1);
+
 	ScalarFunctionSet set02("ST_RasterToWorldCoordX");
 	set02.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::DOUBLE, RasterRasterToWorldCoordXFunction));
 	ExtensionUtil::RegisterFunction(db, set02);
 
+	DocUtil::AddDocumentation(db, "ST_RasterToWorldCoordX", DOC_DESCRIPTION_2, DOC_EXAMPLE_2, DOC_TAGS_2);
+
 	ScalarFunctionSet set03("ST_RasterToWorldCoordY");
 	set03.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::DOUBLE, RasterRasterToWorldCoordYFunction));
 	ExtensionUtil::RegisterFunction(db, set03);
+
+	DocUtil::AddDocumentation(db, "ST_RasterToWorldCoordY", DOC_DESCRIPTION_3, DOC_EXAMPLE_3, DOC_TAGS_3);
 }
 
 } // namespace gdal

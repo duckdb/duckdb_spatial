@@ -58,6 +58,23 @@ static void RasterGetValueFunction(DataChunk &args, ExpressionState &state, Vect
 	);
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Returns the value of a given band in a given column, row pixel.
+	Band numbers start at 1 and band is assumed to be 1 if not specified.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	SELECT ST_Value(raster, 1, 0, 0) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "property"}
+};
+
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -68,6 +85,8 @@ void GdalScalarFunctions::RegisterStGetValue(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::DOUBLE, RasterGetValueFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
+
+	DocUtil::AddDocumentation(db, "ST_Value", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

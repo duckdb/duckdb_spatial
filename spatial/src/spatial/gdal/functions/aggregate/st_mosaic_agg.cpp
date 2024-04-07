@@ -64,6 +64,39 @@ struct MosaicAggBinaryOperation : RasterAggBinaryOperation {
 };
 
 //------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	Returns a mosaic of a set of raster tiles into a single raster.
+
+	Tiles are considered as source rasters of a larger mosaic and the result dataset has as many bands as one of the input files.
+
+	`options` is optional, an array of parameters like [GDALBuildVRT](https://gdal.org/programs/gdalbuildvrt.html).
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	WITH __input AS (
+		SELECT
+			1 AS raster_id,
+			ST_RasterFromFile(file) AS raster
+		FROM
+			glob('./test/data/mosaic/*.tiff')
+	),
+	SELECT
+		ST_RasterMosaic_Agg(raster, options => ['-r', 'bilinear']) AS r
+	FROM
+		__input
+	GROUP BY
+		raster_id
+	;
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}, {"category", "aggregation"}
+};
+
+//------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------
 
@@ -86,6 +119,8 @@ void GdalAggregateFunctions::RegisterStRasterMosaicAgg(DatabaseInstance &db) {
 	st_mosaic_agg.AddFunction(fun02);
 
 	ExtensionUtil::RegisterFunction(db, st_mosaic_agg);
+
+	DocUtil::AddDocumentation(db, "ST_RasterMosaic_Agg", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal

@@ -124,6 +124,44 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 	output.SetCardinality(out_size);
 }
 
+//------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+	The `ST_Read_Meta` table function accompanies the [ST_ReadRaster](#st_readraster) table function, but instead of reading the contents of a file, this function scans the metadata instead.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+	SELECT
+		driver_short_name,
+		driver_long_name,
+		upper_left_x,
+		upper_left_y,
+		width,
+		height,
+		scale_x,
+		scale_y,
+		skew_x,
+		skew_y,
+		srid,
+		num_bands
+	FROM
+		ST_ReadRaster_Meta('./test/data/mosaic/SCL.tif-land-clip00.tiff')
+	;
+
+	┌───────────────────┬──────────────────┬──────────────┬──────────────┬───────┬────────┬─────────┬─────────┬────────┬────────┬───────┬───────────┐
+	│ driver_short_name │ driver_long_name │ upper_left_x │ upper_left_y │ width │ height │ scale_x │ scale_y │ skew_x │ skew_y │ srid  │ num_bands │
+	│      varchar      │     varchar      │    double    │    double    │ int32 │ int32  │ double  │ double  │ double │ double │ int32 │   int32   │
+	├───────────────────┼──────────────────┼──────────────┼──────────────┼───────┼────────┼─────────┼─────────┼────────┼────────┼───────┼───────────┤
+	│ GTiff             │ GeoTIFF          │     541020.0 │    4796640.0 │  3438 │   5322 │    20.0 │   -20.0 │    0.0 │    0.0 │ 32630 │         1 │
+	└───────────────────┴──────────────────┴──────────────┴──────────────┴───────┴────────┴─────────┴─────────┴────────┴────────┴───────┴───────────┘
+)";
+
+static constexpr DocTag DOC_TAGS[] = {
+	{"ext", "spatial"}
+};
+
 //------------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------------
@@ -131,6 +169,8 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 void GdalRasterMetadataFunction::Register(DatabaseInstance &db) {
 	TableFunction func("ST_ReadRaster_Meta", {LogicalType::VARCHAR}, Scan, Bind, Init);
 	ExtensionUtil::RegisterFunction(db, MultiFileReader::CreateFunctionSet(func));
+
+	DocUtil::AddDocumentation(db, "ST_ReadRaster_Meta", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace gdal
