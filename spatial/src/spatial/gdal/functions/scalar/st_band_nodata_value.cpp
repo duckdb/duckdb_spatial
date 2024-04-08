@@ -20,18 +20,19 @@ namespace gdal {
 static void RasterGetBandNoDataFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 
-	BinaryExecutor::Execute<uintptr_t, int32_t, double_t>(args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
-		GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+	BinaryExecutor::Execute<uintptr_t, int32_t, double_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-		if (band_num < 1) {
-			throw InvalidInputException("BandNum must be greater than 0");
-		}
-		if (dataset->GetRasterCount() < band_num) {
-			throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
-		}
-		GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
-		return raster_band->GetNoDataValue();
-	});
+		    if (band_num < 1) {
+			    throw InvalidInputException("BandNum must be greater than 0");
+		    }
+		    if (dataset->GetRasterCount() < band_num) {
+			    throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
+		    }
+		    GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
+		    return raster_band->GetNoDataValue();
+	    });
 }
 
 //------------------------------------------------------------------------
@@ -46,9 +47,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT ST_GetBandNoDataValue(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -57,7 +56,8 @@ static constexpr DocTag DOC_TAGS[] = {
 void GdalScalarFunctions::RegisterStBandNoDataValue(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GetBandNoDataValue");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::DOUBLE, RasterGetBandNoDataFunction));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::DOUBLE, RasterGetBandNoDataFunction));
 	ExtensionUtil::RegisterFunction(db, set);
 
 	DocUtil::AddDocumentation(db, "ST_GetBandNoDataValue", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);

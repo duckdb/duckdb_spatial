@@ -7,8 +7,7 @@ namespace spatial {
 
 namespace gdal {
 
-GDALDataset *RasterFactory::FromFile(const std::string& file_path,
-                                     const std::vector<std::string> &allowed_drivers,
+GDALDataset *RasterFactory::FromFile(const std::string &file_path, const std::vector<std::string> &allowed_drivers,
                                      const std::vector<std::string> &open_options,
                                      const std::vector<std::string> &sibling_files) {
 
@@ -16,19 +15,15 @@ GDALDataset *RasterFactory::FromFile(const std::string& file_path,
 	auto gdal_open_options = RasterFactory::FromVectorOfStrings(open_options);
 	auto gdal_sibling_files = RasterFactory::FromVectorOfStrings(sibling_files);
 
-	GDALDataset *dataset =
-		GDALDataset::Open(file_path.c_str(),
-		                  GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR,
-		                  gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
-		                  gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
-		                  gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data());
+	GDALDataset *dataset = GDALDataset::Open(file_path.c_str(), GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR,
+	                                         gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
+	                                         gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
+	                                         gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data());
 
 	return dataset;
 }
 
-bool RasterFactory::WriteFile(GDALDataset *dataset,
-                              const std::string &file_path,
-                              const std::string &driver_name,
+bool RasterFactory::WriteFile(GDALDataset *dataset, const std::string &file_path, const std::string &driver_name,
                               const std::vector<std::string> &write_options) {
 
 	auto driver = GetGDALDriverManager()->GetDriverByName(driver_name.c_str());
@@ -44,9 +39,7 @@ bool RasterFactory::WriteFile(GDALDataset *dataset,
 	CPLErrorReset();
 
 	if (copy_available) {
-		output =
-			GDALDatasetUniquePtr(
-				driver->CreateCopy(file_path.c_str(), dataset, FALSE, gdal_options, NULL, NULL));
+		output = GDALDatasetUniquePtr(driver->CreateCopy(file_path.c_str(), dataset, FALSE, gdal_options, NULL, NULL));
 
 		if (output.get() == nullptr) {
 			return false;
@@ -65,8 +58,7 @@ bool RasterFactory::WriteFile(GDALDataset *dataset,
 		int date_type_size = GDALGetDataTypeSize(data_type);
 
 		output =
-			GDALDatasetUniquePtr(
-				driver->Create(file_path.c_str(), cols, rows, band_count, data_type, gdal_options));
+		    GDALDatasetUniquePtr(driver->Create(file_path.c_str(), cols, rows, band_count, data_type, gdal_options));
 
 		if (output.get() == nullptr) {
 			return false;
@@ -89,8 +81,9 @@ bool RasterFactory::WriteFile(GDALDataset *dataset,
 			target_band->SetNoDataValue(source_band->GetNoDataValue());
 			target_band->SetColorInterpretation(source_band->GetColorInterpretation());
 
-			if (source_band->RasterIO(GF_Read , 0, 0, cols, rows, pafScanline, cols, rows, data_type, 0, 0) != CE_None ||
-			    target_band->RasterIO(GF_Write, 0, 0, cols, rows, pafScanline, cols, rows, data_type, 0, 0) != CE_None ) {
+			if (source_band->RasterIO(GF_Read, 0, 0, cols, rows, pafScanline, cols, rows, data_type, 0, 0) != CE_None ||
+			    target_band->RasterIO(GF_Write, 0, 0, cols, rows, pafScanline, cols, rows, data_type, 0, 0) !=
+			        CE_None) {
 				CPLFree(pafScanline);
 				return false;
 			}
@@ -117,7 +110,8 @@ std::vector<char const *> RasterFactory::FromVectorOfStrings(const std::vector<s
 	return output;
 }
 
-std::vector<char const *> RasterFactory::FromNamedParameters(const named_parameter_map_t &input, const std::string &keyname) {
+std::vector<char const *> RasterFactory::FromNamedParameters(const named_parameter_map_t &input,
+                                                             const std::string &keyname) {
 	auto output = std::vector<char const *>();
 
 	auto input_param = input.find(keyname);

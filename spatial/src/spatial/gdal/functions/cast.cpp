@@ -19,9 +19,8 @@ namespace gdal {
 //------------------------------------------------------------------------------
 
 static bool RasterToVarcharCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-	UnaryExecutor::Execute<uintptr_t, string_t>(source, result, count, [&](uintptr_t &input) {
-		return string_t("RASTER");
-	});
+	UnaryExecutor::Execute<uintptr_t, string_t>(source, result, count,
+	                                            [&](uintptr_t &input) { return string_t("RASTER"); });
 	return true;
 }
 
@@ -62,24 +61,20 @@ static bool RasterCoordToVarcharCast(Vector &source, Vector &result, idx_t count
 
 void GdalCastFunctions::Register(DatabaseInstance &db) {
 
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), LogicalType::VARCHAR,
-	                                    RasterToVarcharCast, 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), LogicalType::VARCHAR, RasterToVarcharCast, 1);
 
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), GeoTypes::GEOMETRY(),
-	                                    BoundCastInfo(RasterToGeometryCast, nullptr,
-	                                    GeometryFunctionLocalState::InitCast), 1);
+	ExtensionUtil::RegisterCastFunction(
+	    db, GeoTypes::RASTER(), GeoTypes::GEOMETRY(),
+	    BoundCastInfo(RasterToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 
 	// POINTER -> RASTER is implicitly castable
-	ExtensionUtil::RegisterCastFunction(db, LogicalType::POINTER, GeoTypes::RASTER(),
-	                                    DefaultCasts::ReinterpretCast, 1);
+	ExtensionUtil::RegisterCastFunction(db, LogicalType::POINTER, GeoTypes::RASTER(), DefaultCasts::ReinterpretCast, 1);
 
 	// RASTER -> POINTER is implicitly castable
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), LogicalType::POINTER,
-	                                    DefaultCasts::ReinterpretCast, 1);
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER(), LogicalType::POINTER, DefaultCasts::ReinterpretCast, 1);
 
-	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER_COORD(), LogicalType::VARCHAR,
-	                                    RasterCoordToVarcharCast, 1);
-
+	ExtensionUtil::RegisterCastFunction(db, GeoTypes::RASTER_COORD(), LogicalType::VARCHAR, RasterCoordToVarcharCast,
+	                                    1);
 };
 
 } // namespace gdal

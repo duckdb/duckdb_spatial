@@ -6,32 +6,30 @@ namespace spatial {
 namespace gdal {
 
 //! Supported Pixel data types (GDALDataType).
-typedef enum
-{
-	Unknown = 0,    /**< Unknown or unspecified type     */
-	Byte = 1,       /**< Eight bit unsigned integer      */
-	Int8 = 14,      /**< 8-bit signed integer            */
-	UInt16 = 2,     /**< Sixteen bit unsigned integer    */
-	Int16 = 3,      /**< Sixteen bit signed integer      */
-	UInt32 = 4,     /**< Thirty two bit unsigned integer */
-	Int32 = 5,      /**< Thirty two bit signed integer   */
-	UInt64 = 12,    /**< 64 bit unsigned integer         */
-	Int64 = 13,     /**< 64 bit signed integer           */
-	Float32 = 6,    /**< Thirty two bit floating point   */
-	Float64 = 7,    /**< Sixty four bit floating point   */
-	CInt16 = 8,     /**< Complex Int16                   */
-	CInt32 = 9,     /**< Complex Int32                   */
-	CFloat32 = 10,  /**< Complex Float32                 */
-	CFloat64 = 11,  /**< Complex Float64                 */
-	TypeCount = 15  /**< maximum type # + 1              */
+typedef enum {
+	Unknown = 0,   /**< Unknown or unspecified type     */
+	Byte = 1,      /**< Eight bit unsigned integer      */
+	Int8 = 14,     /**< 8-bit signed integer            */
+	UInt16 = 2,    /**< Sixteen bit unsigned integer    */
+	Int16 = 3,     /**< Sixteen bit signed integer      */
+	UInt32 = 4,    /**< Thirty two bit unsigned integer */
+	Int32 = 5,     /**< Thirty two bit signed integer   */
+	UInt64 = 12,   /**< 64 bit unsigned integer         */
+	Int64 = 13,    /**< 64 bit signed integer           */
+	Float32 = 6,   /**< Thirty two bit floating point   */
+	Float64 = 7,   /**< Sixty four bit floating point   */
+	CInt16 = 8,    /**< Complex Int16                   */
+	CInt32 = 9,    /**< Complex Int32                   */
+	CFloat32 = 10, /**< Complex Float32                 */
+	CFloat64 = 11, /**< Complex Float64                 */
+	TypeCount = 15 /**< maximum type # + 1              */
 } PixelType;
 
 //! Returns the name of given PixelType
-std::string GetPixelTypeName(const PixelType& pixel_type);
+std::string GetPixelTypeName(const PixelType &pixel_type);
 
 //! Supported Types of color interpretation for raster bands (GDALColorInterp).
-typedef enum
-{
+typedef enum {
 	Undefined = 0,      /**< Undefined                             */
 	GrayIndex = 1,      /**< Greyscale                             */
 	PaletteIndex = 2,   /**< Paletted (see associated color table) */
@@ -52,11 +50,10 @@ typedef enum
 } ColorInterp;
 
 //! Returns the name of given ColorInterp
-std::string GetColorInterpName(const ColorInterp& color_interp);
+std::string GetColorInterpName(const ColorInterp &color_interp);
 
 //! Supported Warp Resampling Algorithm (GDALResampleAlg).
-typedef enum
-{
+typedef enum {
 	NearestNeighbour = 0, /**< Nearest neighbour (select on one input pixel) */
 	Bilinear = 1,         /**< Bilinear (2x2 kernel) */
 	Cubic = 2,            /**< Cubic Convolution Approximation (4x4 kernel) */
@@ -65,7 +62,7 @@ typedef enum
 	Average = 5,          /**< Average (computes the weighted average of all non-NODATA contributing pixels) */
 	Mode = 6,             /**< Mode (selects the value which appears most often of all the sampled points) */
 	Max = 8,              /**< Max (selects maximum of all non-NODATA contributing pixels) */
- 	Min = 9,              /**< Min (selects minimum of all non-NODATA contributing pixels) */
+	Min = 9,              /**< Min (selects minimum of all non-NODATA contributing pixels) */
 	Med = 10,             /**< Med (selects median of all non-NODATA contributing pixels) */
 	Q1 = 11,              /**< Q1 (selects first quartile of all non-NODATA contributing pixels) */
 	Q3 = 12,              /**< Q3 (selects third quartile of all non-NODATA contributing pixels) */
@@ -74,7 +71,7 @@ typedef enum
 } ResampleAlg;
 
 //! Returns the name of given ResampleAlg
-std::string GetResampleAlgName(const ResampleAlg& resample_alg);
+std::string GetResampleAlgName(const ResampleAlg &resample_alg);
 
 //! Position of a cell in a Raster (upper left corner as column and row)
 struct RasterCoord {

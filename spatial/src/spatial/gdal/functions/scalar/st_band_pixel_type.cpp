@@ -20,18 +20,19 @@ namespace gdal {
 static void RasterGetPixelTypeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 
-	BinaryExecutor::Execute<uintptr_t, int32_t, int32_t>(args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
-		GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+	BinaryExecutor::Execute<uintptr_t, int32_t, int32_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-		if (band_num < 1) {
-			throw InvalidInputException("BandNum must be greater than 0");
-		}
-		if (dataset->GetRasterCount() < band_num) {
-			throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
-		}
-		GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
-		return (int32_t)raster_band->GetRasterDataType();
-	});
+		    if (band_num < 1) {
+			    throw InvalidInputException("BandNum must be greater than 0");
+		    }
+		    if (dataset->GetRasterCount() < band_num) {
+			    throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
+		    }
+		    GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
+		    return (int32_t)raster_band->GetRasterDataType();
+	    });
 }
 
 //------------------------------------------------------------------------------
@@ -41,18 +42,19 @@ static void RasterGetPixelTypeFunction(DataChunk &args, ExpressionState &state, 
 static void RasterGetPixelTypeNameFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 
-	BinaryExecutor::Execute<uintptr_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
-		GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+	BinaryExecutor::Execute<uintptr_t, int32_t, string_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-		if (band_num < 1) {
-			throw InvalidInputException("BandNum must be greater than 0");
-		}
-		if (dataset->GetRasterCount() < band_num) {
-			throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
-		}
-		GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
-		return GetPixelTypeName((PixelType)raster_band->GetRasterDataType());
-	});
+		    if (band_num < 1) {
+			    throw InvalidInputException("BandNum must be greater than 0");
+		    }
+		    if (dataset->GetRasterCount() < band_num) {
+			    throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
+		    }
+		    GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
+		    return GetPixelTypeName((PixelType)raster_band->GetRasterDataType());
+	    });
 }
 
 //------------------------------------------------------------------------
@@ -85,9 +87,7 @@ static constexpr const char *DOC_EXAMPLE_1 = R"(
 	SELECT ST_GetBandPixelType(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_1[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_1[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_2 = R"(
 	Returns the pixel type name of a band in the raster.
@@ -115,9 +115,7 @@ static constexpr const char *DOC_EXAMPLE_2 = R"(
 	SELECT ST_GetBandPixelTypeName(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_2[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_2[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -126,7 +124,8 @@ static constexpr DocTag DOC_TAGS_2[] = {
 void GdalScalarFunctions::RegisterStBandPixelType(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GetBandPixelType");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::INTEGER, RasterGetPixelTypeFunction));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::INTEGER, RasterGetPixelTypeFunction));
 	ExtensionUtil::RegisterFunction(db, set);
 
 	DocUtil::AddDocumentation(db, "ST_GetBandPixelType", DOC_DESCRIPTION_1, DOC_EXAMPLE_1, DOC_TAGS_1);
@@ -135,7 +134,8 @@ void GdalScalarFunctions::RegisterStBandPixelType(DatabaseInstance &db) {
 void GdalScalarFunctions::RegisterStBandPixelTypeName(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GetBandPixelTypeName");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::VARCHAR, RasterGetPixelTypeNameFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::VARCHAR,
+	                               RasterGetPixelTypeNameFunction));
 	ExtensionUtil::RegisterFunction(db, set);
 
 	DocUtil::AddDocumentation(db, "ST_GetBandPixelTypeName", DOC_DESCRIPTION_2, DOC_EXAMPLE_2, DOC_TAGS_2);

@@ -27,35 +27,35 @@ static void RasterGetValueFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &p3 = args.data[2];
 	auto &p4 = args.data[3];
 
-	GenericExecutor::ExecuteQuaternary<POINTER_TYPE, INT_TYPE, INT_TYPE, INT_TYPE, DOUBLE_TYPE>(p1, p2, p3, p4, result, args.size(),
-		[&](POINTER_TYPE p1, INT_TYPE p2, INT_TYPE p3, INT_TYPE p4) {
-			auto input = p1.val;
-			auto band_num = p2.val;
-			auto col = p3.val;
-			auto row = p4.val;
+	GenericExecutor::ExecuteQuaternary<POINTER_TYPE, INT_TYPE, INT_TYPE, INT_TYPE, DOUBLE_TYPE>(
+	    p1, p2, p3, p4, result, args.size(), [&](POINTER_TYPE p1, INT_TYPE p2, INT_TYPE p3, INT_TYPE p4) {
+		    auto input = p1.val;
+		    auto band_num = p2.val;
+		    auto col = p3.val;
+		    auto row = p4.val;
 
-			GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
-			auto cols = dataset->GetRasterXSize();
-			auto rows = dataset->GetRasterYSize();
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+		    auto cols = dataset->GetRasterXSize();
+		    auto rows = dataset->GetRasterYSize();
 
-			if (band_num < 1) {
-				throw InvalidInputException("BandNum must be greater than 0");
-			}
-			if (dataset->GetRasterCount() < band_num) {
-				throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
-			}
-			if (col < 0 || col >= cols || row < 0 || row >= rows) {
-				throw InvalidInputException("Attempting to get pixel value with out of range raster coordinates: (%d, %d)", col, row);
-			}
+		    if (band_num < 1) {
+			    throw InvalidInputException("BandNum must be greater than 0");
+		    }
+		    if (dataset->GetRasterCount() < band_num) {
+			    throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
+		    }
+		    if (col < 0 || col >= cols || row < 0 || row >= rows) {
+			    throw InvalidInputException(
+			        "Attempting to get pixel value with out of range raster coordinates: (%d, %d)", col, row);
+		    }
 
-			Raster raster(dataset);
-			double value;
-			if (raster.GetValue(value, band_num, col, row)) {
-				return value;
-			}
-			throw InternalException("Failed attempting to get pixel value with raster coordinates: (%d, %d)", col, row);
-		}
-	);
+		    Raster raster(dataset);
+		    double value;
+		    if (raster.GetValue(value, band_num, col, row)) {
+			    return value;
+		    }
+		    throw InternalException("Failed attempting to get pixel value with raster coordinates: (%d, %d)", col, row);
+	    });
 }
 
 //------------------------------------------------------------------------
@@ -71,9 +71,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT ST_Value(raster, 1, 0, 0) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -82,7 +80,9 @@ static constexpr DocTag DOC_TAGS[] = {
 void GdalScalarFunctions::RegisterStGetValue(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Value");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::DOUBLE, RasterGetValueFunction));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER},
+	                   LogicalType::DOUBLE, RasterGetValueFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
 

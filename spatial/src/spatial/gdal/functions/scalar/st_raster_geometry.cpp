@@ -40,9 +40,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT ST_GetGeometry(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -51,9 +49,8 @@ static constexpr DocTag DOC_TAGS[] = {
 void GdalScalarFunctions::RegisterStGetGeometry(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GetGeometry");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER()}, GeoTypes::GEOMETRY(), RasterGetGeometryFunction,
-	                               nullptr, nullptr, nullptr,
-	                               GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::RASTER()}, GeoTypes::GEOMETRY(), RasterGetGeometryFunction, nullptr,
+	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 

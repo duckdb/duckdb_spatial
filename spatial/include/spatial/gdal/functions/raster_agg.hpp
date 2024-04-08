@@ -76,7 +76,8 @@ struct RasterAggBinaryOperation {
 	}
 
 	template <class INPUT_TYPE, class OPTS_TYPE, class STATE, class OP>
-	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, const OPTS_TYPE &opts, AggregateBinaryInput &agg, idx_t) {
+	static void ConstantOperation(STATE &state, const INPUT_TYPE &input, const OPTS_TYPE &opts,
+	                              AggregateBinaryInput &agg, idx_t) {
 		Operation<INPUT_TYPE, OPTS_TYPE, STATE, OP>(state, input, opts, agg);
 	}
 
@@ -92,7 +93,7 @@ struct RasterAggBindData : public FunctionData {
 	std::vector<std::string> options;
 
 	explicit RasterAggBindData(ClientContext &context, std::vector<std::string> options)
-		: context(context), options(options) {
+	    : context(context), options(options) {
 	}
 
 	unique_ptr<FunctionData> Copy() const override {

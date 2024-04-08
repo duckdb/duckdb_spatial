@@ -55,7 +55,6 @@ struct UnionAggUnaryOperation : RasterAggUnaryOperation {
 	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
 		RasterUnionFunction(state, target, finalize_data);
 	}
-
 };
 
 struct UnionAggBinaryOperation : RasterAggBinaryOperation {
@@ -64,7 +63,6 @@ struct UnionAggBinaryOperation : RasterAggBinaryOperation {
 	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
 		RasterUnionFunction(state, target, finalize_data);
 	}
-
 };
 
 //------------------------------------------------------------------------
@@ -96,9 +94,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	;
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "aggregation"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "aggregation"}};
 
 //------------------------------------------------------------------------
 // Register
@@ -109,15 +105,14 @@ void GdalAggregateFunctions::RegisterStRasterUnionAgg(DatabaseInstance &db) {
 	AggregateFunctionSet st_union_agg("ST_RasterUnion_Agg");
 
 	auto fun01 = AggregateFunction::UnaryAggregate<RasterAggState, uintptr_t, uintptr_t, UnionAggUnaryOperation>(
-		GeoTypes::RASTER(), GeoTypes::RASTER()
-	);
+	    GeoTypes::RASTER(), GeoTypes::RASTER());
 	fun01.bind = BindRasterAggOperation;
 
 	st_union_agg.AddFunction(fun01);
 
-	auto fun02 = AggregateFunction::BinaryAggregate<RasterAggState, uintptr_t, list_entry_t, uintptr_t, UnionAggBinaryOperation>(
-		GeoTypes::RASTER(), LogicalType::LIST(LogicalType::VARCHAR), GeoTypes::RASTER()
-	);
+	auto fun02 =
+	    AggregateFunction::BinaryAggregate<RasterAggState, uintptr_t, list_entry_t, uintptr_t, UnionAggBinaryOperation>(
+	        GeoTypes::RASTER(), LogicalType::LIST(LogicalType::VARCHAR), GeoTypes::RASTER());
 	fun02.bind = BindRasterAggOperation;
 
 	st_union_agg.AddFunction(fun02);

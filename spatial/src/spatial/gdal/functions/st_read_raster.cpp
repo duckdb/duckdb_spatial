@@ -68,24 +68,20 @@ void GdalRasterTableFunction::Execute(ClientContext &context, TableFunctionInput
 	}
 
 	// First scan for "options" parameter
-	auto gdal_open_options =
-		RasterFactory::FromNamedParameters(bind_data.parameters, "open_options");
+	auto gdal_open_options = RasterFactory::FromNamedParameters(bind_data.parameters, "open_options");
 
-	auto gdal_allowed_drivers =
-		RasterFactory::FromNamedParameters(bind_data.parameters, "allowed_drivers");
+	auto gdal_allowed_drivers = RasterFactory::FromNamedParameters(bind_data.parameters, "allowed_drivers");
 
-	auto gdal_sibling_files =
-		RasterFactory::FromNamedParameters(bind_data.parameters, "sibling_files");
+	auto gdal_sibling_files = RasterFactory::FromNamedParameters(bind_data.parameters, "sibling_files");
 
 	// Now we can open the dataset
 	auto raw_file_name = bind_data.file_name;
 	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 	auto prefixed_file_name = ctx_state.GetPrefix(raw_file_name);
-	auto dataset =
-		GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR,
-		                  gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
-		                  gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
-		                  gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data());
+	auto dataset = GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR,
+	                                 gdal_allowed_drivers.empty() ? nullptr : gdal_allowed_drivers.data(),
+	                                 gdal_open_options.empty() ? nullptr : gdal_open_options.data(),
+	                                 gdal_sibling_files.empty() ? nullptr : gdal_sibling_files.data());
 
 	if (dataset == nullptr) {
 		auto error = Raster::GetLastErrorMsg();
@@ -125,10 +121,8 @@ unique_ptr<TableRef> GdalRasterTableFunction::ReplacementScan(ClientContext &, c
 	auto lower_name = StringUtil::Lower(table_name);
 
 	// Check if the file name ends with some common raster file extensions
-	if (StringUtil::EndsWith(lower_name, ".img") ||
-	    StringUtil::EndsWith(lower_name, ".tiff") ||
-	    StringUtil::EndsWith(lower_name, ".tif") ||
-	    StringUtil::EndsWith(lower_name, ".vrt")) {
+	if (StringUtil::EndsWith(lower_name, ".img") || StringUtil::EndsWith(lower_name, ".tiff") ||
+	    StringUtil::EndsWith(lower_name, ".tif") || StringUtil::EndsWith(lower_name, ".vrt")) {
 
 		auto table_function = make_uniq<TableFunctionRef>();
 		vector<unique_ptr<ParsedExpression>> children;
@@ -177,9 +171,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT * FROM './path/to/some/shapefile/dataset.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
 //------------------------------------------------------------------------------
 // Register

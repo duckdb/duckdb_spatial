@@ -60,7 +60,6 @@ public:
 	bool GetValue(double &value, int32_t band_num, int32_t col, int32_t row) const;
 
 public:
-
 	//! Returns the geometric X and Y (longitude and latitude) given a column and row
 	static bool RasterToWorldCoord(PointXY &point, double matrix[], int32_t col, int32_t row);
 
@@ -76,8 +75,7 @@ public:
 	                         const std::vector<std::string> &options = std::vector<std::string>());
 
 	//! Returns a raster that is clipped by the input geometry
-	static GDALDataset *Clip(GDALDataset *dataset,
-	                         const geometry_t &geometry,
+	static GDALDataset *Clip(GDALDataset *dataset, const geometry_t &geometry,
 	                         const std::vector<std::string> &options = std::vector<std::string>());
 
 	//! Get the last error message.

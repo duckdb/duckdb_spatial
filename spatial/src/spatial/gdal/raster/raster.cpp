@@ -39,8 +39,7 @@ int32_t Raster::GetSrid() const {
 		OGRSpatialReference spatial_ref;
 		spatial_ref.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
 
-		if (spatial_ref.importFromWkt(proj_def) == OGRERR_NONE &&
-		    spatial_ref.AutoIdentifyEPSG() == OGRERR_NONE) {
+		if (spatial_ref.importFromWkt(proj_def) == OGRERR_NONE && spatial_ref.AutoIdentifyEPSG() == OGRERR_NONE) {
 
 			const char *code = spatial_ref.GetAuthorityCode(nullptr);
 			if (code) {
@@ -130,10 +129,10 @@ bool Raster::WorldToRasterCoord(RasterCoord &coord, double inv_matrix[], double 
 	// https://github.com/postgis/postgis/blob/stable-3.4/raster/rt_core/rt_raster.c#L808
 	double rnd = 0;
 
-	// Helper macro for symmetrical rounding
-	#define ROUND(x, y) (((x > 0.0) ? floor((x * pow(10, y) + 0.5)) : ceil((x * pow(10, y) - 0.5))) / pow(10, y))
-	// Helper macro for consistent floating point equality checks
-	#define FLT_EQ(x, y) ((x == y) || (isnan(x) && isnan(y)) || (fabs(x - y) <= FLT_EPSILON))
+// Helper macro for symmetrical rounding
+#define ROUND(x, y) (((x > 0.0) ? floor((x * pow(10, y) + 0.5)) : ceil((x * pow(10, y) - 0.5))) / pow(10, y))
+// Helper macro for consistent floating point equality checks
+#define FLT_EQ(x, y) ((x == y) || (isnan(x) && isnan(y)) || (fabs(x - y) <= FLT_EPSILON))
 
 	rnd = ROUND(xr, 0);
 	if (FLT_EQ(rnd, xr))
@@ -164,10 +163,9 @@ bool Raster::GetValue(double &value, int32_t band_num, int32_t col, int32_t row)
 	return false;
 }
 
-GDALDataset *Raster::BuildVRT(const std::vector<GDALDataset *> &datasets,
-                              const std::vector<std::string> &options) {
+GDALDataset *Raster::BuildVRT(const std::vector<GDALDataset *> &datasets, const std::vector<std::string> &options) {
 
-	char** papszArgv = nullptr;
+	char **papszArgv = nullptr;
 
 	for (auto it = options.begin(); it != options.end(); ++it) {
 		papszArgv = CSLAddString(papszArgv, (*it).c_str());
@@ -175,13 +173,11 @@ GDALDataset *Raster::BuildVRT(const std::vector<GDALDataset *> &datasets,
 
 	CPLErrorReset();
 
-	GDALBuildVRTOptions* psOptions = GDALBuildVRTOptionsNew(papszArgv, nullptr);
+	GDALBuildVRTOptions *psOptions = GDALBuildVRTOptionsNew(papszArgv, nullptr);
 	CSLDestroy(papszArgv);
 
-	auto result =
-		GDALDatasetUniquePtr(GDALDataset::FromHandle(
-			GDALBuildVRT(nullptr, datasets.size(), (GDALDatasetH *)&datasets[0],
-			nullptr, psOptions, nullptr)));
+	auto result = GDALDatasetUniquePtr(GDALDataset::FromHandle(
+	    GDALBuildVRT(nullptr, datasets.size(), (GDALDatasetH *)&datasets[0], nullptr, psOptions, nullptr)));
 
 	GDALBuildVRTOptionsFree(psOptions);
 
@@ -191,8 +187,7 @@ GDALDataset *Raster::BuildVRT(const std::vector<GDALDataset *> &datasets,
 	return result.release();
 }
 
-GDALDataset *Raster::Warp(GDALDataset *dataset,
-                          const std::vector<std::string> &options) {
+GDALDataset *Raster::Warp(GDALDataset *dataset, const std::vector<std::string> &options) {
 
 	GDALDatasetH hDataset = GDALDataset::ToHandle(dataset);
 
@@ -201,7 +196,7 @@ GDALDataset *Raster::Warp(GDALDataset *dataset,
 		throw InvalidInputException("Unknown driver 'MEM'");
 	}
 
-	char** papszArgv = nullptr;
+	char **papszArgv = nullptr;
 	papszArgv = CSLAddString(papszArgv, "-of");
 	papszArgv = CSLAddString(papszArgv, "MEM");
 
@@ -216,9 +211,8 @@ GDALDataset *Raster::Warp(GDALDataset *dataset,
 
 	auto ds_name = UUID::ToString(UUID::GenerateRandomUUID());
 
-	auto result =
-		GDALDatasetUniquePtr(GDALDataset::FromHandle(
-			GDALWarp(ds_name.c_str(), nullptr, 1, &hDataset, psOptions, nullptr)));
+	auto result = GDALDatasetUniquePtr(
+	    GDALDataset::FromHandle(GDALWarp(ds_name.c_str(), nullptr, 1, &hDataset, psOptions, nullptr)));
 
 	GDALWarpAppOptionsFree(psOptions);
 
@@ -229,48 +223,35 @@ GDALDataset *Raster::Warp(GDALDataset *dataset,
 }
 
 //! Transformer of Geometries to pixel/line coordinates
-class CutlineTransformer : public OGRCoordinateTransformation
-{
-	public:
-		void *hTransformArg = nullptr;
+class CutlineTransformer : public OGRCoordinateTransformation {
+public:
+	void *hTransformArg = nullptr;
 
-	explicit CutlineTransformer(void *hTransformArg)
-		: hTransformArg(hTransformArg)
-	{
+	explicit CutlineTransformer(void *hTransformArg) : hTransformArg(hTransformArg) {
 	}
-	virtual ~CutlineTransformer()
-	{
+	virtual ~CutlineTransformer() {
 		GDALDestroyTransformer(hTransformArg);
 	}
 
-	virtual const OGRSpatialReference *GetSourceCS() const override
-	{
+	virtual const OGRSpatialReference *GetSourceCS() const override {
 		return nullptr;
 	}
-	virtual const OGRSpatialReference *GetTargetCS() const override
-	{
+	virtual const OGRSpatialReference *GetTargetCS() const override {
 		return nullptr;
 	}
-	virtual OGRCoordinateTransformation *Clone() const override
-	{
+	virtual OGRCoordinateTransformation *Clone() const override {
 		return nullptr;
 	}
-	virtual OGRCoordinateTransformation *GetInverse() const override
-	{
+	virtual OGRCoordinateTransformation *GetInverse() const override {
 		return nullptr;
 	}
 
-	virtual int Transform(int nCount, double *x, double *y, double *z,
-	                      double * /* t */, int *pabSuccess) override
-	{
-		return GDALGenImgProjTransform(
-			hTransformArg, TRUE, nCount, x, y, z, pabSuccess);
+	virtual int Transform(int nCount, double *x, double *y, double *z, double * /* t */, int *pabSuccess) override {
+		return GDALGenImgProjTransform(hTransformArg, TRUE, nCount, x, y, z, pabSuccess);
 	}
 };
 
-GDALDataset *Raster::Clip(GDALDataset *dataset,
-                          const geometry_t &geometry,
-                          const std::vector<std::string> &options) {
+GDALDataset *Raster::Clip(GDALDataset *dataset, const geometry_t &geometry, const std::vector<std::string> &options) {
 
 	GDALDatasetH hDataset = GDALDataset::ToHandle(dataset);
 
@@ -279,7 +260,7 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 		throw InvalidInputException("Unknown driver 'MEM'");
 	}
 
-	char** papszArgv = nullptr;
+	char **papszArgv = nullptr;
 	papszArgv = CSLAddString(papszArgv, "-of");
 	papszArgv = CSLAddString(papszArgv, "MEM");
 
@@ -288,8 +269,7 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 	}
 
 	// Add Bounds & Geometry in pixel/line coordinates to the options.
-	if (geometry.GetType() == GeometryType::POLYGON ||
-	    geometry.GetType() == GeometryType::MULTIPOLYGON) {
+	if (geometry.GetType() == GeometryType::POLYGON || geometry.GetType() == GeometryType::MULTIPOLYGON) {
 
 		OGRGeometryUniquePtr ogr_geom;
 
@@ -304,8 +284,8 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 		WKBWriter::Write(geometry, buffer);
 
 		OGRGeometry *ptr_geom = nullptr;
-		if (OGRGeometryFactory::createFromWkb(
-			buffer.data(), &srs, &ptr_geom, buffer.size(), wkbVariantIso) != OGRERR_NONE) {
+		if (OGRGeometryFactory::createFromWkb(buffer.data(), &srs, &ptr_geom, buffer.size(), wkbVariantIso) !=
+		    OGRERR_NONE) {
 
 			CSLDestroy(papszArgv);
 			throw InvalidInputException("Input Geometry could not imported");
@@ -316,8 +296,7 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 		OGREnvelope envelope;
 		ogr_geom->getEnvelope(&envelope);
 
-		CutlineTransformer transformer(
-			GDALCreateGenImgProjTransformer2(hDataset, nullptr, nullptr));
+		CutlineTransformer transformer(GDALCreateGenImgProjTransformer2(hDataset, nullptr, nullptr));
 
 		if (ogr_geom->transform(&transformer) != OGRERR_NONE) {
 			CSLDestroy(papszArgv);
@@ -350,9 +329,8 @@ GDALDataset *Raster::Clip(GDALDataset *dataset,
 
 	auto ds_name = UUID::ToString(UUID::GenerateRandomUUID());
 
-	auto result =
-		GDALDatasetUniquePtr(GDALDataset::FromHandle(
-			GDALWarp(ds_name.c_str(), nullptr, 1, &hDataset, psOptions, nullptr)));
+	auto result = GDALDatasetUniquePtr(
+	    GDALDataset::FromHandle(GDALWarp(ds_name.c_str(), nullptr, 1, &hDataset, psOptions, nullptr)));
 
 	GDALWarpAppOptionsFree(psOptions);
 

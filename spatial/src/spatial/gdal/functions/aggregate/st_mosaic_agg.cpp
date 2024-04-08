@@ -51,7 +51,6 @@ struct MosaicAggUnaryOperation : RasterAggUnaryOperation {
 	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
 		RasterMosaicFunction(state, target, finalize_data);
 	}
-
 };
 
 struct MosaicAggBinaryOperation : RasterAggBinaryOperation {
@@ -60,7 +59,6 @@ struct MosaicAggBinaryOperation : RasterAggBinaryOperation {
 	static void Finalize(STATE &state, T &target, AggregateFinalizeData &finalize_data) {
 		RasterMosaicFunction(state, target, finalize_data);
 	}
-
 };
 
 //------------------------------------------------------------------------
@@ -92,9 +90,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	;
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "aggregation"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "aggregation"}};
 
 //------------------------------------------------------------------------
 // Register
@@ -105,15 +101,14 @@ void GdalAggregateFunctions::RegisterStRasterMosaicAgg(DatabaseInstance &db) {
 	AggregateFunctionSet st_mosaic_agg("ST_RasterMosaic_Agg");
 
 	auto fun01 = AggregateFunction::UnaryAggregate<RasterAggState, uintptr_t, uintptr_t, MosaicAggUnaryOperation>(
-		GeoTypes::RASTER(), GeoTypes::RASTER()
-	);
+	    GeoTypes::RASTER(), GeoTypes::RASTER());
 	fun01.bind = BindRasterAggOperation;
 
 	st_mosaic_agg.AddFunction(fun01);
 
-	auto fun02 = AggregateFunction::BinaryAggregate<RasterAggState, uintptr_t, list_entry_t, uintptr_t, MosaicAggBinaryOperation>(
-		GeoTypes::RASTER(), LogicalType::LIST(LogicalType::VARCHAR), GeoTypes::RASTER()
-	);
+	auto fun02 = AggregateFunction::BinaryAggregate<RasterAggState, uintptr_t, list_entry_t, uintptr_t,
+	                                                MosaicAggBinaryOperation>(
+	    GeoTypes::RASTER(), LogicalType::LIST(LogicalType::VARCHAR), GeoTypes::RASTER());
 	fun02.bind = BindRasterAggOperation;
 
 	st_mosaic_agg.AddFunction(fun02);

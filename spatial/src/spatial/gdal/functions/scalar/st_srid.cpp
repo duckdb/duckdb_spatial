@@ -36,9 +36,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT ST_SRID(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions

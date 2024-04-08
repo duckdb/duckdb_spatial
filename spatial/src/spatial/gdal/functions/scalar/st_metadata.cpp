@@ -41,7 +41,8 @@ static void RasterGetNumBandsFunction(DataChunk &args, ExpressionState &state, V
 	});
 }
 
-static void RasterGetGeoTransformItemFunction(DataChunk &args, ExpressionState &state, Vector &result, int32_t gt_index) {
+static void RasterGetGeoTransformItemFunction(DataChunk &args, ExpressionState &state, Vector &result,
+                                              int32_t gt_index) {
 
 	UnaryExecutor::Execute<uintptr_t, double>(args.data[0], result, args.size(), [&](uintptr_t input) {
 		Raster raster(reinterpret_cast<GDALDataset *>(input));
@@ -102,9 +103,7 @@ static constexpr const char *DOC_EXAMPLE_01 = R"(
 	SELECT ST_Width(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_01[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_01[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_02 = R"(
 	Returns the height of the raster in pixels.
@@ -114,9 +113,7 @@ static constexpr const char *DOC_EXAMPLE_02 = R"(
 	SELECT ST_Height(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_02[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_02[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_03 = R"(
 	Returns the number of bands in the raster.
@@ -126,9 +123,7 @@ static constexpr const char *DOC_EXAMPLE_03 = R"(
 	SELECT ST_NumBands(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_03[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_03[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_04 = R"(
 	Returns the upper left X coordinate of raster in projected spatial reference.
@@ -138,9 +133,7 @@ static constexpr const char *DOC_EXAMPLE_04 = R"(
 	SELECT ST_UpperLeftX(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_04[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_04[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_05 = R"(
 	Returns the upper left Y coordinate of raster in projected spatial reference.
@@ -150,9 +143,7 @@ static constexpr const char *DOC_EXAMPLE_05 = R"(
 	SELECT ST_UpperLeftY(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_05[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_05[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_06 = R"(
 	Returns the X component of the pixel width in units of coordinate reference system.
@@ -163,9 +154,7 @@ static constexpr const char *DOC_EXAMPLE_06 = R"(
 	SELECT ST_ScaleX(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_06[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_06[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_07 = R"(
 	Returns the Y component of the pixel width in units of coordinate reference system.
@@ -176,9 +165,7 @@ static constexpr const char *DOC_EXAMPLE_07 = R"(
 	SELECT ST_ScaleY(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_07[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_07[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_08 = R"(
 	Returns the georeference X skew (or rotation parameter).
@@ -189,9 +176,7 @@ static constexpr const char *DOC_EXAMPLE_08 = R"(
 	SELECT ST_SkewX(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_08[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_08[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_09 = R"(
 	Returns the georeference Y skew (or rotation parameter).
@@ -202,9 +187,7 @@ static constexpr const char *DOC_EXAMPLE_09 = R"(
 	SELECT ST_SkewY(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_09[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_09[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_10 = R"(
 	Returns the width of a pixel in geometric units of the spatial reference system.
@@ -215,9 +198,7 @@ static constexpr const char *DOC_EXAMPLE_10 = R"(
 	SELECT ST_PixelWidth(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_10[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_10[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_11 = R"(
 	Returns the height of a pixel in geometric units of the spatial reference system.
@@ -228,9 +209,7 @@ static constexpr const char *DOC_EXAMPLE_11 = R"(
 	SELECT ST_PixelHeight(raster) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_11[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_11[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions

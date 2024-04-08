@@ -32,8 +32,7 @@ unique_ptr<FunctionData> BindRasterAggOperation(ClientContext &context, Aggregat
 				options.push_back(option);
 			}
 		} else {
-			throw BinderException(StringUtil::Format(
-				"raster_agg: Unknown argument '%s'", arg->alias.c_str()));
+			throw BinderException(StringUtil::Format("raster_agg: Unknown argument '%s'", arg->alias.c_str()));
 		}
 	}
 

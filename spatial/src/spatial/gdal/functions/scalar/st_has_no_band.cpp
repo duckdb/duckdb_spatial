@@ -19,10 +19,11 @@ namespace gdal {
 static void RasterHasNoBandFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 
-	BinaryExecutor::Execute<uintptr_t, int32_t, bool>(args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
-		GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
-		return dataset->GetRasterCount() >= band_num;
-	});
+	BinaryExecutor::Execute<uintptr_t, int32_t, bool>(args.data[0], args.data[1], result, args.size(),
+	                                                  [&](uintptr_t input, int32_t band_num) {
+		                                                  GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+		                                                  return dataset->GetRasterCount() >= band_num;
+	                                                  });
 }
 
 //------------------------------------------------------------------------
@@ -38,9 +39,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT ST_HasNoBand(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -49,7 +48,8 @@ static constexpr DocTag DOC_TAGS[] = {
 void GdalScalarFunctions::RegisterStGetHasNoBand(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_HasNoBand");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::BOOLEAN, RasterHasNoBandFunction));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::BOOLEAN, RasterHasNoBandFunction));
 	ExtensionUtil::RegisterFunction(db, set);
 
 	DocUtil::AddDocumentation(db, "ST_HasNoBand", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);

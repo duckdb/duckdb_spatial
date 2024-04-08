@@ -29,30 +29,29 @@ static void RasterClipFunction_01(DataChunk &args, ExpressionState &state, Vecto
 	auto &p1 = args.data[0];
 	auto &p2 = args.data[1];
 
-	GenericExecutor::ExecuteBinary<POINTER_TYPE, GEOMETRY_TYPE, POINTER_TYPE>(p1, p2, result, args.size(),
-		[&](POINTER_TYPE p1, GEOMETRY_TYPE p2) {
-			auto input = p1.val;
-			auto geometry = p2.val;
+	GenericExecutor::ExecuteBinary<POINTER_TYPE, GEOMETRY_TYPE, POINTER_TYPE>(
+	    p1, p2, result, args.size(), [&](POINTER_TYPE p1, GEOMETRY_TYPE p2) {
+		    auto input = p1.val;
+		    auto geometry = p2.val;
 
-			GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-			if (dataset->GetRasterCount() == 0) {
-				throw InvalidInputException("Input Raster has no RasterBands");
-			}
+		    if (dataset->GetRasterCount() == 0) {
+			    throw InvalidInputException("Input Raster has no RasterBands");
+		    }
 
-			GDALDataset *result = Raster::Clip(dataset, geometry);
+		    GDALDataset *result = Raster::Clip(dataset, geometry);
 
-			if (result == nullptr) {
-				auto error = Raster::GetLastErrorMsg();
-				throw IOException("Could not clip raster (" + error + ")");
-			}
+		    if (result == nullptr) {
+			    auto error = Raster::GetLastErrorMsg();
+			    throw IOException("Could not clip raster (" + error + ")");
+		    }
 
-			auto &raster_registry = ctx_state.GetRasterRegistry(context);
-			raster_registry.RegisterRaster(result);
+		    auto &raster_registry = ctx_state.GetRasterRegistry(context);
+		    raster_registry.RegisterRaster(result);
 
-			return CastPointerToValue(result);
-		}
-	);
+		    return CastPointerToValue(result);
+	    });
 }
 
 static void RasterClipFunction_02(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -68,39 +67,38 @@ static void RasterClipFunction_02(DataChunk &args, ExpressionState &state, Vecto
 	auto &p3 = args.data[2];
 	auto &p3_entry = ListVector::GetEntry(p3);
 
-	GenericExecutor::ExecuteTernary<POINTER_TYPE, GEOMETRY_TYPE, LIST_TYPE, POINTER_TYPE>(p1, p2, p3, result, args.size(),
-		[&](POINTER_TYPE p1, GEOMETRY_TYPE p2, LIST_TYPE p3_offlen) {
-			auto input = p1.val;
-			auto geometry = p2.val;
-			auto offlen = p3_offlen.val;
+	GenericExecutor::ExecuteTernary<POINTER_TYPE, GEOMETRY_TYPE, LIST_TYPE, POINTER_TYPE>(
+	    p1, p2, p3, result, args.size(), [&](POINTER_TYPE p1, GEOMETRY_TYPE p2, LIST_TYPE p3_offlen) {
+		    auto input = p1.val;
+		    auto geometry = p2.val;
+		    auto offlen = p3_offlen.val;
 
-			GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-			if (dataset->GetRasterCount() == 0) {
-				throw InvalidInputException("Input Raster has no RasterBands");
-			}
+		    if (dataset->GetRasterCount() == 0) {
+			    throw InvalidInputException("Input Raster has no RasterBands");
+		    }
 
-			auto options = std::vector<std::string>();
+		    auto options = std::vector<std::string>();
 
-			for (idx_t i = offlen.offset; i < offlen.offset + offlen.length; i++) {
-				const auto &child_value = p3_entry.GetValue(i);
-				const auto option = child_value.ToString();
-				options.emplace_back(option);
-			}
+		    for (idx_t i = offlen.offset; i < offlen.offset + offlen.length; i++) {
+			    const auto &child_value = p3_entry.GetValue(i);
+			    const auto option = child_value.ToString();
+			    options.emplace_back(option);
+		    }
 
-			GDALDataset *result = Raster::Clip(dataset, geometry, options);
+		    GDALDataset *result = Raster::Clip(dataset, geometry, options);
 
-			if (result == nullptr) {
-				auto error = Raster::GetLastErrorMsg();
-				throw IOException("Could not clip raster (" + error + ")");
-			}
+		    if (result == nullptr) {
+			    auto error = Raster::GetLastErrorMsg();
+			    throw IOException("Could not clip raster (" + error + ")");
+		    }
 
-			auto &raster_registry = ctx_state.GetRasterRegistry(context);
-			raster_registry.RegisterRaster(result);
+		    auto &raster_registry = ctx_state.GetRasterRegistry(context);
+		    raster_registry.RegisterRaster(result);
 
-			return CastPointerToValue(result);
-		}
-	);
+		    return CastPointerToValue(result);
+	    });
 }
 
 //------------------------------------------------------------------------
@@ -136,9 +134,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	;
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "construction"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -147,13 +143,11 @@ static constexpr DocTag DOC_TAGS[] = {
 void GdalScalarFunctions::RegisterStRasterClip(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_RasterClip");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY()},
-	                               GeoTypes::RASTER(),
-	                               RasterClipFunction_01));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY()}, GeoTypes::RASTER(), RasterClipFunction_01));
 
 	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), GeoTypes::GEOMETRY(), LogicalType::LIST(LogicalType::VARCHAR)},
-	                               GeoTypes::RASTER(),
-	                               RasterClipFunction_02));
+	                               GeoTypes::RASTER(), RasterClipFunction_02));
 
 	ExtensionUtil::RegisterFunction(db, set);
 

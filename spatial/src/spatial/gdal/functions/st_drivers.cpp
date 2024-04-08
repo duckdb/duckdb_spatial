@@ -61,8 +61,9 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 		auto short_name = Value::CreateValue(GDALGetDriverShortName(driver));
 		auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
 
-		std::string driver_type = supports_vector ? "vector": "";
-		if (supports_raster) driver_type += (supports_vector) ? ",raster" : "raster";
+		std::string driver_type = supports_vector ? "vector" : "";
+		if (supports_raster)
+			driver_type += (supports_vector) ? ",raster" : "raster";
 
 		const char *create_flag = GDALGetMetadataItem(driver, GDAL_DCAP_CREATE, nullptr);
 		auto create_value = Value::CreateValue(create_flag != nullptr);

@@ -58,9 +58,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	SELECT raster from __input;
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}, {"category", "construction"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 
 //------------------------------------------------------------------------------
 // Register functions

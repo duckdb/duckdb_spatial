@@ -31,7 +31,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	auto result = make_uniq<GDALMetadataBindData>();
 
 	result->file_names =
-		MultiFileReader::GetFileList(context, input.inputs[0], "gdal metadata", FileGlobOptions::ALLOW_EMPTY);
+	    MultiFileReader::GetFileList(context, input.inputs[0], "gdal metadata", FileGlobOptions::ALLOW_EMPTY);
 
 	return_types.push_back(LogicalType::VARCHAR);
 	return_types.push_back(LogicalType::VARCHAR);
@@ -94,7 +94,7 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 		GDALDatasetUniquePtr dataset;
 		try {
 			dataset = GDALDatasetUniquePtr(
-				GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR));
+			    GDALDataset::Open(prefixed_file_name.c_str(), GDAL_OF_RASTER | GDAL_OF_VERBOSE_ERROR));
 		} catch (...) {
 			// Just skip anything we cant open
 			out_idx--;
@@ -106,16 +106,16 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 		double gt[6] = {0};
 		raster.GetGeoTransform(gt);
 
-		output.data[0] .SetValue(out_idx, file_name);
-		output.data[1] .SetValue(out_idx, dataset->GetDriver()->GetDescription());
-		output.data[2] .SetValue(out_idx, dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
-		output.data[3] .SetValue(out_idx, gt[0]);
-		output.data[4] .SetValue(out_idx, gt[3]);
-		output.data[5] .SetValue(out_idx, raster.GetRasterXSize());
-		output.data[6] .SetValue(out_idx, raster.GetRasterYSize());
-		output.data[7] .SetValue(out_idx, gt[1]);
-		output.data[8] .SetValue(out_idx, gt[5]);
-		output.data[9] .SetValue(out_idx, gt[2]);
+		output.data[0].SetValue(out_idx, file_name);
+		output.data[1].SetValue(out_idx, dataset->GetDriver()->GetDescription());
+		output.data[2].SetValue(out_idx, dataset->GetDriver()->GetMetadataItem(GDAL_DMD_LONGNAME));
+		output.data[3].SetValue(out_idx, gt[0]);
+		output.data[4].SetValue(out_idx, gt[3]);
+		output.data[5].SetValue(out_idx, raster.GetRasterXSize());
+		output.data[6].SetValue(out_idx, raster.GetRasterYSize());
+		output.data[7].SetValue(out_idx, gt[1]);
+		output.data[8].SetValue(out_idx, gt[5]);
+		output.data[9].SetValue(out_idx, gt[2]);
 		output.data[10].SetValue(out_idx, gt[4]);
 		output.data[11].SetValue(out_idx, raster.GetSrid());
 		output.data[12].SetValue(out_idx, raster.GetRasterCount());
@@ -158,9 +158,7 @@ static constexpr const char *DOC_EXAMPLE = R"(
 	└───────────────────┴──────────────────┴──────────────┴──────────────┴───────┴────────┴─────────┴─────────┴────────┴────────┴───────┴───────────┘
 )";
 
-static constexpr DocTag DOC_TAGS[] = {
-	{"ext", "spatial"}
-};
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
 //------------------------------------------------------------------------------
 // Register

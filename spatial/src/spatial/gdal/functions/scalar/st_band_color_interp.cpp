@@ -20,18 +20,19 @@ namespace gdal {
 static void RasterGetColorInterpFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 
-	BinaryExecutor::Execute<uintptr_t, int32_t, int32_t>(args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
-		GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+	BinaryExecutor::Execute<uintptr_t, int32_t, int32_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-		if (band_num < 1) {
-			throw InvalidInputException("BandNum must be greater than 0");
-		}
-		if (dataset->GetRasterCount() < band_num) {
-			throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
-		}
-		GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
-		return (int32_t)raster_band->GetColorInterpretation();
-	});
+		    if (band_num < 1) {
+			    throw InvalidInputException("BandNum must be greater than 0");
+		    }
+		    if (dataset->GetRasterCount() < band_num) {
+			    throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
+		    }
+		    GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
+		    return (int32_t)raster_band->GetColorInterpretation();
+	    });
 }
 
 //------------------------------------------------------------------------------
@@ -41,18 +42,19 @@ static void RasterGetColorInterpFunction(DataChunk &args, ExpressionState &state
 static void RasterGetColorInterpNameFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	D_ASSERT(args.data.size() == 2);
 
-	BinaryExecutor::Execute<uintptr_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
-		GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
+	BinaryExecutor::Execute<uintptr_t, int32_t, string_t>(
+	    args.data[0], args.data[1], result, args.size(), [&](uintptr_t input, int32_t band_num) {
+		    GDALDataset *dataset = reinterpret_cast<GDALDataset *>(input);
 
-		if (band_num < 1) {
-			throw InvalidInputException("BandNum must be greater than 0");
-		}
-		if (dataset->GetRasterCount() < band_num) {
-			throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
-		}
-		GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
-		return GetColorInterpName((ColorInterp)raster_band->GetColorInterpretation());
-	});
+		    if (band_num < 1) {
+			    throw InvalidInputException("BandNum must be greater than 0");
+		    }
+		    if (dataset->GetRasterCount() < band_num) {
+			    throw InvalidInputException("Dataset only has %d RasterBands", dataset->GetRasterCount());
+		    }
+		    GDALRasterBand *raster_band = dataset->GetRasterBand(band_num);
+		    return GetColorInterpName((ColorInterp)raster_band->GetColorInterpretation());
+	    });
 }
 
 //------------------------------------------------------------------------
@@ -87,9 +89,7 @@ static constexpr const char *DOC_EXAMPLE_1 = R"(
 	SELECT ST_GetBandColorInterp(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_1[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_1[] = {{"ext", "spatial"}, {"category", "property"}};
 
 static constexpr const char *DOC_DESCRIPTION_2 = R"(
 	Returns the color interpretation name of a band in the raster.
@@ -119,9 +119,7 @@ static constexpr const char *DOC_EXAMPLE_2 = R"(
 	SELECT ST_GetBandColorInterpName(raster, 1) FROM './test/data/mosaic/SCL.tif-land-clip00.tiff';
 )";
 
-static constexpr DocTag DOC_TAGS_2[] = {
-	{"ext", "spatial"}, {"category", "property"}
-};
+static constexpr DocTag DOC_TAGS_2[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -130,7 +128,8 @@ static constexpr DocTag DOC_TAGS_2[] = {
 void GdalScalarFunctions::RegisterStBandColorInterp(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GetBandColorInterp");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::INTEGER, RasterGetColorInterpFunction));
+	set.AddFunction(
+	    ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::INTEGER, RasterGetColorInterpFunction));
 	ExtensionUtil::RegisterFunction(db, set);
 
 	DocUtil::AddDocumentation(db, "ST_GetBandColorInterp", DOC_DESCRIPTION_1, DOC_EXAMPLE_1, DOC_TAGS_1);
@@ -139,7 +138,8 @@ void GdalScalarFunctions::RegisterStBandColorInterp(DatabaseInstance &db) {
 void GdalScalarFunctions::RegisterStBandColorInterpName(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_GetBandColorInterpName");
-	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::VARCHAR, RasterGetColorInterpNameFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::RASTER(), LogicalType::INTEGER}, LogicalType::VARCHAR,
+	                               RasterGetColorInterpNameFunction));
 	ExtensionUtil::RegisterFunction(db, set);
 
 	DocUtil::AddDocumentation(db, "ST_GetBandColorInterpName", DOC_DESCRIPTION_2, DOC_EXAMPLE_2, DOC_TAGS_2);
