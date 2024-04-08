@@ -15,12 +15,12 @@ Value RasterValue::CreateValue(GDALDataset *dataset) {
 }
 
 GDALDataset *RasterValue::operator->() const {
-	GDALDataset *dataset = reinterpret_cast<GDALDataset *>(GetValueUnsafe<uintptr_t>());
+	GDALDataset *dataset = reinterpret_cast<GDALDataset *>(GetValueUnsafe<uint64_t>());
 	return dataset;
 }
 
 GDALDataset *RasterValue::get() const {
-	GDALDataset *dataset = reinterpret_cast<GDALDataset *>(GetValueUnsafe<uintptr_t>());
+	GDALDataset *dataset = reinterpret_cast<GDALDataset *>(GetValueUnsafe<uint64_t>());
 	return dataset;
 }
 

@@ -141,7 +141,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 
 			if (type == core::GeoTypes::RASTER()) {
 				auto value = input.GetValue(col_idx, row_idx);
-				GDALDataset *dataset = reinterpret_cast<GDALDataset *>(value.GetValueUnsafe<uintptr_t>());
+				GDALDataset *dataset = reinterpret_cast<GDALDataset *>(value.GetValueUnsafe<uint64_t>());
 
 				auto raw_file_name = bind_data.file_path;
 				auto &client_ctx = GDALClientContextState::GetOrCreate(context.client);
