@@ -29,8 +29,8 @@ static inline double HaversineFunction(double lat1_p, double lon1_p, double lat2
 	auto dlon = lon2 - lon1;
 
 	auto a =
-	    std::pow(std::sin(dlat * 0.5), 2.0) + std::cos(lat1) * std::cos(lat2) * std::pow(std::sin(dlon * 0.5), 2.0);
-	auto c = 2.0 * std::asin(std::sqrt(a));
+	    std::pow(std::sin(dlat / 2), 2) + std::cos(lat1) * std::cos(lat2) * std::pow(std::sin(dlon / 2), 2);
+	auto c = 2.0 * std::atan2(std::sqrt(a), std::sqrt(1.0 - a));
 	return R * c;
 }
 
