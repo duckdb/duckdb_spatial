@@ -29,7 +29,7 @@ static inline double HaversineFunction(double lat1_p, double lon1_p, double lat2
 	auto dlon = lon2 - lon1;
 
 	auto a =
-	    std::pow(std::sin(dlat / 2), 2) + std::cos(lat1) * std::cos(lat2) * std::pow(std::sin(dlon / 2), 2);
+	    std::pow(std::sin(dlat / 2.0), 2.0) + std::cos(lat1) * std::cos(lat2) * std::pow(std::sin(dlon / 2.0), 2.0);
 	auto c = 2.0 * std::atan2(std::sqrt(a), std::sqrt(1.0 - a));
 	return R * c;
 }
@@ -66,13 +66,13 @@ static void GeometryHaversineFunction(DataChunk &args, ExpressionState &state, V
 		    if (left.GetType() != GeometryType::POINT || right.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_Distance_Sphere only supports POINT geometries (for now!)");
 		    }
-		    auto &left_geom = Geometry::Deserialize(lstate.arena, left).As<Point>();
-		    auto &right_geom = Geometry::Deserialize(lstate.arena, right).As<Point>();
+		    auto left_geom = Geometry::Deserialize(lstate.arena, left);
+		    auto right_geom = Geometry::Deserialize(lstate.arena, right);
 		    if (left_geom.IsEmpty() || right_geom.IsEmpty()) {
 			    throw InvalidInputException("ST_Distance_Sphere does not support EMPTY geometries");
 		    }
-		    auto v1 = left_geom.Get(0);
-		    auto v2 = right_geom.Get(0);
+		    auto v1 = left_geom.As<Point>().Get(0);
+		    auto v2 = right_geom.As<Point>().Get(0);
 		    return HaversineFunction(v1.x, v1.y, v2.x, v2.y);
 	    });
 }
