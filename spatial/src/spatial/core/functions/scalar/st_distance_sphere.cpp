@@ -64,12 +64,12 @@ static void GeometryHaversineFunction(DataChunk &args, ExpressionState &state, V
 	BinaryExecutor::Execute<geometry_t, geometry_t, double>(
 	    left, right, result, count, [&](geometry_t left, geometry_t right) {
 		    if (left.GetType() != GeometryType::POINT || right.GetType() != GeometryType::POINT) {
-			    throw InvalidInputException("ST_Haversine only supports POINT geometries (for now!)");
+			    throw InvalidInputException("ST_Distance_Sphere only supports POINT geometries (for now!)");
 		    }
 		    auto &left_geom = Geometry::Deserialize(lstate.arena, left).As<Point>();
 		    auto &right_geom = Geometry::Deserialize(lstate.arena, right).As<Point>();
 		    if (left_geom.IsEmpty() || right_geom.IsEmpty()) {
-			    throw InvalidInputException("ST_Haversine does not support EMPTY geometries");
+			    throw InvalidInputException("ST_Distance_Sphere does not support EMPTY geometries");
 		    }
 		    auto v1 = left_geom.Get(0);
 		    auto v2 = right_geom.Get(0);
@@ -97,7 +97,7 @@ static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property
 // Register functions
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStHaversine(DatabaseInstance &db) {
-	ScalarFunctionSet distance_function_set("ST_Haversine");
+	ScalarFunctionSet distance_function_set("ST_Distance_Sphere");
 
 	distance_function_set.AddFunction(
 	    ScalarFunction({GeoTypes::POINT_2D(), GeoTypes::POINT_2D()}, LogicalType::DOUBLE, PointHaversineFunction));
@@ -107,7 +107,7 @@ void CoreScalarFunctions::RegisterStHaversine(DatabaseInstance &db) {
 	                                                 GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, distance_function_set);
-	DocUtil::AddDocumentation(db, "ST_Haversine", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddDocumentation(db, "ST_Distance_Sphere", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core
