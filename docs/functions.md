@@ -86,6 +86,7 @@
 | [ST_ReducePrecision](#st_reduceprecision) | Returns the geometry with all vertices reduced to the target precision |
 | [ST_RemoveRepeatedPoints](#st_removerepeatedpoints) | Returns a new geometry with repeated points removed, optionally within a target distance of eachother. |
 | [ST_Reverse](#st_reverse) | Returns a new version of the input geometry with the order of its vertices reversed |
+| [ST_ShortestLine](#st_shortestline) | Returns the line between the two closest points between geom1 and geom2 |
 | [ST_Simplify](#st_simplify) | Simplifies the input geometry by collapsing edges smaller than 'distance' |
 | [ST_SimplifyPreserveTopology](#st_simplifypreservetopology) | Returns a simplified geometry but avoids creating invalid topologies |
 | [ST_StartPoint](#st_startpoint) | Returns the first point of a line geometry |
@@ -1696,6 +1697,22 @@ GEOMETRY ST_Reverse (col0 GEOMETRY)
 #### Description
 
 Returns a new version of the input geometry with the order of its vertices reversed
+
+
+
+### ST_ShortestLine
+
+_Returns the line between the two closest points between geom1 and geom2_
+
+#### Signature
+
+```sql
+GEOMETRY ST_ShortestLine (col0 GEOMETRY, col1 GEOMETRY)
+```
+
+#### Description
+
+Returns the line between the two closest points between geom1 and geom2
 
 
 
