@@ -83,7 +83,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    rings.push_back(hole);
 		    }
 
-		    Polygon polygon(arena, rings.size(), false, false);
+		    auto polygon = Polygon::Create(arena, rings.size(), false, false);
 		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
 			    polygon[ring_idx] = std::move(rings[ring_idx]);
 		    }
@@ -116,7 +116,7 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 
 		auto props = line_blob.GetProperties();
 
-		Polygon polygon(arena, 1, props.HasZ(), props.HasM());
+		auto polygon = Polygon::Create(arena, 1, props.HasZ(), props.HasM());
 		polygon[0] = std::move(line);
 		return Geometry(polygon).Serialize(result);
 	});

@@ -29,6 +29,7 @@ public:
 		RegisterStGeomFromHEXWKB(db);
 		RegisterStGeomFromText(db);
 		RegisterStGeomFromWKB(db);
+		RegisterStHaversine(db);
 		RegisterStHilbert(db);
 		RegisterStIntersects(db);
 		RegisterStIntersectsExtent(db);
@@ -123,6 +124,9 @@ private:
 
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(DatabaseInstance &db);
+
+	// ST_Haversine
+	static void RegisterStHaversine(DatabaseInstance &db);
 
 	// ST_Hilbert
 	static void RegisterStHilbert(DatabaseInstance &db);

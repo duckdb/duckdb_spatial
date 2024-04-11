@@ -113,19 +113,17 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectPoints(geometry, points);
 					    uint32_t size = points.size();
 
-					    MultiPoint mpoint(arena, size, props.HasZ(), props.HasM());
+					    auto mpoint = MultiPoint::Create(arena, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoint[i] = points[i];
 					    }
 					    return Geometry(mpoint).Serialize(result);
 				    }
 				    // otherwise, we return an empty multipoint
-				    MultiPoint empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
+				    return Geometry(MultiPoint::Empty(props.HasZ(), props.HasM())).Serialize(result);
 			    } else {
 				    // otherwise if its not a collection, we return an empty point
-				    Point empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
+				    return Geometry(Point::Empty(props.HasZ(), props.HasM())).Serialize(result);
 			    }
 		    }
 		    case 2: {
@@ -139,19 +137,17 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectLines(geometry, lines);
 					    uint32_t size = lines.size();
 
-					    MultiLineString mline(arena, size, props.HasZ(), props.HasM());
+					    auto mline = MultiLineString::Create(arena, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mline[i] = lines[i];
 					    }
 					    return Geometry(mline).Serialize(result);
 				    }
 				    // otherwise, we return an empty multilinestring
-				    MultiLineString empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
+				    return Geometry(MultiLineString::Empty(props.HasZ(), props.HasM())).Serialize(result);
 			    } else {
 				    // otherwise if its not a collection, we return an empty linestring
-				    LineString empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
+				    return Geometry(LineString::Empty(props.HasZ(), props.HasM())).Serialize(result);
 			    }
 		    }
 		    case 3: {
@@ -164,19 +160,17 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 					    CollectPolygons(geometry, polys);
 					    uint32_t size = polys.size();
 
-					    MultiPolygon mpoly(arena, size, props.HasZ(), props.HasM());
+					    auto mpoly = MultiPolygon::Create(arena, size, props.HasZ(), props.HasM());
 					    for (uint32_t i = 0; i < size; i++) {
 						    mpoly[i] = polys[i];
 					    }
 					    return Geometry(mpoly).Serialize(result);
 				    }
 				    // otherwise, we return an empty multipolygon
-				    MultiPolygon empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
+				    return Geometry(MultiPolygon::Empty(props.HasZ(), props.HasM())).Serialize(result);
 			    } else {
 				    // otherwise if its not a collection, we return an empty polygon
-				    Polygon empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
+				    return Geometry(Polygon::Empty(props.HasZ(), props.HasM())).Serialize(result);
 			    }
 		    }
 		    default:
@@ -213,7 +207,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<Point> points;
 				CollectPoints(geometry, points);
 				uint32_t size = points.size();
-				MultiPoint mpoint(arena, size, props.HasZ(), props.HasM());
+				auto mpoint = MultiPoint::Create(arena, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mpoint[i] = points[i];
 				}
@@ -224,7 +218,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<LineString> lines;
 				CollectLines(geometry, lines);
 				uint32_t size = lines.size();
-				MultiLineString mline(arena, size, props.HasZ(), props.HasM());
+				auto mline = MultiLineString::Create(arena, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mline[i] = lines[i];
 				}
@@ -235,7 +229,7 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 				vector<Polygon> polys;
 				CollectPolygons(geometry, polys);
 				uint32_t size = polys.size();
-				MultiPolygon mpoly(arena, size, props.HasZ(), props.HasM());
+				auto mpoly = MultiPolygon::Create(arena, size, props.HasZ(), props.HasM());
 				for (uint32_t i = 0; i < size; i++) {
 					mpoly[i] = polys[i];
 				}

@@ -105,8 +105,8 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 
 		    auto polygon = Geometry::Deserialize(arena, input).As<Polygon>();
 		    if (polygon.IsEmpty()) {
-			    LineString empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM());
-			    return Geometry(empty).Serialize(result);
+			    return Geometry(LineString::Empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM()))
+			        .Serialize(result);
 		    }
 
 		    auto &shell = polygon[0];

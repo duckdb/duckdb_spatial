@@ -25,7 +25,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
-		LineString line_geom(arena, length, false, false);
+		auto line_geom = LineString::Create(arena, length, false, false);
 
 		uint32_t vertex_idx = 0;
 		for (idx_t i = offset; i < offset + length; i++) {
@@ -81,8 +81,7 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 
 		    if (geometry_left.IsEmpty() && geometry_right.IsEmpty()) {
 			    // Empty linestring
-			    LineString line(false, false);
-			    return Geometry(line).Serialize(result);
+			    return Geometry(LineString::Empty(false, false)).Serialize(result);
 		    }
 
 		    if (geometry_left.IsEmpty() || geometry_right.IsEmpty()) {
@@ -100,7 +99,7 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    point_left.SetVertexType(arena, has_z, has_m);
 		    point_right.SetVertexType(arena, has_z, has_m);
 
-		    LineString line_geom(has_z, has_m);
+		    auto line_geom = LineString::Empty(has_z, has_m);
 		    line_geom.Append(arena, point_left);
 		    line_geom.Append(arena, point_right);
 		    return Geometry(line_geom).Serialize(result);
