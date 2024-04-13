@@ -638,13 +638,13 @@ public:
 	}
 
 	template <class T>
-	T &As() {
+	T &As() & {
 		D_ASSERT(GetType() == T::TYPE);
 		return reinterpret_cast<T &>(*this);
 	}
 
 	template <class T>
-	const T &As() const {
+	const T &As() const & {
 		D_ASSERT(GetType() == T::TYPE);
 		return reinterpret_cast<const T &>(*this);
 	}
