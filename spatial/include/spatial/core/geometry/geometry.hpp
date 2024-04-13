@@ -742,7 +742,7 @@ public:
 		return Visit<op>();
 	}
 
-	Geometry &SetVertexType(ArenaAllocator &arena, bool has_z, bool has_m, double default_z = 0, double default_m = 0) {
+	void SetVertexType(ArenaAllocator &arena, bool has_z, bool has_m, double default_z = 0, double default_m = 0) {
 		struct op {
 			static void Apply(SinglePartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m, double default_z,
 			                  double default_m) {
@@ -758,7 +758,6 @@ public:
 			}
 		};
 		Visit<op>(arena, has_z, has_m, default_z, default_m);
-		return *this;
 	}
 
 	geometry_t Serialize(Vector &result);

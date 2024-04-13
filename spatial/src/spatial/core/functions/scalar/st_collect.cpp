@@ -76,25 +76,29 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		if (all_points) {
 			auto collection = MultiPoint::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Point>();
+                geometries[i].SetVertexType(arena, has_z, has_m);
+				collection[i] = geometries[i].As<Point>();
 			}
 			return Geometry(collection).Serialize(result);
 		} else if (all_lines) {
 			auto collection = MultiLineString::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<LineString>();
+                geometries[i].SetVertexType(arena, has_z, has_m);
+				collection[i] = geometries[i].As<LineString>();
 			}
 			return Geometry(collection).Serialize(result);
 		} else if (all_polygons) {
 			auto collection = MultiPolygon::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Polygon>();
+                geometries[i].SetVertexType(arena, has_z, has_m);
+				collection[i] = geometries[i].As<Polygon>();
 			}
 			return Geometry(collection).Serialize(result);
 		} else {
 			auto collection = GeometryCollection::Create(arena, geometries.size(), has_z, has_m);
 			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m);
+                geometries[i].SetVertexType(arena, has_z, has_m);
+				collection[i] = geometries[i];
 			}
 			return Geometry(collection).Serialize(result);
 		}
