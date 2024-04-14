@@ -3,7 +3,6 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/types.hpp"
 
 namespace spatial {
@@ -102,41 +101,50 @@ static void Point4DFunction(DataChunk &args, ExpressionState &state, Vector &res
 //------------------------------------------------------------------------------
 static void PointFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
-
+	auto &arena = lstate.arena;
 	auto &x = args.data[0];
 	auto &y = args.data[1];
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, geometry_t>(x, y, result, count, [&](double x, double y) {
-		Point point(lstate.factory.allocator, x, y);
-		return lstate.factory.Serialize(result, point, false, false);
+		return Geometry(Point::FromVertex(arena, VertexXY {x, y})).Serialize(result);
 	});
 }
 
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+
 void CoreScalarFunctions::RegisterStPoint(DatabaseInstance &db) {
 
 	ScalarFunction st_point("ST_Point", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::GEOMETRY(), PointFunction,
 	                        nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init);
 
 	ExtensionUtil::RegisterFunction(db, st_point);
+	auto POINT_DOC_DESCRIPTION = "Creates a GEOMETRY point";
+	DocUtil::AddDocumentation(db, "ST_Point", POINT_DOC_DESCRIPTION, nullptr, DOC_TAGS);
 
 	// Non-standard
 	ScalarFunction st_point2d("ST_Point2D", {LogicalType::DOUBLE, LogicalType::DOUBLE}, GeoTypes::POINT_2D(),
 	                          Point2DFunction);
 	ExtensionUtil::RegisterFunction(db, st_point2d);
+	auto POINT2D_DOC_DESCRIPTION = "Creates a POINT_2D";
+	DocUtil::AddDocumentation(db, "ST_Point2D", POINT2D_DOC_DESCRIPTION, nullptr, DOC_TAGS);
 
 	ScalarFunction st_point_3d("ST_Point3D", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
 	                           GeoTypes::POINT_3D(), Point3DFunction);
 	ExtensionUtil::RegisterFunction(db, st_point_3d);
+	auto POINT3D_DOC_DESCRIPTION = "Creates a POINT_3D";
+	DocUtil::AddDocumentation(db, "ST_Point3D", POINT3D_DOC_DESCRIPTION, nullptr, DOC_TAGS);
 
 	ScalarFunction st_point_4d("ST_Point4D",
 	                           {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE},
 	                           GeoTypes::POINT_4D(), Point4DFunction);
 
 	ExtensionUtil::RegisterFunction(db, st_point_4d);
+	auto POINT4D_DOC_DESCRIPTION = "Creates a POINT_4D";
+	DocUtil::AddDocumentation(db, "ST_Point4D", POINT4D_DOC_DESCRIPTION, nullptr, DOC_TAGS);
 }
 
 } // namespace core

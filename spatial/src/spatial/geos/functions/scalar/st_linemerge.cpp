@@ -37,6 +37,21 @@ static void LineMergeFunctionWithDirected(DataChunk &args, ExpressionState &stat
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    "Merges" the input line geometry, optionally taking direction into account.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
 void GEOSScalarFunctions::RegisterStLineMerge(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_LineMerge");
@@ -48,6 +63,7 @@ void GEOSScalarFunctions::RegisterStLineMerge(DatabaseInstance &db) {
 	                               GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_LineMerge", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

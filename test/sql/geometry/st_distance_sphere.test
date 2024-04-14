@@ -1,0 +1,7 @@
+require spatial
+
+# Distance between JFK and AMS in meters
+query I
+SELECT ST_Distance_Sphere(ST_Point(40.639722, -73.778889), ST_Point(52.3, 4.765));
+----
+5847000

@@ -17,15 +17,15 @@ namespace core {
 // WKB -> GEOMETRY
 //------------------------------------------------------------------------------
 static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
-	WKBReader reader(lstate.factory.allocator);
+	WKBReader reader(lstate.arena);
 
 	bool success = true;
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    source, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
 		    try {
-			    auto geometry = reader.Deserialize(input);
-			    return lstate.factory.Serialize(result, geometry, reader.GeomHasZ(), reader.GeomHasM());
+			    return reader.Deserialize(input).Serialize(result);
 		    } catch (SerializationException &e) {
 			    if (success) {
 				    success = false;

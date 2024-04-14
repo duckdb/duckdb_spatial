@@ -8,7 +8,6 @@
 #include "duckdb/parser/parsed_data/create_copy_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "spatial/core/types.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
 #include "spatial/gdal/functions.hpp"
@@ -39,8 +38,8 @@ struct BindData : public TableFunctionData {
 };
 
 struct LocalState : public LocalFunctionData {
-	core::GeometryFactory factory;
-	explicit LocalState(ClientContext &context) : factory(BufferAllocator::Get(context)) {
+	ArenaAllocator arena;
+	explicit LocalState(ClientContext &context) : arena(BufferAllocator::Get(context)) {
 	}
 };
 
@@ -286,7 +285,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 
 	// Create the dataset
 	auto &client_ctx = GDALClientContextState::GetOrCreate(context);
-	auto prefixed_path = client_ctx.GetPrefix() + file_path;
+	auto prefixed_path = client_ctx.GetPrefix(file_path);
 	auto dataset = GDALDatasetUniquePtr(
 	    driver->Create(prefixed_path.c_str(), 0, 0, 0, GDT_Unknown, gdal_data.dataset_creation_options));
 	if (!dataset) {
@@ -338,8 +337,7 @@ static unique_ptr<GlobalFunctionData> InitGlobal(ClientContext &context, Functio
 // Sink
 //===--------------------------------------------------------------------===//
 
-static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value,
-                                                 core::GeometryFactory &factory) {
+static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const Value &value, ArenaAllocator &arena) {
 	if (type == core::GeoTypes::WKB_BLOB()) {
 		auto str = value.GetValueUnsafe<string_t>();
 
@@ -355,7 +353,7 @@ static OGRGeometryUniquePtr OGRGeometryFromValue(const LogicalType &type, const 
 	} else if (type == core::GeoTypes::GEOMETRY()) {
 		auto blob = value.GetValueUnsafe<string_t>();
 		uint32_t size;
-		auto wkb = core::WKBWriter::Write(core::geometry_t(blob), &size, factory.allocator);
+		auto wkb = core::WKBWriter::Write(core::geometry_t(blob), &size, arena);
 		OGRGeometry *ptr;
 		auto ok = OGRGeometryFactory::createFromWkb(wkb, nullptr, &ptr, size, wkbVariantIso);
 		if (ok != OGRERR_NONE) {
@@ -493,7 +491,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 	auto &bind_data = bdata.Cast<BindData>();
 	auto &global_state = gstate.Cast<GlobalState>();
 	auto &local_state = lstate.Cast<LocalState>();
-	local_state.factory.allocator.Reset();
+	local_state.arena.Reset();
 
 	lock_guard<mutex> d_lock(global_state.lock);
 	auto layer = global_state.layer;
@@ -512,7 +510,7 @@ static void Sink(ExecutionContext &context, FunctionData &bdata, GlobalFunctionD
 
 			if (IsGeometryType(type)) {
 				// TODO: check how many geometry fields there are and use the correct one.
-				auto geom = OGRGeometryFromValue(type, value, local_state.factory);
+				auto geom = OGRGeometryFromValue(type, value, local_state.arena);
 				if (bind_data.geometry_type != wkbUnknown && geom->getGeometryType() != bind_data.geometry_type) {
 					auto got_name =
 					    StringUtil::Replace(StringUtil::Upper(OGRGeometryTypeToName(geom->getGeometryType())), " ", "");

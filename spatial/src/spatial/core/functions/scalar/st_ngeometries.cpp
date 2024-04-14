@@ -21,30 +21,34 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 	auto count = args.size();
 
 	UnaryExecutor::Execute<geometry_t, int32_t>(input, result, count, [&](geometry_t input) {
-		switch (input.GetType()) {
-		case GeometryType::MULTIPOINT: {
-			auto mpoint = ctx.factory.Deserialize(input).As<MultiPoint>();
-			return static_cast<int32_t>(mpoint.ItemCount());
-		}
-		case GeometryType::MULTILINESTRING: {
-			auto mline = ctx.factory.Deserialize(input).As<MultiLineString>();
-			return static_cast<int32_t>(mline.ItemCount());
-		}
-		case GeometryType::MULTIPOLYGON: {
-			auto mpoly = ctx.factory.Deserialize(input).As<MultiPolygon>();
-			return static_cast<int32_t>(mpoly.ItemCount());
-		}
-		case GeometryType::GEOMETRYCOLLECTION: {
-			auto collection = ctx.factory.Deserialize(input).As<GeometryCollection>();
-			return static_cast<int32_t>(collection.ItemCount());
-		}
-		default:
-			auto geom = ctx.factory.Deserialize(input);
-			return geom.IsEmpty() ? 0 : 1;
-		}
+		struct op {
+			static int32_t Apply(const CollectionGeometry &collection) {
+				return static_cast<int32_t>(collection.Count());
+			}
+			static int32_t Apply(const Polygon &geom) {
+				return geom.IsEmpty() ? 0 : 1;
+			}
+			static int32_t Apply(const SinglePartGeometry &geom) {
+				return geom.IsEmpty() ? 0 : 1;
+			}
+		};
+		return Geometry::Deserialize(ctx.arena, input).Visit<op>();
 	});
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the number of component geometries in a collection geometry
+    If the input geometry is not a collection, returns 1 if the geometry is not empty, otherwise 0
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -57,6 +61,7 @@ void CoreScalarFunctions::RegisterStNGeometries(DatabaseInstance &db) {
 		                               nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 		ExtensionUtil::RegisterFunction(db, set);
+		DocUtil::AddDocumentation(db, alias, DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 	}
 }
 

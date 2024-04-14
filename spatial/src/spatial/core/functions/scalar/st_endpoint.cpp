@@ -70,20 +70,32 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
-		    auto props = input.GetProperties();
 
-		    auto line = lstate.factory.Deserialize(input).As<LineString>();
-		    auto point_count = line.Vertices().Count();
+		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
+		    auto point_count = line.Count();
 
 		    if (point_count == 0) {
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
 
-		    Point point(VertexArray::Reference(line.Vertices(), point_count - 1, 1));
-		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
+		    auto point = Point::FromReference(line, point_count - 1);
+		    return Geometry(point).Serialize(result);
 	    });
 }
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns the end point of a line.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+select st_endpoint('LINESTRING(0 0, 1 1)'::geometry);
+-- POINT(1 1)
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -97,6 +109,7 @@ void CoreScalarFunctions::RegisterStEndPoint(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringEndPointFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_EndPoint", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

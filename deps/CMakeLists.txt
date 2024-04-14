@@ -225,10 +225,10 @@ ExternalProject_Add(
 ExternalProject_Add(
     GDAL
     DEPENDS ${GDAL_DEPENDENCIES}
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal380.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal385.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler${PATCH_NAME_ENDING}.patch"
-    CMAKE_ARGS 
+    CMAKE_ARGS
     # CMake options
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}

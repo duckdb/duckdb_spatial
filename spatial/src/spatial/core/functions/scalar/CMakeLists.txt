@@ -11,6 +11,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_contains.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_dimension.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_distance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_distance_sphere.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_dump.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_endpoint.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_extent.cpp
@@ -21,6 +22,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromhexwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromtext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_hilbert.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersects.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersects_extent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_length.cpp

@@ -92,6 +92,7 @@ static void PolygonExteriorRingFunction(DataChunk &args, ExpressionState &state,
 //------------------------------------------------------------------------------
 static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
+	auto &arena = lstate.arena;
 	auto &input = args.data[0];
 	auto count = args.size();
 
@@ -101,24 +102,30 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 			    validity.SetInvalid(idx);
 			    return geometry_t {};
 		    }
-		    auto props = input.GetProperties();
-		    auto polygon = lstate.factory.Deserialize(input);
-		    auto &poly = polygon.As<Polygon>();
-		    if (poly.IsEmpty()) {
-			    return lstate.factory.Serialize(result, LineString(props.HasZ(), props.HasM()), props.HasZ(),
-			                                    props.HasM());
+
+		    auto polygon = Geometry::Deserialize(arena, input).As<Polygon>();
+		    if (polygon.IsEmpty()) {
+			    return Geometry(LineString::Empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM()))
+			        .Serialize(result);
 		    }
 
-		    auto &shell = poly[0];
-		    auto num_points = shell.Count();
-
-		    LineString line(lstate.factory.allocator, num_points, props.HasZ(), props.HasM());
-		    for (uint32_t i = 0; i < num_points; i++) {
-			    line.Vertices().Set(i, shell.Get(i));
-		    }
-		    return lstate.factory.Serialize(result, line, props.HasZ(), props.HasM());
+		    auto &shell = polygon[0];
+		    return Geometry(shell).Serialize(result);
 	    });
 }
+
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the exterior ring (shell) of a polygon geometry.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 
 //------------------------------------------------------------------------------
 // Register functions
@@ -132,6 +139,7 @@ void CoreScalarFunctions::RegisterStExteriorRing(DatabaseInstance &db) {
 	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_ExteriorRing", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core

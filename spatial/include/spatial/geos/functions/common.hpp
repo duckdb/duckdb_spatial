@@ -1,7 +1,7 @@
 #pragma once
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/geometry_factory.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
+
 namespace spatial {
 
 namespace geos {
@@ -9,7 +9,7 @@ namespace geos {
 struct GEOSFunctionLocalState : FunctionLocalState {
 public:
 	GeosContextWrapper ctx;
-	core::GeometryFactory factory;
+	ArenaAllocator arena;
 
 public:
 	explicit GEOSFunctionLocalState(ClientContext &context);

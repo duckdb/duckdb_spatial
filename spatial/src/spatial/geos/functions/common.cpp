@@ -7,7 +7,7 @@ namespace geos {
 
 using namespace spatial::core;
 
-GEOSFunctionLocalState::GEOSFunctionLocalState(ClientContext &context) : ctx(), factory(BufferAllocator::Get(context)) {
+GEOSFunctionLocalState::GEOSFunctionLocalState(ClientContext &context) : ctx(), arena(BufferAllocator::Get(context)) {
 	// TODO: Set GEOS error handler
 	// GEOSContext_setErrorMessageHandler_r()
 }
@@ -22,14 +22,14 @@ unique_ptr<FunctionLocalState> GEOSFunctionLocalState::InitCast(CastLocalStatePa
 }
 
 GEOSFunctionLocalState &GEOSFunctionLocalState::ResetAndGet(CastParameters &parameters) {
-	auto &local_state = (GEOSFunctionLocalState &)*parameters.local_state;
-	local_state.factory.allocator.Reset();
+	auto &local_state = parameters.local_state->Cast<GEOSFunctionLocalState>();
+	local_state.arena.Reset();
 	return local_state;
 }
 
 GEOSFunctionLocalState &GEOSFunctionLocalState::ResetAndGet(ExpressionState &state) {
-	auto &local_state = (GEOSFunctionLocalState &)*ExecuteFunctionState::GetFunctionState(state);
-	local_state.factory.allocator.Reset();
+	auto &local_state = ExecuteFunctionState::GetFunctionState(state)->Cast<GEOSFunctionLocalState>();
+	local_state.arena.Reset();
 	return local_state;
 }
 

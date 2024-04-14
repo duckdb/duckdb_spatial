@@ -25,6 +25,23 @@ static void EnvelopeFunction(DataChunk &args, ExpressionState &state, Vector &re
 	    });
 }
 
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+
+static constexpr const char *DOC_DESCRIPTION = R"(
+    Returns the minimum bounding box for the input geometry as a polygon geometry.
+)";
+
+static constexpr const char *DOC_EXAMPLE = R"(
+
+)";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
+//------------------------------------------------------------------------------
+// Register Functions
+//------------------------------------------------------------------------------
+
 void GEOSScalarFunctions::RegisterStEnvelope(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Envelope");
@@ -33,6 +50,7 @@ void GEOSScalarFunctions::RegisterStEnvelope(DatabaseInstance &db) {
 	                               nullptr, GEOSFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_Envelope", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace geos

@@ -71,20 +71,28 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 			    return geometry_t {};
 		    }
 
-		    auto props = input.GetProperties();
-		    auto line = lstate.factory.Deserialize(input).As<LineString>();
-		    auto point_count = line.Vertices().Count();
+		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
 
-		    if (point_count == 0) {
+		    if (line.IsEmpty()) {
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
 
-		    Point point(VertexArray::Reference(line.Vertices(), 0, 1));
-		    return lstate.factory.Serialize(result, point, props.HasZ(), props.HasM());
+		    auto point = Point::FromReference(line, 0);
+
+		    return Geometry(point).Serialize(result);
 	    });
 }
+//------------------------------------------------------------------------------
+// Documentation
+//------------------------------------------------------------------------------
+static constexpr const char *DOC_DESCRIPTION = R"(
+Returns the first point of a line geometry
+)";
 
+static constexpr const char *DOC_EXAMPLE = R"()";
+
+static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------
 // Register functions
 //------------------------------------------------------------------------------
@@ -97,6 +105,7 @@ void CoreScalarFunctions::RegisterStStartPoint(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringStartPointFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
+	DocUtil::AddDocumentation(db, "ST_StartPoint", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }
 
 } // namespace core
