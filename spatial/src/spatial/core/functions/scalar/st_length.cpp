@@ -54,34 +54,15 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	struct op {
-		static double Apply(const LineString &line) {
-			return line.Length();
-		}
-
-		static double Apply(const MultiLineString &mline) {
-			double sum = 0.0;
-			for (const auto &line : mline) {
-				sum += line.Length();
-			}
-			return sum;
-		}
-
-		static double Apply(const GeometryCollection &collection) {
-			double sum = 0.0;
-			for (const auto &geom : collection) {
-				sum += geom.Visit<op>();
-			}
-			return sum;
-		}
-
-		static double Apply(const BaseGeometry &) {
-			return 0.0;
-		}
-	};
-
 	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(); });
+	    input, result, count, [&](geometry_t input) {
+            auto geom = Geometry::Deserialize(arena, input);
+            double length = 0.0;
+            Geometry::ExtractLines(geom, [&](const Geometry &line) {
+                length += LineString::Length(line);
+            });
+            return length;
+        });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

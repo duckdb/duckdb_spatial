@@ -40,7 +40,8 @@ static void GeometryInteriorRingsFunction(DataChunk &args, ExpressionState &stat
 			    validity.SetInvalid(idx);
 			    return 0;
 		    }
-		    auto rings = Geometry::Deserialize(arena, input).As<Polygon>().Count();
+            auto polygon = Geometry::Deserialize(arena, input);
+            auto rings = Polygon::PartCount(polygon);
 		    return rings == 0 ? 0 : static_cast<int32_t>(rings - 1); // -1 for the exterior ring
 	    });
 }

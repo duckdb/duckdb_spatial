@@ -2,7 +2,8 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/util/cursor.hpp"
+#include "spatial/core/util/math.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
 namespace spatial {
@@ -150,10 +151,10 @@ public:
 
 		if (properties.HasBBox()) {
 			// Write the bbox after the first 8 bytes
-			buffer.WriteOffset<float>(Utils::DoubleToFloatDown(stats.min_x), 8);
-			buffer.WriteOffset<float>(Utils::DoubleToFloatDown(stats.min_y), 12);
-			buffer.WriteOffset<float>(Utils::DoubleToFloatUp(stats.max_x), 16);
-			buffer.WriteOffset<float>(Utils::DoubleToFloatUp(stats.max_y), 20);
+			buffer.WriteOffset<float>(MathUtil::DoubleToFloatDown(stats.min_x), 8);
+			buffer.WriteOffset<float>(MathUtil::DoubleToFloatDown(stats.min_y), 12);
+			buffer.WriteOffset<float>(MathUtil::DoubleToFloatUp(stats.max_x), 16);
+			buffer.WriteOffset<float>(MathUtil::DoubleToFloatUp(stats.max_y), 20);
 			string_t blob = string_t {const_char_ptr_cast(buffer.GetPtr()), buffer.Size()};
 			return blob;
 		} else {

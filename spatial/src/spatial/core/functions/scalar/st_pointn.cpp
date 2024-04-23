@@ -79,8 +79,8 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
-		    auto line = Geometry::Deserialize(arena, input).As<LineString>();
-		    auto point_count = line.Count();
+		    auto line = Geometry::Deserialize(arena, input);
+		    auto point_count = LineString::VertexCount(line);
 
 		    if (point_count == 0 || index == 0 || index < -static_cast<int64_t>(point_count) ||
 		        index > static_cast<int64_t>(point_count)) {
@@ -89,10 +89,8 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 		    }
 
 		    auto actual_index = index < 0 ? point_count + index : index - 1;
-
-		    auto point = Point::FromReference(line, actual_index);
-
-		    return Geometry(point).Serialize(result);
+		    auto point = LineString::GetPointAsReference(line, actual_index);
+            return Geometry::Serialize(point, result);
 	    });
 }
 

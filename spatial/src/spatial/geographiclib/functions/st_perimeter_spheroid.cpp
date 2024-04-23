@@ -70,15 +70,15 @@ static void GeodesicPolygon2DFunction(DataChunk &args, ExpressionState &state, V
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static double PolygonPerimeter(const Polygon &poly, GeographicLib::PolygonArea &comp) {
+static double PolygonPerimeter(const Geometry &poly, GeographicLib::PolygonArea &comp) {
 
 	double total_perimeter = 0;
-	for (auto &ring : poly) {
+	for (auto &ring : Polygon::Parts(poly)) {
 		comp.Clear();
 		// Note: the last point is the same as the first point, but geographiclib doesn't know that,
 		// so skip it.
 		for (uint32_t coord_idx = 0; coord_idx < ring.Count() - 1; coord_idx++) {
-			auto coord = ring.Get(coord_idx);
+			auto coord = LineString::GetVertex(ring, coord_idx);
 			comp.AddPoint(coord.x, coord.y);
 		}
 		double _ring_area;
@@ -99,34 +99,15 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, false);
 
-	struct op {
-		static double Apply(const Polygon &poly, GeographicLib::PolygonArea &comp) {
-			return PolygonPerimeter(poly, comp);
-		}
-
-		static double Apply(const MultiPolygon &mpoly, GeographicLib::PolygonArea &comp) {
-			double total_perimeter = 0;
-			for (auto &poly : mpoly) {
-				total_perimeter += PolygonPerimeter(poly, comp);
-			}
-			return total_perimeter;
-		}
-
-		static double Apply(const GeometryCollection &coll, GeographicLib::PolygonArea &comp) {
-			double total_perimeter = 0;
-			for (auto &item : coll) {
-				total_perimeter += item.Visit<op>(comp);
-			}
-			return total_perimeter;
-		}
-
-		static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
-			return 0.0;
-		}
-	};
-
 	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(comp); });
+	    input, result, count, [&](geometry_t input) {
+            auto geom = Geometry::Deserialize(arena, input);
+            auto length = 0.0;
+            Geometry::ExtractPolygons(geom, [&](const Geometry &poly) {
+                length += PolygonPerimeter(poly, comp);
+            });
+            return length;
+        });
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

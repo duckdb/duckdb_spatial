@@ -162,25 +162,26 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto count = args.size();
 
 	struct FlipOp {
-		static void Apply(SinglePartGeometry &geom, ArenaAllocator &arena) {
-			geom.MakeMutable(arena);
-			for (idx_t i = 0; i < geom.Count(); i++) {
-				auto vertex = geom.Get(i);
+		static void Case(Geometry::Tags::SinglePartGeometry, Geometry &geom, ArenaAllocator &arena) {
+            SinglePartGeometry::MakeMutable(geom, arena);
+			for (idx_t i = 0; i < SinglePartGeometry::VertexCount(geom); i++) {
+                auto vertex = SinglePartGeometry::GetVertex(geom, i);
 				std::swap(vertex.x, vertex.y);
-				geom.Set(i, vertex);
+                SinglePartGeometry::SetVertex(geom, i, vertex);
 			}
 		}
-		static void Apply(MultiPartGeometry &geom, ArenaAllocator &arena) {
-			for (auto &part : geom) {
-				part.Visit<FlipOp>(arena);
-			}
+		static void Case(Geometry::Tags::MultiPartGeometry, Geometry &geom, ArenaAllocator &arena) {
+            for (uint32_t i = 0; i < MultiPartGeometry::PartCount(geom); i++) {
+                auto &part = MultiPartGeometry::Part(geom, i);
+                Geometry::Visit<FlipOp>(part, arena);
+            }
 		}
 	};
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		auto geom = Geometry::Deserialize(lstate.arena, input);
-		geom.Visit<FlipOp>(lstate.arena);
-		return geom.Serialize(result);
+		Geometry::Visit<FlipOp>(geom, lstate.arena);
+        return Geometry::Serialize(geom, result);
 	});
 }
 

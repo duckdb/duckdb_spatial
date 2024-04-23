@@ -103,14 +103,14 @@ static void GeometryExteriorRingFunction(DataChunk &args, ExpressionState &state
 			    return geometry_t {};
 		    }
 
-		    auto polygon = Geometry::Deserialize(arena, input).As<Polygon>();
-		    if (polygon.IsEmpty()) {
-			    return Geometry(LineString::Empty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM()))
-			        .Serialize(result);
+		    auto polygon = Geometry::Deserialize(arena, input);
+		    if (Polygon::IsEmpty(polygon)) {
+                auto empty = LineString::CreateEmpty(polygon.GetProperties().HasZ(), polygon.GetProperties().HasM());
+                return Geometry::Serialize(empty, result);
 		    }
 
-		    auto &shell = polygon[0];
-		    return Geometry(shell).Serialize(result);
+            auto &shell = Polygon::Part(polygon, 0);
+            return Geometry::Serialize(shell, result);
 	    });
 }
 

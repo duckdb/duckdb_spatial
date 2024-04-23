@@ -45,7 +45,7 @@ static void GeometryFromWKTFunction(DataChunk &args, ExpressionState &state, Vec
 	                                                      [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		                                                      try {
 			                                                      auto geom = reader.Parse(wkt);
-			                                                      return geom.Serialize(result);
+                                                                  return Geometry::Serialize(geom, result);
 		                                                      } catch (InvalidInputException &error) {
 			                                                      if (!info.ignore_invalid) {
 				                                                      throw;

@@ -233,18 +233,18 @@ static void Point2DTransformFunction(DataChunk &args, ExpressionState &state, Ve
 }
 
 struct TransformOp {
-	static void Apply(SinglePartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
-		geom.MakeMutable(arena);
+	static void Case(Geometry::Tags::SinglePartGeometry, Geometry &geom, PJ *crs, ArenaAllocator &arena) {
+		SinglePartGeometry::MakeMutable(geom, arena);
 		for (uint32_t i = 0; i < geom.Count(); i++) {
-			auto vertex = geom.Get(i);
+			auto vertex = SinglePartGeometry::GetVertex(geom, i);
 			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
 			// we own the array, so we can use SetUnsafe
-			geom.Set(i, transformed.x, transformed.y);
+			SinglePartGeometry::SetVertex(geom, i, { transformed.x, transformed.y });
 		}
 	}
-	static void Apply(MultiPartGeometry &geom, PJ *crs, ArenaAllocator &arena) {
-		for (auto &part : geom) {
-			part.Visit<TransformOp>(crs, arena);
+	static void Case(Geometry::Tags::MultiPartGeometry, Geometry &geom, PJ *crs, ArenaAllocator &arena) {
+		for (auto &part : MultiPartGeometry::Parts(geom)) {
+			Geometry::Visit<TransformOp>(part, crs, arena);
 		}
 	}
 };
@@ -296,8 +296,8 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 
 		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
 			auto geom = Geometry::Deserialize(arena, input_geom);
-			geom.Visit<TransformOp>(crs.get(), arena);
-			return geom.Serialize(result);
+            Geometry::Visit<TransformOp>(geom, crs.get(), arena);
+            return Geometry::Serialize(geom, result);
 		});
 	} else {
 		// General case: projections are not constant
@@ -322,8 +322,8 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			    }
 
 			    auto geom = Geometry::Deserialize(arena, input_geom);
-			    geom.Visit<TransformOp>(crs.get(), arena);
-			    return geom.Serialize(result);
+                Geometry::Visit<TransformOp>(geom, crs.get(), arena);
+			    return Geometry::Serialize(geom, result);
 		    });
 	}
 }

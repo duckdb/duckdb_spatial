@@ -25,13 +25,14 @@ private:
 	void Expect(char c);
 	void ParseVertex(vector<double> &coords);
 	pair<uint32_t, vector<double>> ParseVertices();
-	Point ParsePoint();
-	LineString ParseLineString();
-	Polygon ParsePolygon();
-	MultiPoint ParseMultiPoint();
-	MultiLineString ParseMultiLineString();
-	MultiPolygon ParseMultiPolygon();
-	GeometryCollection ParseGeometryCollection();
+    
+    Geometry ParsePoint();
+	Geometry ParseLineString();
+    Geometry ParsePolygon();
+    Geometry ParseMultiPoint();
+    Geometry ParseMultiLineString();
+    Geometry ParseMultiPolygon();
+    Geometry ParseGeometryCollection();
 	void CheckZM();
 	Geometry ParseGeometry();
 	Geometry ParseWKT();

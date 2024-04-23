@@ -71,16 +71,13 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 			    return geometry_t {};
 		    }
 
-		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
-
-		    if (line.IsEmpty()) {
+		    auto line = Geometry::Deserialize(lstate.arena, input);
+		    if (LineString::IsEmpty(line)) {
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
-
-		    auto point = Point::FromReference(line, 0);
-
-		    return Geometry(point).Serialize(result);
+		    auto point = LineString::GetPointAsReference(line, 0);
+		    return Geometry::Serialize(point, result);
 	    });
 }
 //------------------------------------------------------------------------------

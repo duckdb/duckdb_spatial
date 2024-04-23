@@ -46,35 +46,12 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			auto current_path = std::get<1>(current);
 
 			stack.pop_back();
-
-			if (current_geom.GetType() == GeometryType::MULTIPOINT) {
-				auto mpoint = current_geom.As<MultiPoint>();
-				for (int32_t i = 0; i < mpoint.Count(); i++) {
-					auto path = current_path;
-					path.push_back(i + 1); // path is 1-indexed
-					stack.emplace_back(mpoint[i], path);
-				}
-			} else if (current_geom.GetType() == GeometryType::MULTILINESTRING) {
-				auto mline = current_geom.As<MultiLineString>();
-				for (int32_t i = 0; i < mline.Count(); i++) {
-					auto path = current_path;
-					path.push_back(i + 1);
-					stack.emplace_back(mline[i], path);
-				}
-			} else if (current_geom.GetType() == GeometryType::MULTIPOLYGON) {
-				auto mpoly = current_geom.As<MultiPolygon>();
-				for (int32_t i = 0; i < mpoly.Count(); i++) {
-					auto path = current_path;
-					path.push_back(i + 1);
-					stack.emplace_back(mpoly[i], path);
-				}
-			} else if (current_geom.GetType() == GeometryType::GEOMETRYCOLLECTION) {
-				auto collection = current_geom.As<GeometryCollection>();
-				for (int32_t i = 0; i < collection.Count(); i++) {
-					auto path = current_path;
-					path.push_back(i + 1);
-					stack.emplace_back(collection[i], path);
-				}
+            if(current_geom.IsCollection()) {
+                for(int32_t i = 0; i < CollectionGeometry::PartCount(current_geom); i++) {
+                    auto path = current_path;
+                    path.push_back(i + 1); // path is 1-indexed
+                    stack.emplace_back(CollectionGeometry::Part(current_geom, i), path);
+                }
 			} else {
 				items.push_back(current);
 			}
@@ -107,7 +84,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 		for (idx_t i = 0; i < geom_length; i++) {
 			// Write the geometry
 			auto &item_blob = std::get<0>(items[i]);
-			geom_data[geom_offset + i] = item_blob.Serialize(*result_geom_vec);
+			geom_data[geom_offset + i] = Geometry::Serialize(item_blob, *result_geom_vec);
 
 			// Now write the paths
 			auto &path = std::get<1>(items[i]);

@@ -27,7 +27,7 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 		    input, z_values, m_values, result, count, [&](const geometry_t &blob, double default_z, double default_m) {
                 auto geom = Geometry::Deserialize(arena, blob);
                 geom.SetVertexType(arena, HAS_Z, HAS_M, default_z, default_m);
-                return geom.Serialize(result);
+                return Geometry::Serialize(geom, result);
 		    });
 
 	} else if (HAS_Z || HAS_M) {
@@ -39,13 +39,13 @@ static void GeometryFunction(DataChunk &args, ExpressionState &state, Vector &re
 
                 auto geom = Geometry::Deserialize(arena, blob);
                 geom.SetVertexType(arena, HAS_Z, HAS_M, def_z, def_m);
-                return geom.Serialize(result);
+                return Geometry::Serialize(geom, result);
 		    });
 	} else {
 		UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](const geometry_t &blob) {
             auto geom = Geometry::Deserialize(arena, blob);
             geom.SetVertexType(arena, HAS_Z, HAS_M);
-            return geom.Serialize(result);
+            return Geometry::Serialize(geom, result);
 		});
 	}
 }

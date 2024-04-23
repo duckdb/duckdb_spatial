@@ -238,11 +238,10 @@ public:
 
 		unique_ptr<FileHandle> file;
 		try {
-			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ | FileCompressionType::AUTO_DETECT);
+			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ | FileCompressionType::AUTO_DETECT | FileFlags::FILE_FLAGS_NULL_IF_NOT_EXISTS);
 		} catch (std::exception &ex) {
 			return -1;
 		}
-
 		if (!file) {
 			return -1;
 		}

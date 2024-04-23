@@ -76,20 +76,24 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 	auto count = args.size();
 
 	struct op {
-		static uint32_t Apply(const SinglePartGeometry &geom) {
+		static uint32_t Case(Geometry::Tags::SinglePartGeometry, const Geometry &geom) {
 			return geom.Count();
 		}
-		static uint32_t Apply(const MultiPartGeometry &geom) {
+		static uint32_t Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom) {
 			uint32_t count = 0;
-			for (const auto &part : geom) {
-				count += part.Visit<op>();
+            for(uint32_t i = 0; i < MultiPartGeometry::PartCount(geom); i++) {
+                auto part = MultiPartGeometry::Part(geom, i);
+				count += Geometry::Visit<op>(part);
 			}
 			return count;
 		}
 	};
 
 	UnaryExecutor::Execute<geometry_t, uint32_t>(
-	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(); });
+	    input, result, count, [&](geometry_t input) {
+            auto geom = Geometry::Deserialize(arena, input);
+            return Geometry::Visit<op>(geom);
+        });
 }
 
 //------------------------------------------------------------------------------

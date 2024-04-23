@@ -69,23 +69,19 @@ static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vec
 
 	BinaryExecutor::Execute<geometry_t, int32_t, string_t>(
 	    geom, level, result, count, [&](geometry_t input, int32_t level) {
+            if (level < 1 || level > 23) {
+                throw InvalidInputException("ST_QuadKey: Level must be between 1 and 23");
+            }
 		    if (input.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_QuadKey: Only POINT geometries are supported");
 		    }
 		    auto point = Geometry::Deserialize(arena, input);
-		    if (point.IsEmpty()) {
+            if (Point::IsEmpty(point)) {
 			    throw InvalidInputException("ST_QuadKey: Empty geometries are not supported");
 		    }
-		    auto vertex = point.As<Point>().Get(0);
-		    auto x = vertex.x;
-		    auto y = vertex.y;
-
-		    if (level < 1 || level > 23) {
-			    throw InvalidInputException("ST_QuadKey: Level must be between 1 and 23");
-		    }
-
+		    auto vertex = Point::GetVertex(point);
 		    char buffer[64];
-		    GetQuadKey(x, y, level, buffer);
+		    GetQuadKey(vertex.x, vertex.y, level, buffer);
 		    return StringVector::AddString(result, buffer, level);
 	    });
 }

@@ -71,16 +71,16 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    return geometry_t {};
 		    }
 
-		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
-		    auto point_count = line.Count();
+		    auto line = Geometry::Deserialize(lstate.arena, input);
+		    auto point_count = LineString::VertexCount(line);
 
 		    if (point_count == 0) {
 			    mask.SetInvalid(row_idx);
 			    return geometry_t {};
 		    }
 
-		    auto point = Point::FromReference(line, point_count - 1);
-		    return Geometry(point).Serialize(result);
+            auto point = LineString::GetPointAsReference(line, point_count - 1);
+            return Geometry::Serialize(point, result);
 	    });
 }
 //------------------------------------------------------------------------------

@@ -107,7 +107,7 @@ static void PointFunction(DataChunk &args, ExpressionState &state, Vector &resul
 	auto count = args.size();
 
 	BinaryExecutor::Execute<double, double, geometry_t>(x, y, result, count, [&](double x, double y) {
-		return Geometry(Point::FromVertex(arena, VertexXY {x, y})).Serialize(result);
+        return Geometry::Serialize(Point::CreateFromVertex(arena, VertexXY {x, y}), result);
 	});
 }
 

@@ -18,42 +18,46 @@ static bool IsValidForGeos(Geometry &geometry) {
 	switch (geometry.GetType()) {
 	case GeometryType::LINESTRING:
 		// Every linestring needs 0 or at least 2 points
-		return geometry.As<LineString>().Count() != 1;
+		return LineString::VertexCount(geometry) != 1;
 
 	case GeometryType::POLYGON: {
 		// Every ring needs 0 or at least 4 points
-		auto &polygon = geometry.As<Polygon>();
-		for (const auto &ring : polygon) {
-			if (ring.Count() > 0 && ring.Count() < 4) {
-				return false;
-			}
-		}
+        for(uint32_t i = 0; i < Polygon::PartCount(geometry); i++) {
+            auto &ring = Polygon::Part(geometry, i);
+            if (LineString::VertexCount(ring) < 4) {
+                return false;
+            }
+        }
 		return true;
 	}
 	case GeometryType::MULTILINESTRING: {
-		for (const auto &linestring : geometry.As<MultiLineString>()) {
-			if (linestring.Count() == 1) {
-				return false;
-			}
-		}
+        for(uint32_t i = 0; i < MultiLineString::PartCount(geometry); i++) {
+            auto &linestring = MultiLineString::Part(geometry, i);
+            if (LineString::VertexCount(linestring) == 1) {
+                return false;
+            }
+        }
 		return true;
 	}
 	case GeometryType::MULTIPOLYGON: {
-		for (const auto &polygon : geometry.As<MultiPolygon>()) {
-			for (const auto &ring : polygon) {
-				if (ring.Count() > 0 && ring.Count() < 4) {
-					return false;
-				}
-			}
-		}
+        for(uint32_t i = 0; i < MultiPolygon::PartCount(geometry); i++) {
+            auto &polygon = MultiPolygon::Part(geometry, i);
+            for(uint32_t j = 0; j < Polygon::PartCount(polygon); j++) {
+                auto &ring = Polygon::Part(polygon, j);
+                if (LineString::VertexCount(ring) < 4) {
+                    return false;
+                }
+            }
+        }
 		return true;
 	}
 	case GeometryType::GEOMETRYCOLLECTION: {
-		for (auto &geom : geometry.As<GeometryCollection>()) {
-			if (!IsValidForGeos(geom)) {
-				return false;
-			}
-		}
+        for(uint32_t i = 0; i < GeometryCollection::PartCount(geometry); i++) {
+            auto &geom = GeometryCollection::Part(geometry, i);
+            if (!IsValidForGeos(geom)) {
+                return false;
+            }
+        }
 		return true;
 	}
 	default:

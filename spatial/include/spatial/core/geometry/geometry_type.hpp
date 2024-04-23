@@ -2,7 +2,7 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/bbox.hpp"
 #include "spatial/core/geometry/geometry_properties.hpp"
-#include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/util/cursor.hpp"
 
 namespace spatial {
 
@@ -16,6 +16,44 @@ enum class GeometryType : uint8_t {
 	MULTILINESTRING,
 	MULTIPOLYGON,
 	GEOMETRYCOLLECTION
+};
+
+struct GeometryTypes {
+    static bool IsSinglePart(GeometryType type) {
+        return type == GeometryType::POINT || type == GeometryType::LINESTRING;
+    }
+
+    static bool IsMultiPart(GeometryType type) {
+        return type == GeometryType::POLYGON ||
+               type == GeometryType::MULTIPOINT || type == GeometryType::MULTILINESTRING ||
+               type == GeometryType::MULTIPOLYGON || type == GeometryType::GEOMETRYCOLLECTION;
+    }
+
+    static bool IsCollection(GeometryType type) {
+        return type == GeometryType::MULTIPOINT || type == GeometryType::MULTILINESTRING ||
+               type == GeometryType::MULTIPOLYGON || type == GeometryType::GEOMETRYCOLLECTION;
+    }
+
+    static string ToString(GeometryType type) {
+        switch (type) {
+        case GeometryType::POINT:
+            return "POINT";
+        case GeometryType::LINESTRING:
+            return "LINESTRING";
+        case GeometryType::POLYGON:
+            return "POLYGON";
+        case GeometryType::MULTIPOINT:
+            return "MULTIPOINT";
+        case GeometryType::MULTILINESTRING:
+            return "MULTILINESTRING";
+        case GeometryType::MULTIPOLYGON:
+            return "MULTIPOLYGON";
+        case GeometryType::GEOMETRYCOLLECTION:
+            return "GEOMETRYCOLLECTION";
+        default:
+            return StringUtil::Format("UNKNOWN(%d)", static_cast<int>(type));
+        }
+    }
 };
 
 enum class SerializedGeometryType : uint32_t {

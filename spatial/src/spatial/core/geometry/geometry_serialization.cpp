@@ -1,7 +1,8 @@
 #include "spatial/common.hpp"
-#include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/util/cursor.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
+#include "spatial/core/util/math.hpp"
 
 namespace spatial {
 
@@ -37,14 +38,14 @@ namespace core {
 
 template <class VERTEX>
 struct GetRequiredSizeOp {
-	static uint32_t Apply(const SinglePartGeometry &geom) {
+	static uint32_t Case(Geometry::Tags::SinglePartGeometry, const Geometry &geom) {
 		// 4 bytes for the type
 		// 4 bytes for the length
 		// sizeof(vertex) * count
 		return 4 + 4 + (geom.Count() * sizeof(VERTEX));
 	}
 
-	static uint32_t Apply(const Polygon &polygon) {
+	static uint32_t Case(Geometry::Tags::Polygon, const Geometry &polygon) {
 		// Polygons are special because they may pad between the rings and the ring data
 		// 4 bytes for the type
 		// 4 bytes for the number of rings
@@ -52,36 +53,25 @@ struct GetRequiredSizeOp {
 		// - sizeof(vertex) * count for each ring
 		// (+ 4 bytes for padding if num_rings is odd)
 		uint32_t size = 4 + 4;
-		for (const auto &ring : polygon) {
-			size += 4;
-			size += ring.Count() * sizeof(VERTEX);
-		}
+        for(uint32_t i = 0; i < Polygon::PartCount(polygon); i++) {
+            size += 4;
+            size += Polygon::Part(polygon, i).Count() * sizeof(VERTEX);
+        }
 		if (polygon.Count() % 2 == 1) {
 			size += 4;
 		}
 		return size;
 	}
 
-	template <class ITEM>
-	static uint32_t Apply(const TypedCollectionGeometry<ITEM> &collection) {
+	static uint32_t Case(Geometry::Tags::CollectionGeometry, const Geometry &collection) {
 		// 4 bytes for the type
 		// 4 bytes for the number of items
 		// recursive call for each item
 		uint32_t size = 4 + 4;
-		for (const auto &item : collection) {
-			size += Apply(item);
-		}
-		return size;
-	}
-
-	static uint32_t Apply(const GeometryCollection &collection) {
-		// 4 bytes for the type
-		// 4 bytes for the number of geometries
-		// sizeof(geometry) * count
-		uint32_t size = 4 + 4;
-		for (const auto &geom : collection) {
-			size += geom.Visit<GetRequiredSizeOp<VERTEX>>();
-		}
+        for(uint32_t i = 0; i < CollectionGeometry::PartCount(collection); i++) {
+            auto &part = CollectionGeometry::Part(collection, i);
+            size += Geometry::Visit<GetRequiredSizeOp<VERTEX>>(part);
+        }
 		return size;
 	}
 };
@@ -90,23 +80,23 @@ template <class VERTEX>
 struct SerializeOp {
 	static constexpr uint32_t MAX_DEPTH = 256;
 
-	static void SerializeVertices(const SinglePartGeometry &verts, Cursor &cursor, BoundingBox &bbox,
+	static void SerializeVertices(const Geometry &verts, Cursor &cursor, BoundingBox &bbox,
 	                              bool update_bounds) {
 		// Write the vertex data
-		auto byte_size = verts.ByteSize();
+		auto byte_size = SinglePartGeometry::ByteSize(verts);
 		memcpy(cursor.GetPtr(), verts.GetData(), byte_size);
 		// Move the cursor forward
 		cursor.Skip(byte_size);
 		// Also update the bounds real quick
 		if (update_bounds) {
 			for (uint32_t i = 0; i < verts.Count(); i++) {
-				auto vertex = verts.GetExact<VERTEX>(i);
+				auto vertex = SinglePartGeometry::GetVertex<VERTEX>(verts, i);
 				bbox.Stretch(vertex);
 			}
 		}
 	}
 
-	static void Apply(const Point &point, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+	static void Case(Geometry::Tags::Point, const Geometry &point, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
 		D_ASSERT(point.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(point.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -121,7 +111,7 @@ struct SerializeOp {
 		SerializeVertices(point, cursor, bbox, depth != 0);
 	}
 
-	static void Apply(const LineString &linestring, Cursor &cursor, BoundingBox &bbox, uint32_t) {
+	static void Case(Geometry::Tags::LineString, const Geometry &linestring, Cursor &cursor, BoundingBox &bbox, uint32_t) {
 		D_ASSERT(linestring.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(linestring.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -135,7 +125,7 @@ struct SerializeOp {
 		SerializeVertices(linestring, cursor, bbox, true);
 	}
 
-	static void Apply(const Polygon &polygon, Cursor &cursor, BoundingBox &bbox, uint32_t) {
+	static void Case(Geometry::Tags::Polygon, const Geometry &polygon, Cursor &cursor, BoundingBox &bbox, uint32_t) {
 		D_ASSERT(polygon.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(polygon.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -146,9 +136,9 @@ struct SerializeOp {
 		cursor.Write<uint32_t>(polygon.Count());
 
 		// Write ring lengths
-		for (const auto &ring : polygon) {
-			cursor.Write<uint32_t>(ring.Count());
-		}
+        for(uint32_t i = 0; i < Polygon::PartCount(polygon); i++) {
+            cursor.Write<uint32_t>(Polygon::Part(polygon, i).Count());
+        }
 
 		if (polygon.Count() % 2 == 1) {
 			// Write padding (4 bytes)
@@ -159,11 +149,11 @@ struct SerializeOp {
 		for (uint32_t i = 0; i < polygon.Count(); i++) {
 			// The first ring is always the shell, and must be the only ring contributing to the bounding box
 			// or the geometry is invalid.
-			SerializeVertices(polygon[i], cursor, bbox, i == 0);
+			SerializeVertices(Polygon::Part(polygon, i), cursor, bbox, i == 0);
 		}
 	}
 
-	static void Apply(const MultiPoint &multipoint, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+	static void Case(Geometry::Tags::MultiPoint, const Geometry &multipoint, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
 		D_ASSERT(multipoint.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(multipoint.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -174,12 +164,12 @@ struct SerializeOp {
 		cursor.Write<uint32_t>(multipoint.Count());
 
 		// Write point data
-		for (const auto &point : multipoint) {
-			Apply(point, cursor, bbox, depth + 1);
-		}
+        for (uint32_t i = 0; i < MultiPoint::PartCount(multipoint); i++) {
+            Case(Geometry::Tags::Point{}, MultiPoint::Part(multipoint, i), cursor, bbox, depth + 1);
+        }
 	}
 
-	static void Apply(const MultiLineString &multilinestring, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+	static void Case(Geometry::Tags::MultiLineString, const Geometry &multilinestring, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
 		D_ASSERT(multilinestring.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(multilinestring.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -190,12 +180,12 @@ struct SerializeOp {
 		cursor.Write<uint32_t>(multilinestring.Count());
 
 		// Write linestring data
-		for (const auto &linestring : multilinestring) {
-			Apply(linestring, cursor, bbox, depth + 1);
-		}
+        for(uint32_t i = 0; i < MultiLineString::PartCount(multilinestring); i++) {
+            Case(Geometry::Tags::LineString{}, MultiLineString::Part(multilinestring, i), cursor, bbox, depth + 1);
+        }
 	}
 
-	static void Apply(const MultiPolygon &multipolygon, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+	static void Case(Geometry::Tags::MultiPolygon, const Geometry &multipolygon, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
 		D_ASSERT(multipolygon.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(multipolygon.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -206,12 +196,12 @@ struct SerializeOp {
 		cursor.Write<uint32_t>(multipolygon.Count());
 
 		// Write polygon data
-		for (const auto &polygon : multipolygon) {
-			Apply(polygon, cursor, bbox, depth + 1);
-		}
+        for(uint32_t i = 0; i < MultiPolygon::PartCount(multipolygon); i++) {
+            Case(Geometry::Tags::Polygon{}, MultiPolygon::Part(multipolygon, i), cursor, bbox, depth + 1);
+        }
 	}
 
-	static void Apply(const GeometryCollection &collection, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+	static void Case(Geometry::Tags::GeometryCollection, const Geometry &collection, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
 		D_ASSERT(collection.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(collection.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -227,30 +217,31 @@ struct SerializeOp {
 		cursor.Write<uint32_t>(collection.Count());
 
 		// write geometry data
-		for (const auto &geom : collection) {
-			geom.Visit<SerializeOp<VERTEX>>(cursor, bbox, depth + 1);
-		}
+        for(uint32_t i = 0; i < GeometryCollection::PartCount(collection); i++) {
+            auto &geom = GeometryCollection::Part(collection, i);
+            Geometry::Visit<SerializeOp<VERTEX>>(geom, cursor, bbox, depth + 1);
+        }
 	}
 };
 
-geometry_t Geometry::Serialize(Vector &result) {
-	auto type = GetType();
-	bool has_bbox = type != GeometryType::POINT && !IsEmpty();
+geometry_t Geometry::Serialize(const Geometry &geom, Vector &result) {
+	auto type = geom.GetType();
+	bool has_bbox = type != GeometryType::POINT && !Geometry::IsEmpty(geom);
 
-	auto properties = GetProperties();
+	auto properties = geom.GetProperties();
 	auto has_z = properties.HasZ();
 	auto has_m = properties.HasM();
 	properties.SetBBox(has_bbox);
 
 	uint32_t geom_size = 0;
 	if (has_z && has_m) {
-		geom_size = Visit<GetRequiredSizeOp<VertexXYZM>>();
+		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXYZM>>(geom);
 	} else if (has_z) {
-		geom_size = Visit<GetRequiredSizeOp<VertexXYZ>>();
+		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXYZ>>(geom);
 	} else if (has_m) {
-		geom_size = Visit<GetRequiredSizeOp<VertexXYM>>();
+		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXYM>>(geom);
 	} else {
-		geom_size = Visit<GetRequiredSizeOp<VertexXY>>();
+		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXY>>(geom);
 	}
 
 	auto header_size = 4;
@@ -277,13 +268,13 @@ geometry_t Geometry::Serialize(Vector &result) {
 	cursor.Skip(bbox_size);
 
 	if (has_z && has_m) {
-		Visit<SerializeOp<VertexXYZM>>(cursor, bbox, 0);
+		Geometry::Visit<SerializeOp<VertexXYZM>>(geom, cursor, bbox, 0);
 	} else if (has_z) {
-		Visit<SerializeOp<VertexXYZ>>(cursor, bbox, 0);
+        Geometry::Visit<SerializeOp<VertexXYZ>>(geom, cursor, bbox, 0);
 	} else if (has_m) {
-		Visit<SerializeOp<VertexXYM>>(cursor, bbox, 0);
+        Geometry::Visit<SerializeOp<VertexXYM>>(geom, cursor, bbox, 0);
 	} else {
-		Visit<SerializeOp<VertexXY>>(cursor, bbox, 0);
+        Geometry::Visit<SerializeOp<VertexXY>>(geom, cursor, bbox, 0);
 	}
 
 	// Now write the bounding box
@@ -291,17 +282,17 @@ geometry_t Geometry::Serialize(Vector &result) {
 		cursor.SetPtr(bbox_ptr);
 		// We serialize the bounding box as floats to save space, but ensure that the bounding box is
 		// still large enough to contain the original double values by rounding up and down
-		cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minx));
-		cursor.Write<float>(Utils::DoubleToFloatDown(bbox.miny));
-		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxx));
-		cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxy));
+		cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.minx));
+		cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.miny));
+		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxx));
+		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxy));
 		if (has_z) {
-			cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minz));
-			cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxz));
+			cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.minz));
+			cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxz));
 		}
 		if (has_m) {
-			cursor.Write<float>(Utils::DoubleToFloatDown(bbox.minm));
-			cursor.Write<float>(Utils::DoubleToFloatUp(bbox.maxm));
+			cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.minm));
+			cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxm));
 		}
 	}
 	blob.Finalize();
@@ -315,9 +306,9 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	ArenaAllocator &allocator;
 
 	Geometry ProcessPoint(const VertexData &vertices) override {
-		auto point = Point::Empty(HasZ(), HasM());
+		auto point = Point::CreateEmpty(HasZ(), HasM());
 		if (!vertices.IsEmpty()) {
-			point.ReferenceData(vertices.data[0], vertices.count);
+            Point::ReferenceData(point, vertices.data[0], vertices.count);
 		}
 		return point;
 	}
@@ -325,7 +316,7 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 	Geometry ProcessLineString(const VertexData &vertices) override {
 		auto line_string = LineString::Create(allocator, vertices.count, HasZ(), HasM());
 		if (!vertices.IsEmpty()) {
-			line_string.ReferenceData(vertices.data[0], vertices.count);
+            LineString::ReferenceData(line_string, vertices.data[0], vertices.count);
 		}
 		return line_string;
 	}
@@ -335,7 +326,8 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 		for (auto i = 0; i < state.RingCount(); i++) {
 			auto vertices = state.Next();
 			if (!vertices.IsEmpty()) {
-				polygon[i].ReferenceData(vertices.data[0], vertices.count);
+                auto &part = Polygon::Part(polygon, i);
+                LineString::ReferenceData(part, vertices.data[0], vertices.count);
 			}
 		}
 		return polygon;
@@ -346,28 +338,28 @@ class GeometryDeserializer final : GeometryProcessor<Geometry> {
 		case GeometryType::MULTIPOINT: {
 			auto multi_point = MultiPoint::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
-				multi_point[i] = state.Next().As<Point>();
+                MultiPoint::Part(multi_point, i) = state.Next();
 			}
 			return multi_point;
 		}
 		case GeometryType::MULTILINESTRING: {
 			auto multi_line_string = MultiLineString::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
-				multi_line_string[i] = state.Next().As<LineString>();
+                MultiLineString::Part(multi_line_string, i) = state.Next();
 			}
 			return multi_line_string;
 		}
 		case GeometryType::MULTIPOLYGON: {
 			auto multi_polygon = MultiPolygon::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
-				multi_polygon[i] = state.Next().As<Polygon>();
+                MultiPolygon::Part(multi_polygon, i) = state.Next();
 			}
 			return multi_polygon;
 		}
 		case GeometryType::GEOMETRYCOLLECTION: {
 			auto collection = GeometryCollection::Create(allocator, state.ItemCount(), HasZ(), HasM());
 			for (auto i = 0; i < state.ItemCount(); i++) {
-				collection[i] = state.Next();
+				GeometryCollection::Part(collection, i) = state.Next();
 			}
 			return collection;
 		}
