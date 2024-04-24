@@ -62,12 +62,11 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 			    if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
 				    throw InvalidInputException("ST_MakePolygon does not support Z or M geometries");
 			    }
-
-			    auto hole = Geometry::Deserialize(arena, geometry_blob);
-			    if (hole.GetType() != GeometryType::LINESTRING) {
+			    if (geometry_blob.GetType() != GeometryType::LINESTRING) {
 				    throw InvalidInputException(
 				        StringUtil::Format("ST_MakePolygon hole #%lu is not a LINESTRING geometry", hole_idx + 1));
 			    }
+                auto hole = Geometry::Deserialize(arena, geometry_blob);
 			    if (LineString::VertexCount(hole) < 4) {
 				    throw InvalidInputException(
 				        StringUtil::Format("ST_MakePolygon hole #%lu requires at least 4 vertices", hole_idx + 1));
@@ -80,7 +79,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 
 			    rings.push_back(hole);
 		    }
-
+            // TODO: Add constructor that takes a vector of rings
 		    auto polygon = Polygon::Create(arena, rings.size(), false, false);
 		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
                 Polygon::Part(polygon, ring_idx) = std::move(rings[ring_idx]);

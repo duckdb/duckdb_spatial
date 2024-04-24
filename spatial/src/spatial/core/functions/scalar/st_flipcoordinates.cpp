@@ -161,7 +161,7 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 	auto input = args.data[0];
 	auto count = args.size();
 
-	struct FlipOp {
+	struct op {
 		static void Case(Geometry::Tags::SinglePartGeometry, Geometry &geom, ArenaAllocator &arena) {
             SinglePartGeometry::MakeMutable(geom, arena);
 			for (idx_t i = 0; i < SinglePartGeometry::VertexCount(geom); i++) {
@@ -173,14 +173,14 @@ static void GeometryFlipCoordinatesFunction(DataChunk &args, ExpressionState &st
 		static void Case(Geometry::Tags::MultiPartGeometry, Geometry &geom, ArenaAllocator &arena) {
             for (uint32_t i = 0; i < MultiPartGeometry::PartCount(geom); i++) {
                 auto &part = MultiPartGeometry::Part(geom, i);
-                Geometry::Visit<FlipOp>(part, arena);
+                Geometry::Match<op>(part, arena);
             }
 		}
 	};
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		auto geom = Geometry::Deserialize(lstate.arena, input);
-		Geometry::Visit<FlipOp>(geom, lstate.arena);
+		Geometry::Match<op>(geom, lstate.arena);
         return Geometry::Serialize(geom, result);
 	});
 }

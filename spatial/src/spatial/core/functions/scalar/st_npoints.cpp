@@ -83,7 +83,7 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 			uint32_t count = 0;
             for(uint32_t i = 0; i < MultiPartGeometry::PartCount(geom); i++) {
                 auto part = MultiPartGeometry::Part(geom, i);
-				count += Geometry::Visit<op>(part);
+				count += Geometry::Match<op>(part);
 			}
 			return count;
 		}
@@ -92,7 +92,7 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 	UnaryExecutor::Execute<geometry_t, uint32_t>(
 	    input, result, count, [&](geometry_t input) {
             auto geom = Geometry::Deserialize(arena, input);
-            return Geometry::Visit<op>(geom);
+            return Geometry::Match<op>(geom);
         });
 }
 

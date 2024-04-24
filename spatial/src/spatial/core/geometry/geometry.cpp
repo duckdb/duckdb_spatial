@@ -1,5 +1,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
+#include "spatial/core/util/math.hpp"
 
 namespace spatial {
 
@@ -8,41 +9,6 @@ namespace core {
 //------------------------------------------------------------------------------
 // Single Part Geometry
 //------------------------------------------------------------------------------
-/*
-void SinglePartGeometry::Reference(const SinglePartGeometry &other, uint32_t offset, uint32_t count) {
-	properties = other.properties;
-	data.vertex_data = other.data.vertex_data + offset * properties.VertexSize();
-	data_count = count;
-	is_readonly = true;
-}
-
-void SinglePartGeometry::ReferenceData(const_data_ptr_t data_ptr, uint32_t count, bool has_z, bool has_m) {
-	properties.SetZ(has_z);
-	properties.SetM(has_m);
-	data.vertex_data = const_cast<data_ptr_t>(data_ptr);
-	data_count = count;
-	is_readonly = true;
-}
-
-void SinglePartGeometry::Copy(ArenaAllocator &alloc, const SinglePartGeometry &other, uint32_t offset, uint32_t count) {
-	properties = other.properties;
-	data_count = count;
-	data.vertex_data = alloc.AllocateAligned(properties.VertexSize() * count);
-	memcpy(data.vertex_data, other.data.vertex_data + offset * properties.VertexSize(),
-	       properties.VertexSize() * count);
-	is_readonly = false;
-}
-
-void SinglePartGeometry::CopyData(ArenaAllocator &alloc, const_data_ptr_t data_ptr, uint32_t count, bool has_z,
-                                  bool has_m) {
-	properties.SetZ(has_z);
-	properties.SetM(has_m);
-	data_count = count;
-	data.vertex_data = alloc.AllocateAligned(properties.VertexSize() * count);
-	memcpy(data.vertex_data, data_ptr, properties.VertexSize() * count);
-	is_readonly = false;
-}
-*/
 void SinglePartGeometry::Resize(Geometry& geom, ArenaAllocator &alloc, uint32_t new_count) {
     D_ASSERT(GeometryTypes::IsSinglePart(geom.type));
 
@@ -59,7 +25,7 @@ void SinglePartGeometry::Resize(Geometry& geom, ArenaAllocator &alloc, uint32_t 
 	}
 
 	if (!geom.is_readonly) {
-		geom.data_ptr = alloc.Reallocate(geom.data_ptr, geom.data_count * vertex_size, vertex_size * new_count);
+		geom.data_ptr = alloc.ReallocateAligned(geom.data_ptr, geom.data_count * vertex_size, vertex_size * new_count);
 		geom.data_count = new_count;
 	} else {
 		auto new_data = alloc.AllocateAligned(vertex_size * new_count);
@@ -260,7 +226,7 @@ string SinglePartGeometry::ToString(const Geometry& geom, uint32_t start, uint32
 		string result = StringUtil::Format("%s XYZM ([%d-%d]/%d) [", type_name, start, start + count, geom.data_count);
 		for (uint32_t i = start; i < count; i++) {
 			auto vertex = GetVertex<VertexXYZM>(geom, i);
-			result += StringUtil::Format("(%f, %f, %f, %f)", vertex.x, vertex.y, vertex.z, vertex.m);
+			result += "(" + MathUtil::format_coord(vertex.x, vertex.y, vertex.z, vertex.m) + ")";
 			if (i < count - 1) {
 				result += ", ";
 			}
@@ -271,7 +237,7 @@ string SinglePartGeometry::ToString(const Geometry& geom, uint32_t start, uint32
 		string result = StringUtil::Format("%s XYZ ([%d-%d]/%d) [", type_name, start, start + count, geom.data_count);
 		for (uint32_t i = start; i < count; i++) {
             auto vertex = GetVertex<VertexXYZ>(geom, i);
-			result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.z);
+			result += "(" + MathUtil::format_coord(vertex.x, vertex.y, vertex.z) + ")";
 			if (i < count - 1) {
 				result += ", ";
 			}
@@ -282,7 +248,7 @@ string SinglePartGeometry::ToString(const Geometry& geom, uint32_t start, uint32
 		string result = StringUtil::Format("%s XYM ([%d-%d]/%d) [", type_name, start, start + count, geom.data_count);
 		for (uint32_t i = start; i < count; i++) {
             auto vertex = GetVertex<VertexXYM>(geom, i);
-			result += StringUtil::Format("(%f, %f, %f)", vertex.x, vertex.y, vertex.m);
+			result += "(" + MathUtil::format_coord(vertex.x, vertex.y, vertex.m) + ")";
 			if (i < count - 1) {
 				result += ", ";
 			}
@@ -293,7 +259,7 @@ string SinglePartGeometry::ToString(const Geometry& geom, uint32_t start, uint32
 		string result = StringUtil::Format("%s XY ([%d-%d]/%d) [", type_name, start, start + count, geom.data_count);
 		for (uint32_t i = start; i < count; i++) {
             auto vertex = GetVertex<VertexXY>(geom, i);
-			result += StringUtil::Format("(%f, %f)", vertex.x, vertex.y);
+			result += "(" + MathUtil::format_coord(vertex.x, vertex.y) + ")";
 			if (i < count - 1) {
 				result += ", ";
 			}
@@ -303,57 +269,10 @@ string SinglePartGeometry::ToString(const Geometry& geom, uint32_t start, uint32
 	}
 }
 
-bool Geometry::IsEmpty(const Geometry &geom) {
-    struct op {
-        static bool Case (Geometry::Tags::SinglePartGeometry, const Geometry &geom) {
-            return geom.data_count == 0;
-        }
-        static bool Case (Geometry::Tags::MultiPartGeometry, const Geometry &geom) {
-            for(const auto &p : MultiPartGeometry::Parts(geom)) {
-                if (!Geometry::IsEmpty(p)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    };
-    return Geometry::Visit<op>(geom);
-}
 
-uint32_t Geometry::GetDimension(const Geometry &geom, bool ignore_empty) {
-    if (ignore_empty && Geometry::IsEmpty(geom)) {
-        return 0;
-    }
-    struct op {
-        static uint32_t Case(Geometry::Tags::Point, const Geometry&, bool) {
-            return 0;
-        }
-        static uint32_t Case(Geometry::Tags::LineString, const Geometry&, bool) {
-            return 1;
-        }
-        static uint32_t Case(Geometry::Tags::Polygon, const Geometry&, bool) {
-            return 2;
-        }
-        static uint32_t Case(Geometry::Tags::MultiPoint, const Geometry&, bool) {
-            return 0;
-        }
-        static uint32_t Case(Geometry::Tags::MultiLineString, const Geometry&, bool) {
-            return 1;
-        }
-        static uint32_t Case(Geometry::Tags::MultiPolygon, const Geometry&, bool) {
-            return 2;
-        }
-        static uint32_t Case(Geometry::Tags::GeometryCollection, const Geometry& geom, bool ignore_empty) {
-            uint32_t max_dimension = 0;
-            for(const auto &p : GeometryCollection::Parts(geom)) {
-                max_dimension = std::max(max_dimension, Geometry::GetDimension(p, ignore_empty));
-            }
-            return max_dimension;
-        }
-    };
-    return Geometry::Visit<op>(geom, ignore_empty);
-}
-
+//------------------------------------------------------------------------------
+// Geometry
+//------------------------------------------------------------------------------
 void Geometry::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, double default_z, double default_m) {
     struct op {
         static void Case(Geometry::Tags::SinglePartGeometry, Geometry &geom, ArenaAllocator &alloc, bool has_z, bool has_m, double default_z, double default_m) {
@@ -367,7 +286,7 @@ void Geometry::SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, doub
             }
         }
     };
-    Geometry::Visit<op>(*this, alloc, has_z, has_m, default_z, default_m);
+    Geometry::Match<op>(*this, alloc, has_z, has_m, default_z, default_m);
 }
 
 //------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 			}
 		};
         auto geom = Geometry::Deserialize(ctx.arena, input);
-        return Geometry::Visit<op>(geom);
+        return Geometry::Match<op>(geom);
 	});
 }
 

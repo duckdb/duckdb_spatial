@@ -17,18 +17,6 @@ class Geometry;
 // Geometry
 //------------------------------------------------------------------------------
 
-// Forward declare all accessors
-struct AnyGeometry;
-struct SinglePartGeometry;
-struct MultiPartGeometry;
-struct CollectionGeometry;
-struct Point;
-struct LineString;
-struct Polygon;
-struct MultiPoint;
-struct MultiLineString;
-struct MultiPolygon;
-struct GeometryCollection;
 
 class Geometry {
     friend struct SinglePartGeometry;
@@ -43,6 +31,22 @@ private:
 
     Geometry(GeometryType type, GeometryProperties props, bool is_readonly, data_ptr_t data, uint32_t count)
         : type(type), properties(props), is_readonly(is_readonly), data_count(count), data_ptr(data) {}
+
+
+    // TODO: Maybe make these public...
+    Geometry& operator[](uint32_t index) {
+        D_ASSERT(index < data_count);
+        return reinterpret_cast<Geometry*>(data_ptr)[index];
+    }
+    Geometry* begin() { return reinterpret_cast<Geometry*>(data_ptr); }
+    Geometry* end() { return reinterpret_cast<Geometry*>(data_ptr) + data_count; }
+
+    const Geometry& operator[](uint32_t index) const {
+        D_ASSERT(index < data_count);
+        return reinterpret_cast<const Geometry*>(data_ptr)[index];
+    }
+    const Geometry* begin() const { return reinterpret_cast<const Geometry*>(data_ptr); }
+    const Geometry* end() const { return reinterpret_cast<const Geometry*>(data_ptr) + data_count; }
 
 public:
     // By default, create a read-only empty point
@@ -102,49 +106,26 @@ public:
     bool IsCollection() const { return GeometryTypes::IsCollection(type); }
     bool IsMultiPart() const { return GeometryTypes::IsMultiPart(type); }
     bool IsSinglePart() const { return GeometryTypes::IsSinglePart(type); }
-
 public:
     // Used for tag dispatching
     struct Tags {
         // Base types
-        struct AnyGeometry {
-            using ACCESS = ::spatial::core::AnyGeometry;
-        };
-        struct SinglePartGeometry : public AnyGeometry {
-            using ACCESS = ::spatial::core::SinglePartGeometry;
-        };
-        struct MultiPartGeometry : public AnyGeometry {
-            using ACCESS = ::spatial::core::MultiPartGeometry;
-        };
-        struct CollectionGeometry : public MultiPartGeometry {
-            using ACCESS = ::spatial::core::CollectionGeometry;
-        };
+        struct AnyGeometry {};
+        struct SinglePartGeometry : public AnyGeometry {};
+        struct MultiPartGeometry : public AnyGeometry {};
+        struct CollectionGeometry : public MultiPartGeometry {};
         // Concrete types
-        struct Point : public SinglePartGeometry {
-            using ACCESS = ::spatial::core::Point;
-        };
-        struct LineString : public SinglePartGeometry {
-            using ACCESS = ::spatial::core::LineString;
-        };
-        struct Polygon : public MultiPartGeometry {
-            using ACCESS = ::spatial::core::Polygon;
-        };
-        struct MultiPoint : public CollectionGeometry {
-            using ACCESS = ::spatial::core::MultiPoint;
-        };
-        struct MultiLineString : public CollectionGeometry {
-            using ACCESS = ::spatial::core::MultiLineString;
-        };
-        struct MultiPolygon : public CollectionGeometry {
-            using ACCESS = ::spatial::core::MultiPolygon;
-        };
-        struct GeometryCollection : public CollectionGeometry {
-            using ACCESS = ::spatial::core::GeometryCollection;
-        };
+        struct Point : public SinglePartGeometry {};
+        struct LineString : public SinglePartGeometry {};
+        struct Polygon : public MultiPartGeometry {};
+        struct MultiPoint : public CollectionGeometry {};
+        struct MultiLineString : public CollectionGeometry {};
+        struct MultiPolygon : public CollectionGeometry {};
+        struct GeometryCollection : public CollectionGeometry {};
     };
 
     template<class T, class ...ARGS>
-    static auto Visit(Geometry& geom, ARGS&&... args) -> decltype(T::Case(std::declval<Tags::Point>(), std::declval<Geometry&>(), std::declval<ARGS>()...)) {
+    static auto Match(Geometry& geom, ARGS&&... args) -> decltype(T::Case(std::declval<Tags::Point>(), std::declval<Geometry&>(), std::declval<ARGS>()...)) {
         switch(geom.type) {
             case GeometryType::POINT: return T::Case(Tags::Point{}, geom, std::forward<ARGS>(args)...);
             case GeometryType::LINESTRING: return T::Case(Tags::LineString{}, geom, std::forward<ARGS>(args)...);
@@ -158,7 +139,7 @@ public:
     }
 
     template<class T, class ...ARGS>
-    static auto Visit(const Geometry &geom, ARGS&&... args) -> decltype(T::Case(std::declval<Tags::Point>(), std::declval<Geometry&>(), std::declval<ARGS>()...))  {
+    static auto Match(const Geometry &geom, ARGS&&... args) -> decltype(T::Case(std::declval<Tags::Point>(), std::declval<Geometry&>(), std::declval<ARGS>()...))  {
         switch(geom.type) {
             case GeometryType::POINT: return T::Case(Tags::Point{}, geom, std::forward<ARGS>(args)...);
             case GeometryType::LINESTRING: return T::Case(Tags::LineString{}, geom, std::forward<ARGS>(args)...);
@@ -207,6 +188,124 @@ inline Geometry Geometry::Create(ArenaAllocator &alloc, GeometryType type, uint3
 inline Geometry Geometry::CreateEmpty(GeometryType type, bool has_z, bool has_m) {
     GeometryProperties props(has_z, has_m);
     return Geometry(type, props, false, nullptr, 0);
+}
+
+//------------------------------------------------------------------------------
+// Inlined Geometry Functions
+//------------------------------------------------------------------------------
+template<class FUNC>
+inline void Geometry::ExtractPoints(const Geometry &geom, FUNC &&func) {
+    struct op {
+        static void Case(Geometry::Tags::Point, const Geometry &geom, FUNC &&func) {
+            func(geom);
+        }
+        static void Case(Geometry::Tags::MultiPoint, const Geometry &geom, FUNC &&func) {
+            for(auto &part : geom) {
+                func(part);
+            }
+        }
+        static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
+            for(auto &part : geom) {
+                Match<op>(part, std::forward<FUNC>(func));
+            }
+        }
+        static void Case(Geometry::Tags::AnyGeometry, const Geometry&, FUNC &&) { }
+    };
+    Match<op>(geom, std::forward<FUNC>(func));
+}
+
+template<class FUNC>
+inline void Geometry::ExtractLines(const Geometry &geom, FUNC &&func) {
+    struct op {
+        static void Case(Geometry::Tags::LineString, const Geometry &geom, FUNC &&func) {
+            func(geom);
+        }
+        static void Case(Geometry::Tags::MultiLineString, const Geometry &geom, FUNC &&func) {
+            for(auto &part : geom) {
+                func(part);
+            }
+        }
+        static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
+            for(auto &part : geom) {
+                Match<op>(part, std::forward<FUNC>(func));
+            }
+        }
+        static void Case(Geometry::Tags::AnyGeometry, const Geometry&, FUNC &&) { }
+    };
+    Match<op>(geom, std::forward<FUNC>(func));
+}
+
+template<class FUNC>
+inline void Geometry::ExtractPolygons(const Geometry &geom, FUNC &&func){
+    struct op {
+        static void Case(Geometry::Tags::Polygon, const Geometry &geom, FUNC &&func) {
+            func(geom);
+        }
+        static void Case(Geometry::Tags::MultiPolygon, const Geometry &geom, FUNC &&func) {
+            for(auto &part : geom) {
+                func(part);
+            }
+        }
+        static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
+            for(auto &part : geom) {
+                Match<op>(part, std::forward<FUNC>(func));
+            }
+        }
+        static void Case(Geometry::Tags::AnyGeometry, const Geometry&, FUNC &&) { }
+    };
+    Match<op>(geom, std::forward<FUNC>(func));
+}
+
+
+inline bool Geometry::IsEmpty(const Geometry &geom) {
+    struct op {
+        static bool Case (Geometry::Tags::SinglePartGeometry, const Geometry &geom) {
+            return geom.data_count == 0;
+        }
+        static bool Case (Geometry::Tags::MultiPartGeometry, const Geometry &geom) {
+            for(const auto &part : geom) {
+                if(!Geometry::Match<op>(part)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+    return Geometry::Match<op>(geom);
+}
+
+inline uint32_t Geometry::GetDimension(const Geometry &geom, bool ignore_empty) {
+    if (ignore_empty && Geometry::IsEmpty(geom)) {
+        return 0;
+    }
+    struct op {
+        static uint32_t Case(Geometry::Tags::Point, const Geometry&, bool) {
+            return 0;
+        }
+        static uint32_t Case(Geometry::Tags::LineString, const Geometry&, bool) {
+            return 1;
+        }
+        static uint32_t Case(Geometry::Tags::Polygon, const Geometry&, bool) {
+            return 2;
+        }
+        static uint32_t Case(Geometry::Tags::MultiPoint, const Geometry&, bool) {
+            return 0;
+        }
+        static uint32_t Case(Geometry::Tags::MultiLineString, const Geometry&, bool) {
+            return 1;
+        }
+        static uint32_t Case(Geometry::Tags::MultiPolygon, const Geometry&, bool) {
+            return 2;
+        }
+        static uint32_t Case(Geometry::Tags::GeometryCollection, const Geometry& geom, bool ignore_empty) {
+            uint32_t max_dimension = 0;
+            for(const auto &p : geom) {
+                max_dimension = std::max(max_dimension, Geometry::GetDimension(p, ignore_empty));
+            }
+            return max_dimension;
+        }
+    };
+    return Geometry::Match<op>(geom, ignore_empty);
 }
 
 //------------------------------------------------------------------------------
@@ -305,11 +404,6 @@ public:
 //------------------------------------------------------------------------------
 // Accessors
 //------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// AnyGeometry
-//------------------------------------------------------------------------------
-struct AnyGeometry {};
 
 //------------------------------------------------------------------------------
 // SinglePartGeometry
@@ -605,7 +699,6 @@ struct Point : public SinglePartGeometry {
 
     // Constants
     static const constexpr GeometryType TYPE = GeometryType::POINT;
-    static const constexpr int SURFACE_DIMENSION = 0;
 };
 
 inline Geometry Point::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
@@ -673,7 +766,6 @@ struct LineString : public SinglePartGeometry {
 
     // Constants
     static const constexpr GeometryType TYPE = GeometryType::LINESTRING;
-    static const constexpr int SURFACE_DIMENSION = 1;
 };
 
 inline Geometry LineString::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
@@ -682,6 +774,38 @@ inline Geometry LineString::Create(ArenaAllocator &alloc, uint32_t count, bool h
 
 inline Geometry LineString::CreateEmpty(bool has_z, bool has_m) {
     return Geometry::CreateEmpty(TYPE, has_z, has_m);
+}
+
+//------------------------------------------------------------------------------
+// LinearRing (special case of LineString)
+//------------------------------------------------------------------------------
+struct LinearRing : public LineString {
+    static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+    static Geometry CreateEmpty(bool has_z, bool has_m);
+
+    // Methods
+    static bool IsClosed(const Geometry &geom);
+
+    // Constants
+    // TODO: We dont have a LinearRing type, so we use LineString for now
+    static const constexpr GeometryType TYPE = GeometryType::LINESTRING;
+};
+
+inline Geometry LinearRing::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+    return LineString::Create(alloc, count, has_z, has_m);
+}
+
+inline Geometry LinearRing::CreateEmpty(bool has_z, bool has_m) {
+    return LineString::CreateEmpty(has_z, has_m);
+}
+
+inline bool LinearRing::IsClosed(const Geometry &geom) {
+    D_ASSERT(geom.GetType() == TYPE);
+    // The difference between LineString is that a empty LinearRing is considered closed
+    if(LinearRing::IsEmpty(geom)) {
+        return true;
+    }
+    return LineString::IsClosed(geom);
 }
 
 //------------------------------------------------------------------------------
@@ -694,10 +818,11 @@ struct Polygon : public MultiPartGeometry {
     static Geometry CreateFromBox(ArenaAllocator &alloc, double minx, double miny, double maxx, double maxy);
 
     // Methods
+    static const Geometry& ExteriorRing(const Geometry &geom);
+    static Geometry& ExteriorRing(Geometry &geom);
 
     // Constants
     static const constexpr GeometryType TYPE = GeometryType::POLYGON;
-    static const constexpr int SURFACE_DIMENSION = 2;
 };
 
 inline Geometry Polygon::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
@@ -725,6 +850,18 @@ inline Geometry Polygon::CreateFromBox(ArenaAllocator &alloc, double minx, doubl
     return polygon;
 }
 
+inline Geometry& Polygon::ExteriorRing(Geometry &geom) {
+    D_ASSERT(geom.GetType() == TYPE);
+    D_ASSERT(Polygon::PartCount(geom) > 0);
+    return Polygon::Part(geom, 0);
+}
+
+inline const Geometry& Polygon::ExteriorRing(const Geometry &geom) {
+    D_ASSERT(geom.GetType() == TYPE);
+    D_ASSERT(Polygon::PartCount(geom) > 0);
+    return Polygon::Part(geom, 0);
+}
+
 //------------------------------------------------------------------------------
 // MultiPoint
 //------------------------------------------------------------------------------
@@ -735,7 +872,6 @@ struct MultiPoint : public CollectionGeometry {
 
     // Constants
     static const constexpr GeometryType TYPE = GeometryType::MULTIPOINT;
-    static const constexpr int SURFACE_DIMENSION = 0;
 };
 
 inline Geometry MultiPoint::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
@@ -763,10 +899,10 @@ struct MultiLineString : public CollectionGeometry {
     static Geometry CreateEmpty(bool has_z, bool has_m);
     static Geometry Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m);
 
+    static bool IsClosed(const Geometry &geom);
 
     // Constants
     static const constexpr GeometryType TYPE = GeometryType::MULTILINESTRING;
-    static const constexpr int SURFACE_DIMENSION = 1;
 };
 
 inline Geometry MultiLineString::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
@@ -786,6 +922,18 @@ inline Geometry MultiLineString::Create(ArenaAllocator &alloc, vector<Geometry> 
     return CollectionGeometry::Create(alloc, TYPE, items, has_z, has_m);
 }
 
+inline bool MultiLineString::IsClosed(const Geometry &geom) {
+    if(MultiLineString::PartCount(geom) == 0) {
+        return false;
+    }
+    for(auto &part : MultiLineString::Parts(geom)) {
+        if(!LineString::IsClosed(part)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 //------------------------------------------------------------------------------
 // MultiPolygon
 //------------------------------------------------------------------------------
@@ -796,7 +944,6 @@ struct MultiPolygon : public CollectionGeometry {
 
     // Constants
     static const constexpr GeometryType TYPE = GeometryType::MULTIPOLYGON;
-    static const constexpr int SURFACE_DIMENSION = 2;
 };
 
 inline Geometry MultiPolygon::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
@@ -843,78 +990,6 @@ inline Geometry GeometryCollection::CreateEmpty(bool has_z, bool has_m) {
 
 inline Geometry GeometryCollection::Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m) {
     return CollectionGeometry::Create(alloc, TYPE, items, has_z, has_m);
-}
-
-//------------------------------------------------------------------------------
-// Inlined Functions
-//------------------------------------------------------------------------------
-template<class FUNC>
-inline void Geometry::ExtractPoints(const Geometry &geom, FUNC &&func) {
-    struct op {
-        static void Case(Geometry::Tags::Point, const Geometry &geom, FUNC &&func) {
-            func(geom);
-        }
-        static void Case(Geometry::Tags::MultiPoint, const Geometry &geom, FUNC &&func) {
-            auto parts = MultiPoint::Parts(geom);
-            for(auto &part : parts) {
-                func(part);
-            }
-        }
-        static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
-            auto parts = GeometryCollection::Parts(geom);
-            for(auto &part : parts) {
-                Visit<op>(part, std::forward<FUNC>(func));
-            }
-        }
-        static void Case(Geometry::Tags::AnyGeometry, const Geometry&, FUNC &&) { }
-    };
-    Visit<op>(geom, std::forward<FUNC>(func));
-}
-
-template<class FUNC>
-inline void Geometry::ExtractLines(const Geometry &geom, FUNC &&func) {
-    struct op {
-        static void Case(Geometry::Tags::LineString, const Geometry &geom, FUNC &&func) {
-            func(geom);
-        }
-        static void Case(Geometry::Tags::MultiLineString, const Geometry &geom, FUNC &&func) {
-            auto parts = MultiLineString::Parts(geom);
-            for(auto &part : parts) {
-                func(part);
-            }
-        }
-        static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
-            auto parts = GeometryCollection::Parts(geom);
-            for(auto &part : parts) {
-                Visit<op>(part, std::forward<FUNC>(func));
-            }
-        }
-        static void Case(Geometry::Tags::AnyGeometry, const Geometry&, FUNC &&) { }
-    };
-    Visit<op>(geom, std::forward<FUNC>(func));
-}
-
-template<class FUNC>
-inline void Geometry::ExtractPolygons(const Geometry &geom, FUNC &&func){
-    struct op {
-        static void Case(Geometry::Tags::Polygon, const Geometry &geom, FUNC &&func) {
-            func(geom);
-        }
-        static void Case(Geometry::Tags::MultiPolygon, const Geometry &geom, FUNC &&func) {
-            auto parts = MultiPolygon::Parts(geom);
-            for(auto &part : parts) {
-                func(part);
-            }
-        }
-        static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
-            auto parts = GeometryCollection::Parts(geom);
-            for(auto &part : parts) {
-                Visit<op>(part, std::forward<FUNC>(func));
-            }
-        }
-        static void Case(Geometry::Tags::AnyGeometry, const Geometry&, FUNC &&) { }
-    };
-    Visit<op>(geom, std::forward<FUNC>(func));
 }
 
 //------------------------------------------------------------------------------

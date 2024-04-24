@@ -213,7 +213,7 @@ struct ToGeoJSONFunctor {
         for(uint32_t i = 0; i < GeometryCollection::PartCount(collection); i++) {
             auto &geom = GeometryCollection::Part(collection, i);
             auto geom_obj = yyjson_mut_obj(doc);
-            Geometry::Visit<ToGeoJSONFunctor>(geom, doc, geom_obj);
+            Geometry::Match<ToGeoJSONFunctor>(geom, doc, geom_obj);
             yyjson_mut_arr_append(arr, geom_obj);
         }
     }
@@ -235,7 +235,7 @@ static void GeometryToGeoJSONFragmentFunction(DataChunk &args, ExpressionState &
 		auto obj = yyjson_mut_obj(doc);
 		yyjson_mut_doc_set_root(doc, obj);
 
-		Geometry::Visit<ToGeoJSONFunctor>(geom, doc, obj);
+		Geometry::Match<ToGeoJSONFunctor>(geom, doc, obj);
 
 		size_t json_size = 0;
 		// TODO: YYJSON_WRITE_PRETTY

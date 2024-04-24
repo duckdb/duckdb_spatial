@@ -57,7 +57,7 @@ struct GetRequiredSizeOp {
             size += 4;
             size += Polygon::Part(polygon, i).Count() * sizeof(VERTEX);
         }
-		if (polygon.Count() % 2 == 1) {
+		if (Polygon::PartCount(polygon) % 2 == 1) {
 			size += 4;
 		}
 		return size;
@@ -70,7 +70,7 @@ struct GetRequiredSizeOp {
 		uint32_t size = 4 + 4;
         for(uint32_t i = 0; i < CollectionGeometry::PartCount(collection); i++) {
             auto &part = CollectionGeometry::Part(collection, i);
-            size += Geometry::Visit<GetRequiredSizeOp<VERTEX>>(part);
+            size += Geometry::Match<GetRequiredSizeOp<VERTEX>>(part);
         }
 		return size;
 	}
@@ -219,7 +219,7 @@ struct SerializeOp {
 		// write geometry data
         for(uint32_t i = 0; i < GeometryCollection::PartCount(collection); i++) {
             auto &geom = GeometryCollection::Part(collection, i);
-            Geometry::Visit<SerializeOp<VERTEX>>(geom, cursor, bbox, depth + 1);
+            Geometry::Match<SerializeOp<VERTEX>>(geom, cursor, bbox, depth + 1);
         }
 	}
 };
@@ -235,13 +235,13 @@ geometry_t Geometry::Serialize(const Geometry &geom, Vector &result) {
 
 	uint32_t geom_size = 0;
 	if (has_z && has_m) {
-		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXYZM>>(geom);
+		geom_size = Geometry::Match<GetRequiredSizeOp<VertexXYZM>>(geom);
 	} else if (has_z) {
-		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXYZ>>(geom);
+		geom_size = Geometry::Match<GetRequiredSizeOp<VertexXYZ>>(geom);
 	} else if (has_m) {
-		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXYM>>(geom);
+		geom_size = Geometry::Match<GetRequiredSizeOp<VertexXYM>>(geom);
 	} else {
-		geom_size = Geometry::Visit<GetRequiredSizeOp<VertexXY>>(geom);
+		geom_size = Geometry::Match<GetRequiredSizeOp<VertexXY>>(geom);
 	}
 
 	auto header_size = 4;
@@ -268,13 +268,13 @@ geometry_t Geometry::Serialize(const Geometry &geom, Vector &result) {
 	cursor.Skip(bbox_size);
 
 	if (has_z && has_m) {
-		Geometry::Visit<SerializeOp<VertexXYZM>>(geom, cursor, bbox, 0);
+		Geometry::Match<SerializeOp<VertexXYZM>>(geom, cursor, bbox, 0);
 	} else if (has_z) {
-        Geometry::Visit<SerializeOp<VertexXYZ>>(geom, cursor, bbox, 0);
+        Geometry::Match<SerializeOp<VertexXYZ>>(geom, cursor, bbox, 0);
 	} else if (has_m) {
-        Geometry::Visit<SerializeOp<VertexXYM>>(geom, cursor, bbox, 0);
+        Geometry::Match<SerializeOp<VertexXYM>>(geom, cursor, bbox, 0);
 	} else {
-        Geometry::Visit<SerializeOp<VertexXY>>(geom, cursor, bbox, 0);
+        Geometry::Match<SerializeOp<VertexXY>>(geom, cursor, bbox, 0);
 	}
 
 	// Now write the bounding box

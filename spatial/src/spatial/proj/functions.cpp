@@ -244,7 +244,7 @@ struct TransformOp {
 	}
 	static void Case(Geometry::Tags::MultiPartGeometry, Geometry &geom, PJ *crs, ArenaAllocator &arena) {
 		for (auto &part : MultiPartGeometry::Parts(geom)) {
-			Geometry::Visit<TransformOp>(part, crs, arena);
+			Geometry::Match<TransformOp>(part, crs, arena);
 		}
 	}
 };
@@ -296,7 +296,7 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 
 		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
 			auto geom = Geometry::Deserialize(arena, input_geom);
-            Geometry::Visit<TransformOp>(geom, crs.get(), arena);
+            Geometry::Match<TransformOp>(geom, crs.get(), arena);
             return Geometry::Serialize(geom, result);
 		});
 	} else {
@@ -322,7 +322,7 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			    }
 
 			    auto geom = Geometry::Deserialize(arena, input_geom);
-                Geometry::Visit<TransformOp>(geom, crs.get(), arena);
+                Geometry::Match<TransformOp>(geom, crs.get(), arena);
 			    return Geometry::Serialize(geom, result);
 		    });
 	}
