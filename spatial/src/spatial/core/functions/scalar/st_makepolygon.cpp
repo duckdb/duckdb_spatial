@@ -66,7 +66,7 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 				    throw InvalidInputException(
 				        StringUtil::Format("ST_MakePolygon hole #%lu is not a LINESTRING geometry", hole_idx + 1));
 			    }
-                auto hole = Geometry::Deserialize(arena, geometry_blob);
+			    auto hole = Geometry::Deserialize(arena, geometry_blob);
 			    if (LineString::VertexCount(hole) < 4) {
 				    throw InvalidInputException(
 				        StringUtil::Format("ST_MakePolygon hole #%lu requires at least 4 vertices", hole_idx + 1));
@@ -79,12 +79,12 @@ static void MakePolygonFromRingsFunction(DataChunk &args, ExpressionState &state
 
 			    rings.push_back(hole);
 		    }
-            // TODO: Add constructor that takes a vector of rings
+		    // TODO: Add constructor that takes a vector of rings
 		    auto polygon = Polygon::Create(arena, rings.size(), false, false);
 		    for (idx_t ring_idx = 0; ring_idx < rings.size(); ring_idx++) {
-                Polygon::Part(polygon, ring_idx) = std::move(rings[ring_idx]);
+			    Polygon::Part(polygon, ring_idx) = std::move(rings[ring_idx]);
 		    }
-            return Geometry::Serialize(polygon, result);
+		    return Geometry::Serialize(polygon, result);
 	    });
 }
 
@@ -113,7 +113,7 @@ static void MakePolygonFromShellFunction(DataChunk &args, ExpressionState &state
 
 		auto polygon = Polygon::Create(arena, 1, props.HasZ(), props.HasM());
 		Polygon::Part(polygon, 0) = std::move(line);
-        return Geometry::Serialize(polygon, result);
+		return Geometry::Serialize(polygon, result);
 	});
 }
 

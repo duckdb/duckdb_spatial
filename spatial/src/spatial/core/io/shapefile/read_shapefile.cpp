@@ -268,10 +268,10 @@ struct ConvertPolygon {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
 				auto &ring = Polygon::Part(polygon, i);
 				auto ring_size = end - start;
-                LineString::Resize(ring, arena, ring_size);
+				LineString::Resize(ring, arena, ring_size);
 				for (int j = 0; j < ring_size; j++) {
 					auto offset = start + j;
-                    LineString::SetVertex<VertexXY>(ring, j, {shape->padfX[offset], shape->padfY[offset]});
+					LineString::SetVertex<VertexXY>(ring, j, {shape->padfX[offset], shape->padfY[offset]});
 				}
 				start = end;
 			}
@@ -294,10 +294,10 @@ struct ConvertPolygon {
 					LineString::Resize(ring, arena, ring_size);
 					for (int j = 0; j < ring_size; j++) {
 						auto offset = start + j;
-                        LineString::SetVertex<VertexXY>(ring, j, {shape->padfX[offset], shape->padfY[offset]});
+						LineString::SetVertex<VertexXY>(ring, j, {shape->padfX[offset], shape->padfY[offset]});
 					}
 				}
-                MultiPolygon::Part(multi_polygon, polygon_idx) = std::move(polygon);
+				MultiPolygon::Part(multi_polygon, polygon_idx) = std::move(polygon);
 			}
 			return multi_polygon;
 		}
@@ -308,7 +308,7 @@ struct ConvertMultiPoint {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
 		auto multi_point = MultiPoint::Create(arena, shape->nVertices, false, false);
 		for (int i = 0; i < shape->nVertices; i++) {
-            auto point = Point::CreateFromVertex(arena, VertexXY {shape->padfX[i], shape->padfY[i]});
+			auto point = Point::CreateFromVertex(arena, VertexXY {shape->padfX[i], shape->padfY[i]});
 			MultiPoint::Part(multi_point, i) = std::move(point);
 		}
 		return multi_point;

@@ -71,9 +71,9 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-            LineString::SetVertex<VertexXY>(geom, i, VertexXY {x, y});
+			LineString::SetVertex<VertexXY>(geom, i, VertexXY {x, y});
 		}
-        return Geometry::Serialize(geom, result);
+		return Geometry::Serialize(geom, result);
 	});
 	return true;
 }
@@ -134,11 +134,11 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 		for (idx_t i = 0; i < poly.length; i++) {
 			auto ring = ring_entries[poly.offset + i];
 			auto &ring_array = Polygon::Part(geom, i);
-            LineString::Resize(ring_array, arena, ring.length);
+			LineString::Resize(ring_array, arena, ring.length);
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-                LineString::SetVertex<VertexXY>(ring_array, j, VertexXY {x, y});
+				LineString::SetVertex<VertexXY>(ring_array, j, VertexXY {x, y});
 			}
 		}
 		return Geometry::Serialize(geom, result);

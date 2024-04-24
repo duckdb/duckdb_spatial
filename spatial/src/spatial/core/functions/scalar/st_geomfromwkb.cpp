@@ -273,11 +273,10 @@ static void GeometryFromWKBFunction(DataChunk &args, ExpressionState &state, Vec
 	auto count = args.size();
 
 	WKBReader reader(arena);
-	UnaryExecutor::Execute<string_t, geometry_t>(
-	    input, result, count, [&](string_t input) {
-            auto geom = reader.Deserialize(input);
-            return Geometry::Serialize(geom, result);
-        });
+	UnaryExecutor::Execute<string_t, geometry_t>(input, result, count, [&](string_t input) {
+		auto geom = reader.Deserialize(input);
+		return Geometry::Serialize(geom, result);
+	});
 }
 
 //------------------------------------------------------------------------------

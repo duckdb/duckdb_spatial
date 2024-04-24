@@ -154,8 +154,8 @@ Geometry WKTReader::ParsePolygon() {
 	Expect(')');
 	auto result = Polygon::Create(arena, rings.size(), has_z, has_m);
 	for (uint32_t i = 0; i < rings.size(); i++) {
-        auto &ring = Polygon::Part(result, i);
-        LineString::CopyData(ring, arena, data_ptr_cast(rings[i].second.data()), rings[i].first);
+		auto &ring = Polygon::Part(result, i);
+		LineString::CopyData(ring, arena, data_ptr_cast(rings[i].second.data()), rings[i].first);
 	}
 	return result;
 }
@@ -213,7 +213,7 @@ Geometry WKTReader::ParseMultiLineString() {
 	Expect(')');
 	auto result = MultiLineString::Create(arena, lines.size(), has_z, has_m);
 	for (uint32_t i = 0; i < lines.size(); i++) {
-        MultiLineString::Part(result, i) = lines[i];
+		MultiLineString::Part(result, i) = lines[i];
 	}
 	return result;
 }

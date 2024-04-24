@@ -88,9 +88,9 @@ static int DuckDBShapefileRemove(void *userData, const char *filename) {
 	try {
 		auto &fs = *reinterpret_cast<FileSystem *>(userData);
 		auto file = fs.OpenFile(filename, FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_NULL_IF_NOT_EXISTS);
-        if (!file) {
-            return -1;
-        }
+		if (!file) {
+			return -1;
+		}
 		auto file_type = fs.GetFileType(*file);
 		if (file_type == FileType::FILE_TYPE_DIR) {
 			fs.RemoveDirectory(filename);

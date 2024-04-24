@@ -48,8 +48,8 @@ void GeometryFromHEXWKB(DataChunk &args, ExpressionState &state, Vector &result)
 			blob_ptr[blob_idx++] = (byte_a << 4) + byte_b;
 		}
 
-        auto geom = reader.Deserialize(blob_ptr, blob_size);
-        return Geometry::Serialize(geom, result);
+		auto geom = reader.Deserialize(blob_ptr, blob_size);
+		return Geometry::Serialize(geom, result);
 	});
 }
 

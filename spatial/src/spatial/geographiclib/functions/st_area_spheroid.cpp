@@ -115,15 +115,12 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, false);
 
-	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) {
-            auto geom = Geometry::Deserialize(arena, input);
-            double area = 0;
-            Geometry::ExtractPolygons(geom, [&](const Geometry &geom) {
-                area += PolygonArea(geom, comp);
-            });
-            return area;
-        });
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(arena, input);
+		double area = 0;
+		Geometry::ExtractPolygons(geom, [&](const Geometry &geom) { area += PolygonArea(geom, comp); });
+		return area;
+	});
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

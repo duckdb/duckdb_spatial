@@ -27,7 +27,7 @@ static void MakeEnvelopeFunction(DataChunk &args, ExpressionState &state, Vector
 	    min_x_vec, min_y_vec, max_x_vec, max_y_vec, result, count,
 	    [&](DOUBLE_TYPE x_min, DOUBLE_TYPE y_min, DOUBLE_TYPE x_max, DOUBLE_TYPE y_max) {
 		    auto box = Polygon::CreateFromBox(lstate.arena, x_min.val, y_min.val, x_max.val, y_max.val);
-            return Geometry::Serialize(box, result);
+		    return Geometry::Serialize(box, result);
 	    });
 }
 

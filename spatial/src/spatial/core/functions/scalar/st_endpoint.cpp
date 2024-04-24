@@ -79,8 +79,8 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 			    return geometry_t {};
 		    }
 
-            auto point = LineString::GetPointAsReference(line, point_count - 1);
-            return Geometry::Serialize(point, result);
+		    auto point = LineString::GetPointAsReference(line, point_count - 1);
+		    return Geometry::Serialize(point, result);
 	    });
 }
 //------------------------------------------------------------------------------

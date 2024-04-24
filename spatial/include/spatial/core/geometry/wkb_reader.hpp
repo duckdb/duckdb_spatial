@@ -26,12 +26,12 @@ private:
 
 	// Geometries
 	Geometry ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-    Geometry ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-    Geometry ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-    Geometry ReadMultiPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-    Geometry ReadMultiLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-    Geometry ReadMultiPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-    Geometry ReadGeometryCollection(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadMultiPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadMultiLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadMultiPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadGeometryCollection(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
 	Geometry ReadGeometry(Cursor &cursor);
 
 public:

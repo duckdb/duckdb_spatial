@@ -48,17 +48,17 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (Point::IsEmpty(point)) {
 				continue;
 			}
-            LineString::Vertex(line, vertex_idx++) = Point::GetVertex(point);
+			LineString::Vertex(line, vertex_idx++) = Point::GetVertex(point);
 		}
 
 		// Shrink the vertex array to the actual size
-        LineString::Resize(line, arena, vertex_idx);
+		LineString::Resize(line, arena, vertex_idx);
 
 		if (line.Count() == 1) {
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		}
 
-        return Geometry::Serialize(line, result);
+		return Geometry::Serialize(line, result);
 	});
 }
 
@@ -70,8 +70,7 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 
 	BinaryExecutor::Execute<geometry_t, geometry_t, geometry_t>(
 	    args.data[0], args.data[1], result, count, [&](geometry_t &geom_blob_left, geometry_t &geom_blob_right) {
-
-            if (geom_blob_left.GetType() != GeometryType::POINT || geom_blob_right.GetType() != GeometryType::POINT) {
+		    if (geom_blob_left.GetType() != GeometryType::POINT || geom_blob_right.GetType() != GeometryType::POINT) {
 			    throw InvalidInputException("ST_MakeLine only accepts POINT geometries");
 		    }
 
@@ -80,8 +79,8 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 
 		    if (Point::IsEmpty(geometry_left) && Point::IsEmpty(geometry_right)) {
 			    // Empty linestring
-                auto empty = LineString::CreateEmpty(false, false);
-                return Geometry::Serialize(empty, result);
+			    auto empty = LineString::CreateEmpty(false, false);
+			    return Geometry::Serialize(empty, result);
 		    }
 
 		    if (Point::IsEmpty(geometry_left) || Point::IsEmpty(geometry_right)) {
@@ -97,9 +96,9 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    geometry_right.SetVertexType(arena, has_z, has_m);
 
 		    auto line_geom = LineString::CreateEmpty(has_z, has_m);
-            LineString::Append(line_geom, arena, geometry_left);
-            LineString::Append(line_geom, arena, geometry_right);
-            return Geometry::Serialize(line_geom, result);
+		    LineString::Append(line_geom, arena, geometry_left);
+		    LineString::Append(line_geom, arena, geometry_right);
+		    return Geometry::Serialize(line_geom, result);
 	    });
 }
 

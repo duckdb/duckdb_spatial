@@ -29,11 +29,11 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 				return Polygon::IsEmpty(geom) ? 0 : 1;
 			}
 			static int32_t Case(Geometry::Tags::SinglePartGeometry, const Geometry &geom) {
-				return SinglePartGeometry::IsEmpty(geom)? 0 : 1;
+				return SinglePartGeometry::IsEmpty(geom) ? 0 : 1;
 			}
 		};
-        auto geom = Geometry::Deserialize(ctx.arena, input);
-        return Geometry::Match<op>(geom);
+		auto geom = Geometry::Deserialize(ctx.arena, input);
+		return Geometry::Match<op>(geom);
 	});
 }
 

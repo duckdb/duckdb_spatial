@@ -239,7 +239,7 @@ struct TransformOp {
 			auto vertex = SinglePartGeometry::GetVertex(geom, i);
 			auto transformed = proj_trans(crs, PJ_FWD, proj_coord(vertex.x, vertex.y, 0, 0)).xy;
 			// we own the array, so we can use SetUnsafe
-			SinglePartGeometry::SetVertex(geom, i, { transformed.x, transformed.y });
+			SinglePartGeometry::SetVertex(geom, i, {transformed.x, transformed.y});
 		}
 	}
 	static void Case(Geometry::Tags::MultiPartGeometry, Geometry &geom, PJ *crs, ArenaAllocator &arena) {
@@ -296,8 +296,8 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 
 		UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input_geom) {
 			auto geom = Geometry::Deserialize(arena, input_geom);
-            Geometry::Match<TransformOp>(geom, crs.get(), arena);
-            return Geometry::Serialize(geom, result);
+			Geometry::Match<TransformOp>(geom, crs.get(), arena);
+			return Geometry::Serialize(geom, result);
 		});
 	} else {
 		// General case: projections are not constant
@@ -322,7 +322,7 @@ static void GeometryTransformFunction(DataChunk &args, ExpressionState &state, V
 			    }
 
 			    auto geom = Geometry::Deserialize(arena, input_geom);
-                Geometry::Match<TransformOp>(geom, crs.get(), arena);
+			    Geometry::Match<TransformOp>(geom, crs.get(), arena);
 			    return Geometry::Serialize(geom, result);
 		    });
 	}

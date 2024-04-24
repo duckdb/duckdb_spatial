@@ -60,9 +60,9 @@ static void GeodesicLineString2DFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 static double LineLength(const Geometry &line, GeographicLib::PolygonArea &comp) {
 	comp.Clear();
-    for(VertexXY vert : LineString::Vertices(line)) {
-        comp.AddPoint(vert.x, vert.y);
-    }
+	for (VertexXY vert : LineString::Vertices(line)) {
+		comp.AddPoint(vert.x, vert.y);
+	}
 	double _area;
 	double linestring_length;
 	comp.Compute(false, true, linestring_length, _area);
@@ -79,15 +79,12 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, true);
 
-	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) {
-            auto geom = Geometry::Deserialize(arena, input);
-            double length = 0.0;
-            Geometry::ExtractLines(geom, [&](const Geometry &line) {
-                length += LineLength(line, comp);
-            });
-            return length;
-        });
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(arena, input);
+		double length = 0.0;
+		Geometry::ExtractLines(geom, [&](const Geometry &line) { length += LineLength(line, comp); });
+		return length;
+	});
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

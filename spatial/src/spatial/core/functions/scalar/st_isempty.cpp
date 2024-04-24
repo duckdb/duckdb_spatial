@@ -52,11 +52,10 @@ static void GeometryIsEmptyFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<geometry_t, bool>(
-	    input, result, count, [&](geometry_t input) {
-            auto geom = Geometry::Deserialize(lstate.arena, input);
-            return Geometry::IsEmpty(geom);
-        });
+	UnaryExecutor::Execute<geometry_t, bool>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(lstate.arena, input);
+		return Geometry::IsEmpty(geom);
+	});
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

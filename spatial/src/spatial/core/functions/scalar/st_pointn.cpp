@@ -90,7 +90,7 @@ static void GeometryPointNFunction(DataChunk &args, ExpressionState &state, Vect
 
 		    auto actual_index = index < 0 ? point_count + index : index - 1;
 		    auto point = LineString::GetPointAsReference(line, actual_index);
-            return Geometry::Serialize(point, result);
+		    return Geometry::Serialize(point, result);
 	    });
 }
 

@@ -81,19 +81,18 @@ static void GeometryNumPointsFunction(DataChunk &args, ExpressionState &state, V
 		}
 		static uint32_t Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom) {
 			uint32_t count = 0;
-            for(uint32_t i = 0; i < MultiPartGeometry::PartCount(geom); i++) {
-                auto part = MultiPartGeometry::Part(geom, i);
+			for (uint32_t i = 0; i < MultiPartGeometry::PartCount(geom); i++) {
+				auto part = MultiPartGeometry::Part(geom, i);
 				count += Geometry::Match<op>(part);
 			}
 			return count;
 		}
 	};
 
-	UnaryExecutor::Execute<geometry_t, uint32_t>(
-	    input, result, count, [&](geometry_t input) {
-            auto geom = Geometry::Deserialize(arena, input);
-            return Geometry::Match<op>(geom);
-        });
+	UnaryExecutor::Execute<geometry_t, uint32_t>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(arena, input);
+		return Geometry::Match<op>(geom);
+	});
 }
 
 //------------------------------------------------------------------------------

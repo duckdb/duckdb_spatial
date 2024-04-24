@@ -25,8 +25,8 @@ static bool WKBToGeometryCast(Vector &source, Vector &result, idx_t count, CastP
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    source, result, count, [&](string_t input, ValidityMask &mask, idx_t idx) {
 		    try {
-                auto geom = reader.Deserialize(input);
-                return Geometry::Serialize(geom, result);
+			    auto geom = reader.Deserialize(input);
+			    return Geometry::Serialize(geom, result);
 		    } catch (SerializationException &e) {
 			    if (success) {
 				    success = false;

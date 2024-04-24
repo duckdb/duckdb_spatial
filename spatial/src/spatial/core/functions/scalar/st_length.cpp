@@ -54,15 +54,12 @@ static void GeometryLengthFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) {
-            auto geom = Geometry::Deserialize(arena, input);
-            double length = 0.0;
-            Geometry::ExtractLines(geom, [&](const Geometry &line) {
-                length += LineString::Length(line);
-            });
-            return length;
-        });
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(arena, input);
+		double length = 0.0;
+		Geometry::ExtractLines(geom, [&](const Geometry &line) { length += LineString::Length(line); });
+		return length;
+	});
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

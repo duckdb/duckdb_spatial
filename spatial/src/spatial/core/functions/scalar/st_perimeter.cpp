@@ -78,17 +78,16 @@ static void GeometryPerimeterFunction(DataChunk &args, ExpressionState &state, V
 	auto &input = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) {
-            auto geom = Geometry::Deserialize(arena, input);
-            double perimeter = 0.0;
-            Geometry::ExtractPolygons(geom, [&](const Geometry &poly) {
-                for(auto &p : Polygon::Parts(poly)) {
-                    perimeter += LineString::Length(p);
-                }
-            });
-            return perimeter;
-        });
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(arena, input);
+		double perimeter = 0.0;
+		Geometry::ExtractPolygons(geom, [&](const Geometry &poly) {
+			for (auto &p : Polygon::Parts(poly)) {
+				perimeter += LineString::Length(p);
+			}
+		});
+		return perimeter;
+	});
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

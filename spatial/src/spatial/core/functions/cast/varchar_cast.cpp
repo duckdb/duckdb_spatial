@@ -114,7 +114,7 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &box) {
 		return StringVector::AddString(result,
 		                               StringUtil::Format("BOX(%s, %s)", MathUtil::format_coord(box.a_val, box.b_val),
-                                                          MathUtil::format_coord(box.c_val, box.d_val)));
+		                                                  MathUtil::format_coord(box.c_val, box.d_val)));
 	});
 }
 
@@ -324,8 +324,8 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    source, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
-                auto geom = reader.Parse(wkt);
-                return Geometry::Serialize(geom, result);
+			    auto geom = reader.Parse(wkt);
+			    return Geometry::Serialize(geom, result);
 		    } catch (InvalidInputException &e) {
 			    if (success) {
 				    success = false;

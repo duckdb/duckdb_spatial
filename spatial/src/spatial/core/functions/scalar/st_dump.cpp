@@ -46,12 +46,12 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 			auto current_path = std::get<1>(current);
 
 			stack.pop_back();
-            if(current_geom.IsCollection()) {
-                for(int32_t i = 0; i < CollectionGeometry::PartCount(current_geom); i++) {
-                    auto path = current_path;
-                    path.push_back(i + 1); // path is 1-indexed
-                    stack.emplace_back(CollectionGeometry::Part(current_geom, i), path);
-                }
+			if (current_geom.IsCollection()) {
+				for (int32_t i = 0; i < CollectionGeometry::PartCount(current_geom); i++) {
+					auto path = current_path;
+					path.push_back(i + 1); // path is 1-indexed
+					stack.emplace_back(CollectionGeometry::Part(current_geom, i), path);
+				}
 			} else {
 				items.push_back(current);
 			}

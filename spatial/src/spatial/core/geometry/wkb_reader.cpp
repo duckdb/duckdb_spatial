@@ -19,7 +19,7 @@ Geometry WKBReader::Deserialize(const_data_ptr_t wkb, uint32_t size) {
 	auto geom = ReadGeometry(cursor);
 
 	// Make sure the geometry has unified vertex type, in case we got some funky nested WKB with mixed dimensions
-    geom.SetVertexType(arena, has_any_z, has_any_m);
+	geom.SetVertexType(arena, has_any_z, has_any_m);
 
 	return geom;
 }
@@ -123,7 +123,7 @@ Geometry WKBReader::ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, 
 	auto polygon = Polygon::Create(arena, ring_count, has_z, has_m);
 	for (uint32_t i = 0; i < ring_count; i++) {
 		auto point_count = ReadInt(cursor, little_endian);
-        Polygon::Part(polygon, i) = LineString::Create(arena, point_count, has_z, has_m);
+		Polygon::Part(polygon, i) = LineString::Create(arena, point_count, has_z, has_m);
 		ReadVertices(cursor, little_endian, has_z, has_m, Polygon::Part(polygon, i));
 	}
 	return polygon;
@@ -146,7 +146,8 @@ Geometry WKBReader::ReadMultiLineString(Cursor &cursor, bool little_endian, bool
 	for (uint32_t i = 0; i < count; i++) {
 		bool line_order = cursor.Read<uint8_t>();
 		auto line_type = ReadType(cursor, line_order);
-		MultiLineString::Part(multi_line_string, i) = ReadLineString(cursor, line_order, line_type.has_z, line_type.has_m);
+		MultiLineString::Part(multi_line_string, i) =
+		    ReadLineString(cursor, line_order, line_type.has_z, line_type.has_m);
 	}
 	return multi_line_string;
 }
@@ -157,7 +158,8 @@ Geometry WKBReader::ReadMultiPolygon(Cursor &cursor, bool little_endian, bool ha
 	for (uint32_t i = 0; i < count; i++) {
 		bool polygon_order = cursor.Read<uint8_t>();
 		auto polygon_type = ReadType(cursor, polygon_order);
-		MultiPolygon::Part(multi_polygon, i) = ReadPolygon(cursor, polygon_order, polygon_type.has_z, polygon_type.has_m);
+		MultiPolygon::Part(multi_polygon, i) =
+		    ReadPolygon(cursor, polygon_order, polygon_type.has_z, polygon_type.has_m);
 	}
 	return multi_polygon;
 }
@@ -166,7 +168,7 @@ Geometry WKBReader::ReadGeometryCollection(Cursor &cursor, bool little_endian, b
 	uint32_t count = ReadInt(cursor, little_endian);
 	auto geometry_collection = GeometryCollection::Create(arena, count, has_z, has_m);
 	for (uint32_t i = 0; i < count; i++) {
-        GeometryCollection::Part(geometry_collection, i) = ReadGeometry(cursor);
+		GeometryCollection::Part(geometry_collection, i) = ReadGeometry(cursor);
 	}
 	return geometry_collection;
 }

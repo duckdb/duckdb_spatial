@@ -27,9 +27,9 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		// First figure out if we have Z or M
 		bool has_z = false;
 		bool has_m = false;
-        bool all_points = true;
-        bool all_lines = true;
-        bool all_polygons = true;
+		bool all_points = true;
+		bool all_lines = true;
+		bool all_polygons = true;
 
 		for (idx_t i = offset; i < offset + length; i++) {
 			auto mapped_idx = format.sel->get_index(i);
@@ -49,24 +49,24 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 				auto geometry = Geometry::Deserialize(arena, geometry_blob);
 				// Dont add empty geometries
 				if (!Geometry::IsEmpty(geometry)) {
-                    all_points = all_points && geometry_blob.GetType() == GeometryType::POINT;
-                    all_lines = all_lines && geometry_blob.GetType() == GeometryType::LINESTRING;
-                    all_polygons = all_polygons && geometry_blob.GetType() == GeometryType::POLYGON;
+					all_points = all_points && geometry_blob.GetType() == GeometryType::POINT;
+					all_lines = all_lines && geometry_blob.GetType() == GeometryType::LINESTRING;
+					all_polygons = all_polygons && geometry_blob.GetType() == GeometryType::POLYGON;
 
-                    // Ensure all geometries have the same Z and M
-                    geometry.SetVertexType(arena, has_z, has_m);
-                    geometries.push_back(std::move(geometry));
+					// Ensure all geometries have the same Z and M
+					geometry.SetVertexType(arena, has_z, has_m);
+					geometries.push_back(std::move(geometry));
 				}
 			}
 		}
 
 		if (geometries.empty()) {
-            return Geometry::Serialize(GeometryCollection::CreateEmpty(has_z, has_m), result);
+			return Geometry::Serialize(GeometryCollection::CreateEmpty(has_z, has_m), result);
 		}
 
 		// TODO: Dont upcast the children, just append them.
 		if (all_points) {
-            return Geometry::Serialize(MultiPoint::Create(arena, geometries, has_z, has_m), result);
+			return Geometry::Serialize(MultiPoint::Create(arena, geometries, has_z, has_m), result);
 		} else if (all_lines) {
 			return Geometry::Serialize(MultiLineString::Create(arena, geometries, has_z, has_m), result);
 		} else if (all_polygons) {
