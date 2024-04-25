@@ -48,7 +48,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (Point::IsEmpty(point)) {
 				continue;
 			}
-			LineString::Vertex(line, vertex_idx++) = Point::GetVertex(point);
+			LineString::SetVertex(line, vertex_idx++, Point::GetVertex(point));
 		}
 
 		// Shrink the vertex array to the actual size

@@ -3,7 +3,6 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry_properties.hpp"
 #include "spatial/core/util/cursor.hpp"
-#include "spatial/core/util/misaligned_ptr.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/geometry/vertex.hpp"
 
@@ -402,96 +401,6 @@ public:
 	}
 };
 
-class VertexView {
-private:
-	data_ptr_t beg_ptr;
-	data_ptr_t end_ptr;
-	uint32_t vertex_size;
-
-public:
-	VertexView(data_ptr_t beg, data_ptr_t end, uint32_t vertex_size)
-	    : beg_ptr(beg), end_ptr(end), vertex_size(vertex_size) {
-	}
-
-	StridedPtr<VertexXY> begin() {
-		return {beg_ptr, vertex_size};
-	}
-	StridedPtr<VertexXY> end() {
-		return {end_ptr, vertex_size};
-	}
-	MisalignedRef<VertexXY> operator[](uint32_t index) {
-		D_ASSERT(beg_ptr + index * vertex_size < end_ptr);
-		return {beg_ptr + index * vertex_size};
-	}
-};
-
-class ConstVertexView {
-private:
-	const_data_ptr_t beg_ptr;
-	const_data_ptr_t end_ptr;
-	uint32_t vertex_size;
-
-public:
-	ConstVertexView(const_data_ptr_t beg, const_data_ptr_t end, uint32_t vertex_size)
-	    : beg_ptr(beg), end_ptr(end), vertex_size(vertex_size) {
-	}
-
-	ConstStridedPtr<VertexXY> begin() const {
-		return {beg_ptr, vertex_size};
-	}
-	ConstStridedPtr<VertexXY> end() const {
-		return {end_ptr, vertex_size};
-	}
-	ConstMisalignedRef<VertexXY> operator[](uint32_t index) {
-		D_ASSERT(beg_ptr + index * vertex_size < end_ptr);
-		return {beg_ptr + index * vertex_size};
-	}
-};
-
-template <class V>
-class TypedVertexView {
-	static_assert(V::IS_VERTEX, "V must be a vertex type");
-	data_ptr_t beg_ptr;
-	data_ptr_t end_ptr;
-
-public:
-	TypedVertexView(data_ptr_t beg, data_ptr_t end) : beg_ptr(beg), end_ptr(end) {
-	}
-
-	MisalignedPtr<V> begin() {
-		return {beg_ptr};
-	}
-	MisalignedPtr<V> end() {
-		return {end_ptr};
-	}
-	MisalignedRef<V> operator[](uint32_t index) {
-		D_ASSERT(beg_ptr + index * sizeof(V) < end_ptr);
-		return {beg_ptr + index * sizeof(V)};
-	}
-};
-
-template <class V>
-class ConstTypedVertexView {
-	static_assert(V::IS_VERTEX, "V must be a vertex type");
-	const_data_ptr_t beg_ptr;
-	const_data_ptr_t end_ptr;
-
-public:
-	ConstTypedVertexView(const_data_ptr_t beg, const_data_ptr_t end) : beg_ptr(beg), end_ptr(end) {
-	}
-
-	ConstMisalignedPtr<V> begin() {
-		return {beg_ptr};
-	}
-	ConstMisalignedPtr<V> end() {
-		return {end_ptr};
-	}
-	ConstMisalignedRef<V> operator[](uint32_t index) {
-		D_ASSERT(beg_ptr + index * sizeof(V) < end_ptr);
-		return {beg_ptr + index * sizeof(V)};
-	}
-};
-
 //------------------------------------------------------------------------------
 // Accessors
 //------------------------------------------------------------------------------
@@ -594,31 +503,9 @@ struct SinglePartGeometry {
 	template <class V>
 	static void SetVertex(Geometry &geom, uint32_t index, const V &vertex);
 
-	template <class V>
-	static MisalignedRef<V> Vertex(Geometry &geom, uint32_t index);
-	static MisalignedRef<VertexXY> Vertex(Geometry &geom, uint32_t index);
-
-	template <class V>
-	static ConstMisalignedRef<V> Vertex(const Geometry &geom, uint32_t index);
-	static ConstMisalignedRef<VertexXY> Vertex(const Geometry &geom, uint32_t index);
-
 	static uint32_t VertexCount(const Geometry &geom);
 	static uint32_t VertexSize(const Geometry &geom);
 	static uint32_t ByteSize(const Geometry &geom);
-
-	static VertexView Vertices(Geometry &geom) {
-		D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
-		auto count = VertexCount(geom);
-		auto size = VertexSize(geom);
-		return {geom.GetData(), geom.GetData() + count * size, size};
-	}
-
-	static ConstVertexView Vertices(const Geometry &geom) {
-		D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
-		auto count = VertexCount(geom);
-		auto size = VertexSize(geom);
-		return {geom.GetData(), geom.GetData() + count * size, size};
-	}
 };
 
 inline VertexXY SinglePartGeometry::GetVertex(const Geometry &geom, uint32_t index) {
@@ -649,36 +536,6 @@ inline void SinglePartGeometry::SetVertex(Geometry &geom, uint32_t index, const 
 	D_ASSERT(V::HAS_M == geom.GetProperties().HasM());
 	D_ASSERT(index < geom.data_count);
 	Store(vertex, geom.GetData() + index * sizeof(V));
-}
-
-template <class V>
-inline MisalignedRef<V> SinglePartGeometry::Vertex(Geometry &geom, uint32_t index) {
-	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
-	D_ASSERT(V::HAS_Z == geom.GetProperties().HasZ());
-	D_ASSERT(V::HAS_M == geom.GetProperties().HasM());
-	D_ASSERT(index < geom.data_count);
-	return {geom.GetData() + index * sizeof(V)};
-}
-
-inline MisalignedRef<VertexXY> SinglePartGeometry::Vertex(Geometry &geom, uint32_t index) {
-	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
-	D_ASSERT(index < geom.data_count);
-	return {geom.GetData() + index * geom.GetProperties().VertexSize()};
-}
-
-template <class V>
-inline ConstMisalignedRef<V> SinglePartGeometry::Vertex(const Geometry &geom, uint32_t index) {
-	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
-	D_ASSERT(V::HAS_Z == geom.GetProperties().HasZ());
-	D_ASSERT(V::HAS_M == geom.GetProperties().HasM());
-	D_ASSERT(index < geom.data_count);
-	return {geom.GetData() + index * sizeof(V)};
-}
-
-inline ConstMisalignedRef<VertexXY> SinglePartGeometry::Vertex(const Geometry &geom, uint32_t index) {
-	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
-	D_ASSERT(index < geom.data_count);
-	return {geom.GetData() + index * geom.GetProperties().VertexSize()};
 }
 
 inline uint32_t SinglePartGeometry::VertexCount(const Geometry &geom) {

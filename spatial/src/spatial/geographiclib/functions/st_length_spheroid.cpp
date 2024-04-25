@@ -60,9 +60,10 @@ static void GeodesicLineString2DFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 static double LineLength(const Geometry &line, GeographicLib::PolygonArea &comp) {
 	comp.Clear();
-	for (VertexXY vert : LineString::Vertices(line)) {
-		comp.AddPoint(vert.x, vert.y);
-	}
+    for(uint32_t i = 0; i < LineString::VertexCount(line); i++) {
+        auto vert = LineString::GetVertex(line, i);
+        comp.AddPoint(vert.x, vert.y);
+    }
 	double _area;
 	double linestring_length;
 	comp.Compute(false, true, linestring_length, _area);
