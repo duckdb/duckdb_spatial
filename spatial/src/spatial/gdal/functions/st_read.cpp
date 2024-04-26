@@ -570,7 +570,8 @@ void GdalTableFunction::Scan(ClientContext &context, TableFunctionInput &input, 
 						    validity.SetInvalid(out_idx);
 						    return core::geometry_t {};
 					    }
-					    return state.wkb_reader.Deserialize(input).Serialize(geom_vec);
+					    auto geom = state.wkb_reader.Deserialize(input);
+					    return core::Geometry::Serialize(geom, geom_vec);
 				    });
 				output.data[col_idx].ReferenceAndSetType(geom_vec);
 			}

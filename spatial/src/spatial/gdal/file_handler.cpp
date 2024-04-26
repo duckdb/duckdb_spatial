@@ -169,8 +169,7 @@ public:
 			// Check if the file is a directory
 
 #ifdef _WIN32
-			if (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(file_name_str) &&
-			    (flags.OpenForReading())) {
+			if (!FileSystem::IsRemoteFile(file_name) && fs.DirectoryExists(file_name_str) && (flags.OpenForReading())) {
 				// We can't open a directory for reading on windows without special flags
 				// so just open nul instead, gdal will reject it when it tries to read
 				auto file = fs.OpenFile("nul", flags);
@@ -179,17 +178,15 @@ public:
 #endif
 
 			// If the file is remote and NOT in write mode, we can cache it.
-			if (FileSystem::IsRemoteFile(file_name_str) &&
-                !flags.OpenForWriting() &&
-			    !flags.OpenForAppending()) {
+			if (FileSystem::IsRemoteFile(file_name_str) && !flags.OpenForWriting() && !flags.OpenForAppending()) {
 
 				// Pass the direct IO flag to the file system since we use GDAL's caching instead
 				flags |= FileFlags::FILE_FLAGS_DIRECT_IO;
 
-                auto file = fs.OpenFile(file_name, flags | FileCompressionType::AUTO_DETECT);
-                return VSICreateCachedFile(new DuckDBFileHandle(std::move(file)));
+				auto file = fs.OpenFile(file_name, flags | FileCompressionType::AUTO_DETECT);
+				return VSICreateCachedFile(new DuckDBFileHandle(std::move(file)));
 			} else {
-                auto file = fs.OpenFile(file_name, flags | FileCompressionType::AUTO_DETECT);
+				auto file = fs.OpenFile(file_name, flags | FileCompressionType::AUTO_DETECT);
 				return new DuckDBFileHandle(std::move(file));
 			}
 		} catch (std::exception &ex) {
@@ -238,11 +235,11 @@ public:
 
 		unique_ptr<FileHandle> file;
 		try {
-			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ | FileCompressionType::AUTO_DETECT);
+			file = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ | FileCompressionType::AUTO_DETECT |
+			                                  FileFlags::FILE_FLAGS_NULL_IF_NOT_EXISTS);
 		} catch (std::exception &ex) {
 			return -1;
 		}
-
 		if (!file) {
 			return -1;
 		}

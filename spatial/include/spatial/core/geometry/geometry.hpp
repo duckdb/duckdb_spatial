@@ -2,7 +2,7 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry_properties.hpp"
-#include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/util/cursor.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/geometry/vertex.hpp"
 
@@ -10,62 +10,81 @@ namespace spatial {
 
 namespace core {
 
-//------------------------------------------------------------------------------
-// Geometry Objects
-//------------------------------------------------------------------------------
-
 class Geometry;
 
 //------------------------------------------------------------------------------
-// Base Classes
+// Geometry
 //------------------------------------------------------------------------------
 
-class BaseGeometry {
-	friend class Geometry;
-	friend class Wrap;
+class Geometry {
+	friend struct SinglePartGeometry;
+	friend struct MultiPartGeometry;
+	friend struct CollectionGeometry;
 
-protected:
+private:
 	GeometryType type;
 	GeometryProperties properties;
 	bool is_readonly;
 	uint32_t data_count;
-	union {
-		Geometry *part_data;
-		data_ptr_t vertex_data;
-	} data;
+	data_ptr_t data_ptr;
 
-	BaseGeometry(GeometryType type, Geometry *part_data, bool is_readonly, bool has_z, bool has_m)
-	    : type(type), properties(has_z, has_m), is_readonly(is_readonly), data_count(0), data({nullptr}) {
-		data.part_data = part_data;
+	Geometry(GeometryType type, GeometryProperties props, bool is_readonly, data_ptr_t data, uint32_t count)
+	    : type(type), properties(props), is_readonly(is_readonly), data_count(count), data_ptr(data) {
 	}
 
-	BaseGeometry(GeometryType type, data_ptr_t vert_data, bool is_readonly, bool has_z, bool has_m)
-	    : type(type), properties(has_z, has_m), is_readonly(is_readonly), data_count(0), data({nullptr}) {
-		data.vertex_data = vert_data;
+	// TODO: Maybe make these public...
+	Geometry &operator[](uint32_t index) {
+		D_ASSERT(index < data_count);
+		return reinterpret_cast<Geometry *>(data_ptr)[index];
+	}
+	Geometry *begin() {
+		return reinterpret_cast<Geometry *>(data_ptr);
+	}
+	Geometry *end() {
+		return reinterpret_cast<Geometry *>(data_ptr) + data_count;
+	}
+
+	const Geometry &operator[](uint32_t index) const {
+		D_ASSERT(index < data_count);
+		return reinterpret_cast<const Geometry *>(data_ptr)[index];
+	}
+	const Geometry *begin() const {
+		return reinterpret_cast<const Geometry *>(data_ptr);
+	}
+	const Geometry *end() const {
+		return reinterpret_cast<const Geometry *>(data_ptr) + data_count;
+	}
+
+public:
+	// By default, create a read-only empty point
+	Geometry()
+	    : type(GeometryType::POINT), properties(false, false), is_readonly(true), data_count(0), data_ptr(nullptr) {
+	}
+
+	Geometry(GeometryType type, bool has_z, bool has_m)
+	    : type(type), properties(has_z, has_m), is_readonly(true), data_count(0), data_ptr(nullptr) {
 	}
 
 	// Copy Constructor
-	BaseGeometry(const BaseGeometry &other)
+	Geometry(const Geometry &other)
 	    : type(other.type), properties(other.properties), is_readonly(true), data_count(other.data_count),
-	      data({nullptr}) {
-		data = other.data;
+	      data_ptr(other.data_ptr) {
 	}
 
 	// Copy Assignment
-	BaseGeometry &operator=(const BaseGeometry &other) {
+	Geometry &operator=(const Geometry &other) {
 		type = other.type;
 		properties = other.properties;
 		is_readonly = true;
 		data_count = other.data_count;
-		data = other.data;
+		data_ptr = other.data_ptr;
 		return *this;
 	}
 
 	// Move Constructor
-	BaseGeometry(BaseGeometry &&other) noexcept
+	Geometry(Geometry &&other) noexcept
 	    : type(other.type), properties(other.properties), is_readonly(other.is_readonly), data_count(other.data_count),
-	      data({nullptr}) {
-		data = other.data;
+	      data_ptr(other.data_ptr) {
 		if (!other.is_readonly) {
 			// Take ownership of the data, and make the other object read-only
 			other.is_readonly = true;
@@ -73,12 +92,12 @@ protected:
 	}
 
 	// Move Assignment
-	BaseGeometry &operator=(BaseGeometry &&other) noexcept {
+	Geometry &operator=(Geometry &&other) noexcept {
 		type = other.type;
 		properties = other.properties;
 		is_readonly = other.is_readonly;
 		data_count = other.data_count;
-		data = other.data;
+		data_ptr = other.data_ptr;
 		if (!other.is_readonly) {
 			// Take ownership of the data, and make the other object read-only
 			other.is_readonly = true;
@@ -87,11 +106,20 @@ protected:
 	}
 
 public:
-	GeometryProperties GetProperties() const {
-		return properties;
+	GeometryType GetType() const {
+		return type;
 	}
 	GeometryProperties &GetProperties() {
 		return properties;
+	}
+	const GeometryProperties &GetProperties() const {
+		return properties;
+	}
+	const_data_ptr_t GetData() const {
+		return data_ptr;
+	}
+	data_ptr_t GetData() {
+		return data_ptr;
 	}
 	bool IsReadOnly() const {
 		return is_readonly;
@@ -99,788 +127,823 @@ public:
 	uint32_t Count() const {
 		return data_count;
 	}
-};
 
-static_assert(sizeof(BaseGeometry) <= 16, "GeometryBase should be at most 16 bytes (can be less in WASM)");
-
-//------------------------------------------------------------------------------
-// All of the following classes are just to provide a type-safe interface to the underlying geometry data, and to
-// enable convenient matching of geometry types using function overloads.
-
-// A single part geometry, contains a single array of vertices
-class SinglePartGeometry : public BaseGeometry {
-	friend class Geometry;
-
-protected:
-	SinglePartGeometry(GeometryType type, bool has_z, bool has_m)
-	    : BaseGeometry(type, (data_ptr_t) nullptr, true, has_z, has_m) {
+	bool IsCollection() const {
+		return GeometryTypes::IsCollection(type);
 	}
-
-	SinglePartGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : BaseGeometry(type, (data_ptr_t) nullptr, false, has_z, has_m) {
-		data_count = count;
-		data.vertex_data = alloc.AllocateAligned(count * properties.VertexSize());
+	bool IsMultiPart() const {
+		return GeometryTypes::IsMultiPart(type);
+	}
+	bool IsSinglePart() const {
+		return GeometryTypes::IsSinglePart(type);
 	}
 
 public:
-	uint32_t ByteSize() const {
-		return data_count * properties.VertexSize();
+	// Used for tag dispatching
+	struct Tags {
+		// Base types
+		struct AnyGeometry {};
+		struct SinglePartGeometry : public AnyGeometry {};
+		struct MultiPartGeometry : public AnyGeometry {};
+		struct CollectionGeometry : public MultiPartGeometry {};
+		// Concrete types
+		struct Point : public SinglePartGeometry {};
+		struct LineString : public SinglePartGeometry {};
+		struct Polygon : public MultiPartGeometry {};
+		struct MultiPoint : public CollectionGeometry {};
+		struct MultiLineString : public CollectionGeometry {};
+		struct MultiPolygon : public CollectionGeometry {};
+		struct GeometryCollection : public CollectionGeometry {};
+	};
+
+	template <class T, class... ARGS>
+	static auto Match(Geometry &geom, ARGS &&...args)
+	    -> decltype(T::Case(std::declval<Tags::Point>(), std::declval<Geometry &>(), std::declval<ARGS>()...)) {
+		switch (geom.type) {
+		case GeometryType::POINT:
+			return T::Case(Tags::Point {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::LINESTRING:
+			return T::Case(Tags::LineString {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::POLYGON:
+			return T::Case(Tags::Polygon {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::MULTIPOINT:
+			return T::Case(Tags::MultiPoint {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::MULTILINESTRING:
+			return T::Case(Tags::MultiLineString {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::MULTIPOLYGON:
+			return T::Case(Tags::MultiPolygon {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::GEOMETRYCOLLECTION:
+			return T::Case(Tags::GeometryCollection {}, geom, std::forward<ARGS>(args)...);
+		default:
+			throw NotImplementedException("Geometry::Match");
+		}
 	}
 
-	bool IsEmpty() const {
-		return data_count == 0;
+	template <class T, class... ARGS>
+	static auto Match(const Geometry &geom, ARGS &&...args)
+	    -> decltype(T::Case(std::declval<Tags::Point>(), std::declval<Geometry &>(), std::declval<ARGS>()...)) {
+		switch (geom.type) {
+		case GeometryType::POINT:
+			return T::Case(Tags::Point {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::LINESTRING:
+			return T::Case(Tags::LineString {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::POLYGON:
+			return T::Case(Tags::Polygon {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::MULTIPOINT:
+			return T::Case(Tags::MultiPoint {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::MULTILINESTRING:
+			return T::Case(Tags::MultiLineString {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::MULTIPOLYGON:
+			return T::Case(Tags::MultiPolygon {}, geom, std::forward<ARGS>(args)...);
+		case GeometryType::GEOMETRYCOLLECTION:
+			return T::Case(Tags::GeometryCollection {}, geom, std::forward<ARGS>(args)...);
+		default:
+			throw NotImplementedException("Geometry::Match");
+		}
 	}
 
-	const_data_ptr_t GetData() const {
-		return data.vertex_data;
-	}
+	// TODO: Swap this to only have two create methods,
+	// and use mutating methods for Reference/Copy
+	static Geometry Create(ArenaAllocator &alloc, GeometryType type, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(GeometryType type, bool has_z, bool has_m);
 
-	void Set(uint32_t index, const VertexXY &vertex) {
-		D_ASSERT(index < data_count);
-		Store(vertex, data.vertex_data + index * properties.VertexSize());
-	}
+	static geometry_t Serialize(const Geometry &geom, Vector &result);
+	static Geometry Deserialize(ArenaAllocator &arena, const geometry_t &data);
 
-	void Set(uint32_t index, double x, double y) {
-		Set(index, VertexXY {x, y});
-	}
+	static bool IsEmpty(const Geometry &geom);
+	static uint32_t GetDimension(const Geometry &geom, bool recurse);
+	void SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, double default_z = 0, double default_m = 0);
 
-	VertexXY Get(uint32_t index) const {
-		D_ASSERT(index < data_count);
-		return Load<VertexXY>(data.vertex_data + index * properties.VertexSize());
-	}
+	// Iterate over all points in the geometry, recursing into collections
+	template <class FUNC>
+	static void ExtractPoints(const Geometry &geom, FUNC &&func);
 
-	template <class V>
-	void SetExact(uint32_t index, const V &vertex) {
-		static_assert(V::IS_VERTEX, "V must be a vertex type");
-		D_ASSERT(V::HAS_Z == properties.HasZ());
-		D_ASSERT(V::HAS_M == properties.HasM());
-		D_ASSERT(index < data_count);
-		Store(vertex, data.vertex_data + index * sizeof(V));
-	}
+	// Iterate over all lines in the geometry, recursing into collections
+	template <class FUNC>
+	static void ExtractLines(const Geometry &geom, FUNC &&func);
 
-	template <class V>
-	V GetExact(uint32_t index) const {
-		static_assert(V::IS_VERTEX, "V must be a vertex type");
-		D_ASSERT(V::HAS_Z == properties.HasZ());
-		D_ASSERT(V::HAS_M == properties.HasM());
-		D_ASSERT(index < data_count);
-		return Load<V>(data.vertex_data + index * sizeof(V));
+	// Iterate over all polygons in the geometry, recursing into collections
+	template <class FUNC>
+	static void ExtractPolygons(const Geometry &geom, FUNC &&func);
+};
+
+inline Geometry Geometry::Create(ArenaAllocator &alloc, GeometryType type, uint32_t count, bool has_z, bool has_m) {
+	GeometryProperties props(has_z, has_m);
+	auto single_part = GeometryTypes::IsSinglePart(type);
+	auto elem_size = single_part ? props.VertexSize() : sizeof(Geometry);
+	auto geom = Geometry(type, props, false, alloc.AllocateAligned(count * elem_size), count);
+	return geom;
+}
+
+inline Geometry Geometry::CreateEmpty(GeometryType type, bool has_z, bool has_m) {
+	GeometryProperties props(has_z, has_m);
+	return Geometry(type, props, false, nullptr, 0);
+}
+
+//------------------------------------------------------------------------------
+// Inlined Geometry Functions
+//------------------------------------------------------------------------------
+template <class FUNC>
+inline void Geometry::ExtractPoints(const Geometry &geom, FUNC &&func) {
+	struct op {
+		static void Case(Geometry::Tags::Point, const Geometry &geom, FUNC &&func) {
+			func(geom);
+		}
+		static void Case(Geometry::Tags::MultiPoint, const Geometry &geom, FUNC &&func) {
+			for (auto &part : geom) {
+				func(part);
+			}
+		}
+		static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
+			for (auto &part : geom) {
+				Match<op>(part, std::forward<FUNC>(func));
+			}
+		}
+		static void Case(Geometry::Tags::AnyGeometry, const Geometry &, FUNC &&) {
+		}
+	};
+	Match<op>(geom, std::forward<FUNC>(func));
+}
+
+template <class FUNC>
+inline void Geometry::ExtractLines(const Geometry &geom, FUNC &&func) {
+	struct op {
+		static void Case(Geometry::Tags::LineString, const Geometry &geom, FUNC &&func) {
+			func(geom);
+		}
+		static void Case(Geometry::Tags::MultiLineString, const Geometry &geom, FUNC &&func) {
+			for (auto &part : geom) {
+				func(part);
+			}
+		}
+		static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
+			for (auto &part : geom) {
+				Match<op>(part, std::forward<FUNC>(func));
+			}
+		}
+		static void Case(Geometry::Tags::AnyGeometry, const Geometry &, FUNC &&) {
+		}
+	};
+	Match<op>(geom, std::forward<FUNC>(func));
+}
+
+template <class FUNC>
+inline void Geometry::ExtractPolygons(const Geometry &geom, FUNC &&func) {
+	struct op {
+		static void Case(Geometry::Tags::Polygon, const Geometry &geom, FUNC &&func) {
+			func(geom);
+		}
+		static void Case(Geometry::Tags::MultiPolygon, const Geometry &geom, FUNC &&func) {
+			for (auto &part : geom) {
+				func(part);
+			}
+		}
+		static void Case(Geometry::Tags::GeometryCollection, const Geometry &geom, FUNC &&func) {
+			for (auto &part : geom) {
+				Match<op>(part, std::forward<FUNC>(func));
+			}
+		}
+		static void Case(Geometry::Tags::AnyGeometry, const Geometry &, FUNC &&) {
+		}
+	};
+	Match<op>(geom, std::forward<FUNC>(func));
+}
+
+inline bool Geometry::IsEmpty(const Geometry &geom) {
+	struct op {
+		static bool Case(Geometry::Tags::SinglePartGeometry, const Geometry &geom) {
+			return geom.data_count == 0;
+		}
+		static bool Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom) {
+			for (const auto &part : geom) {
+				if (!Geometry::Match<op>(part)) {
+					return false;
+				}
+			}
+			return true;
+		}
+	};
+	return Geometry::Match<op>(geom);
+}
+
+inline uint32_t Geometry::GetDimension(const Geometry &geom, bool ignore_empty) {
+	if (ignore_empty && Geometry::IsEmpty(geom)) {
+		return 0;
+	}
+	struct op {
+		static uint32_t Case(Geometry::Tags::Point, const Geometry &, bool) {
+			return 0;
+		}
+		static uint32_t Case(Geometry::Tags::LineString, const Geometry &, bool) {
+			return 1;
+		}
+		static uint32_t Case(Geometry::Tags::Polygon, const Geometry &, bool) {
+			return 2;
+		}
+		static uint32_t Case(Geometry::Tags::MultiPoint, const Geometry &, bool) {
+			return 0;
+		}
+		static uint32_t Case(Geometry::Tags::MultiLineString, const Geometry &, bool) {
+			return 1;
+		}
+		static uint32_t Case(Geometry::Tags::MultiPolygon, const Geometry &, bool) {
+			return 2;
+		}
+		static uint32_t Case(Geometry::Tags::GeometryCollection, const Geometry &geom, bool ignore_empty) {
+			uint32_t max_dimension = 0;
+			for (const auto &p : geom) {
+				max_dimension = std::max(max_dimension, Geometry::GetDimension(p, ignore_empty));
+			}
+			return max_dimension;
+		}
+	};
+	return Geometry::Match<op>(geom, ignore_empty);
+}
+
+//------------------------------------------------------------------------------
+// Iterators
+//------------------------------------------------------------------------------
+class PartView {
+private:
+	Geometry *beg_ptr;
+	Geometry *end_ptr;
+
+public:
+	PartView(Geometry *beg, Geometry *end) : beg_ptr(beg), end_ptr(end) {
+	}
+	Geometry *begin() {
+		return beg_ptr;
+	}
+	Geometry *end() {
+		return end_ptr;
+	}
+	Geometry &operator[](uint32_t index) {
+		return beg_ptr[index];
+	}
+};
+
+class ConstPartView {
+private:
+	const Geometry *beg_ptr;
+	const Geometry *end_ptr;
+
+public:
+	ConstPartView(const Geometry *beg, const Geometry *end) : beg_ptr(beg), end_ptr(end) {
+	}
+	const Geometry *begin() {
+		return beg_ptr;
+	}
+	const Geometry *end() {
+		return end_ptr;
+	}
+	const Geometry &operator[](uint32_t index) {
+		return beg_ptr[index];
+	}
+};
+
+//------------------------------------------------------------------------------
+// Accessors
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// SinglePartGeometry
+//------------------------------------------------------------------------------
+struct SinglePartGeometry {
+
+	// Turn this geometry into a read-only reference to raw data
+	static void ReferenceData(Geometry &geom, const_data_ptr_t data, uint32_t count, bool has_z, bool has_m) {
+		geom.data_count = count;
+		geom.data_ptr = const_cast<data_ptr_t>(data);
+		geom.is_readonly = true;
+		geom.properties.SetZ(has_z);
+		geom.properties.SetM(has_m);
 	}
 
 	// Turn this geometry into a read-only reference to another geometry, starting at the specified index
-	void Reference(const SinglePartGeometry &other, uint32_t offset, uint32_t count);
+	static void ReferenceData(Geometry &geom, const Geometry &other, uint32_t offset, uint32_t count) {
+		D_ASSERT(GeometryTypes::IsSinglePart(other.GetType()));
+		D_ASSERT(offset + count <= other.data_count);
+		auto vertex_size = other.properties.VertexSize();
+		auto has_z = other.properties.HasZ();
+		auto has_m = other.properties.HasM();
+		ReferenceData(geom, other.data_ptr + offset * vertex_size, count, has_z, has_m);
+	}
 
-	// Turn this geometry into a read-only reference to raw data
-	void ReferenceData(const_data_ptr_t data, uint32_t count, bool has_z, bool has_m);
+	static void ReferenceData(Geometry &geom, const_data_ptr_t data, uint32_t count) {
+		ReferenceData(geom, data, count, geom.properties.HasZ(), geom.properties.HasM());
+	}
 
-	void ReferenceData(const_data_ptr_t data, uint32_t count) {
-		ReferenceData(data, count, properties.HasZ(), properties.HasM());
+	// Turn this geometry into a owning copy of raw data
+	static void CopyData(Geometry &geom, ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z,
+	                     bool has_m) {
+		auto old_vertex_size = geom.properties.VertexSize();
+		geom.properties.SetZ(has_z);
+		geom.properties.SetM(has_m);
+		auto new_vertex_size = geom.properties.VertexSize();
+		if (geom.is_readonly) {
+			geom.data_ptr = alloc.AllocateAligned(count * new_vertex_size);
+		} else if (geom.data_count != count) {
+			geom.data_ptr =
+			    alloc.ReallocateAligned(geom.data_ptr, geom.data_count * old_vertex_size, count * new_vertex_size);
+		}
+		memcpy(geom.data_ptr, data, count * new_vertex_size);
+		geom.data_count = count;
+		geom.is_readonly = false;
 	}
 
 	// Turn this geometry into a owning copy of another geometry, starting at the specified index
-	void Copy(ArenaAllocator &alloc, const SinglePartGeometry &other, uint32_t offset, uint32_t count);
+	static void CopyData(Geometry &geom, ArenaAllocator &alloc, const Geometry &other, uint32_t offset,
+	                     uint32_t count) {
+		D_ASSERT(GeometryTypes::IsSinglePart(other.GetType()));
+		D_ASSERT(offset + count <= other.data_count);
+		auto vertex_size = geom.properties.VertexSize();
+		auto has_z = other.properties.HasZ();
+		auto has_m = other.properties.HasM();
+		CopyData(geom, alloc, other.data_ptr + offset * vertex_size, count, has_z, has_m);
+	}
 
-	// Turn this geometry into a owning copy of raw data
-	void CopyData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z, bool has_m);
-
-	void CopyData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count) {
-		CopyData(alloc, data, count, properties.HasZ(), properties.HasM());
+	static void CopyData(Geometry &geom, ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count) {
+		CopyData(geom, alloc, data, count, geom.properties.HasZ(), geom.properties.HasM());
 	}
 
 	// Resize the geometry, truncating or extending with zeroed vertices as needed
-	void Resize(ArenaAllocator &alloc, uint32_t new_count);
+	static void Resize(Geometry &geom, ArenaAllocator &alloc, uint32_t new_count);
 
 	// Append the data from another geometry
-	void Append(ArenaAllocator &alloc, const SinglePartGeometry &other);
+	static void Append(Geometry &geom, ArenaAllocator &alloc, const Geometry &other);
 
 	// Append the data from multiple other geometries
-	void Append(ArenaAllocator &alloc, const SinglePartGeometry *others, uint32_t others_count);
+	static void Append(Geometry &geom, ArenaAllocator &alloc, const Geometry *others, uint32_t others_count);
 
 	// Force the geometry to have a specific vertex type, resizing or shrinking the data as needed
-	void SetVertexType(ArenaAllocator &alloc, bool has_z, bool has_m, double default_z = 0, double default_m = 0);
+	static void SetVertexType(Geometry &geom, ArenaAllocator &alloc, bool has_z, bool has_m, double default_z = 0,
+	                          double default_m = 0);
 
 	// If this geometry is read-only, make it mutable by copying the data
-	void MakeMutable(ArenaAllocator &alloc);
+	static void MakeMutable(Geometry &geom, ArenaAllocator &alloc);
 
 	// Print this geometry as a string, starting at the specified index and printing the specified number of vertices
 	// (useful for debugging)
-	string ToString(uint32_t start = 0, uint32_t count = 0) const;
+	static string ToString(const Geometry &geom, uint32_t start = 0, uint32_t count = 0);
 
 	// Check if the geometry is closed (first and last vertex are the same)
 	// A geometry with 1 vertex is considered closed, 0 vertices are considered open
-	bool IsClosed() const;
+	static bool IsClosed(const Geometry &geom);
+	static bool IsEmpty(const Geometry &geom);
 
 	// Return the planar length of the geometry
-	double Length() const;
-};
+	static double Length(const Geometry &geom);
 
-// A multi-part geometry, contains multiple parts
-class MultiPartGeometry : public BaseGeometry {
-protected:
-	MultiPartGeometry(GeometryType type, bool has_z, bool has_m)
-	    : BaseGeometry(type, (Geometry *)nullptr, true, has_z, has_m) {
-	}
+	static VertexXY GetVertex(const Geometry &geom, uint32_t index);
+	static void SetVertex(Geometry &geom, uint32_t index, const VertexXY &vertex);
 
-	MultiPartGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : BaseGeometry(type, (Geometry *)nullptr, false, has_z, has_m) {
-		data_count = count;
-		data.vertex_data = alloc.AllocateAligned(count * sizeof(BaseGeometry));
-	}
-
-public:
-	bool IsEmpty() const;
-
-	Geometry &operator[](uint32_t index);
-	Geometry *begin();
-	Geometry *end();
-
-	const Geometry &operator[](uint32_t index) const;
-	const Geometry *begin() const;
-	const Geometry *end() const;
-
-	void Resize(ArenaAllocator &alloc, uint32_t new_count);
-};
-
-class CollectionGeometry : public MultiPartGeometry {
-protected:
-	CollectionGeometry(GeometryType type, bool has_z, bool has_m) : MultiPartGeometry(type, has_z, has_m) {
-	}
-	CollectionGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : MultiPartGeometry(type, alloc, count, has_z, has_m) {
-	}
-};
-
-template <class T>
-class TypedCollectionGeometry : public CollectionGeometry {
-protected:
-	TypedCollectionGeometry(GeometryType type, bool has_z, bool has_m) : CollectionGeometry(type, has_z, has_m) {
-	}
-	TypedCollectionGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
-
-public:
-	T &operator[](uint32_t index);
-	T *begin();
-	T *end();
-
-	const T &operator[](uint32_t index) const;
-	const T *begin() const;
-	const T *end() const;
-};
-
-//------------------------------------------------------------------------------
-// Concrete Classes
-//------------------------------------------------------------------------------
-// These are the actual Geometry types that are instantiated and used in practice
-
-class Point : public SinglePartGeometry {
-protected:
-	friend class TypedCollectionGeometry<Point>;
-	friend class GeometryCollection;
-
-	Point(bool has_z = false, bool has_m = false) : SinglePartGeometry(TYPE, has_z, has_m) {
-	}
-	Point(ArenaAllocator &alloc, uint32_t size, bool has_z, bool has_m)
-	    : SinglePartGeometry(TYPE, alloc, size, has_z, has_m) {
-	}
-
-public:
-	static constexpr GeometryType TYPE = GeometryType::POINT;
-
-	static Point Empty(bool has_z = false, bool has_m = false) {
-		return Point(has_z, has_m);
-	}
-	static Point Create(ArenaAllocator &alloc, uint32_t size, bool has_z, bool has_m) {
-		return Point(alloc, size, has_z, has_m);
-	}
-
-	// Helpers
 	template <class V>
-	static Point FromVertex(ArenaAllocator &alloc, const V &vertex) {
-		static_assert(V::IS_VERTEX, "V must be a vertex type");
-		auto point = Point::Create(alloc, 1, V::HAS_Z, V::HAS_M);
-		point.SetExact(0, vertex);
-		return point;
-	}
+	static V GetVertex(const Geometry &geom, uint32_t index);
 
-	static Point CopyFromData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z, bool has_m) {
-		auto point = Point::Create(alloc, 1, has_z, has_m);
-		point.CopyData(alloc, data, 1);
-		return point;
-	}
+	template <class V>
+	static void SetVertex(Geometry &geom, uint32_t index, const V &vertex);
 
-	static Point FromReference(const SinglePartGeometry &other, uint32_t offset) {
-		Point point(other.GetProperties().HasZ(), other.GetProperties().HasM());
-		point.Reference(other, offset, 1);
-		return point;
+	static uint32_t VertexCount(const Geometry &geom);
+	static uint32_t VertexSize(const Geometry &geom);
+	static uint32_t ByteSize(const Geometry &geom);
+};
+
+inline VertexXY SinglePartGeometry::GetVertex(const Geometry &geom, uint32_t index) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	D_ASSERT(index < geom.data_count);
+	return Load<VertexXY>(geom.GetData() + index * geom.GetProperties().VertexSize());
+}
+
+inline void SinglePartGeometry::SetVertex(Geometry &geom, uint32_t index, const VertexXY &vertex) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	D_ASSERT(index < geom.data_count);
+	Store(vertex, geom.GetData() + index * geom.GetProperties().VertexSize());
+}
+
+template <class V>
+inline V SinglePartGeometry::GetVertex(const Geometry &geom, uint32_t index) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	D_ASSERT(V::HAS_Z == geom.GetProperties().HasZ());
+	D_ASSERT(V::HAS_M == geom.GetProperties().HasM());
+	D_ASSERT(index < geom.data_count);
+	return Load<V>(geom.GetData() + index * sizeof(V));
+}
+
+template <class V>
+inline void SinglePartGeometry::SetVertex(Geometry &geom, uint32_t index, const V &vertex) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	D_ASSERT(V::HAS_Z == geom.GetProperties().HasZ());
+	D_ASSERT(V::HAS_M == geom.GetProperties().HasM());
+	D_ASSERT(index < geom.data_count);
+	Store(vertex, geom.GetData() + index * sizeof(V));
+}
+
+inline uint32_t SinglePartGeometry::VertexCount(const Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	return geom.data_count;
+}
+
+inline uint32_t SinglePartGeometry::VertexSize(const Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	return geom.GetProperties().VertexSize();
+}
+
+inline uint32_t SinglePartGeometry::ByteSize(const Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	return geom.data_count * geom.GetProperties().VertexSize();
+}
+
+inline bool SinglePartGeometry::IsEmpty(const Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsSinglePart(geom.GetType()));
+	return geom.data_count == 0;
+}
+
+//------------------------------------------------------------------------------
+// MultiPartGeometry
+//------------------------------------------------------------------------------
+struct MultiPartGeometry {
+
+	// static void Resize(Geometry &geom, ArenaAllocator &alloc, uint32_t new_count);
+
+	static uint32_t PartCount(const Geometry &geom);
+	static Geometry &Part(Geometry &geom, uint32_t index);
+	static const Geometry &Part(const Geometry &geom, uint32_t index);
+	static PartView Parts(Geometry &geom);
+	static ConstPartView Parts(const Geometry &geom);
+
+	static bool IsEmpty(const Geometry &geom) {
+		D_ASSERT(GeometryTypes::IsMultiPart(geom.GetType()));
+		for (uint32_t i = 0; i < geom.data_count; i++) {
+			if (!Geometry::IsEmpty(Part(geom, i))) {
+				return false;
+			}
+		}
+		return true;
 	}
 };
 
-class LineString : public SinglePartGeometry {
+inline uint32_t MultiPartGeometry::PartCount(const Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsMultiPart(geom.GetType()));
+	return geom.data_count;
+}
+
+inline Geometry &MultiPartGeometry::Part(Geometry &geom, uint32_t index) {
+	D_ASSERT(GeometryTypes::IsMultiPart(geom.GetType()));
+	D_ASSERT(index < geom.data_count);
+	return *reinterpret_cast<Geometry *>(geom.GetData() + index * sizeof(Geometry));
+}
+
+inline const Geometry &MultiPartGeometry::Part(const Geometry &geom, uint32_t index) {
+	D_ASSERT(GeometryTypes::IsMultiPart(geom.GetType()));
+	D_ASSERT(index < geom.data_count);
+	return *reinterpret_cast<const Geometry *>(geom.GetData() + index * sizeof(Geometry));
+}
+
+inline PartView MultiPartGeometry::Parts(Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsMultiPart(geom.GetType()));
+	auto ptr = reinterpret_cast<Geometry *>(geom.GetData());
+	return {ptr, ptr + geom.data_count};
+}
+
+inline ConstPartView MultiPartGeometry::Parts(const Geometry &geom) {
+	D_ASSERT(GeometryTypes::IsMultiPart(geom.GetType()));
+	auto ptr = reinterpret_cast<const Geometry *>(geom.GetData());
+	return {ptr, ptr + geom.data_count};
+}
+
+//------------------------------------------------------------------------------
+// CollectionGeometry
+//------------------------------------------------------------------------------
+struct CollectionGeometry : public MultiPartGeometry {
 protected:
-	friend class TypedCollectionGeometry<LineString>;
-	friend class Polygon;
-
-	LineString(bool has_z = false, bool has_m = false) : SinglePartGeometry(TYPE, has_z, has_m) {
+	static Geometry Create(ArenaAllocator &alloc, GeometryType type, vector<Geometry> &items, bool has_z, bool has_m) {
+		D_ASSERT(GeometryTypes::IsCollection(type));
+		auto collection = Geometry::Create(alloc, type, items.size(), has_z, has_m);
+		for (uint32_t i = 0; i < items.size(); i++) {
+			CollectionGeometry::Part(collection, i) = std::move(items[i]);
+		}
+		return collection;
 	}
-	LineString(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : SinglePartGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
+};
 
-public:
-	static constexpr GeometryType TYPE = GeometryType::LINESTRING;
+//------------------------------------------------------------------------------
+// Point
+//------------------------------------------------------------------------------
+struct Point : public SinglePartGeometry {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
 
-	static LineString Empty(bool has_z = false, bool has_m = false) {
-		return LineString(has_z, has_m);
-	}
-	static LineString Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
-		return LineString(alloc, count, has_z, has_m);
-	}
+	template <class V>
+	static Geometry CreateFromVertex(ArenaAllocator &alloc, const V &vertex);
 
-	static LineString CopyFromData(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z,
+	static Geometry CreateFromCopy(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z,
 	                               bool has_m) {
-		LineString line(alloc, count, has_z, has_m);
-		line.CopyData(alloc, data, count);
+		auto point = Point::Create(alloc, 1, has_z, has_m);
+		SinglePartGeometry::CopyData(point, alloc, data, count, has_z, has_m);
+		return point;
+	}
+
+	// Methods
+	template <class V = VertexXY>
+	static V GetVertex(const Geometry &geom);
+
+	template <class V = VertexXY>
+	static void SetVertex(Geometry &geom, const V &vertex);
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::POINT;
+};
+
+inline Geometry Point::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	return Geometry::Create(alloc, TYPE, count, has_z, has_m);
+}
+
+inline Geometry Point::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
+}
+
+template <class V>
+inline Geometry Point::CreateFromVertex(ArenaAllocator &alloc, const V &vertex) {
+	auto point = Create(alloc, 1, V::HAS_Z, V::HAS_M);
+	Point::SetVertex(point, vertex);
+	return point;
+}
+
+template <class V>
+inline V Point::GetVertex(const Geometry &geom) {
+	D_ASSERT(geom.GetType() == TYPE);
+	D_ASSERT(geom.Count() == 1);
+	D_ASSERT(geom.GetProperties().HasZ() == V::HAS_Z);
+	D_ASSERT(geom.GetProperties().HasM() == V::HAS_M);
+	return SinglePartGeometry::GetVertex<V>(geom, 0);
+}
+
+template <class V>
+void Point::SetVertex(Geometry &geom, const V &vertex) {
+	D_ASSERT(geom.GetType() == TYPE);
+	D_ASSERT(geom.Count() == 1);
+	D_ASSERT(geom.GetProperties().HasZ() == V::HAS_Z);
+	D_ASSERT(geom.GetProperties().HasM() == V::HAS_M);
+	SinglePartGeometry::SetVertex(geom, 0, vertex);
+}
+
+//------------------------------------------------------------------------------
+// LineString
+//------------------------------------------------------------------------------
+struct LineString : public SinglePartGeometry {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
+
+	static Geometry CreateFromCopy(ArenaAllocator &alloc, const_data_ptr_t data, uint32_t count, bool has_z,
+	                               bool has_m) {
+		auto line = LineString::Create(alloc, 1, has_z, has_m);
+		SinglePartGeometry::CopyData(line, alloc, data, count, has_z, has_m);
 		return line;
 	}
+
+	// TODO: Wrap
+	// Create a new LineString referencing a slice of the this linestring
+	static Geometry GetSliceAsReference(const Geometry &geom, uint32_t start, uint32_t count) {
+		auto line = LineString::CreateEmpty(geom.GetProperties().HasZ(), geom.GetProperties().HasM());
+		SinglePartGeometry::ReferenceData(line, geom, start, count);
+		return line;
+	}
+
+	// TODO: Wrap
+	// Create a new LineString referencing a single point in the this linestring
+	static Geometry GetPointAsReference(const Geometry &geom, uint32_t index) {
+		auto count = index >= geom.Count() ? 0 : 1;
+		auto point = Point::CreateEmpty(geom.GetProperties().HasZ(), geom.GetProperties().HasM());
+		SinglePartGeometry::ReferenceData(point, geom, index, count);
+		return point;
+	}
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::LINESTRING;
 };
 
-class Polygon : public MultiPartGeometry {
-protected:
-	friend class TypedCollectionGeometry<Polygon>;
+inline Geometry LineString::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	return Geometry::Create(alloc, TYPE, count, has_z, has_m);
+}
 
-	Polygon(bool has_z = false, bool has_m = false) : MultiPartGeometry(TYPE, has_z, has_m) {
-	}
-	Polygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
-
-public:
-	static constexpr GeometryType TYPE = GeometryType::POLYGON;
-
-	static Polygon Empty(bool has_z = false, bool has_m = false) {
-		return Polygon(has_z, has_m);
-	}
-	static Polygon Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
-		return Polygon(alloc, count, has_z, has_m);
-	}
-
-	LineString &operator[](uint32_t index);
-	LineString *begin();
-	LineString *end();
-
-	const LineString &operator[](uint32_t index) const;
-	const LineString *begin() const;
-	const LineString *end() const;
-
-	// TODO: Generalize this to take a min/max vertex instead
-	static Polygon FromBox(ArenaAllocator &alloc, double minx, double miny, double maxx, double maxy) {
-		Polygon box(alloc, 1, false, false);
-		auto &ring = box[0];
-		ring.Resize(alloc, 5);
-		ring.SetExact(0, VertexXY {minx, miny});
-		ring.SetExact(1, VertexXY {minx, maxy});
-		ring.SetExact(2, VertexXY {maxx, maxy});
-		ring.SetExact(3, VertexXY {maxx, miny});
-		ring.SetExact(4, VertexXY {minx, miny});
-		return box;
-	}
-};
-
-class MultiPoint : public TypedCollectionGeometry<Point> {
-protected:
-	MultiPoint(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
-	}
-	MultiPoint(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
-
-public:
-	static constexpr GeometryType TYPE = GeometryType::MULTIPOINT;
-
-	static MultiPoint Empty(bool has_z = false, bool has_m = false) {
-		return MultiPoint(has_z, has_m);
-	}
-	static MultiPoint Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
-		return MultiPoint(alloc, count, has_z, has_m);
-	}
-};
-
-class MultiLineString : public TypedCollectionGeometry<LineString> {
-protected:
-	MultiLineString(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
-	}
-	MultiLineString(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
-
-public:
-	static constexpr GeometryType TYPE = GeometryType::MULTILINESTRING;
-
-	static MultiLineString Empty(bool has_z = false, bool has_m = false) {
-		return MultiLineString(has_z, has_m);
-	}
-	static MultiLineString Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
-		return MultiLineString(alloc, count, has_z, has_m);
-	}
-};
-
-class MultiPolygon : public TypedCollectionGeometry<Polygon> {
-protected:
-	MultiPolygon(bool has_z = false, bool has_m = false) : TypedCollectionGeometry(TYPE, has_z, has_m) {
-	}
-	MultiPolygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-	    : TypedCollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	}
-
-public:
-	static constexpr GeometryType TYPE = GeometryType::MULTIPOLYGON;
-
-	static MultiPolygon Empty(bool has_z = false, bool has_m = false) {
-		return MultiPolygon(has_z, has_m);
-	}
-	static MultiPolygon Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
-		return MultiPolygon(alloc, count, has_z, has_m);
-	}
-};
-
-class GeometryCollection : public CollectionGeometry {
-protected:
-	GeometryCollection(bool has_z = false, bool has_m = false) : CollectionGeometry(TYPE, has_z, has_m) {
-	}
-	GeometryCollection(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
-
-public:
-	static constexpr GeometryType TYPE = GeometryType::GEOMETRYCOLLECTION;
-
-	static GeometryCollection Empty(bool has_z = false, bool has_m = false) {
-		return GeometryCollection(has_z, has_m);
-	}
-	static GeometryCollection Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
-		return GeometryCollection(alloc, count, has_z, has_m);
-	}
-};
-
-class Geometry {
-	union {
-		Point point;
-		LineString linestring;
-		Polygon polygon;
-		MultiPoint multipoint;
-		MultiLineString multilinestring;
-		MultiPolygon multipolygon;
-		GeometryCollection collection;
-	};
-
-public:
-	// This is legal because all members is standard layout and have the same common initial sequence
-	// Additionally, a union is pointer-interconvertible with its first member
-	GeometryType GetType() const {
-		return point.type;
-	}
-	GeometryProperties GetProperties() const {
-		return point.properties;
-	}
-	GeometryProperties &GetProperties() {
-		return point.properties;
-	}
-	bool IsReadOnly() const {
-		return reinterpret_cast<const BaseGeometry &>(*this).IsReadOnly();
-	}
-	bool IsCollection() const {
-		auto type = GetType();
-		return type == GeometryType::MULTIPOINT || type == GeometryType::MULTILINESTRING ||
-		       type == GeometryType::MULTIPOLYGON || type == GeometryType::GEOMETRYCOLLECTION;
-	}
-
-	// NOLINTBEGIN
-	Geometry(Point point) : point(point) {
-	}
-	Geometry(LineString linestring) : linestring(linestring) {
-	}
-	Geometry(Polygon polygon) : polygon(polygon) {
-	}
-	Geometry(MultiPoint multipoint) : multipoint(multipoint) {
-	}
-	Geometry(MultiLineString multilinestring) : multilinestring(multilinestring) {
-	}
-	Geometry(MultiPolygon multipolygon) : multipolygon(multipolygon) {
-	}
-	Geometry(GeometryCollection collection) : collection(collection) {
-	}
-	// NOLINTEND
-
-	// Copy Constructor
-	Geometry(const Geometry &other) {
-		switch (other.GetType()) {
-		case GeometryType::POINT:
-			new (&point) Point(other.point);
-			break;
-		case GeometryType::LINESTRING:
-			new (&linestring) LineString(other.linestring);
-			break;
-		case GeometryType::POLYGON:
-			new (&polygon) Polygon(other.polygon);
-			break;
-		case GeometryType::MULTIPOINT:
-			new (&multipoint) MultiPoint(other.multipoint);
-			break;
-		case GeometryType::MULTILINESTRING:
-			new (&multilinestring) MultiLineString(other.multilinestring);
-			break;
-		case GeometryType::MULTIPOLYGON:
-			new (&multipolygon) MultiPolygon(other.multipolygon);
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			new (&collection) GeometryCollection(other.collection);
-			break;
-		default:
-			throw NotImplementedException("Geometry::Geometry(const Geometry&)");
-		}
-	}
-
-	// Copy Assignment
-	Geometry &operator=(const Geometry &other) {
-		if (this == &other) {
-			return *this;
-		}
-		this->~Geometry();
-		switch (other.GetType()) {
-		case GeometryType::POINT:
-			new (&point) Point(other.point);
-			break;
-		case GeometryType::LINESTRING:
-			new (&linestring) LineString(other.linestring);
-			break;
-		case GeometryType::POLYGON:
-			new (&polygon) Polygon(other.polygon);
-			break;
-		case GeometryType::MULTIPOINT:
-			new (&multipoint) MultiPoint(other.multipoint);
-			break;
-		case GeometryType::MULTILINESTRING:
-			new (&multilinestring) MultiLineString(other.multilinestring);
-			break;
-		case GeometryType::MULTIPOLYGON:
-			new (&multipolygon) MultiPolygon(other.multipolygon);
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			new (&collection) GeometryCollection(other.collection);
-			break;
-		default:
-			throw NotImplementedException("Geometry::operator=(const Geometry&)");
-		}
-		return *this;
-	}
-
-	// Move Constructor
-	Geometry(Geometry &&other) noexcept {
-		switch (other.GetType()) {
-		case GeometryType::POINT:
-			new (&point) Point(std::move(other.point));
-			break;
-		case GeometryType::LINESTRING:
-			new (&linestring) LineString(std::move(other.linestring));
-			break;
-		case GeometryType::POLYGON:
-			new (&polygon) Polygon(std::move(other.polygon));
-			break;
-		case GeometryType::MULTIPOINT:
-			new (&multipoint) MultiPoint(std::move(other.multipoint));
-			break;
-		case GeometryType::MULTILINESTRING:
-			new (&multilinestring) MultiLineString(std::move(other.multilinestring));
-			break;
-		case GeometryType::MULTIPOLYGON:
-			new (&multipolygon) MultiPolygon(std::move(other.multipolygon));
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			new (&collection) GeometryCollection(std::move(other.collection));
-			break;
-		default:
-			D_ASSERT(false);
-			new (&point) Point(std::move(other.point));
-			break;
-		}
-	}
-
-	// Move Assignment
-	Geometry &operator=(Geometry &&other) noexcept {
-		if (this == &other) {
-			return *this;
-		}
-		this->~Geometry();
-		switch (other.GetType()) {
-		case GeometryType::POINT:
-			new (&point) Point(std::move(other.point));
-			break;
-		case GeometryType::LINESTRING:
-			new (&linestring) LineString(std::move(other.linestring));
-			break;
-		case GeometryType::POLYGON:
-			new (&polygon) Polygon(std::move(other.polygon));
-			break;
-		case GeometryType::MULTIPOINT:
-			new (&multipoint) MultiPoint(std::move(other.multipoint));
-			break;
-		case GeometryType::MULTILINESTRING:
-			new (&multilinestring) MultiLineString(std::move(other.multilinestring));
-			break;
-		case GeometryType::MULTIPOLYGON:
-			new (&multipolygon) MultiPolygon(std::move(other.multipolygon));
-			break;
-		case GeometryType::GEOMETRYCOLLECTION:
-			new (&collection) GeometryCollection(std::move(other.collection));
-			break;
-		default:
-			D_ASSERT(false);
-			new (&point) Point(std::move(other.point));
-			break;
-		}
-		return *this;
-	}
-
-	template <class T>
-	T &As() & {
-		D_ASSERT(GetType() == T::TYPE);
-		return reinterpret_cast<T &>(*this);
-	}
-
-	template <class T>
-	const T &As() const & {
-		D_ASSERT(GetType() == T::TYPE);
-		return reinterpret_cast<const T &>(*this);
-	}
-
-	// Apply a functor to the contained geometry
-	template <class F, class... ARGS>
-	auto Visit(ARGS &&...args) const -> decltype(F::Apply(std::declval<const Point &>(), std::forward<ARGS>(args)...)) {
-		switch (GetType()) {
-		case GeometryType::POINT:
-			return F::Apply(const_cast<const Point &>(point), std::forward<ARGS>(args)...);
-		case GeometryType::LINESTRING:
-			return F::Apply(const_cast<const LineString &>(linestring), std::forward<ARGS>(args)...);
-		case GeometryType::POLYGON:
-			return F::Apply(const_cast<const Polygon &>(polygon), std::forward<ARGS>(args)...);
-		case GeometryType::MULTIPOINT:
-			return F::Apply(const_cast<const MultiPoint &>(multipoint), std::forward<ARGS>(args)...);
-		case GeometryType::MULTILINESTRING:
-			return F::Apply(const_cast<const MultiLineString &>(multilinestring), std::forward<ARGS>(args)...);
-		case GeometryType::MULTIPOLYGON:
-			return F::Apply(const_cast<const MultiPolygon &>(multipolygon), std::forward<ARGS>(args)...);
-		case GeometryType::GEOMETRYCOLLECTION:
-			return F::Apply(const_cast<const GeometryCollection &>(collection), std::forward<ARGS>(args)...);
-		default:
-			throw NotImplementedException("Geometry::Visit()");
-		}
-	}
-
-	// Apply a functor to the contained geometry
-	template <class F, class... ARGS>
-	auto Visit(ARGS &&...args) -> decltype(F::Apply(std::declval<Point &>(), std::forward<ARGS>(args)...)) {
-		switch (GetType()) {
-		case GeometryType::POINT:
-			return F::Apply(static_cast<Point &>(point), std::forward<ARGS>(args)...);
-		case GeometryType::LINESTRING:
-			return F::Apply(static_cast<LineString &>(linestring), std::forward<ARGS>(args)...);
-		case GeometryType::POLYGON:
-			return F::Apply(static_cast<Polygon &>(polygon), std::forward<ARGS>(args)...);
-		case GeometryType::MULTIPOINT:
-			return F::Apply(static_cast<MultiPoint &>(multipoint), std::forward<ARGS>(args)...);
-		case GeometryType::MULTILINESTRING:
-			return F::Apply(static_cast<MultiLineString &>(multilinestring), std::forward<ARGS>(args)...);
-		case GeometryType::MULTIPOLYGON:
-			return F::Apply(static_cast<MultiPolygon &>(multipolygon), std::forward<ARGS>(args)...);
-		case GeometryType::GEOMETRYCOLLECTION:
-			return F::Apply(static_cast<GeometryCollection &>(collection), std::forward<ARGS>(args)...);
-		default:
-			throw NotImplementedException("Geometry::Visit()");
-		}
-	}
-
-	uint32_t GetDimension(bool skip_empty) const {
-		if (skip_empty && IsEmpty()) {
-			return 0;
-		}
-		struct op {
-			static uint32_t Apply(const Point &, bool) {
-				return 0;
-			}
-			static uint32_t Apply(const LineString &, bool) {
-				return 1;
-			}
-			static uint32_t Apply(const Polygon &, bool) {
-				return 2;
-			}
-			static uint32_t Apply(const MultiPoint &, bool) {
-				return 0;
-			}
-			static uint32_t Apply(const MultiLineString &, bool) {
-				return 1;
-			}
-			static uint32_t Apply(const MultiPolygon &, bool) {
-				return 2;
-			}
-			static uint32_t Apply(const GeometryCollection &gc, bool skip_empty) {
-				uint32_t max = 0;
-
-				for (const auto &item : gc) {
-					max = std::max(max, item.GetDimension(skip_empty));
-				}
-				return max;
-			}
-		};
-		return Visit<op>(skip_empty);
-	}
-
-	bool IsEmpty() const {
-		struct op {
-			static bool Apply(const SinglePartGeometry &g) {
-				return g.IsEmpty();
-			}
-			static bool Apply(const MultiPartGeometry &g) {
-				return g.IsEmpty();
-			}
-		};
-		return Visit<op>();
-	}
-
-	void SetVertexType(ArenaAllocator &arena, bool has_z, bool has_m, double default_z = 0, double default_m = 0) {
-		struct op {
-			static void Apply(SinglePartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m, double default_z,
-			                  double default_m) {
-				g.SetVertexType(arena, has_z, has_m);
-			}
-			static void Apply(MultiPartGeometry &g, ArenaAllocator &arena, bool has_z, bool has_m, double default_z,
-			                  double default_m) {
-				g.properties.SetZ(has_z);
-				g.properties.SetM(has_m);
-				for (auto &part : g) {
-					part.SetVertexType(arena, has_z, has_m, default_z, default_m);
-				}
-			}
-		};
-		Visit<op>(arena, has_z, has_m, default_z, default_m);
-	}
-
-	geometry_t Serialize(Vector &result);
-	static Geometry Deserialize(ArenaAllocator &arena, const geometry_t &data);
-};
+inline Geometry LineString::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
+}
 
 //------------------------------------------------------------------------------
-// Inlined Methods
+// LinearRing (special case of LineString)
 //------------------------------------------------------------------------------
+struct LinearRing : public LineString {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
 
-inline Polygon::Polygon(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-    : MultiPartGeometry(TYPE, alloc, count, has_z, has_m) {
-	auto ptr = data.part_data;
-	for (uint32_t i = 0; i < count; i++) {
-		new (ptr++) LineString(alloc, 0, has_z, has_m);
-	}
+	// Methods
+	static bool IsClosed(const Geometry &geom);
+
+	// Constants
+	// TODO: We dont have a LinearRing type, so we use LineString for now
+	static const constexpr GeometryType TYPE = GeometryType::LINESTRING;
+};
+
+inline Geometry LinearRing::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	return LineString::Create(alloc, count, has_z, has_m);
 }
 
-inline GeometryCollection::GeometryCollection(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m)
-    : CollectionGeometry(TYPE, alloc, count, has_z, has_m) {
-	auto ptr = data.part_data;
-	for (uint32_t i = 0; i < count; i++) {
-		new (ptr++) Point(has_z, has_m);
-	}
+inline Geometry LinearRing::CreateEmpty(bool has_z, bool has_m) {
+	return LineString::CreateEmpty(has_z, has_m);
 }
 
-template <class T>
-inline TypedCollectionGeometry<T>::TypedCollectionGeometry(GeometryType type, ArenaAllocator &alloc, uint32_t count,
-                                                           bool has_z, bool has_m)
-    : CollectionGeometry(type, alloc, count, has_z, has_m) {
-	auto ptr = data.part_data;
-	for (uint32_t i = 0; i < count; i++) {
-		new (ptr++) T(has_z, has_m);
+inline bool LinearRing::IsClosed(const Geometry &geom) {
+	D_ASSERT(geom.GetType() == TYPE);
+	// The difference between LineString is that a empty LinearRing is considered closed
+	if (LinearRing::IsEmpty(geom)) {
+		return true;
 	}
+	return LineString::IsClosed(geom);
 }
 
-//-------------------
-// MultiPartGeometry
-//-------------------
+//------------------------------------------------------------------------------
+// Polygon
+//------------------------------------------------------------------------------
+struct Polygon : public MultiPartGeometry {
+	// Constructors
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
+	static Geometry CreateFromBox(ArenaAllocator &alloc, double minx, double miny, double maxx, double maxy);
 
-inline bool MultiPartGeometry::IsEmpty() const {
-	for (const auto &part : *this) {
-		if (!part.IsEmpty()) {
+	// Methods
+	static const Geometry &ExteriorRing(const Geometry &geom);
+	static Geometry &ExteriorRing(Geometry &geom);
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::POLYGON;
+};
+
+inline Geometry Polygon::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	auto geom = Geometry::Create(alloc, TYPE, count, has_z, has_m);
+	for (uint32_t i = 0; i < count; i++) {
+		// Placement new
+		new (&Polygon::Part(geom, i)) Geometry(GeometryType::LINESTRING, has_z, has_m);
+	}
+	return geom;
+}
+
+inline Geometry Polygon::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
+}
+
+inline Geometry Polygon::CreateFromBox(ArenaAllocator &alloc, double minx, double miny, double maxx, double maxy) {
+	auto polygon = Polygon::Create(alloc, 1, false, false);
+	auto &ring = Polygon::Part(polygon, 0);
+	LineString::Resize(ring, alloc, 5);
+	LineString::SetVertex(ring, 0, {minx, miny});
+	LineString::SetVertex(ring, 1, {miny, maxy});
+	LineString::SetVertex(ring, 2, {maxx, maxy});
+	LineString::SetVertex(ring, 3, {maxx, miny});
+	LineString::SetVertex(ring, 4, {minx, miny});
+	return polygon;
+}
+
+inline Geometry &Polygon::ExteriorRing(Geometry &geom) {
+	D_ASSERT(geom.GetType() == TYPE);
+	D_ASSERT(Polygon::PartCount(geom) > 0);
+	return Polygon::Part(geom, 0);
+}
+
+inline const Geometry &Polygon::ExteriorRing(const Geometry &geom) {
+	D_ASSERT(geom.GetType() == TYPE);
+	D_ASSERT(Polygon::PartCount(geom) > 0);
+	return Polygon::Part(geom, 0);
+}
+
+//------------------------------------------------------------------------------
+// MultiPoint
+//------------------------------------------------------------------------------
+struct MultiPoint : public CollectionGeometry {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
+	static Geometry Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m);
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::MULTIPOINT;
+};
+
+inline Geometry MultiPoint::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	auto geom = Geometry::Create(alloc, TYPE, count, has_z, has_m);
+	for (uint32_t i = 0; i < count; i++) {
+		// Placement new
+		new (&MultiPoint::Part(geom, i)) Geometry(GeometryType::POINT, has_z, has_m);
+	}
+	return geom;
+}
+
+inline Geometry MultiPoint::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
+}
+
+inline Geometry MultiPoint::Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m) {
+	return CollectionGeometry::Create(alloc, TYPE, items, has_z, has_m);
+}
+
+//------------------------------------------------------------------------------
+// MultiLineString
+//------------------------------------------------------------------------------
+struct MultiLineString : public CollectionGeometry {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
+	static Geometry Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m);
+
+	static bool IsClosed(const Geometry &geom);
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::MULTILINESTRING;
+};
+
+inline Geometry MultiLineString::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	auto geom = Geometry::Create(alloc, TYPE, count, has_z, has_m);
+	for (uint32_t i = 0; i < count; i++) {
+		// Placement new
+		new (&MultiLineString::Part(geom, i)) Geometry(GeometryType::LINESTRING, has_z, has_m);
+	}
+	return geom;
+}
+
+inline Geometry MultiLineString::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
+}
+
+inline Geometry MultiLineString::Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m) {
+	return CollectionGeometry::Create(alloc, TYPE, items, has_z, has_m);
+}
+
+inline bool MultiLineString::IsClosed(const Geometry &geom) {
+	if (MultiLineString::PartCount(geom) == 0) {
+		return false;
+	}
+	for (auto &part : MultiLineString::Parts(geom)) {
+		if (!LineString::IsClosed(part)) {
 			return false;
 		}
 	}
 	return true;
 }
 
-inline Geometry &MultiPartGeometry::operator[](uint32_t index) {
-	return data.part_data[index];
-}
-inline Geometry *MultiPartGeometry::begin() {
-	return data.part_data;
-}
-inline Geometry *MultiPartGeometry::end() {
-	return data.part_data + data_count;
+//------------------------------------------------------------------------------
+// MultiPolygon
+//------------------------------------------------------------------------------
+struct MultiPolygon : public CollectionGeometry {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
+	static Geometry Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m);
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::MULTIPOLYGON;
+};
+
+inline Geometry MultiPolygon::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	auto geom = Geometry::Create(alloc, TYPE, count, has_z, has_m);
+	for (uint32_t i = 0; i < count; i++) {
+		// Placement new
+		new (&MultiPolygon::Part(geom, i)) Geometry(GeometryType::POLYGON, has_z, has_m);
+	}
+	return geom;
 }
 
-inline const Geometry &MultiPartGeometry::operator[](uint32_t index) const {
-	return data.part_data[index];
-}
-inline const Geometry *MultiPartGeometry::begin() const {
-	return data.part_data;
-}
-inline const Geometry *MultiPartGeometry::end() const {
-	return data.part_data + data_count;
+inline Geometry MultiPolygon::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
 }
 
-//-----------------
-// Polygon
-//-----------------
-
-inline LineString &Polygon::operator[](uint32_t index) {
-	return reinterpret_cast<LineString &>(data.part_data[index]);
-}
-inline LineString *Polygon::begin() {
-	return reinterpret_cast<LineString *>(data.part_data);
-}
-inline LineString *Polygon::end() {
-	return reinterpret_cast<LineString *>(data.part_data + data_count);
+inline Geometry MultiPolygon::Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m) {
+	return CollectionGeometry::Create(alloc, TYPE, items, has_z, has_m);
 }
 
-inline const LineString &Polygon::operator[](uint32_t index) const {
-	return reinterpret_cast<const LineString &>(data.part_data[index]);
-}
-inline const LineString *Polygon::begin() const {
-	return reinterpret_cast<const LineString *>(data.part_data);
-}
-inline const LineString *Polygon::end() const {
-	return reinterpret_cast<const LineString *>(data.part_data + data_count);
+//------------------------------------------------------------------------------
+// GeometryCollection
+//------------------------------------------------------------------------------
+struct GeometryCollection : public CollectionGeometry {
+	static Geometry Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m);
+	static Geometry CreateEmpty(bool has_z, bool has_m);
+	static Geometry Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m);
+
+	// Constants
+	static const constexpr GeometryType TYPE = GeometryType::GEOMETRYCOLLECTION;
+};
+
+inline Geometry GeometryCollection::Create(ArenaAllocator &alloc, uint32_t count, bool has_z, bool has_m) {
+	auto geom = Geometry::Create(alloc, TYPE, count, has_z, has_m);
+	for (uint32_t i = 0; i < count; i++) {
+		// Placement new
+		new (&GeometryCollection::Part(geom, i)) Geometry(GeometryType::GEOMETRYCOLLECTION, has_z, has_m);
+	}
+	return geom;
 }
 
-//-----------------
-// Collection
-//-----------------
-
-template <class T>
-inline T &TypedCollectionGeometry<T>::operator[](uint32_t index) {
-	return reinterpret_cast<T &>(data.part_data[index]);
-}
-template <class T>
-inline T *TypedCollectionGeometry<T>::begin() {
-	return reinterpret_cast<T *>(data.part_data);
-}
-template <class T>
-inline T *TypedCollectionGeometry<T>::end() {
-	return reinterpret_cast<T *>(data.part_data + data_count);
+inline Geometry GeometryCollection::CreateEmpty(bool has_z, bool has_m) {
+	return Geometry::CreateEmpty(TYPE, has_z, has_m);
 }
 
-template <class T>
-inline const T &TypedCollectionGeometry<T>::operator[](uint32_t index) const {
-	return reinterpret_cast<const T &>(data.part_data[index]);
-}
-
-template <class T>
-inline const T *TypedCollectionGeometry<T>::begin() const {
-	return reinterpret_cast<const T *>(data.part_data);
-}
-
-template <class T>
-inline const T *TypedCollectionGeometry<T>::end() const {
-	return reinterpret_cast<const T *>(data.part_data + data_count);
+inline Geometry GeometryCollection::Create(ArenaAllocator &alloc, vector<Geometry> &items, bool has_z, bool has_m) {
+	return CollectionGeometry::Create(alloc, TYPE, items, has_z, has_m);
 }
 
 //------------------------------------------------------------------------------
@@ -888,57 +951,6 @@ inline const T *TypedCollectionGeometry<T>::end() const {
 //------------------------------------------------------------------------------
 
 static_assert(std::is_standard_layout<Geometry>::value, "Geometry must be standard layout");
-static_assert(std::is_standard_layout<BaseGeometry>::value, "BaseGeometry must be standard layout");
-static_assert(std::is_standard_layout<SinglePartGeometry>::value, "SinglePartBase must be standard layout");
-static_assert(std::is_standard_layout<MultiPartGeometry>::value, "Point must be standard layout");
-static_assert(std::is_standard_layout<Point>::value, "Point must be standard layout");
-static_assert(std::is_standard_layout<Polygon>::value, "Polygon must be standard layout");
-static_assert(std::is_standard_layout<LineString>::value, "LineString must be standard layout");
-static_assert(std::is_standard_layout<MultiPolygon>::value, "MultiPolygon must be standard layout");
-static_assert(std::is_standard_layout<MultiLineString>::value, "MultiLineString must be standard layout");
-static_assert(std::is_standard_layout<MultiPoint>::value, "MultiPoint must be standard layout");
-static_assert(std::is_standard_layout<GeometryCollection>::value, "GeometryCollection must be standard layout");
-
-//------------------------------------------------------------------------------
-// Utils
-//------------------------------------------------------------------------------
-
-struct Utils {
-	static string format_coord(double d);
-	static string format_coord(double x, double y);
-	static string format_coord(double x, double y, double z);
-	static string format_coord(double x, double y, double z, double m);
-
-	static inline float DoubleToFloatDown(double d) {
-		if (d > static_cast<double>(std::numeric_limits<float>::max())) {
-			return std::numeric_limits<float>::max();
-		}
-		if (d <= static_cast<double>(std::numeric_limits<float>::lowest())) {
-			return std::numeric_limits<float>::lowest();
-		}
-
-		auto f = static_cast<float>(d);
-		if (static_cast<double>(f) <= d) {
-			return f;
-		}
-		return std::nextafter(f, std::numeric_limits<float>::lowest());
-	}
-
-	static inline float DoubleToFloatUp(double d) {
-		if (d >= static_cast<double>(std::numeric_limits<float>::max())) {
-			return std::numeric_limits<float>::max();
-		}
-		if (d < static_cast<double>(std::numeric_limits<float>::lowest())) {
-			return std::numeric_limits<float>::lowest();
-		}
-
-		auto f = static_cast<float>(d);
-		if (static_cast<double>(f) >= d) {
-			return f;
-		}
-		return std::nextafter(f, std::numeric_limits<float>::max());
-	}
-};
 
 } // namespace core
 

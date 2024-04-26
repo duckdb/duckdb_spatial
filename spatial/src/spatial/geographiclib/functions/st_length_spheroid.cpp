@@ -58,12 +58,12 @@ static void GeodesicLineString2DFunction(DataChunk &args, ExpressionState &state
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static double LineLength(const LineString &line, GeographicLib::PolygonArea &comp) {
+static double LineLength(const Geometry &line, GeographicLib::PolygonArea &comp) {
 	comp.Clear();
-	for (uint32_t i = 0; i < line.Count(); i++) {
-		auto vert = line.Get(i);
-		comp.AddPoint(vert.x, vert.y);
-	}
+    for(uint32_t i = 0; i < LineString::VertexCount(line); i++) {
+        auto vert = LineString::GetVertex(line, i);
+        comp.AddPoint(vert.x, vert.y);
+    }
 	double _area;
 	double linestring_length;
 	comp.Compute(false, true, linestring_length, _area);
@@ -80,34 +80,12 @@ static void GeodesicGeometryFunction(DataChunk &args, ExpressionState &state, Ve
 	const GeographicLib::Geodesic &geod = GeographicLib::Geodesic::WGS84();
 	auto comp = GeographicLib::PolygonArea(geod, true);
 
-	struct op {
-		static double Apply(const LineString &line, GeographicLib::PolygonArea &comp) {
-			return LineLength(line, comp);
-		}
-
-		static double Apply(const MultiLineString &mline, GeographicLib::PolygonArea &comp) {
-			double sum = 0.0;
-			for (const auto &line : mline) {
-				sum += LineLength(line, comp);
-			}
-			return sum;
-		}
-
-		static double Apply(const GeometryCollection &collection, GeographicLib::PolygonArea &comp) {
-			double sum = 0.0;
-			for (const auto &geom : collection) {
-				sum += geom.Visit<op>(comp);
-			}
-			return sum;
-		}
-
-		static double Apply(const BaseGeometry &, GeographicLib::PolygonArea &) {
-			return 0.0;
-		}
-	};
-
-	UnaryExecutor::Execute<geometry_t, double>(
-	    input, result, count, [&](geometry_t input) { return Geometry::Deserialize(arena, input).Visit<op>(comp); });
+	UnaryExecutor::Execute<geometry_t, double>(input, result, count, [&](geometry_t input) {
+		auto geom = Geometry::Deserialize(arena, input);
+		double length = 0.0;
+		Geometry::ExtractLines(geom, [&](const Geometry &line) { length += LineLength(line, comp); });
+		return length;
+	});
 
 	if (count == 1) {
 		result.SetVectorType(VectorType::CONSTANT_VECTOR);

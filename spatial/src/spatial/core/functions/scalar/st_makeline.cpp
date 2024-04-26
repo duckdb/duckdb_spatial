@@ -25,7 +25,7 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 		auto offset = geometry_list.offset;
 		auto length = geometry_list.length;
 
-		auto line_geom = LineString::Create(arena, length, false, false);
+		auto line = LineString::Create(arena, length, false, false);
 
 		uint32_t vertex_idx = 0;
 		for (idx_t i = offset; i < offset + length; i++) {
@@ -44,23 +44,21 @@ static void MakeLineListFunction(DataChunk &args, ExpressionState &state, Vector
 			if (geometry_blob.GetProperties().HasZ() || geometry_blob.GetProperties().HasM()) {
 				throw InvalidInputException("ST_MakeLine from list does not support Z or M geometries");
 			}
-
-			auto point = Geometry::Deserialize(arena, geometry_blob).As<Point>();
-			if (point.IsEmpty()) {
+			auto point = Geometry::Deserialize(arena, geometry_blob);
+			if (Point::IsEmpty(point)) {
 				continue;
 			}
-			auto vertex = point.Get(0);
-			line_geom.Set(vertex_idx++, vertex.x, vertex.y);
+			LineString::SetVertex(line, vertex_idx++, Point::GetVertex(point));
 		}
 
 		// Shrink the vertex array to the actual size
-		line_geom.Resize(arena, vertex_idx);
+		LineString::Resize(line, arena, vertex_idx);
 
-		if (line_geom.Count() == 1) {
+		if (line.Count() == 1) {
 			throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		}
 
-		return Geometry(line_geom).Serialize(result);
+		return Geometry::Serialize(line, result);
 	});
 }
 
@@ -79,30 +77,28 @@ static void MakeLineBinaryFunction(DataChunk &args, ExpressionState &state, Vect
 		    auto geometry_left = Geometry::Deserialize(arena, geom_blob_left);
 		    auto geometry_right = Geometry::Deserialize(arena, geom_blob_right);
 
-		    if (geometry_left.IsEmpty() && geometry_right.IsEmpty()) {
+		    if (Point::IsEmpty(geometry_left) && Point::IsEmpty(geometry_right)) {
 			    // Empty linestring
-			    return Geometry(LineString::Empty(false, false)).Serialize(result);
+			    auto empty = LineString::CreateEmpty(false, false);
+			    return Geometry::Serialize(empty, result);
 		    }
 
-		    if (geometry_left.IsEmpty() || geometry_right.IsEmpty()) {
+		    if (Point::IsEmpty(geometry_left) || Point::IsEmpty(geometry_right)) {
 			    throw InvalidInputException("ST_MakeLine requires zero or two or more POINT geometries");
 		    }
 
 		    auto has_z = geom_blob_left.GetProperties().HasZ() || geom_blob_right.GetProperties().HasZ();
 		    auto has_m = geom_blob_left.GetProperties().HasM() || geom_blob_right.GetProperties().HasM();
 
-		    auto &point_left = geometry_left.As<Point>();
-		    auto &point_right = geometry_right.As<Point>();
-
 		    // TODO: Dont upcast the child geometries, just append and let the append function handle upcasting of the
 		    // target instead.
-		    point_left.SetVertexType(arena, has_z, has_m);
-		    point_right.SetVertexType(arena, has_z, has_m);
+		    geometry_left.SetVertexType(arena, has_z, has_m);
+		    geometry_right.SetVertexType(arena, has_z, has_m);
 
-		    auto line_geom = LineString::Empty(has_z, has_m);
-		    line_geom.Append(arena, point_left);
-		    line_geom.Append(arena, point_right);
-		    return Geometry(line_geom).Serialize(result);
+		    auto line_geom = LineString::CreateEmpty(has_z, has_m);
+		    LineString::Append(line_geom, arena, geometry_left);
+		    LineString::Append(line_geom, arena, geometry_right);
+		    return Geometry::Serialize(line_geom, result);
 	    });
 }
 

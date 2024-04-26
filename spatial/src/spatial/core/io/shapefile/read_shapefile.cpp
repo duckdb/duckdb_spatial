@@ -208,7 +208,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 
 struct ConvertPoint {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
-		return Point::FromVertex(arena, VertexXY {shape->padfX[0], shape->padfY[0]});
+		return Point::CreateFromVertex(arena, VertexXY {shape->padfX[0], shape->padfY[0]});
 	}
 };
 
@@ -218,7 +218,7 @@ struct ConvertLineString {
 			// Single LineString
 			auto line = LineString::Create(arena, shape->nVertices, false, false);
 			for (int i = 0; i < shape->nVertices; i++) {
-				line.SetExact(i, VertexXY {shape->padfX[i], shape->padfY[i]});
+				LineString::SetVertex<VertexXY>(line, i, {shape->padfX[i], shape->padfY[i]});
 			}
 			return line;
 		} else {
@@ -228,11 +228,11 @@ struct ConvertLineString {
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
 				auto line_size = end - start;
-				auto &line = multi_line_string[i];
-				line.Resize(arena, line_size);
+				auto &line = MultiLineString::Part(multi_line_string, i);
+				LineString::Resize(line, arena, line_size);
 				for (int j = 0; j < line_size; j++) {
 					auto offset = start + j;
-					line.SetExact(j, VertexXY {shape->padfX[offset], shape->padfY[offset]});
+					LineString::SetVertex<VertexXY>(line, j, {shape->padfX[offset], shape->padfY[offset]});
 				}
 				start = end;
 			}
@@ -266,12 +266,12 @@ struct ConvertPolygon {
 			auto start = shape->panPartStart[0];
 			for (int i = 0; i < shape->nParts; i++) {
 				auto end = i == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[i + 1];
-				auto &ring = polygon[i];
+				auto &ring = Polygon::Part(polygon, i);
 				auto ring_size = end - start;
-				ring.Resize(arena, ring_size);
+				LineString::Resize(ring, arena, ring_size);
 				for (int j = 0; j < ring_size; j++) {
 					auto offset = start + j;
-					ring.Set(j, shape->padfX[offset], shape->padfY[offset]);
+					LineString::SetVertex<VertexXY>(ring, j, {shape->padfX[offset], shape->padfY[offset]});
 				}
 				start = end;
 			}
@@ -289,15 +289,15 @@ struct ConvertPolygon {
 				for (auto ring_idx = part_start; ring_idx < part_end; ring_idx++) {
 					auto start = shape->panPartStart[ring_idx];
 					auto end = ring_idx == shape->nParts - 1 ? shape->nVertices : shape->panPartStart[ring_idx + 1];
-					auto &ring = polygon[ring_idx - part_start];
+					auto &ring = Polygon::Part(polygon, ring_idx - part_start);
 					auto ring_size = end - start;
-					ring.Resize(arena, ring_size);
+					LineString::Resize(ring, arena, ring_size);
 					for (int j = 0; j < ring_size; j++) {
 						auto offset = start + j;
-						ring.SetExact(j, VertexXY {shape->padfX[offset], shape->padfY[offset]});
+						LineString::SetVertex<VertexXY>(ring, j, {shape->padfX[offset], shape->padfY[offset]});
 					}
 				}
-				multi_polygon[polygon_idx] = polygon;
+				MultiPolygon::Part(multi_polygon, polygon_idx) = std::move(polygon);
 			}
 			return multi_polygon;
 		}
@@ -308,7 +308,8 @@ struct ConvertMultiPoint {
 	static Geometry Convert(SHPObjectPtr &shape, ArenaAllocator &arena) {
 		auto multi_point = MultiPoint::Create(arena, shape->nVertices, false, false);
 		for (int i = 0; i < shape->nVertices; i++) {
-			multi_point[i] = Point::FromVertex(arena, VertexXY {shape->padfX[i], shape->padfY[i]});
+			auto point = Point::CreateFromVertex(arena, VertexXY {shape->padfX[i], shape->padfY[i]});
+			MultiPoint::Part(multi_point, i) = std::move(point);
 		}
 		return multi_point;
 	}
@@ -323,7 +324,7 @@ static void ConvertGeomLoop(Vector &result, int record_start, idx_t count, SHPHa
 			FlatVector::SetNull(result, result_idx, true);
 		} else {
 			// TODO: Handle Z and M
-			FlatVector::GetData<string_t>(result)[result_idx] = Geometry(OP::Convert(shape, arena)).Serialize(result);
+			FlatVector::GetData<string_t>(result)[result_idx] = Geometry::Serialize(OP::Convert(shape, arena), result);
 		}
 	}
 }

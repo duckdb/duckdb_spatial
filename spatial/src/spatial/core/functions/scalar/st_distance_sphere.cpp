@@ -68,11 +68,11 @@ static void GeometryHaversineFunction(DataChunk &args, ExpressionState &state, V
 		    }
 		    auto left_geom = Geometry::Deserialize(lstate.arena, left);
 		    auto right_geom = Geometry::Deserialize(lstate.arena, right);
-		    if (left_geom.IsEmpty() || right_geom.IsEmpty()) {
+		    if (Point::IsEmpty(left_geom) || Point::IsEmpty(right_geom)) {
 			    throw InvalidInputException("ST_Distance_Sphere does not support EMPTY geometries");
 		    }
-		    auto v1 = left_geom.As<Point>().Get(0);
-		    auto v2 = right_geom.As<Point>().Get(0);
+		    auto v1 = Point::GetVertex(left_geom);
+		    auto v2 = Point::GetVertex(right_geom);
 		    return HaversineFunction(v1.x, v1.y, v2.x, v2.y);
 	    });
 }
