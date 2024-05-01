@@ -27,6 +27,10 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 		// First figure out if we have Z or M
 		bool has_z = false;
 		bool has_m = false;
+		bool all_points = true;
+		bool all_lines = true;
+		bool all_polygons = true;
+
 		for (idx_t i = offset; i < offset + length; i++) {
 			auto mapped_idx = format.sel->get_index(i);
 			if (format.validity.RowIsValid(mapped_idx)) {
@@ -37,7 +41,6 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 			}
 		}
 
-		// TODO: Peek the types first
 		vector<Geometry> geometries;
 		for (idx_t i = offset; i < offset + length; i++) {
 			auto mapped_idx = format.sel->get_index(i);
@@ -45,59 +48,31 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 				auto geometry_blob = ((geometry_t *)format.data)[mapped_idx];
 				auto geometry = Geometry::Deserialize(arena, geometry_blob);
 				// Dont add empty geometries
-				if (!geometry.IsEmpty()) {
-					geometries.push_back(geometry);
+				if (!Geometry::IsEmpty(geometry)) {
+					all_points = all_points && geometry_blob.GetType() == GeometryType::POINT;
+					all_lines = all_lines && geometry_blob.GetType() == GeometryType::LINESTRING;
+					all_polygons = all_polygons && geometry_blob.GetType() == GeometryType::POLYGON;
+
+					// Ensure all geometries have the same Z and M
+					geometry.SetVertexType(arena, has_z, has_m);
+					geometries.push_back(std::move(geometry));
 				}
 			}
 		}
 
 		if (geometries.empty()) {
-			GeometryCollection empty(has_z, has_m);
-			return Geometry(empty).Serialize(result);
-		}
-
-		bool all_points = true;
-		bool all_lines = true;
-		bool all_polygons = true;
-
-		for (auto &geometry : geometries) {
-			if (geometry.GetType() != GeometryType::POINT) {
-				all_points = false;
-			}
-			if (geometry.GetType() != GeometryType::LINESTRING) {
-				all_lines = false;
-			}
-			if (geometry.GetType() != GeometryType::POLYGON) {
-				all_polygons = false;
-			}
+			return Geometry::Serialize(GeometryCollection::CreateEmpty(has_z, has_m), result);
 		}
 
 		// TODO: Dont upcast the children, just append them.
-
 		if (all_points) {
-			MultiPoint collection(arena, geometries.size(), has_z, has_m);
-			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Point>();
-			}
-			return Geometry(collection).Serialize(result);
+			return Geometry::Serialize(MultiPoint::Create(arena, geometries, has_z, has_m), result);
 		} else if (all_lines) {
-			MultiLineString collection(arena, geometries.size(), has_z, has_m);
-			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<LineString>();
-			}
-			return Geometry(collection).Serialize(result);
+			return Geometry::Serialize(MultiLineString::Create(arena, geometries, has_z, has_m), result);
 		} else if (all_polygons) {
-			MultiPolygon collection(arena, geometries.size(), has_z, has_m);
-			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m).As<Polygon>();
-			}
-			return Geometry(collection).Serialize(result);
+			return Geometry::Serialize(MultiPolygon::Create(arena, geometries, has_z, has_m), result);
 		} else {
-			GeometryCollection collection(arena, geometries.size(), has_z, has_m);
-			for (idx_t i = 0; i < geometries.size(); i++) {
-				collection[i] = geometries[i].SetVertexType(arena, has_z, has_m);
-			}
-			return Geometry(collection).Serialize(result);
+			return Geometry::Serialize(GeometryCollection::Create(arena, geometries, has_z, has_m), result);
 		}
 	});
 }

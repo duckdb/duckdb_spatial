@@ -18,7 +18,7 @@ namespace core {
 static SAFile DuckDBShapefileOpen(void *userData, const char *filename, const char *access_mode) {
 	try {
 		auto &fs = *reinterpret_cast<FileSystem *>(userData);
-		auto file_handle = fs.OpenFile(filename, FileFlags::FILE_FLAGS_READ);
+		auto file_handle = fs.OpenFile(filename, FileFlags::FILE_FLAGS_READ | FileFlags::FILE_FLAGS_NULL_IF_NOT_EXISTS);
 		if (!file_handle) {
 			return nullptr;
 		}
@@ -87,7 +87,10 @@ static int DuckDBShapefileClose(SAFile file) {
 static int DuckDBShapefileRemove(void *userData, const char *filename) {
 	try {
 		auto &fs = *reinterpret_cast<FileSystem *>(userData);
-		auto file = fs.OpenFile(filename, FileFlags::FILE_FLAGS_WRITE);
+		auto file = fs.OpenFile(filename, FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_NULL_IF_NOT_EXISTS);
+		if (!file) {
+			return -1;
+		}
 		auto file_type = fs.GetFileType(*file);
 		if (file_type == FileType::FILE_TYPE_DIR) {
 			fs.RemoveDirectory(filename);

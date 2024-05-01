@@ -29,9 +29,11 @@ public:
 		RegisterStGeomFromHEXWKB(db);
 		RegisterStGeomFromText(db);
 		RegisterStGeomFromWKB(db);
+		RegisterStHaversine(db);
 		RegisterStHilbert(db);
 		RegisterStIntersects(db);
 		RegisterStIntersectsExtent(db);
+		RegisterStIsClosed(db);
 		RegisterStIsEmpty(db);
 		RegisterStLength(db);
 		RegisterStMakeEnvelope(db);
@@ -124,6 +126,9 @@ private:
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(DatabaseInstance &db);
 
+	// ST_Haversine
+	static void RegisterStHaversine(DatabaseInstance &db);
+
 	// ST_Hilbert
 	static void RegisterStHilbert(DatabaseInstance &db);
 
@@ -132,6 +137,9 @@ private:
 
 	// ST_IntersectsExtent (&&)
 	static void RegisterStIntersectsExtent(DatabaseInstance &db);
+
+	// ST_IsClosed
+	static void RegisterStIsClosed(DatabaseInstance &db);
 
 	// ST_IsEmpty
 	static void RegisterStIsEmpty(DatabaseInstance &db);

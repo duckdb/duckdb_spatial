@@ -58,7 +58,7 @@ private:
 // GEOMETRY -> GEOJSON Fragment
 //------------------------------------------------------------------------------
 
-static void VerticesToGeoJSON(const SinglePartGeometry &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
+static void VerticesToGeoJSON(const Geometry &vertices, yyjson_mut_doc *doc, yyjson_mut_val *arr) {
 	// TODO: If the vertexvector is empty, do we null, add an empty array or a pair of NaN?
 	auto haz_z = vertices.GetProperties().HasZ();
 	auto has_m = vertices.GetProperties().HasM();
@@ -66,7 +66,7 @@ static void VerticesToGeoJSON(const SinglePartGeometry &vertices, yyjson_mut_doc
 	if (haz_z && has_m) {
 		for (uint32_t i = 0; i < vertices.Count(); i++) {
 			auto coord = yyjson_mut_arr(doc);
-			auto vert = vertices.GetExact<VertexXYZM>(i);
+			auto vert = SinglePartGeometry::GetVertex<VertexXYZM>(vertices, i);
 			yyjson_mut_arr_add_real(doc, coord, vert.x);
 			yyjson_mut_arr_add_real(doc, coord, vert.y);
 			yyjson_mut_arr_add_real(doc, coord, vert.z);
@@ -75,7 +75,7 @@ static void VerticesToGeoJSON(const SinglePartGeometry &vertices, yyjson_mut_doc
 	} else if (haz_z) {
 		for (uint32_t i = 0; i < vertices.Count(); i++) {
 			auto coord = yyjson_mut_arr(doc);
-			auto vert = vertices.GetExact<VertexXYZ>(i);
+			auto vert = SinglePartGeometry::GetVertex<VertexXYZ>(vertices, i);
 			yyjson_mut_arr_add_real(doc, coord, vert.x);
 			yyjson_mut_arr_add_real(doc, coord, vert.y);
 			yyjson_mut_arr_add_real(doc, coord, vert.z);
@@ -84,7 +84,7 @@ static void VerticesToGeoJSON(const SinglePartGeometry &vertices, yyjson_mut_doc
 	} else if (has_m) {
 		for (uint32_t i = 0; i < vertices.Count(); i++) {
 			auto coord = yyjson_mut_arr(doc);
-			auto vert = vertices.GetExact<VertexXYM>(i);
+			auto vert = SinglePartGeometry::GetVertex<VertexXYM>(vertices, i);
 			yyjson_mut_arr_add_real(doc, coord, vert.x);
 			yyjson_mut_arr_add_real(doc, coord, vert.y);
 			yyjson_mut_arr_append(arr, coord);
@@ -92,7 +92,7 @@ static void VerticesToGeoJSON(const SinglePartGeometry &vertices, yyjson_mut_doc
 	} else {
 		for (uint32_t i = 0; i < vertices.Count(); i++) {
 			auto coord = yyjson_mut_arr(doc);
-			auto vert = vertices.GetExact<VertexXY>(i);
+			auto vert = SinglePartGeometry::GetVertex<VertexXY>(vertices, i);
 			yyjson_mut_arr_add_real(doc, coord, vert.x);
 			yyjson_mut_arr_add_real(doc, coord, vert.y);
 			yyjson_mut_arr_append(arr, coord);
@@ -103,30 +103,30 @@ static void VerticesToGeoJSON(const SinglePartGeometry &vertices, yyjson_mut_doc
 struct ToGeoJSONFunctor {
 
 	// Point
-	static void Apply(const Point &point, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::Point, const Geometry &point, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "Point");
 
 		auto coords = yyjson_mut_arr(doc);
 		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-		if (!point.IsEmpty()) {
+		if (!Point::IsEmpty(point)) {
 			auto has_z = point.GetProperties().HasZ();
 			auto has_m = point.GetProperties().HasM();
 			if (has_z && has_m) {
-				auto vert = point.GetExact<VertexXYZM>(0);
+				auto vert = Point::GetVertex<VertexXYZM>(point);
 				yyjson_mut_arr_add_real(doc, coords, vert.x);
 				yyjson_mut_arr_add_real(doc, coords, vert.y);
 				yyjson_mut_arr_add_real(doc, coords, vert.z);
 			} else if (has_z) {
-				auto vert = point.GetExact<VertexXYZ>(0);
+				auto vert = Point::GetVertex<VertexXYZ>(point);
 				yyjson_mut_arr_add_real(doc, coords, vert.x);
 				yyjson_mut_arr_add_real(doc, coords, vert.y);
 				yyjson_mut_arr_add_real(doc, coords, vert.z);
 			} else if (has_m) {
-				auto vert = point.GetExact<VertexXYM>(0);
+				auto vert = Point::GetVertex<VertexXYM>(point);
 				yyjson_mut_arr_add_real(doc, coords, vert.x);
 				yyjson_mut_arr_add_real(doc, coords, vert.y);
 			} else {
-				auto vert = point.GetExact<VertexXY>(0);
+				auto vert = Point::GetVertex<VertexXY>(point);
 				yyjson_mut_arr_add_real(doc, coords, vert.x);
 				yyjson_mut_arr_add_real(doc, coords, vert.y);
 			}
@@ -134,7 +134,7 @@ struct ToGeoJSONFunctor {
 	}
 
 	// LineString
-	static void Apply(const LineString &line, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::LineString, const Geometry &line, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "LineString");
 
 		auto coords = yyjson_mut_arr(doc);
@@ -143,12 +143,13 @@ struct ToGeoJSONFunctor {
 	}
 
 	// Polygon
-	static void Apply(const Polygon &poly, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::Polygon, const Geometry &poly, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "Polygon");
 
 		auto coords = yyjson_mut_arr(doc);
 		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-		for (const auto &ring : poly) {
+		for (uint32_t i = 0; i < Polygon::PartCount(poly); i++) {
+			auto &ring = Polygon::Part(poly, i);
 			auto ring_coords = yyjson_mut_arr(doc);
 			VerticesToGeoJSON(ring, doc, ring_coords);
 			yyjson_mut_arr_append(coords, ring_coords);
@@ -156,24 +157,26 @@ struct ToGeoJSONFunctor {
 	}
 
 	// MultiPoint
-	static void Apply(const MultiPoint &mpoint, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::MultiPoint, const Geometry &mpoint, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "MultiPoint");
 
 		auto coords = yyjson_mut_arr(doc);
 		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
-		for (const auto &point : mpoint) {
+		for (uint32_t i = 0; i < MultiPoint::PartCount(mpoint); i++) {
+			auto &point = MultiPoint::Part(mpoint, i);
 			VerticesToGeoJSON(point, doc, coords);
 		}
 	}
 
 	// MultiLineString
-	static void Apply(const MultiLineString &mline, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::MultiLineString, const Geometry &mline, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "MultiLineString");
 
 		auto coords = yyjson_mut_arr(doc);
 		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-		for (const auto &line : mline) {
+		for (uint32_t i = 0; i < MultiLineString::PartCount(mline); i++) {
+			auto &line = MultiLineString::Part(mline, i);
 			auto line_coords = yyjson_mut_arr(doc);
 			VerticesToGeoJSON(line, doc, line_coords);
 			yyjson_mut_arr_append(coords, line_coords);
@@ -181,15 +184,17 @@ struct ToGeoJSONFunctor {
 	}
 
 	// MultiPolygon
-	static void Apply(const MultiPolygon &mpoly, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::MultiPolygon, const Geometry &mpoly, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "MultiPolygon");
 
 		auto coords = yyjson_mut_arr(doc);
 		yyjson_mut_obj_add_val(doc, obj, "coordinates", coords);
 
-		for (const auto &poly : mpoly) {
+		for (uint32_t i = 0; i < MultiPolygon::PartCount(mpoly); i++) {
+			auto &poly = MultiPolygon::Part(mpoly, i);
 			auto poly_coords = yyjson_mut_arr(doc);
-			for (const auto &ring : poly) {
+			for (uint32_t j = 0; j < Polygon::PartCount(poly); j++) {
+				auto &ring = Polygon::Part(poly, j);
 				auto ring_coords = yyjson_mut_arr(doc);
 				VerticesToGeoJSON(ring, doc, ring_coords);
 				yyjson_mut_arr_append(poly_coords, ring_coords);
@@ -199,14 +204,16 @@ struct ToGeoJSONFunctor {
 	}
 
 	// GeometryCollection
-	static void Apply(const GeometryCollection &collection, yyjson_mut_doc *doc, yyjson_mut_val *obj) {
+	static void Case(Geometry::Tags::GeometryCollection, const Geometry &collection, yyjson_mut_doc *doc,
+	                 yyjson_mut_val *obj) {
 		yyjson_mut_obj_add_str(doc, obj, "type", "GeometryCollection");
 		auto arr = yyjson_mut_arr(doc);
 		yyjson_mut_obj_add_val(doc, obj, "geometries", arr);
 
-		for (auto &geom : collection) {
+		for (uint32_t i = 0; i < GeometryCollection::PartCount(collection); i++) {
+			auto &geom = GeometryCollection::Part(collection, i);
 			auto geom_obj = yyjson_mut_obj(doc);
-			geom.Visit<ToGeoJSONFunctor>(doc, geom_obj);
+			Geometry::Match<ToGeoJSONFunctor>(geom, doc, geom_obj);
 			yyjson_mut_arr_append(arr, geom_obj);
 		}
 	}
@@ -222,13 +229,13 @@ static void GeometryToGeoJSONFragmentFunction(DataChunk &args, ExpressionState &
 	JSONAllocator json_allocator(lstate.arena);
 
 	UnaryExecutor::Execute<geometry_t, string_t>(input, result, count, [&](geometry_t input) {
-		auto geometry = Geometry::Deserialize(lstate.arena, input);
+		auto geom = Geometry::Deserialize(lstate.arena, input);
 
 		auto doc = yyjson_mut_doc_new(json_allocator.GetYYJSONAllocator());
 		auto obj = yyjson_mut_obj(doc);
 		yyjson_mut_doc_set_root(doc, obj);
 
-		geometry.Visit<ToGeoJSONFunctor>(doc, obj);
+		Geometry::Match<ToGeoJSONFunctor>(geom, doc, obj);
 
 		size_t json_size = 0;
 		// TODO: YYJSON_WRITE_PRETTY
@@ -242,11 +249,11 @@ static void GeometryToGeoJSONFragmentFunction(DataChunk &args, ExpressionState &
 // GEOJSON Fragment -> GEOMETRY
 //------------------------------------------------------------------------------
 
-static Point PointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw, bool &has_z) {
+static Geometry PointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw, bool &has_z) {
 	auto len = yyjson_arr_size(coord_array);
 	if (len == 0) {
 		// empty point
-		return Point(has_z, false);
+		return Point::CreateEmpty(has_z, false);
 	}
 	if (len < 2) {
 		throw InvalidInputException("GeoJSON input coordinates field is not an array of at least length 2: %s",
@@ -273,18 +280,17 @@ static Point PointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, co
 			                            raw.GetString());
 		}
 		auto z = yyjson_get_num(z_val);
-		return Point::FromVertex(arena, VertexXYZ {x, y, z});
+		return Point::CreateFromVertex(arena, VertexXYZ {x, y, z});
 	} else {
-		return Point::FromVertex(arena, VertexXY {x, y});
+		return Point::CreateFromVertex(arena, VertexXY {x, y});
 	}
 }
 
-static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
-                                      bool &has_z) {
+static Geometry VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw, bool &has_z) {
 	auto len = yyjson_arr_size(coord_array);
 	if (len == 0) {
 		// Empty
-		return LineString(false, false);
+		return LineString::CreateEmpty(false, false);
 	} else {
 		// Sniff the coordinates to see if we have Z
 		bool has_any_z = false;
@@ -308,7 +314,7 @@ static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &a
 			has_z = true;
 		}
 
-		LineString vertices(arena, len, has_any_z, false);
+		auto vertices = LineString::Create(arena, len, has_any_z, false);
 
 		yyjson_arr_foreach(coord_array, idx, max, coord) {
 			auto coord_len = yyjson_arr_size(coord);
@@ -335,28 +341,28 @@ static LineString VerticesFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &a
 				z = yyjson_get_num(z_val);
 			}
 			if (has_any_z) {
-				vertices.SetExact(idx, VertexXYZ {x, y, z});
+				LineString::SetVertex<VertexXYZ>(vertices, idx, {x, y, z});
 			} else {
-				vertices.SetExact(idx, VertexXY {x, y});
+				LineString::SetVertex<VertexXY>(vertices, idx, {x, y});
 			}
 		}
 		return vertices;
 	}
 }
 
-static LineString LineStringFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
-                                        bool &has_z) {
+static Geometry LineStringFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
+                                      bool &has_z) {
 	return VerticesFromGeoJSON(coord_array, arena, raw, has_z);
 }
 
-static Polygon PolygonFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw, bool &has_z) {
+static Geometry PolygonFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw, bool &has_z) {
 	auto num_rings = yyjson_arr_size(coord_array);
 	if (num_rings == 0) {
 		// Empty
-		return Polygon(has_z, false);
+		return Polygon::CreateEmpty(has_z, false);
 	} else {
 		// Polygon
-		Polygon polygon(arena, num_rings, has_z, false);
+		auto polygon = Polygon::Create(arena, num_rings, has_z, false);
 		size_t idx, max;
 		yyjson_val *ring_val;
 		yyjson_arr_foreach(coord_array, idx, max, ring_val) {
@@ -364,22 +370,22 @@ static Polygon PolygonFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena
 				throw InvalidInputException("GeoJSON input coordinates field is not an array of arrays: %s",
 				                            raw.GetString());
 			}
-			polygon[idx] = VerticesFromGeoJSON(ring_val, arena, raw, has_z);
+			Polygon::Part(polygon, idx) = VerticesFromGeoJSON(ring_val, arena, raw, has_z);
 		}
 
 		return polygon;
 	}
 }
 
-static MultiPoint MultiPointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
-                                        bool &has_z) {
+static Geometry MultiPointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
+                                      bool &has_z) {
 	auto num_points = yyjson_arr_size(coord_array);
 	if (num_points == 0) {
 		// Empty
-		return MultiPoint(has_z, false);
+		return MultiPoint::CreateEmpty(has_z, false);
 	} else {
 		// MultiPoint
-		MultiPoint multi_point(arena, num_points, has_z, false);
+		auto multi_point = MultiPoint::Create(arena, num_points, has_z, false);
 		size_t idx, max;
 		yyjson_val *point_val;
 		yyjson_arr_foreach(coord_array, idx, max, point_val) {
@@ -391,21 +397,21 @@ static MultiPoint MultiPointFromGeoJSON(yyjson_val *coord_array, ArenaAllocator 
 				throw InvalidInputException(
 				    "GeoJSON input coordinates field is not an array of arrays of length >= 2: %s", raw.GetString());
 			}
-			multi_point[idx] = PointFromGeoJSON(point_val, arena, raw, has_z);
+			MultiPoint::Part(multi_point, idx) = PointFromGeoJSON(point_val, arena, raw, has_z);
 		}
 		return multi_point;
 	}
 }
 
-static MultiLineString MultiLineStringFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
-                                                  bool &has_z) {
+static Geometry MultiLineStringFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
+                                           bool &has_z) {
 	auto num_linestrings = yyjson_arr_size(coord_array);
 	if (num_linestrings == 0) {
 		// Empty
-		return MultiLineString(has_z, false);
+		return MultiLineString::CreateEmpty(has_z, false);
 	} else {
 		// MultiLineString
-		MultiLineString multi_linestring(arena, num_linestrings, has_z, false);
+		auto multi_linestring = MultiLineString::Create(arena, num_linestrings, has_z, false);
 		size_t idx, max;
 		yyjson_val *linestring_val;
 		yyjson_arr_foreach(coord_array, idx, max, linestring_val) {
@@ -413,22 +419,22 @@ static MultiLineString MultiLineStringFromGeoJSON(yyjson_val *coord_array, Arena
 				throw InvalidInputException("GeoJSON input coordinates field is not an array of arrays: %s",
 				                            raw.GetString());
 			}
-			multi_linestring[idx] = LineStringFromGeoJSON(linestring_val, arena, raw, has_z);
+			MultiLineString::Part(multi_linestring, idx) = LineStringFromGeoJSON(linestring_val, arena, raw, has_z);
 		}
 
 		return multi_linestring;
 	}
 }
 
-static MultiPolygon MultiPolygonFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
-                                            bool &has_z) {
+static Geometry MultiPolygonFromGeoJSON(yyjson_val *coord_array, ArenaAllocator &arena, const string_t &raw,
+                                        bool &has_z) {
 	auto num_polygons = yyjson_arr_size(coord_array);
 	if (num_polygons == 0) {
 		// Empty
-		return MultiPolygon(has_z, false);
+		return MultiPolygon::CreateEmpty(has_z, false);
 	} else {
 		// MultiPolygon
-		MultiPolygon multi_polygon(arena, num_polygons, has_z, false);
+		auto multi_polygon = MultiPolygon::Create(arena, num_polygons, has_z, false);
 		size_t idx, max;
 		yyjson_val *polygon_val;
 		yyjson_arr_foreach(coord_array, idx, max, polygon_val) {
@@ -436,7 +442,7 @@ static MultiPolygon MultiPolygonFromGeoJSON(yyjson_val *coord_array, ArenaAlloca
 				throw InvalidInputException("GeoJSON input coordinates field is not an array of arrays: %s",
 				                            raw.GetString());
 			}
-			multi_polygon[idx] = PolygonFromGeoJSON(polygon_val, arena, raw, has_z);
+			MultiPolygon::Part(multi_polygon, idx) = PolygonFromGeoJSON(polygon_val, arena, raw, has_z);
 		}
 
 		return multi_polygon;
@@ -445,8 +451,8 @@ static MultiPolygon MultiPolygonFromGeoJSON(yyjson_val *coord_array, ArenaAlloca
 
 static Geometry FromGeoJSON(yyjson_val *root, ArenaAllocator &arena, const string_t &raw, bool &has_z);
 
-static GeometryCollection GeometryCollectionFromGeoJSON(yyjson_val *root, ArenaAllocator &arena, const string_t &raw,
-                                                        bool &has_z) {
+static Geometry GeometryCollectionFromGeoJSON(yyjson_val *root, ArenaAllocator &arena, const string_t &raw,
+                                              bool &has_z) {
 	auto geometries_val = yyjson_obj_get(root, "geometries");
 	if (!geometries_val) {
 		throw InvalidInputException("GeoJSON input does not have a geometries field: %s", raw.GetString());
@@ -457,14 +463,14 @@ static GeometryCollection GeometryCollectionFromGeoJSON(yyjson_val *root, ArenaA
 	auto num_geometries = yyjson_arr_size(geometries_val);
 	if (num_geometries == 0) {
 		// Empty
-		return GeometryCollection(has_z, false);
+		return GeometryCollection::CreateEmpty(has_z, false);
 	} else {
 		// GeometryCollection
-		GeometryCollection geometry_collection(arena, num_geometries, has_z, false);
+		auto geometry_collection = GeometryCollection::Create(arena, num_geometries, has_z, false);
 		size_t idx, max;
 		yyjson_val *geometry_val;
 		yyjson_arr_foreach(geometries_val, idx, max, geometry_val) {
-			geometry_collection[idx] = FromGeoJSON(geometry_val, arena, raw, has_z);
+			GeometryCollection::Part(geometry_collection, idx) = FromGeoJSON(geometry_val, arena, raw, has_z);
 		}
 
 		return geometry_collection;
@@ -540,7 +546,7 @@ static void GeoJSONFragmentToGeometryFunction(DataChunk &args, ExpressionState &
 				// Ensure the geometries has consistent Z values
 				geom.SetVertexType(lstate.arena, has_z, false);
 			}
-			return geom.Serialize(result);
+			return Geometry::Serialize(geom, result);
 		}
 	});
 }

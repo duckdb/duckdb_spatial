@@ -28,6 +28,7 @@
 | [ST_Dimension](#st_dimension) | Returns the dimension of a geometry. |
 | [ST_Disjoint](#st_disjoint) | Returns if two geometries are disjoint |
 | [ST_Distance](#st_distance) | Returns the distance between two geometries. |
+| [ST_Distance_Sphere](#st_distance_sphere) | Returns the haversine distance between two geometries. |
 | [ST_Distance_Spheroid](#st_distance_spheroid) | Returns the distance between two geometries in meters using a ellipsoidal model of the earths surface |
 | [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries |
 | [ST_EndPoint](#st_endpoint) | Returns the end point of a line. |
@@ -645,6 +646,27 @@ select st_distance('POINT(0 0)'::geometry, 'POINT(1 1)'::geometry);
 ----
 1.4142135623731
 ```
+
+
+
+### ST_Distance_Sphere
+
+_Returns the haversine distance between two geometries._
+
+#### Signature
+
+```sql
+DOUBLE ST_Distance_Sphere (col0 POINT_2D, col1 POINT_2D)
+DOUBLE ST_Distance_Sphere (col0 GEOMETRY, col1 GEOMETRY)
+```
+
+#### Description
+
+Returns the haversine distance between two geometries.
+
+- Only supports POINT geometries.
+- Returns the distance in meters.
+- The input is expected to be in WGS84 (EPSG:4326) coordinates, using a [latitude, longitude] axis order.
 
 
 

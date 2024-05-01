@@ -15,81 +15,6 @@ namespace core {
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-static void CollectPoints(Geometry &geom, vector<Point> &points) {
-	switch (geom.GetType()) {
-	case GeometryType::POINT: {
-		points.push_back(geom.As<Point>());
-		break;
-	}
-	case GeometryType::MULTIPOINT: {
-		auto &multipoint = geom.As<MultiPoint>();
-		for (auto &point : multipoint) {
-			points.push_back(point);
-		}
-		break;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &col = geom.As<GeometryCollection>();
-		for (auto &g : col) {
-			CollectPoints(g, points);
-		}
-	}
-	default: {
-		break;
-	}
-	}
-}
-
-static void CollectLines(Geometry &geom, vector<LineString> &lines) {
-	switch (geom.GetType()) {
-	case GeometryType::LINESTRING: {
-		lines.push_back(geom.As<LineString>());
-		break;
-	}
-	case GeometryType::MULTILINESTRING: {
-		auto &multilines = geom.As<MultiLineString>();
-		for (auto &line : multilines) {
-			lines.push_back(line);
-		}
-		break;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &col = geom.As<GeometryCollection>();
-		for (auto &g : col) {
-			CollectLines(g, lines);
-		}
-	}
-	default: {
-		break;
-	}
-	}
-}
-
-static void CollectPolygons(Geometry &geom, vector<Polygon> &polys) {
-	switch (geom.GetType()) {
-	case GeometryType::POLYGON: {
-		polys.push_back(geom.As<Polygon>());
-		break;
-	}
-	case GeometryType::MULTIPOLYGON: {
-		auto &multipolys = geom.As<MultiPolygon>();
-		for (auto &poly : multipolys) {
-			polys.push_back(poly);
-		}
-		break;
-	}
-	case GeometryType::GEOMETRYCOLLECTION: {
-		auto &col = geom.As<GeometryCollection>();
-		for (auto &g : col) {
-			CollectPolygons(g, polys);
-		}
-	}
-	default: {
-		break;
-	}
-	}
-}
-
 // Collection extract with a specific dimension
 static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &lstate = GeometryFunctionLocalState::ResetAndGet(state);
@@ -98,92 +23,82 @@ static void CollectionExtractTypeFunction(DataChunk &args, ExpressionState &stat
 	auto &input = args.data[0];
 	auto &dim = args.data[1];
 
-	BinaryExecutor::Execute<geometry_t, int32_t, geometry_t>(
-	    input, dim, result, count, [&](geometry_t input, int32_t requested_type) {
-		    auto props = input.GetProperties();
-		    auto geometry = Geometry::Deserialize(arena, input);
-		    switch (requested_type) {
-		    case 1: {
-			    if (geometry.GetType() == GeometryType::MULTIPOINT || geometry.GetType() == GeometryType::POINT) {
-				    return input;
-			    } else if (geometry.IsCollection()) {
-				    // if it is a geometry collection, we need to collect all points
-				    if (geometry.GetType() == GeometryType::GEOMETRYCOLLECTION && !geometry.IsEmpty()) {
-					    vector<Point> points;
-					    CollectPoints(geometry, points);
-					    uint32_t size = points.size();
+	// Items vector
+	vector<Geometry> items;
 
-					    MultiPoint mpoint(arena, size, props.HasZ(), props.HasM());
-					    for (uint32_t i = 0; i < size; i++) {
-						    mpoint[i] = points[i];
-					    }
-					    return Geometry(mpoint).Serialize(result);
-				    }
-				    // otherwise, we return an empty multipoint
-				    MultiPoint empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
-			    } else {
-				    // otherwise if its not a collection, we return an empty point
-				    Point empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
-			    }
-		    }
-		    case 2: {
-			    if (geometry.GetType() == GeometryType::MULTILINESTRING ||
-			        geometry.GetType() == GeometryType::LINESTRING) {
-				    return input;
-			    } else if (geometry.IsCollection()) {
-				    // if it is a geometry collection, we need to collect all lines
-				    if (geometry.GetType() == GeometryType::GEOMETRYCOLLECTION && !geometry.IsEmpty()) {
-					    vector<LineString> lines;
-					    CollectLines(geometry, lines);
-					    uint32_t size = lines.size();
+	BinaryExecutor::Execute<geometry_t, int32_t,
+	                        geometry_t>(input, dim, result, count, [&](geometry_t input, int32_t requested_type) {
+		// Reset the items vector
+		items.clear();
 
-					    MultiLineString mline(arena, size, props.HasZ(), props.HasM());
-					    for (uint32_t i = 0; i < size; i++) {
-						    mline[i] = lines[i];
-					    }
-					    return Geometry(mline).Serialize(result);
-				    }
-				    // otherwise, we return an empty multilinestring
-				    MultiLineString empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
-			    } else {
-				    // otherwise if its not a collection, we return an empty linestring
-				    LineString empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
-			    }
-		    }
-		    case 3: {
-			    if (geometry.GetType() == GeometryType::MULTIPOLYGON || geometry.GetType() == GeometryType::POLYGON) {
-				    return input;
-			    } else if (geometry.IsCollection()) {
-				    // if it is a geometry collection, we need to collect all polygons
-				    if (geometry.GetType() == GeometryType::GEOMETRYCOLLECTION && !geometry.IsEmpty()) {
-					    vector<Polygon> polys;
-					    CollectPolygons(geometry, polys);
-					    uint32_t size = polys.size();
+		// Deserialize the input geometry
+		auto props = input.GetProperties();
+		auto geometry = Geometry::Deserialize(arena, input);
 
-					    MultiPolygon mpoly(arena, size, props.HasZ(), props.HasM());
-					    for (uint32_t i = 0; i < size; i++) {
-						    mpoly[i] = polys[i];
-					    }
-					    return Geometry(mpoly).Serialize(result);
-				    }
-				    // otherwise, we return an empty multipolygon
-				    MultiPolygon empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
-			    } else {
-				    // otherwise if its not a collection, we return an empty polygon
-				    Polygon empty(props.HasZ(), props.HasM());
-				    return Geometry(empty).Serialize(result);
-			    }
-		    }
-		    default:
-			    throw InvalidInputException("Invalid requested type parameter for collection extract, must be 1 "
-			                                "(POINT), 2 (LINESTRING) or 3 (POLYGON)");
-		    }
-	    });
+		// Switch on the requested type
+		switch (requested_type) {
+		case 1: {
+			if (geometry.GetType() == GeometryType::MULTIPOINT || geometry.GetType() == GeometryType::POINT) {
+				return input;
+			} else if (geometry.IsCollection()) {
+				// if it is a geometry collection, we need to collect all points
+				if (geometry.GetType() == GeometryType::GEOMETRYCOLLECTION && !GeometryCollection::IsEmpty(geometry)) {
+					Geometry::ExtractPoints(geometry, [&](const Geometry &point) { items.push_back(point); });
+					auto mpoint = MultiPoint::Create(arena, items, props.HasZ(), props.HasM());
+					return Geometry::Serialize(mpoint, result);
+				}
+				// otherwise, we return an empty multipoint
+				auto empty = MultiPoint::CreateEmpty(props.HasZ(), props.HasM());
+				return Geometry::Serialize(empty, result);
+			} else {
+				// otherwise if its not a collection, we return an empty point
+				auto empty = Point::CreateEmpty(props.HasZ(), props.HasM());
+				return Geometry::Serialize(empty, result);
+			}
+		}
+		case 2: {
+			if (geometry.GetType() == GeometryType::MULTILINESTRING || geometry.GetType() == GeometryType::LINESTRING) {
+				return input;
+			} else if (geometry.IsCollection()) {
+				// if it is a geometry collection, we need to collect all lines
+				if (geometry.GetType() == GeometryType::GEOMETRYCOLLECTION && !GeometryCollection::IsEmpty(geometry)) {
+					Geometry::ExtractLines(geometry, [&](const Geometry &line) { items.push_back(line); });
+					auto mline = MultiLineString::Create(arena, items, props.HasZ(), props.HasM());
+					return Geometry::Serialize(mline, result);
+				}
+				// otherwise, we return an empty multilinestring
+				auto empty = MultiLineString::CreateEmpty(props.HasZ(), props.HasM());
+				return Geometry::Serialize(empty, result);
+			} else {
+				// otherwise if its not a collection, we return an empty linestring
+				auto empty = LineString::CreateEmpty(props.HasZ(), props.HasM());
+				return Geometry::Serialize(empty, result);
+			}
+		}
+		case 3: {
+			if (geometry.GetType() == GeometryType::MULTIPOLYGON || geometry.GetType() == GeometryType::POLYGON) {
+				return input;
+			} else if (geometry.IsCollection()) {
+				// if it is a geometry collection, we need to collect all polygons
+				if (geometry.GetType() == GeometryType::GEOMETRYCOLLECTION && !GeometryCollection::IsEmpty(geometry)) {
+					Geometry::ExtractPolygons(geometry, [&](const Geometry &poly) { items.push_back(poly); });
+					auto mpoly = MultiPolygon::Create(arena, items, props.HasZ(), props.HasM());
+					return Geometry::Serialize(mpoly, result);
+				}
+				// otherwise, we return an empty multipolygon
+				auto empty = MultiPolygon::CreateEmpty(props.HasZ(), props.HasM());
+				return Geometry::Serialize(empty, result);
+			} else {
+				// otherwise if its not a collection, we return an empty polygon
+				auto empty = Polygon::CreateEmpty(props.HasZ(), props.HasM());
+				return Geometry::Serialize(empty, result);
+			}
+		}
+		default:
+			throw InvalidInputException("Invalid requested type parameter for collection extract, must be 1 "
+			                            "(POINT), 2 (LINESTRING) or 3 (POLYGON)");
+		}
+	});
 }
 
 // Note: We're being smart here and reusing the memory from the input geometry
@@ -194,52 +109,40 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 	auto count = args.size();
 	auto &input = args.data[0];
 
+	vector<Geometry> items;
+
 	UnaryExecutor::Execute<geometry_t, geometry_t>(input, result, count, [&](geometry_t input) {
 		if (input.GetType() == GeometryType::GEOMETRYCOLLECTION) {
-			auto props = input.GetProperties();
-			auto geometry = Geometry::Deserialize(arena, input);
+			// Reset the items vector
+			items.clear();
 
-			auto &collection = geometry.As<GeometryCollection>();
-			if (collection.IsEmpty()) {
+			auto props = input.GetProperties();
+			auto collection = Geometry::Deserialize(arena, input);
+			if (GeometryCollection::IsEmpty(collection)) {
 				return input;
 			}
 			// Find the highest dimension of the geometries in the collection
 			// Empty geometries are ignored
-			auto dim = geometry.GetDimension(true);
+			auto dim = Geometry::GetDimension(collection, true);
 
 			switch (dim) {
 			// Point case
 			case 0: {
-				vector<Point> points;
-				CollectPoints(geometry, points);
-				uint32_t size = points.size();
-				MultiPoint mpoint(arena, size, props.HasZ(), props.HasM());
-				for (uint32_t i = 0; i < size; i++) {
-					mpoint[i] = points[i];
-				}
-				return Geometry(mpoint).Serialize(result);
+				Geometry::ExtractPoints(collection, [&](const Geometry &point) { items.push_back(point); });
+				auto mpoint = MultiPoint::Create(arena, items, props.HasZ(), props.HasM());
+				return Geometry::Serialize(mpoint, result);
 			}
 			// LineString case
 			case 1: {
-				vector<LineString> lines;
-				CollectLines(geometry, lines);
-				uint32_t size = lines.size();
-				MultiLineString mline(arena, size, props.HasZ(), props.HasM());
-				for (uint32_t i = 0; i < size; i++) {
-					mline[i] = lines[i];
-				}
-				return Geometry(mline).Serialize(result);
+				Geometry::ExtractLines(collection, [&](const Geometry &line) { items.push_back(line); });
+				auto mline = MultiLineString::Create(arena, items, props.HasZ(), props.HasM());
+				return Geometry::Serialize(mline, result);
 			}
 			// Polygon case
 			case 2: {
-				vector<Polygon> polys;
-				CollectPolygons(geometry, polys);
-				uint32_t size = polys.size();
-				MultiPolygon mpoly(arena, size, props.HasZ(), props.HasM());
-				for (uint32_t i = 0; i < size; i++) {
-					mpoly[i] = polys[i];
-				}
-				return Geometry(mpoly).Serialize(result);
+				Geometry::ExtractPolygons(collection, [&](const Geometry &poly) { items.push_back(poly); });
+				auto mpoly = MultiPolygon::Create(arena, items, props.HasZ(), props.HasM());
+				return Geometry::Serialize(mpoly, result);
 			}
 			default: {
 				throw InternalException("Invalid dimension in collection extract");

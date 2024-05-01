@@ -1,7 +1,8 @@
 #include "spatial/common.hpp"
 #include "spatial/geos/geos_wrappers.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/util/cursor.hpp"
+#include "spatial/core/util/math.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
 
 namespace spatial {
@@ -556,22 +557,22 @@ geometry_t SerializeGEOSGeometry(Vector &result, const GEOSGeometry *geom, GEOSC
 	if (has_bbox) {
 		double minx, maxx, miny, maxy;
 		GEOSGeom_getExtent_r(ctx, geom, &minx, &miny, &maxx, &maxy);
-		writer.Write<float>(Utils::DoubleToFloatDown(minx));
-		writer.Write<float>(Utils::DoubleToFloatDown(miny));
-		writer.Write<float>(Utils::DoubleToFloatUp(maxx));
-		writer.Write<float>(Utils::DoubleToFloatUp(maxy));
+		writer.Write<float>(MathUtil::DoubleToFloatDown(minx));
+		writer.Write<float>(MathUtil::DoubleToFloatDown(miny));
+		writer.Write<float>(MathUtil::DoubleToFloatUp(maxx));
+		writer.Write<float>(MathUtil::DoubleToFloatUp(maxy));
 
 		// well, this sucks. GEOS doesnt have a native way to get the Z and M value extents.
 		if (has_z || has_m) {
 			double minz, maxz, minm, maxm;
 			GetExtendedExtent(geom, &minz, &maxz, &minm, &maxm, ctx);
 			if (has_z) {
-				writer.Write<float>(Utils::DoubleToFloatDown(minz));
-				writer.Write<float>(Utils::DoubleToFloatUp(maxz));
+				writer.Write<float>(MathUtil::DoubleToFloatDown(minz));
+				writer.Write<float>(MathUtil::DoubleToFloatUp(maxz));
 			}
 			if (has_m) {
-				writer.Write<float>(Utils::DoubleToFloatDown(minm));
-				writer.Write<float>(Utils::DoubleToFloatUp(maxm));
+				writer.Write<float>(MathUtil::DoubleToFloatDown(minm));
+				writer.Write<float>(MathUtil::DoubleToFloatUp(maxm));
 			}
 		}
 	}

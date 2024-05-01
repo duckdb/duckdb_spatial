@@ -239,7 +239,7 @@ static unique_ptr<GlobalTableFunctionState> InitGlobal(ClientContext &context, T
 	auto &fs = FileSystem::GetFileSystem(context);
 	auto file_name = bind_data.file_name;
 
-	auto handle = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ, FileLockType::READ_LOCK);
+	auto handle = fs.OpenFile(file_name, FileFlags::FILE_FLAGS_READ | FileLockType::READ_LOCK);
 	auto file_size = handle->GetFileSize();
 
 	auto max_threads = context.db->NumberOfThreads();

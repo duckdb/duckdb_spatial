@@ -75,8 +75,8 @@ struct EnvelopeAggFunction {
 			finalize_data.ReturnNull();
 		} else {
 			auto &arena = finalize_data.input.allocator;
-			auto box = Polygon::FromBox(arena, state.xmin, state.ymin, state.xmax, state.ymax);
-			target = Geometry(box).Serialize(finalize_data.result);
+			auto box = Polygon::CreateFromBox(arena, state.xmin, state.ymin, state.xmax, state.ymax);
+			target = Geometry::Serialize(box, finalize_data.result);
 		}
 	}
 
