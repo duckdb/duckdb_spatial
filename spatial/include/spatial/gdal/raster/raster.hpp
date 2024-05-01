@@ -48,7 +48,7 @@ public:
 	bool GetInvGeoTransform(double *inv_matrix) const;
 
 	//! Returns the polygon representation of the extent of the raster
-	Polygon GetGeometry(ArenaAllocator &allocator) const;
+	Geometry GetGeometry(ArenaAllocator &allocator) const;
 
 	//! Returns the geometric X and Y (longitude and latitude) given a column and row
 	bool RasterToWorldCoord(PointXY &point, int32_t col, int32_t row) const;

@@ -1,6 +1,7 @@
 #include "duckdb/common/types/uuid.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/geometry/wkb_writer.hpp"
+#include "spatial/core/util/math.hpp"
 #include "spatial/gdal/types.hpp"
 #include "spatial/gdal/raster/raster.hpp"
 
@@ -81,23 +82,21 @@ static VertexXY rasterToWorldVertex(double matrix[], int32_t col, int32_t row) {
 	return VertexXY {xgeo, ygeo};
 }
 
-Polygon Raster::GetGeometry(ArenaAllocator &allocator) const {
+Geometry Raster::GetGeometry(ArenaAllocator &allocator) const {
 	auto cols = dataset_->GetRasterXSize();
 	auto rows = dataset_->GetRasterYSize();
 
 	double gt[6] = {0};
 	GetGeoTransform(gt);
 
-	Polygon polygon(allocator, 1, false, false);
-	auto &ring = polygon[0];
-	ring.Resize(allocator, 5); // 4 vertices + 1 for closing the polygon
-	ring.Set(0, rasterToWorldVertex(gt, 0, 0));
-	ring.Set(1, rasterToWorldVertex(gt, cols, 0));
-	ring.Set(2, rasterToWorldVertex(gt, cols, rows));
-	ring.Set(3, rasterToWorldVertex(gt, 0, rows));
-	ring.Set(4, rasterToWorldVertex(gt, 0, 0));
+	VertexXY vertex1 = rasterToWorldVertex(gt, 0, 0);
+	VertexXY vertex2 = rasterToWorldVertex(gt, cols, rows);
+	double minx = std::min(vertex1.x, vertex2.x);
+	double miny = std::min(vertex1.y, vertex2.y);
+	double maxx = std::max(vertex1.x, vertex2.x);
+	double maxy = std::max(vertex1.y, vertex2.y);
 
-	return polygon;
+	return Polygon::CreateFromBox(allocator, minx, miny, maxx, maxy);
 }
 
 bool Raster::RasterToWorldCoord(PointXY &point, int32_t col, int32_t row) const {
@@ -316,10 +315,10 @@ GDALDataset *Raster::Clip(GDALDataset *dataset, const geometry_t &geometry, cons
 		papszArgv = CSLAddString(papszArgv, "-wo");
 		papszArgv = CSLAddString(papszArgv, wkt_option.c_str());
 		papszArgv = CSLAddString(papszArgv, "-te");
-		papszArgv = CSLAddString(papszArgv, Utils::format_coord(envelope.MinX).c_str());
-		papszArgv = CSLAddString(papszArgv, Utils::format_coord(envelope.MinY).c_str());
-		papszArgv = CSLAddString(papszArgv, Utils::format_coord(envelope.MaxX).c_str());
-		papszArgv = CSLAddString(papszArgv, Utils::format_coord(envelope.MaxY).c_str());
+		papszArgv = CSLAddString(papszArgv, MathUtil::format_coord(envelope.MinX).c_str());
+		papszArgv = CSLAddString(papszArgv, MathUtil::format_coord(envelope.MinY).c_str());
+		papszArgv = CSLAddString(papszArgv, MathUtil::format_coord(envelope.MaxX).c_str());
+		papszArgv = CSLAddString(papszArgv, MathUtil::format_coord(envelope.MaxY).c_str());
 	}
 
 	CPLErrorReset();

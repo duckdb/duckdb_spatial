@@ -33,7 +33,7 @@ static bool RasterToGeometryCast(Vector &source, Vector &result, idx_t count, Ca
 
 	UnaryExecutor::Execute<uintptr_t, geometry_t>(source, result, count, [&](uintptr_t &input) {
 		Raster raster(reinterpret_cast<GDALDataset *>(input));
-		return Geometry(raster.GetGeometry(lstate.arena)).Serialize(result);
+		return Geometry::Serialize(raster.GetGeometry(lstate.arena), result);
 	});
 	return true;
 }
