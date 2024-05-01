@@ -797,7 +797,7 @@ inline Geometry Polygon::CreateFromBox(ArenaAllocator &alloc, double minx, doubl
 	auto &ring = Polygon::Part(polygon, 0);
 	LineString::Resize(ring, alloc, 5);
 	LineString::SetVertex(ring, 0, {minx, miny});
-	LineString::SetVertex(ring, 1, {miny, maxy});
+	LineString::SetVertex(ring, 1, {minx, maxy});
 	LineString::SetVertex(ring, 2, {maxx, maxy});
 	LineString::SetVertex(ring, 3, {maxx, miny});
 	LineString::SetVertex(ring, 4, {minx, miny});
