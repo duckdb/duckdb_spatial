@@ -47,8 +47,11 @@ static ShapeTypeEntry shape_type_map[] = {
 static unique_ptr<FunctionData> ShapeFileMetaBind(ClientContext &context, TableFunctionBindInput &input,
                                                   vector<LogicalType> &return_types, vector<string> &names) {
 	auto result = make_uniq<ShapeFileMetaBindData>();
-	auto files = MultiFileReader::GetFileList(context, input.inputs[0], "ShapeFiles", FileGlobOptions::ALLOW_EMPTY);
-	for (auto &file : files) {
+
+	auto multi_file_reader = MultiFileReader::Create(input.table_function);
+	auto file_list = multi_file_reader->CreateFileList(context, input.inputs[0], FileGlobOptions::ALLOW_EMPTY);
+
+	for (auto &file : file_list->Files()) {
 		if (StringUtil::EndsWith(StringUtil::Lower(file), ".shp")) {
 			result->files.push_back(file);
 		}

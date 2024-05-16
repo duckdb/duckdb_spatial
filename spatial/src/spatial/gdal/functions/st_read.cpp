@@ -5,6 +5,7 @@
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
 #include "duckdb/planner/table_filter.hpp"
+#include "duckdb/parser/tableref.hpp"
 #include "duckdb/function/function.hpp"
 #include "duckdb/function/replacement_scan.hpp"
 
@@ -592,9 +593,9 @@ unique_ptr<NodeStatistics> GdalTableFunction::Cardinality(ClientContext &context
 	return result;
 }
 
-unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, const string &table_name,
-                                                        ReplacementScanData *) {
-
+unique_ptr<TableRef> GdalTableFunction::ReplacementScan(ClientContext &, ReplacementScanInput &input,
+                                                        optional_ptr<ReplacementScanData>) {
+	auto &table_name = input.table_name;
 	auto lower_name = StringUtil::Lower(table_name);
 	// Check if the table name ends with some common geospatial file extensions
 	if (StringUtil::EndsWith(lower_name, ".gpkg") || StringUtil::EndsWith(lower_name, ".fgb")) {

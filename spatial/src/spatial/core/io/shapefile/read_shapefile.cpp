@@ -540,8 +540,9 @@ static unique_ptr<NodeStatistics> GetCardinality(ClientContext &context, const F
 	return result;
 }
 
-static unique_ptr<TableRef> GetReplacementScan(ClientContext &context, const string &table_name,
-                                               ReplacementScanData *data) {
+static unique_ptr<TableRef> GetReplacementScan(ClientContext &context, ReplacementScanInput &input,
+                                               optional_ptr<ReplacementScanData> data) {
+	auto &table_name = input.table_name;
 	// Check if the table name ends with .shp
 	if (!StringUtil::EndsWith(StringUtil::Lower(table_name), ".shp")) {
 		return nullptr;

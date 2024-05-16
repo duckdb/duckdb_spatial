@@ -56,12 +56,10 @@ static LogicalType LAYER_TYPE = LogicalType::STRUCT({
 
 static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
                                      vector<LogicalType> &return_types, vector<string> &names) {
-
-	auto file_name = input.inputs[0].GetValue<string>();
 	auto result = make_uniq<GDALMetadataBindData>();
 
-	result->file_names =
-	    MultiFileReader::GetFileList(context, input.inputs[0], "gdal metadata", FileGlobOptions::ALLOW_EMPTY);
+	auto multi_file_reader = MultiFileReader::Create(input.table_function);
+	result->file_names = multi_file_reader->CreateFileList(context, input.inputs[0], FileGlobOptions::ALLOW_EMPTY)->GetAllFiles();
 
 	names.push_back("file_name");
 	return_types.push_back(LogicalType::VARCHAR);
