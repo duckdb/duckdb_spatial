@@ -25,7 +25,6 @@ public:
 		RegisterStEnvelope(db);
 		RegisterStIntersection(db);
 		RegisterStIntersects(db);
-		RegisterStIsClosed(db);
 		RegisterStIsRing(db);
 		RegisterStIsSimple(db);
 		RegisterStIsValid(db);
@@ -63,7 +62,6 @@ private:
 	static void RegisterStEnvelope(DatabaseInstance &db);
 	static void RegisterStIntersection(DatabaseInstance &db);
 	static void RegisterStIntersects(DatabaseInstance &db);
-	static void RegisterStIsClosed(DatabaseInstance &db);
 	static void RegisterStIsRing(DatabaseInstance &db);
 	static void RegisterStIsSimple(DatabaseInstance &db);
 	static void RegisterStIsValid(DatabaseInstance &db);

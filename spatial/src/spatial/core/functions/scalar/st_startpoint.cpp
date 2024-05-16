@@ -64,24 +64,21 @@ static void GeometryStartPointFunction(DataChunk &args, ExpressionState &state, 
 	auto &geom_vec = args.data[0];
 	auto count = args.size();
 
-	UnaryExecutor::ExecuteWithNulls<geometry_t, geometry_t>(
-	    geom_vec, result, count, [&](geometry_t input, ValidityMask &mask, idx_t row_idx) {
-		    if (input.GetType() != GeometryType::LINESTRING) {
-			    mask.SetInvalid(row_idx);
-			    return geometry_t {};
-		    }
+	UnaryExecutor::ExecuteWithNulls<geometry_t, geometry_t>(geom_vec, result, count,
+	                                                        [&](geometry_t input, ValidityMask &mask, idx_t row_idx) {
+		                                                        if (input.GetType() != GeometryType::LINESTRING) {
+			                                                        mask.SetInvalid(row_idx);
+			                                                        return geometry_t {};
+		                                                        }
 
-		    auto line = Geometry::Deserialize(lstate.arena, input).As<LineString>();
-
-		    if (line.IsEmpty()) {
-			    mask.SetInvalid(row_idx);
-			    return geometry_t {};
-		    }
-
-		    auto point = Point::FromReference(line, 0);
-
-		    return Geometry(point).Serialize(result);
-	    });
+		                                                        auto line = Geometry::Deserialize(lstate.arena, input);
+		                                                        if (LineString::IsEmpty(line)) {
+			                                                        mask.SetInvalid(row_idx);
+			                                                        return geometry_t {};
+		                                                        }
+		                                                        auto point = LineString::GetPointAsReference(line, 0);
+		                                                        return Geometry::Serialize(point, result);
+	                                                        });
 }
 //------------------------------------------------------------------------------
 // Documentation

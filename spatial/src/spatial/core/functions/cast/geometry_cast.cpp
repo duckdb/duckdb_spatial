@@ -22,8 +22,8 @@ static bool Point2DToGeometryCast(Vector &source, Vector &result, idx_t count, C
 	auto &arena = lstate.arena;
 
 	GenericExecutor::ExecuteUnary<POINT_TYPE, GEOMETRY_TYPE>(source, result, count, [&](POINT_TYPE &point) {
-		auto geom = Point::FromVertex(arena, VertexXY {point.a_val, point.b_val});
-		return Geometry(geom).Serialize(result);
+		auto geom = Point::CreateFromVertex(arena, VertexXY {point.a_val, point.b_val});
+		return Geometry::Serialize(geom, result);
 	});
 	return true;
 }
@@ -43,12 +43,11 @@ static bool GeometryToPoint2DCast(Vector &source, Vector &result, idx_t count, C
 		if (geom.GetType() != GeometryType::POINT) {
 			throw ConversionException("Cannot cast non-point GEOMETRY to POINT_2D");
 		}
-		auto &point = geom.As<Point>();
-		if (point.IsEmpty()) {
+		if (Point::IsEmpty(geom)) {
 			// TODO: Maybe make this return NULL instead
 			throw ConversionException("Cannot cast empty point GEOMETRY to POINT_2D");
 		}
-		auto vertex = point.Get(0);
+		auto vertex = Point::GetVertex(geom);
 		return POINT_TYPE {vertex.x, vertex.y};
 	});
 	return true;
@@ -72,9 +71,9 @@ static bool LineString2DToGeometryCast(Vector &source, Vector &result, idx_t cou
 		for (idx_t i = 0; i < line.length; i++) {
 			auto x = x_data[line.offset + i];
 			auto y = y_data[line.offset + i];
-			geom.SetExact(i, VertexXY {x, y});
+			LineString::SetVertex<VertexXY>(geom, i, VertexXY {x, y});
 		}
-		return Geometry(geom).Serialize(result);
+		return Geometry::Serialize(geom, result);
 	});
 	return true;
 }
@@ -97,15 +96,15 @@ static bool GeometryToLineString2DCast(Vector &source, Vector &result, idx_t cou
 			throw ConversionException("Cannot cast non-linestring GEOMETRY to LINESTRING_2D");
 		}
 
-		auto line = Geometry::Deserialize(arena, geom).As<LineString>();
-		auto line_size = line.Count();
+		auto line = Geometry::Deserialize(arena, geom);
+		auto line_size = LineString::VertexCount(line);
 
 		auto entry = list_entry_t(total_coords, line_size);
 		total_coords += line_size;
 		ListVector::Reserve(result, total_coords);
 
 		for (idx_t i = 0; i < line_size; i++) {
-			auto vertex = line.Get(i);
+			auto vertex = LineString::GetVertex(line, i);
 			x_data[entry.offset + i] = vertex.x;
 			y_data[entry.offset + i] = vertex.y;
 		}
@@ -134,15 +133,15 @@ static bool Polygon2DToGeometryCast(Vector &source, Vector &result, idx_t count,
 
 		for (idx_t i = 0; i < poly.length; i++) {
 			auto ring = ring_entries[poly.offset + i];
-			auto &ring_array = geom[i];
-			ring_array.Resize(arena, ring.length);
+			auto &ring_array = Polygon::Part(geom, i);
+			LineString::Resize(ring_array, arena, ring.length);
 			for (idx_t j = 0; j < ring.length; j++) {
 				auto x = x_data[ring.offset + j];
 				auto y = y_data[ring.offset + j];
-				ring_array.SetExact(j, VertexXY {x, y});
+				LineString::SetVertex<VertexXY>(ring_array, j, VertexXY {x, y});
 			}
 		}
-		return Geometry(geom).Serialize(result);
+		return Geometry::Serialize(geom, result);
 	});
 	return true;
 }
@@ -163,14 +162,14 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 		if (geom.GetType() != GeometryType::POLYGON) {
 			throw ConversionException("Cannot cast non-polygon GEOMETRY to POLYGON_2D");
 		}
-		auto poly = Geometry::Deserialize(arena, geom).As<Polygon>();
-		auto poly_size = poly.Count();
+		auto poly = Geometry::Deserialize(arena, geom);
+		auto poly_size = Polygon::PartCount(poly);
 		auto poly_entry = list_entry_t(total_rings, poly_size);
 
 		ListVector::Reserve(result, total_rings + poly_size);
 
 		for (idx_t ring_idx = 0; ring_idx < poly_size; ring_idx++) {
-			auto ring = poly[ring_idx];
+			auto ring = Polygon::Part(poly, ring_idx);
 			auto ring_size = ring.Count();
 			auto ring_entry = list_entry_t(total_coords, ring_size);
 
@@ -185,7 +184,7 @@ static bool GeometryToPolygon2DCast(Vector &source, Vector &result, idx_t count,
 			ring_entries[total_rings + ring_idx] = ring_entry;
 
 			for (idx_t j = 0; j < ring_size; j++) {
-				auto vert = ring.Get(j);
+				auto vert = LineString::GetVertex(ring, j);
 				x_data[ring_entry.offset + j] = vert.x;
 				y_data[ring_entry.offset + j] = vert.y;
 			}
@@ -216,8 +215,8 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 		auto miny = box.b_val;
 		auto maxx = box.c_val;
 		auto maxy = box.d_val;
-		auto polygon = Polygon::FromBox(arena, minx, miny, maxx, maxy);
-		return Geometry(polygon).Serialize(result);
+		auto polygon = Polygon::CreateFromBox(arena, minx, miny, maxx, maxy);
+		return Geometry::Serialize(polygon, result);
 	});
 	return true;
 }

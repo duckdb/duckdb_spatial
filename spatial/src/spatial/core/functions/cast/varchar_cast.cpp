@@ -5,6 +5,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry_processor.hpp"
 #include "spatial/core/geometry/wkt_reader.hpp"
+#include "spatial/core/util/math.hpp"
 #include "duckdb/function/cast/cast_function_set.hpp"
 #include "duckdb/common/operator/cast_operators.hpp"
 #include "duckdb/common/vector_operations/generic_executor.hpp"
@@ -29,7 +30,7 @@ void CoreVectorOperations::Point2DToVarchar(Vector &source, Vector &result, idx_
 			return StringVector::AddString(result, "POINT EMPTY");
 		}
 
-		return StringVector::AddString(result, StringUtil::Format("POINT (%s)", Utils::format_coord(x, y)));
+		return StringVector::AddString(result, StringUtil::Format("POINT (%s)", MathUtil::format_coord(x, y)));
 	});
 }
 
@@ -52,7 +53,7 @@ void CoreVectorOperations::LineString2DToVarchar(Vector &source, Vector &result,
 
 		string result_str = "LINESTRING (";
 		for (idx_t i = offset; i < offset + length; i++) {
-			result_str += Utils::format_coord(x_data[i], y_data[i]);
+			result_str += MathUtil::format_coord(x_data[i], y_data[i]);
 			if (i < offset + length - 1) {
 				result_str += ", ";
 			}
@@ -89,7 +90,7 @@ void CoreVectorOperations::Polygon2DToVarchar(Vector &source, Vector &result, id
 			auto ring_length = ring_entry.length;
 			result_str += "(";
 			for (idx_t j = ring_offset; j < ring_offset + ring_length; j++) {
-				result_str += Utils::format_coord(x_data[j], y_data[j]);
+				result_str += MathUtil::format_coord(x_data[j], y_data[j]);
 				if (j < ring_offset + ring_length - 1) {
 					result_str += ", ";
 				}
@@ -112,8 +113,8 @@ void CoreVectorOperations::Box2DToVarchar(Vector &source, Vector &result, idx_t 
 	using VARCHAR_TYPE = PrimitiveType<string_t>;
 	GenericExecutor::ExecuteUnary<BOX_TYPE, VARCHAR_TYPE>(source, result, count, [&](BOX_TYPE &box) {
 		return StringVector::AddString(result,
-		                               StringUtil::Format("BOX(%s, %s)", Utils::format_coord(box.a_val, box.b_val),
-		                                                  Utils::format_coord(box.c_val, box.d_val)));
+		                               StringUtil::Format("BOX(%s, %s)", MathUtil::format_coord(box.a_val, box.b_val),
+		                                                  MathUtil::format_coord(box.c_val, box.d_val)));
 	});
 }
 
@@ -136,7 +137,7 @@ public:
 				auto y = Load<double>(dims[1] + i * strides[1]);
 				auto z = Load<double>(dims[2] + i * strides[2]);
 				auto m = Load<double>(dims[3] + i * strides[3]);
-				text += Utils::format_coord(x, y, z, m);
+				text += MathUtil::format_coord(x, y, z, m);
 				if (i < count - 1) {
 					text += ", ";
 				}
@@ -146,7 +147,7 @@ public:
 				auto x = Load<double>(dims[0] + i * strides[0]);
 				auto y = Load<double>(dims[1] + i * strides[1]);
 				auto zm = Load<double>(dims[2] + i * strides[2]);
-				text += Utils::format_coord(x, y, zm);
+				text += MathUtil::format_coord(x, y, zm);
 				if (i < count - 1) {
 					text += ", ";
 				}
@@ -156,7 +157,7 @@ public:
 				auto x = Load<double>(dims[0] + i * strides[0]);
 				auto y = Load<double>(dims[1] + i * strides[1]);
 				auto m = Load<double>(dims[3] + i * strides[3]);
-				text += Utils::format_coord(x, y, m);
+				text += MathUtil::format_coord(x, y, m);
 				if (i < count - 1) {
 					text += ", ";
 				}
@@ -165,7 +166,7 @@ public:
 			for (uint32_t i = 0; i < count; i++) {
 				auto x = Load<double>(dims[0] + i * strides[0]);
 				auto y = Load<double>(dims[1] + i * strides[1]);
-				text += Utils::format_coord(x, y);
+				text += MathUtil::format_coord(x, y);
 
 				if (i < count - 1) {
 					text += ", ";
@@ -323,7 +324,8 @@ static bool TextToGeometryCast(Vector &source, Vector &result, idx_t count, Cast
 	UnaryExecutor::ExecuteWithNulls<string_t, geometry_t>(
 	    source, result, count, [&](string_t &wkt, ValidityMask &mask, idx_t idx) {
 		    try {
-			    return reader.Parse(wkt).Serialize(result);
+			    auto geom = reader.Parse(wkt);
+			    return Geometry::Serialize(geom, result);
 		    } catch (InvalidInputException &e) {
 			    if (success) {
 				    success = false;

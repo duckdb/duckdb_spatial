@@ -1,6 +1,7 @@
 add_subdirectory(geometry)
 add_subdirectory(functions)
 add_subdirectory(io)
+add_subdirectory(util)
 
 set(EXTENSION_SOURCES
         ${EXTENSION_SOURCES}
