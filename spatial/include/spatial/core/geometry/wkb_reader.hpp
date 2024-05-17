@@ -22,16 +22,16 @@ private:
 	uint32_t ReadInt(Cursor &cursor, bool little_endian);
 	double ReadDouble(Cursor &cursor, bool little_endian);
 	WKBType ReadType(Cursor &cursor, bool little_endian);
-	void ReadVertices(Cursor &cursor, bool little_endian, bool has_z, bool has_m, SinglePartGeometry &geometry);
+	void ReadVertices(Cursor &cursor, bool little_endian, bool has_z, bool has_m, Geometry &geometry);
 
 	// Geometries
-	Point ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-	LineString ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-	Polygon ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
-	MultiPoint ReadMultiPoint(Cursor &cursor, bool little_endian);
-	MultiLineString ReadMultiLineString(Cursor &cursor, bool little_endian);
-	MultiPolygon ReadMultiPolygon(Cursor &cursor, bool little_endian);
-	GeometryCollection ReadGeometryCollection(Cursor &cursor, bool little_endian);
+	Geometry ReadPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadMultiPoint(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadMultiLineString(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadMultiPolygon(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
+	Geometry ReadGeometryCollection(Cursor &cursor, bool little_endian, bool has_z, bool has_m);
 	Geometry ReadGeometry(Cursor &cursor);
 
 public:

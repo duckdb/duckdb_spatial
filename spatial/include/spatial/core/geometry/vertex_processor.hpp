@@ -2,7 +2,7 @@
 
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
-#include "spatial/core/geometry/cursor.hpp"
+#include "spatial/core/util/cursor.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
 
 namespace spatial {

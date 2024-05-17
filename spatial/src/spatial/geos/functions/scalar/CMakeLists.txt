@@ -17,7 +17,6 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_equals.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersects.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/st_is_closed.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_ring.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_simple.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_is_valid.cpp
