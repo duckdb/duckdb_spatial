@@ -54,7 +54,9 @@ ExternalProject_Add(
     -DCMAKE_TOOLCHAIN_FILE='${CMAKE_TOOLCHAIN_FILE}'
     -DVCPKG_TARGET_TRIPLET='${VCPKG_TARGET_TRIPLET}'
 )
-if (EMSCRIPTEN)
+
+# Use the system sqlite binary on Emscripten, iOS and Android
+if (EMSCRIPTEN OR IOS OR ANDROID)
   find_program(EXE_SQLITE3 sqlite3)
 endif()
 set(GDAL_DEPENDENCIES ${GDAL_DEPENDENCIES} ZLIB)
