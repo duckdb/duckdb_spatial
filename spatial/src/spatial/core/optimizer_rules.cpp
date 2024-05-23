@@ -267,13 +267,13 @@ public:
 		}
 	}
 
-	static void Optimize(ClientContext &context, OptimizerExtensionInfo *info, unique_ptr<LogicalOperator> &plan) {
+	static void Optimize(OptimizerExtensionInput &input, unique_ptr<LogicalOperator> &plan) {
 
-		TryOptimize(context, info, plan);
+		TryOptimize(input.context, input.info.get(), plan);
 
 		// Recursively optimize the children
 		for (auto &child : plan->children) {
-			Optimize(context, info, child);
+			Optimize(input, child);
 		}
 	}
 };
