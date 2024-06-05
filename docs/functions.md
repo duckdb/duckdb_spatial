@@ -30,7 +30,7 @@
 | [ST_Distance](#st_distance) | Returns the distance between two geometries. |
 | [ST_Distance_Sphere](#st_distance_sphere) | Returns the haversine distance between two geometries. |
 | [ST_Distance_Spheroid](#st_distance_spheroid) | Returns the distance between two geometries in meters using a ellipsoidal model of the earths surface |
-| [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries |
+| [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries and their "path" in the original geometry. |
 | [ST_EndPoint](#st_endpoint) | Returns the end point of a line. |
 | [ST_Envelope](#st_envelope) | Returns the minimum bounding box for the input geometry as a polygon geometry. |
 | [ST_Equals](#st_equals) | Compares two geometries for equality |
@@ -708,7 +708,7 @@ st_point(52.3130, 4.7725)
 
 ### ST_Dump
 
-_Dumps a geometry into a set of sub-geometries_
+_Dumps a geometry into a set of sub-geometries and their "path" in the original geometry._
 
 #### Signature
 
@@ -717,8 +717,6 @@ STRUCT(geom GEOMETRY, path INTEGER[])[] ST_Dump (col0 GEOMETRY)
 ```
 
 #### Description
-
-Dumps a geometry into a set of sub-geometries
 
 Dumps a geometry into a set of sub-geometries and their "path" in the original geometry.
 
@@ -1638,7 +1636,7 @@ Collects all the vertices in the geometry into a multipoint
 ```sql
 select st_points('LINESTRING(1 1, 2 2)'::geometry);
 ----
-MULTIPOINT (0 0, 1 1)
+MULTIPOINT (1 1, 2 2)
 
 select st_points('MULTIPOLYGON Z EMPTY'::geometry);
 ----

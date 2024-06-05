@@ -82,7 +82,7 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 static constexpr const char *DOC_EXAMPLE = R"(
 	select st_points('LINESTRING(1 1, 2 2)'::geometry);
 	----
-	MULTIPOINT (0 0, 1 1)
+	MULTIPOINT (1 1, 2 2)
 
 	select st_points('MULTIPOLYGON Z EMPTY'::geometry);
 	----
