@@ -47,14 +47,15 @@ static void GeometryPointsFunction(DataChunk &args, ExpressionState &state, Vect
 	vector<const_data_ptr_t> vertex_ptr_buffer;
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input) {
+		const auto geom = Geometry::Deserialize(arena, input);
+		const auto has_z = geom.GetProperties().HasZ();
+		const auto has_m = geom.GetProperties().HasM();
+
 		// Reset the vertex pointer buffer
 		vertex_ptr_buffer.clear();
 
-		auto geom = Geometry::Deserialize(arena, input);
+		// Collect the vertex pointers
 		Geometry::Match<op>(geom, vertex_ptr_buffer);
-
-		const auto has_z = geom.GetProperties().HasZ();
-		const auto has_m = geom.GetProperties().HasM();
 
 		if (vertex_ptr_buffer.empty()) {
 			const auto mpoint = MultiPoint::CreateEmpty(has_z, has_m);
