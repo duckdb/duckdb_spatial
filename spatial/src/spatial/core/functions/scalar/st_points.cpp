@@ -28,7 +28,7 @@ static void GeometryPointsFunction(DataChunk &args, ExpressionState &state, Vect
 
 			const auto vertex_ptr = geom.GetData();
 
-			for(uint32_t i = 0; i < vertex_count; i++) {
+			for (uint32_t i = 0; i < vertex_count; i++) {
 				buffer.push_back(vertex_ptr + i * vertex_size);
 			}
 		}
@@ -48,28 +48,28 @@ static void GeometryPointsFunction(DataChunk &args, ExpressionState &state, Vect
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input) {
 		// Reset the vertex pointer buffer
-	    vertex_ptr_buffer.clear();
+		vertex_ptr_buffer.clear();
 
-	    auto geom = Geometry::Deserialize(arena, input);
-	    Geometry::Match<op>(geom, vertex_ptr_buffer);
+		auto geom = Geometry::Deserialize(arena, input);
+		Geometry::Match<op>(geom, vertex_ptr_buffer);
 
-	    const auto has_z = geom.GetProperties().HasZ();
-	    const auto has_m = geom.GetProperties().HasM();
+		const auto has_z = geom.GetProperties().HasZ();
+		const auto has_m = geom.GetProperties().HasM();
 
-		if(vertex_ptr_buffer.empty()) {
+		if (vertex_ptr_buffer.empty()) {
 			const auto mpoint = MultiPoint::CreateEmpty(has_z, has_m);
 			return Geometry::Serialize(mpoint, result);
 		}
 
 		auto mpoint = MultiPoint::Create(arena, vertex_ptr_buffer.size(), has_z, has_m);
-		for(size_t i = 0; i < vertex_ptr_buffer.size(); i++) {
+		for (size_t i = 0; i < vertex_ptr_buffer.size(); i++) {
 			// Get the nth point
 			auto &point = MultiPoint::Part(mpoint, i);
 			// Set the point to reference the data pointer to the current vertex
 			Point::ReferenceData(point, vertex_ptr_buffer[i], 1, has_z, has_m);
 		}
 		return Geometry::Serialize(mpoint, result);
-    });
+	});
 }
 
 //------------------------------------------------------------------------------
@@ -97,9 +97,8 @@ void CoreScalarFunctions::RegisterStPoints(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_Points");
 
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(),
-	                               GeometryPointsFunction, nullptr, nullptr, nullptr,
-	                               GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::GEOMETRY(), GeometryPointsFunction, nullptr,
+	                               nullptr, nullptr, GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_Points", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);

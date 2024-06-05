@@ -11,7 +11,8 @@ struct DocTag {
 
 struct DocUtil {
 	static void AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name, const char *description,
-	                             const char *example, const duckdb::unordered_map<duckdb::string, duckdb::string> &tags);
+	                             const char *example,
+	                             const duckdb::unordered_map<duckdb::string, duckdb::string> &tags);
 
 	// Abuse adding tags as a comment
 	template <size_t N>
