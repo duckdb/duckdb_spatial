@@ -15,31 +15,26 @@ namespace core {
 //------------------------------------------------------------------------------
 // GEOMETRY
 //------------------------------------------------------------------------------
-
-
 static void GeometryPointsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 
 	// Collect all vertex data into a buffer
 	struct op {
-		static void Case(Geometry::Tags::SinglePartGeometry, const Geometry &geom, vector<data_t> &buffer, uint32_t &result_count) {
-			const auto buffer_size = buffer.size();
-			const auto count = SinglePartGeometry::VertexCount(geom);
+		static void Case(Geometry::Tags::SinglePartGeometry, const Geometry &geom, vector<const_data_ptr_t> &buffer) {
+			const auto vertex_count = SinglePartGeometry::VertexCount(geom);
 			const auto vertex_size = SinglePartGeometry::VertexSize(geom);
 
-			// Resize the buffer to fit the new vertices
-			buffer.resize(buffer.size() + vertex_size * count);
+			// Reserve size for the pointers to the vertices
+			buffer.reserve(buffer.size() + vertex_count);
 
-			const auto dst_ptr = buffer.data() + buffer_size;
-			const auto src_ptr = geom.GetData();
-			for(uint32_t i = 0; i < count; i++) {
-				memcpy(dst_ptr + i * vertex_size, src_ptr + i * vertex_size, vertex_size);
+			const auto vertex_ptr = geom.GetData();
+
+			for(uint32_t i = 0; i < vertex_count; i++) {
+				buffer.push_back(vertex_ptr + i * vertex_size);
 			}
-
-			result_count += count;
 		}
-		static void Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom, vector<data_t> &buffer, uint32_t &result_count) {
+		static void Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom, vector<const_data_ptr_t> &buffer) {
 			for (auto &part : MultiPartGeometry::Parts(geom)) {
-				Geometry::Match<op>(part, buffer, result_count);
+				Geometry::Match<op>(part, buffer);
 			}
 		}
 	};
@@ -49,31 +44,29 @@ static void GeometryPointsFunction(DataChunk &args, ExpressionState &state, Vect
 	auto &geom_vec = args.data[0];
 	const auto count = args.size();
 
-	vector<data_t> vertex_buffer;
+	vector<const_data_ptr_t> vertex_ptr_buffer;
 
 	UnaryExecutor::Execute<geometry_t, geometry_t>(geom_vec, result, count, [&](geometry_t input) {
-		// Reset the vertex buffer
-	    vertex_buffer.clear();
-	    uint32_t vertex_count = 0;
+		// Reset the vertex pointer buffer
+	    vertex_ptr_buffer.clear();
 
 	    auto geom = Geometry::Deserialize(arena, input);
-	    Geometry::Match<op>(geom, vertex_buffer, vertex_count);
+	    Geometry::Match<op>(geom, vertex_ptr_buffer);
 
 	    const auto has_z = geom.GetProperties().HasZ();
 	    const auto has_m = geom.GetProperties().HasM();
-	    const auto vertex_size = geom.GetProperties().VertexSize();
 
-		if(vertex_count == 0) {
+		if(vertex_ptr_buffer.empty()) {
 			const auto mpoint = MultiPoint::CreateEmpty(has_z, has_m);
 			return Geometry::Serialize(mpoint, result);
 		}
 
-		auto mpoint = MultiPoint::Create(arena, vertex_count, has_z, has_m);
-		for(uint32_t i = 0; i < vertex_count; i++) {
+		auto mpoint = MultiPoint::Create(arena, vertex_ptr_buffer.size(), has_z, has_m);
+		for(size_t i = 0; i < vertex_ptr_buffer.size(); i++) {
 			// Get the nth point
 			auto &point = MultiPoint::Part(mpoint, i);
-			// Set the point to reference the data in the vertex buffer
-			Point::ReferenceData(point, vertex_buffer.data() + i * vertex_size, 1, has_z, has_m);
+			// Set the point to reference the data pointer to the current vertex
+			Point::ReferenceData(point, vertex_ptr_buffer[i], 1, has_z, has_m);
 		}
 		return Geometry::Serialize(mpoint, result);
     });
