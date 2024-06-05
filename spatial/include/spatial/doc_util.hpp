@@ -11,20 +11,17 @@ struct DocTag {
 
 struct DocUtil {
 	static void AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name, const char *description,
-	                             const char *example, const duckdb::Value &comment);
+	                             const char *example, const duckdb::unordered_map<duckdb::string, duckdb::string> &tags);
 
 	// Abuse adding tags as a comment
 	template <size_t N>
 	static void AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name, const char *description,
 	                             const char *example, const DocTag (&tags)[N]) {
-		auto kv_type = duckdb::LogicalType::STRUCT(
-		    {{"key", duckdb::LogicalType::VARCHAR}, {"value", duckdb::LogicalType::VARCHAR}});
-		duckdb::vector<duckdb::Value> tag_values;
+		duckdb::unordered_map<duckdb::string, duckdb::string> tag_map;
 		for (size_t i = 0; i < N; i++) {
-			auto &tag = tags[i];
-			tag_values.push_back(duckdb::Value::STRUCT(kv_type, {duckdb::Value(tag.key), duckdb::Value(tag.value)}));
+			tag_map[tags[i].key] = tags[i].value;
 		}
-		AddDocumentation(db, function_name, description, example, duckdb::Value::LIST(kv_type, tag_values));
+		AddDocumentation(db, function_name, description, example, tag_map);
 	}
 };
 
