@@ -6,7 +6,7 @@ SELECT
     json({ 
         name: function_name,
         signatures: signatures,
-        tags: tags,
+        tags: func_tags,
         description: description,
         example: example
     })
@@ -18,13 +18,13 @@ FROM (
             return: return_type,
             params: list_zip(parameters, parameter_types)::STRUCT(name VARCHAR, type VARCHAR)[]
         }) as signatures,
-        any_value(try_cast(comment AS STRUCT(key VARCHAR, value VARCHAR)[])) as tags,
+        any_value(tags) AS func_tags,
         any_value(description) AS description,
         any_value(example) AS example
-    FROM duckdb_functions()
+    FROM duckdb_functions() as funcs
     WHERE function_type = '$FUNCTION_TYPE$'
     GROUP BY function_name, function_type
-    HAVING list_contains(tags, {key: 'ext', value: 'spatial'})
+    HAVING func_tags['ext'] = ['spatial']
     ORDER BY function_name
 );
 """
@@ -62,11 +62,13 @@ def main():
         f.write("## Function Index \n")
         f.write("**[Scalar Functions](#scalar-functions)**\n\n")
         write_table_of_contents(f, scalar_functions)
+        f.write("\n")
         f.write("**[Aggregate Functions](#aggregate-functions)**\n\n")
         write_table_of_contents(f, aggregate_functions)
+        f.write("\n")
         f.write("**[Table Functions](#table-functions)**\n\n")
         write_table_of_contents(f, table_functions)
-
+        f.write("\n")
         f.write("----\n\n")
 
         # Write basic functions

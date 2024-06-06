@@ -30,7 +30,7 @@
 | [ST_Distance](#st_distance) | Returns the distance between two geometries. |
 | [ST_Distance_Sphere](#st_distance_sphere) | Returns the haversine distance between two geometries. |
 | [ST_Distance_Spheroid](#st_distance_spheroid) | Returns the distance between two geometries in meters using a ellipsoidal model of the earths surface |
-| [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries |
+| [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries and their "path" in the original geometry. |
 | [ST_EndPoint](#st_endpoint) | Returns the end point of a line. |
 | [ST_Envelope](#st_envelope) | Returns the minimum bounding box for the input geometry as a polygon geometry. |
 | [ST_Equals](#st_equals) | Compares two geometries for equality |
@@ -82,6 +82,7 @@
 | [ST_Point4D](#st_point4d) | Creates a POINT_4D |
 | [ST_PointN](#st_pointn) | Returns the n'th vertex from the input geometry as a point geometry |
 | [ST_PointOnSurface](#st_pointonsurface) | Returns a point that is guaranteed to be on the surface of the input geometry. Sometimes a useful alternative to ST_Centroid. |
+| [ST_Points](#st_points) | Collects all the vertices in the geometry into a multipoint |
 | [ST_QuadKey](#st_quadkey) | Computes a quadkey from a given lon/lat point. |
 | [ST_ReducePrecision](#st_reduceprecision) | Returns the geometry with all vertices reduced to the target precision |
 | [ST_RemoveRepeatedPoints](#st_removerepeatedpoints) | Returns a new geometry with repeated points removed, optionally within a target distance of eachother. |
@@ -103,6 +104,7 @@
 | [ST_Z](#st_z) | Returns the Z value of a point geometry, or NULL if not a point or empty |
 | [ST_ZMax](#st_zmax) | Returns the maximum Z value of a geometry |
 | [ST_ZMin](#st_zmin) | Returns the minimum Z value of a geometry |
+
 **[Aggregate Functions](#aggregate-functions)**
 
 | Function | Summary |
@@ -110,6 +112,7 @@
 | [ST_Envelope_Agg](#st_envelope_agg) | Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries |
 | [ST_Intersection_Agg](#st_intersection_agg) | Computes the intersection of a set of geometries |
 | [ST_Union_Agg](#st_union_agg) | Computes the union of a set of input geometries |
+
 **[Table Functions](#table-functions)**
 
 | Function | Summary |
@@ -118,6 +121,7 @@
 | [ST_Read](#st_read) | Read and import a variety of geospatial file formats using the GDAL library. |
 | [ST_ReadOSM](#st_readosm) | The ST_ReadOsm() table function enables reading compressed OpenStreetMap data directly from a `.osm.pbf file.` |
 | [ST_Read_Meta](#st_read_meta) | Read and the metadata from a variety of geospatial file formats using the GDAL library. |
+
 ----
 
 ## Scalar Functions
@@ -704,7 +708,7 @@ st_point(52.3130, 4.7725)
 
 ### ST_Dump
 
-_Dumps a geometry into a set of sub-geometries_
+_Dumps a geometry into a set of sub-geometries and their "path" in the original geometry._
 
 #### Signature
 
@@ -713,8 +717,6 @@ STRUCT(geom GEOMETRY, path INTEGER[])[] ST_Dump (col0 GEOMETRY)
 ```
 
 #### Description
-
-Dumps a geometry into a set of sub-geometries
 
 Dumps a geometry into a set of sub-geometries and their "path" in the original geometry.
 
@@ -1612,6 +1614,34 @@ GEOMETRY ST_PointOnSurface (col0 GEOMETRY)
 #### Description
 
 Returns a point that is guaranteed to be on the surface of the input geometry. Sometimes a useful alternative to ST_Centroid.
+
+
+
+### ST_Points
+
+_Collects all the vertices in the geometry into a multipoint_
+
+#### Signature
+
+```sql
+GEOMETRY ST_Points (col0 GEOMETRY)
+```
+
+#### Description
+
+Collects all the vertices in the geometry into a multipoint
+
+#### Example
+
+```sql
+select st_points('LINESTRING(1 1, 2 2)'::geometry);
+----
+MULTIPOINT (1 1, 2 2)
+
+select st_points('MULTIPOLYGON Z EMPTY'::geometry);
+----
+MULTIPOINT Z EMPTY
+```
 
 
 

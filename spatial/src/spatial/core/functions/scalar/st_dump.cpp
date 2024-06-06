@@ -5,8 +5,6 @@
 #include "spatial/core/geometry/geometry.hpp"
 
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
-#include "duckdb/common/vector_operations/unary_executor.hpp"
-#include "duckdb/common/vector_operations/binary_executor.hpp"
 
 namespace spatial {
 
@@ -119,8 +117,6 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 // Documentation
 //------------------------------------------------------------------------------
 static constexpr const char *DOC_DESCRIPTION = R"(
-Dumps a geometry into a set of sub-geometries
-
 Dumps a geometry into a set of sub-geometries and their "path" in the original geometry.
 )";
 
