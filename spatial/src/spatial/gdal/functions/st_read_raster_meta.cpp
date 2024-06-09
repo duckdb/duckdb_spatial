@@ -30,8 +30,9 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	auto file_name = input.inputs[0].GetValue<string>();
 	auto result = make_uniq<GDALMetadataBindData>();
 
+	auto multi_file_reader = MultiFileReader::Create(input.table_function);
 	result->file_names =
-	    MultiFileReader::GetFileList(context, input.inputs[0], "gdal metadata", FileGlobOptions::ALLOW_EMPTY);
+	    multi_file_reader->CreateFileList(context, input.inputs[0], FileGlobOptions::ALLOW_EMPTY)->GetAllFiles();
 
 	return_types.push_back(LogicalType::VARCHAR);
 	return_types.push_back(LogicalType::VARCHAR);

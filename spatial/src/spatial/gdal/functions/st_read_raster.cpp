@@ -115,9 +115,10 @@ unique_ptr<NodeStatistics> GdalRasterTableFunction::Cardinality(ClientContext &c
 // ReplacementScan
 //------------------------------------------------------------------------------
 
-unique_ptr<TableRef> GdalRasterTableFunction::ReplacementScan(ClientContext &, const string &table_name,
-                                                              ReplacementScanData *) {
+unique_ptr<TableRef> GdalRasterTableFunction::ReplacementScan(ClientContext &, ReplacementScanInput &input,
+                                                              optional_ptr<ReplacementScanData>) {
 
+	auto &table_name = input.table_name;
 	auto lower_name = StringUtil::Lower(table_name);
 
 	// Check if the file name ends with some common raster file extensions
