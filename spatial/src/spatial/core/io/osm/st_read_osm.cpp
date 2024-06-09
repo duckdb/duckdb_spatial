@@ -839,8 +839,9 @@ static idx_t GetBatchIndex(ClientContext &context, const FunctionData *bind_data
 	return state.block->block_idx;
 }
 
-static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, const string &table_name,
-                                                      ReplacementScanData *data) {
+static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, ReplacementScanInput &input,
+                                                      optional_ptr<ReplacementScanData> data) {
+	auto &table_name = input.table_name;
 	// Check if the table name ends with .osm.pbf
 	if (!StringUtil::EndsWith(StringUtil::Lower(table_name), ".osm.pbf")) {
 		return nullptr;

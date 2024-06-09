@@ -3,6 +3,7 @@
 #include "duckdb/function/table/arrow.hpp"
 #include "duckdb/parser/parsed_data/copy_info.hpp"
 #include "duckdb/function/copy_function.hpp"
+#include "duckdb/function/replacement_scan.hpp"
 
 #include "spatial/common.hpp"
 
@@ -26,8 +27,8 @@ private:
 
 	static unique_ptr<NodeStatistics> Cardinality(ClientContext &context, const FunctionData *data);
 
-	static unique_ptr<TableRef> ReplacementScan(ClientContext &context, const string &table_name,
-	                                            ReplacementScanData *data);
+	static unique_ptr<TableRef> ReplacementScan(ClientContext &context, ReplacementScanInput &input,
+	                                            optional_ptr<ReplacementScanData> data);
 
 public:
 	static void Register(DatabaseInstance &db);

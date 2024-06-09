@@ -5,13 +5,13 @@ name: Stable Extension Distribution Pipeline
 on:
   pull_request:
     branches:
-      - v0.10.2
+      - v1.0.0
     paths-ignore:
       - '**/README.md'
       - 'doc/**'
   push:
     branches:
-      - v0.10.2
+      - v1.0.0
     paths-ignore:
       - '**/README.md'
       - 'doc/**'
@@ -24,17 +24,17 @@ concurrency:
 jobs:
   duckdb-stable-build:
     name: Build extension binaries
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v0.10.2
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.0.0
     with:
-      duckdb_version: v0.10.2
+      duckdb_version: v1.0.0
       extension_name: spatial
 
   duckdb-stable-deploy:
     name: Deploy extension binaries
     needs: duckdb-stable-build
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v0.10.2
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.0.0
     secrets: inherit
     with:
-      duckdb_version: v0.10.2
+      duckdb_version: v1.0.0
       extension_name: spatial
-      deploy_latest: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/v0.10.2' }}
+      deploy_latest: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/v1.0.0' }}

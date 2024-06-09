@@ -52,7 +52,8 @@ static string RemoveIndentAndTrailingWhitespace(const char *text) {
 }
 
 void spatial::DocUtil::AddDocumentation(duckdb::DatabaseInstance &db, const char *function_name,
-                                        const char *description, const char *example, const Value &comment) {
+                                        const char *description, const char *example,
+                                        const duckdb::unordered_map<duckdb::string, duckdb::string> &tags) {
 
 	auto &system_catalog = Catalog::GetSystemCatalog(db);
 	auto data = CatalogTransaction::GetSystemTransaction(db);
@@ -78,8 +79,8 @@ void spatial::DocUtil::AddDocumentation(duckdb::DatabaseInstance &db, const char
 	if (example != nullptr) {
 		func_entry.example = RemoveIndentAndTrailingWhitespace(example);
 	}
-	if (!comment.IsNull()) {
-		func_entry.comment = comment;
+	if (!tags.empty()) {
+		func_entry.tags = tags;
 	}
 }
 

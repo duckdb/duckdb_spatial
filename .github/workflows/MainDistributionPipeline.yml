@@ -24,7 +24,7 @@ concurrency:
 jobs:
   duckdb-stable-build:
     name: Build extension binaries
-    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
+    uses: ./.github/workflows/_extension_distribution.yml
     with:
       duckdb_version: main
       extension_name: spatial

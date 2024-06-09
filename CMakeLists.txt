@@ -17,7 +17,7 @@ add_definitions(-DDUCKDB_PATCH_VERSION=${DUCKDB_PATCH_VERSION})
 # Enable network functionality (OpenSSL and GDAL's CURL based fs/drivers)
 option(SPATIAL_USE_NETWORK "Enable network functionality" ON)
 
-if (EMSCRIPTEN)
+if (EMSCRIPTEN OR IOS OR ANDROID)
   set(SPATIAL_USE_NETWORK OFF)
 endif()
 
@@ -119,7 +119,7 @@ if(WIN32)
   list(APPEND EXTENSION_DEPENDENCIES wbemuuid.lib)
 endif()
 
-if(NOT EMSCRIPTEN)
+if((NOT EMSCRIPTEN) AND (NOT IOS))
   if(APPLE)
     find_library(CoreFoundation_Library CoreFoundation)
     find_library(SystemConfiguration_Library SystemConfiguration)
