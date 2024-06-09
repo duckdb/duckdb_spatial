@@ -14,12 +14,14 @@ unique_ptr<FunctionData> GdalDriversTableFunction::Bind(ClientContext &context, 
                                                         vector<LogicalType> &return_types, vector<string> &names) {
 	return_types.emplace_back(LogicalType::VARCHAR);
 	return_types.emplace_back(LogicalType::VARCHAR);
+	return_types.emplace_back(LogicalType::VARCHAR);
 	return_types.emplace_back(LogicalType::BOOLEAN);
 	return_types.emplace_back(LogicalType::BOOLEAN);
 	return_types.emplace_back(LogicalType::BOOLEAN);
 	return_types.emplace_back(LogicalType::VARCHAR);
 	names.emplace_back("short_name");
 	names.emplace_back("long_name");
+	names.emplace_back("type");
 	names.emplace_back("can_create");
 	names.emplace_back("can_copy");
 	names.emplace_back("can_open");
@@ -46,13 +48,22 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 	for (; state.current_idx < next_idx; state.current_idx++) {
 		auto driver = GDALGetDriver((int)state.current_idx);
 
-		// Check if the driver is a vector driver
-		if (GDALGetMetadataItem(driver, GDAL_DCAP_VECTOR, nullptr) == nullptr) {
+		const char *vector_caps = GDALGetMetadataItem(driver, GDAL_DCAP_VECTOR, nullptr);
+		bool supports_vector = vector_caps && strcmp(vector_caps, "YES") == 0;
+		const char *raster_caps = GDALGetMetadataItem(driver, GDAL_DCAP_RASTER, nullptr);
+		bool supports_raster = raster_caps && strcmp(raster_caps, "YES") == 0;
+
+		// Check if the driver supports vector or raster
+		if (!supports_vector && !supports_raster) {
 			continue;
 		}
 
 		auto short_name = Value::CreateValue(GDALGetDriverShortName(driver));
 		auto long_name = Value::CreateValue(GDALGetDriverLongName(driver));
+
+		std::string driver_type = supports_vector ? "vector" : "";
+		if (supports_raster)
+			driver_type += (supports_vector) ? ",raster" : "raster";
 
 		const char *create_flag = GDALGetMetadataItem(driver, GDAL_DCAP_CREATE, nullptr);
 		auto create_value = Value::CreateValue(create_flag != nullptr);
@@ -69,10 +80,11 @@ void GdalDriversTableFunction::Execute(ClientContext &context, TableFunctionInpu
 
 		output.data[0].SetValue(count, short_name);
 		output.data[1].SetValue(count, long_name);
-		output.data[2].SetValue(count, create_value);
-		output.data[3].SetValue(count, copy_value);
-		output.data[4].SetValue(count, open_value);
-		output.data[5].SetValue(count, help_topic_value);
+		output.data[2].SetValue(count, Value::CreateValue(driver_type));
+		output.data[3].SetValue(count, create_value);
+		output.data[4].SetValue(count, copy_value);
+		output.data[5].SetValue(count, open_value);
+		output.data[6].SetValue(count, help_topic_value);
 		count++;
 	}
 	output.SetCardinality(count);
@@ -86,7 +98,7 @@ static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 static constexpr const char *DOC_DESCRIPTION = R"(
     Returns the list of supported GDAL drivers and file formats
 
-    Note that far from all of these drivers have been tested properly, and some may require additional options to be passed to work as expected. If you run into any issues please first consult the [consult the GDAL docs](https://gdal.org/drivers/vector/index.html).
+    Note that far from all of these drivers have been tested properly, and some may require additional options to be passed to work as expected. If you run into any issues please first consult the GDAL docs for [vector drivers](https://gdal.org/drivers/vector/index.html) and [raster drivers](https://gdal.org/drivers/raster/index.html).
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(

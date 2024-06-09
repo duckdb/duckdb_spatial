@@ -1,5 +1,8 @@
 #include "spatial/gdal/module.hpp"
 #include "spatial/gdal/functions.hpp"
+#include "spatial/gdal/functions/aggregate.hpp"
+#include "spatial/gdal/functions/cast.hpp"
+#include "spatial/gdal/functions/scalar.hpp"
 #include "spatial/gdal/file_handler.hpp"
 #include "spatial/common.hpp"
 
@@ -17,7 +20,7 @@ void GdalModule::Register(DatabaseInstance &db) {
 	static std::once_flag loaded;
 	std::call_once(loaded, [&]() {
 		// Register all embedded drivers (dont go looking for plugins)
-		OGRRegisterAllInternal();
+		GDALAllRegister();
 
 		// Set GDAL error handler
 
@@ -62,9 +65,15 @@ void GdalModule::Register(DatabaseInstance &db) {
 
 	// Register functions
 	GdalTableFunction::Register(db);
+	GdalRasterTableFunction::Register(db);
+	GdalRasterMetadataFunction::Register(db);
 	GdalDriversTableFunction::Register(db);
 	GdalCopyFunction::Register(db);
 	GdalMetadataFunction::Register(db);
+	GdalCastFunctions::Register(db);
+	GdalScalarFunctions::Register(db);
+	GdalAggregateFunctions::Register(db);
+	GdalRasterCopyFunction::Register(db);
 }
 
 } // namespace gdal

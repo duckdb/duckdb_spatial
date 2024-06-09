@@ -1,4 +1,5 @@
 #include "spatial/gdal/file_handler.hpp"
+#include "spatial/gdal/raster/raster_registry.hpp"
 
 #include "duckdb/common/mutex.hpp"
 #include "duckdb/main/client_context.hpp"
@@ -376,12 +377,39 @@ void GDALClientContextState::QueryEnd() {
 
 };
 
+void GDALClientContextState::QueryEnd(ClientContext &context) {
+	std::lock_guard<mutex> glock(lock);
+	auto keyid = CastPointerToValue(&context.GetExecutor());
+
+	auto entry = registries.find(keyid);
+	if (entry != registries.end()) {
+		std::unique_ptr<RasterRegistry> &registry = entry->second;
+		registry.reset();
+		registries.erase(entry);
+	}
+}
+
 string GDALClientContextState::GetPrefix(const string &value) const {
 	// If the user explicitly asked for a VSI prefix, we don't add our own
 	if (StringUtil::StartsWith(value, "/vsi")) {
 		return value;
 	}
 	return client_prefix + value;
+}
+
+RasterRegistry &GDALClientContextState::GetRasterRegistry(ClientContext &context) {
+	std::lock_guard<mutex> glock(lock);
+	auto keyid = CastPointerToValue(&context.GetExecutor());
+
+	auto entry = registries.find(keyid);
+	if (entry != registries.end()) {
+		std::unique_ptr<RasterRegistry> &registry = entry->second;
+		return *registry.get();
+	} else {
+		std::unique_ptr<RasterRegistry> entry = make_uniq<RasterRegistry>();
+		registries[keyid] = std::move(entry);
+		return *registries[keyid].get();
+	}
 }
 
 GDALClientContextState &GDALClientContextState::GetOrCreate(ClientContext &context) {

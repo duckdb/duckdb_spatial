@@ -1,0 +1,23 @@
+require spatial
+
+query II
+WITH __input AS (
+	SELECT
+		raster
+	FROM
+		ST_ReadRaster('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff')
+),
+__warp AS (
+	SELECT
+		ST_RasterWarp(raster, options => ['-r', 'bilinear', '-tr', '40.0', '40.0']) AS warp
+	FROM
+		__input
+)
+SELECT
+     ST_ScaleX(warp) AS scale_x,
+     ST_ScaleY(warp) AS scale_y
+FROM
+	__warp
+;
+----
+40.0	-40.0

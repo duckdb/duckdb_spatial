@@ -15,6 +15,9 @@ struct GeoTypes {
 	static LogicalType GEOMETRY();
 	static LogicalType WKB_BLOB();
 
+	static LogicalType RASTER();
+	static LogicalType RASTER_COORD();
+
 	static void Register(DatabaseInstance &db);
 
 	static LogicalType CreateEnumType(const string &name, const vector<string> &members);

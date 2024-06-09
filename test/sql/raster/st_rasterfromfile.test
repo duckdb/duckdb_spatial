@@ -1,0 +1,16 @@
+require spatial
+
+query I
+WITH __input AS (
+	SELECT
+		ST_RasterFromFile(file) AS raster
+	FROM
+		glob('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff')
+)
+SELECT
+	ST_GetGeometry(raster) AS geom
+FROM
+	__input
+;
+----
+POLYGON ((541020 4690200, 541020 4796640, 609780 4796640, 609780 4690200, 541020 4690200))

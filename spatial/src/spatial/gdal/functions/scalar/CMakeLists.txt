@@ -1,0 +1,18 @@
+set(EXTENSION_SOURCES
+    ${EXTENSION_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_band_color_interp.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_band_nodata_value.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_band_pixel_type.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_has_no_band.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_metadata.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_as_file.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_clip.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_from_file.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_geometry.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_to_world_coord.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_raster_warp.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_srid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_value.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_world_to_raster_coord.cpp
+    PARENT_SCOPE
+)
