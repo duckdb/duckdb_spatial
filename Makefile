@@ -60,6 +60,8 @@ EXTENSION_FLAGS=\
 #### Add more of the DuckDB in-tree extensions here that you need (also feel free to remove them when not needed)
 EXTRA_EXTENSIONS_FLAG=-DBUILD_EXTENSIONS="parquet;json"
 
+DUCKDB_PLATFORM=android_armeabi-v7a
+
 BUILD_FLAGS=-DEXTENSION_STATIC_BUILD=1 $(EXTENSION_FLAGS) ${EXTRA_EXTENSIONS_FLAG} $(OSX_BUILD_FLAG) $(TOOLCHAIN_FLAGS) -DDUCKDB_EXPLICIT_PLATFORM='${DUCKDB_PLATFORM}'
 ifeq (${BUILD_SHELL}, 0)
 	BUILD_FLAGS += -DBUILD_SHELL=0
@@ -92,7 +94,7 @@ debug:
 
 release:
 	mkdir -p build/release && \
-	cmake $(GENERATOR) $(BUILD_FLAGS)  $(CLIENT_FLAGS)  -DCMAKE_BUILD_TYPE=Release -S ./duckdb/ -B build/release && \
+	cmake -DANDROID_ABI=armeabi-v7a -DCMAKE_TOOLCHAIN_FILE=/opt/homebrew/share/android-ndk/build/cmake/android.toolchain.cmake $(GENERATOR) $(BUILD_FLAGS)  $(CLIENT_FLAGS)  -DCMAKE_BUILD_TYPE=Release -S ./duckdb/ -B build/release && \
 	cmake --build build/release --config Release
 
 ##### Client build
