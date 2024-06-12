@@ -22,6 +22,13 @@ struct BoundingBox {
 	}
 
 	// Update the bounding box to include the specified vertex
+	void Stretch(const double x, const double y) {
+		minx = std::min(minx, x);
+		miny = std::min(miny, y);
+		maxx = std::max(maxx, x);
+		maxy = std::max(maxy, y);
+	}
+
 	void Stretch(const VertexXY &vertex) {
 		minx = std::min(minx, vertex.x);
 		miny = std::min(miny, vertex.y);
