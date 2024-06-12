@@ -22,6 +22,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromhexwkb.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromtext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_geomfromwkb.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_has.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_hilbert.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersects.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_intersects_extent.cpp
@@ -36,6 +37,7 @@ set(EXTENSION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/st_perimeter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_point.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_pointn.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/st_points.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_quadkey.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_removerepeatedpoints.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/st_startpoint.cpp
