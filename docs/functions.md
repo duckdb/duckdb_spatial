@@ -30,7 +30,7 @@
 | [ST_Distance](#st_distance) | Returns the distance between two geometries. |
 | [ST_Distance_Sphere](#st_distance_sphere) | Returns the haversine distance between two geometries. |
 | [ST_Distance_Spheroid](#st_distance_spheroid) | Returns the distance between two geometries in meters using a ellipsoidal model of the earths surface |
-| [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries |
+| [ST_Dump](#st_dump) | Dumps a geometry into a set of sub-geometries and their "path" in the original geometry. |
 | [ST_EndPoint](#st_endpoint) | Returns the end point of a line. |
 | [ST_Envelope](#st_envelope) | Returns the minimum bounding box for the input geometry as a polygon geometry. |
 | [ST_Equals](#st_equals) | Compares two geometries for equality |
@@ -47,6 +47,8 @@
 | [ST_GeomFromText](#st_geomfromtext) | Deserializes a GEOMETRY from a WKT string, optionally ignoring invalid geometries |
 | [ST_GeomFromWKB](#st_geomfromwkb) | Deserializes a GEOMETRY from a WKB encoded blob |
 | [ST_GeometryType](#st_geometrytype) | Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type. |
+| [ST_HasM](#st_hasm) | Check if the input geometry has M values. |
+| [ST_HasZ](#st_hasz) | Check if the input geometry has Z values. |
 | [ST_Hilbert](#st_hilbert) | Encodes the X and Y values as the hilbert curve index for a curve covering the given bounding box |
 | [ST_Intersection](#st_intersection) | Returns the "intersection" of geom1 and geom2 |
 | [ST_Intersects](#st_intersects) | Returns true if two geometries intersects |
@@ -82,6 +84,7 @@
 | [ST_Point4D](#st_point4d) | Creates a POINT_4D |
 | [ST_PointN](#st_pointn) | Returns the n'th vertex from the input geometry as a point geometry |
 | [ST_PointOnSurface](#st_pointonsurface) | Returns a point that is guaranteed to be on the surface of the input geometry. Sometimes a useful alternative to ST_Centroid. |
+| [ST_Points](#st_points) | Collects all the vertices in the geometry into a multipoint |
 | [ST_QuadKey](#st_quadkey) | Computes a quadkey from a given lon/lat point. |
 | [ST_ReducePrecision](#st_reduceprecision) | Returns the geometry with all vertices reduced to the target precision |
 | [ST_RemoveRepeatedPoints](#st_removerepeatedpoints) | Returns a new geometry with repeated points removed, optionally within a target distance of eachother. |
@@ -101,8 +104,10 @@
 | [ST_YMax](#st_ymax) | Returns the maximum Y value of a geometry |
 | [ST_YMin](#st_ymin) | Returns the minimum Y value of a geometry |
 | [ST_Z](#st_z) | Returns the Z value of a point geometry, or NULL if not a point or empty |
+| [ST_ZMFlag](#st_zmflag) | Returns a flag indicating the presence of Z and M values in the input geometry. |
 | [ST_ZMax](#st_zmax) | Returns the maximum Z value of a geometry |
 | [ST_ZMin](#st_zmin) | Returns the minimum Z value of a geometry |
+
 **[Aggregate Functions](#aggregate-functions)**
 
 | Function | Summary |
@@ -110,6 +115,7 @@
 | [ST_Envelope_Agg](#st_envelope_agg) | Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries |
 | [ST_Intersection_Agg](#st_intersection_agg) | Computes the intersection of a set of geometries |
 | [ST_Union_Agg](#st_union_agg) | Computes the union of a set of input geometries |
+
 **[Table Functions](#table-functions)**
 
 | Function | Summary |
@@ -118,6 +124,7 @@
 | [ST_Read](#st_read) | Read and import a variety of geospatial file formats using the GDAL library. |
 | [ST_ReadOSM](#st_readosm) | The ST_ReadOsm() table function enables reading compressed OpenStreetMap data directly from a `.osm.pbf file.` |
 | [ST_Read_Meta](#st_read_meta) | Read and the metadata from a variety of geospatial file formats using the GDAL library. |
+
 ----
 
 ## Scalar Functions
@@ -704,7 +711,7 @@ st_point(52.3130, 4.7725)
 
 ### ST_Dump
 
-_Dumps a geometry into a set of sub-geometries_
+_Dumps a geometry into a set of sub-geometries and their "path" in the original geometry._
 
 #### Signature
 
@@ -713,8 +720,6 @@ STRUCT(geom GEOMETRY, path INTEGER[])[] ST_Dump (col0 GEOMETRY)
 ```
 
 #### Description
-
-Dumps a geometry into a set of sub-geometries
 
 Dumps a geometry into a set of sub-geometries and their "path" in the original geometry.
 
@@ -792,6 +797,7 @@ _Returns the minimal bounding box enclosing the input geometry_
 
 ```sql
 BOX_2D ST_Extent (col0 GEOMETRY)
+BOX_2D ST_Extent (col0 WKB_BLOB)
 ```
 
 #### Description
@@ -1015,11 +1021,94 @@ ANY ST_GeometryType (col0 POINT_2D)
 ANY ST_GeometryType (col0 LINESTRING_2D)
 ANY ST_GeometryType (col0 POLYGON_2D)
 ANY ST_GeometryType (col0 GEOMETRY)
+ANY ST_GeometryType (col0 WKB_BLOB)
 ```
 
 #### Description
 
 Returns a 'GEOMETRY_TYPE' enum identifying the input geometry type.
+
+
+
+### ST_HasM
+
+_Check if the input geometry has M values._
+
+#### Signature
+
+```sql
+BOOLEAN ST_HasM (col0 GEOMETRY)
+BOOLEAN ST_HasM (col0 WKB_BLOB)
+```
+
+#### Description
+
+Check if the input geometry has M values.
+
+#### Example
+
+```sql
+-- HasM for a 2D geometry
+SELECT ST_HasM(ST_GeomFromText('POINT(1 1)'));
+----
+false
+
+-- HasM for a 3DZ geometry
+SELECT ST_HasM(ST_GeomFromText('POINT Z(1 1 1)'));
+----
+false
+
+-- HasM for a 3DM geometry
+SELECT ST_HasM(ST_GeomFromText('POINT M(1 1 1)'));
+----
+true
+
+-- HasM for a 4D geometry
+SELECT ST_HasM(ST_GeomFromText('POINT ZM(1 1 1 1)'));
+----
+true
+```
+
+
+
+### ST_HasZ
+
+_Check if the input geometry has Z values._
+
+#### Signature
+
+```sql
+BOOLEAN ST_HasZ (col0 GEOMETRY)
+BOOLEAN ST_HasZ (col0 WKB_BLOB)
+```
+
+#### Description
+
+Check if the input geometry has Z values.
+
+#### Example
+
+```sql
+-- HasZ for a 2D geometry
+SELECT ST_HasZ(ST_GeomFromText('POINT(1 1)'));
+----
+false
+
+-- HasZ for a 3DZ geometry
+SELECT ST_HasZ(ST_GeomFromText('POINT Z(1 1 1)'));
+----
+true
+
+-- HasZ for a 3DM geometry
+SELECT ST_HasZ(ST_GeomFromText('POINT M(1 1 1)'));
+----
+false
+
+-- HasZ for a 4D geometry
+SELECT ST_HasZ(ST_GeomFromText('POINT ZM(1 1 1 1)'));
+----
+true
+```
 
 
 
@@ -1615,6 +1704,34 @@ Returns a point that is guaranteed to be on the surface of the input geometry. S
 
 
 
+### ST_Points
+
+_Collects all the vertices in the geometry into a multipoint_
+
+#### Signature
+
+```sql
+GEOMETRY ST_Points (col0 GEOMETRY)
+```
+
+#### Description
+
+Collects all the vertices in the geometry into a multipoint
+
+#### Example
+
+```sql
+select st_points('LINESTRING(1 1, 2 2)'::geometry);
+----
+MULTIPOINT (1 1, 2 2)
+
+select st_points('MULTIPOLYGON Z EMPTY'::geometry);
+----
+MULTIPOINT Z EMPTY
+```
+
+
+
 ### ST_QuadKey
 
 _Computes a quadkey from a given lon/lat point._
@@ -2019,6 +2136,51 @@ DOUBLE ST_Z (col0 GEOMETRY)
 #### Description
 
 Returns the Z value of a point geometry, or NULL if not a point or empty
+
+
+
+### ST_ZMFlag
+
+_Returns a flag indicating the presence of Z and M values in the input geometry._
+
+#### Signature
+
+```sql
+UTINYINT ST_ZMFlag (col0 GEOMETRY)
+UTINYINT ST_ZMFlag (col0 WKB_BLOB)
+```
+
+#### Description
+
+Returns a flag indicating the presence of Z and M values in the input geometry.
+0 = No Z or M values
+1 = M values only
+2 = Z values only
+3 = Z and M values
+
+#### Example
+
+```sql
+-- ZMFlag for a 2D geometry
+SELECT ST_ZMFlag(ST_GeomFromText('POINT(1 1)'));
+----
+0
+
+-- ZMFlag for a 3DZ geometry
+SELECT ST_ZMFlag(ST_GeomFromText('POINT Z(1 1 1)'));
+----
+2
+
+-- ZMFlag for a 3DM geometry
+SELECT ST_ZMFlag(ST_GeomFromText('POINT M(1 1 1)'));
+----
+1
+
+-- ZMFlag for a 4D geometry
+SELECT ST_ZMFlag(ST_GeomFromText('POINT ZM(1 1 1 1)'));
+----
+3
+```
 
 
 

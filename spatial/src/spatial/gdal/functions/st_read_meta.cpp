@@ -59,7 +59,8 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	auto result = make_uniq<GDALMetadataBindData>();
 
 	auto multi_file_reader = MultiFileReader::Create(input.table_function);
-	result->file_names = multi_file_reader->CreateFileList(context, input.inputs[0], FileGlobOptions::ALLOW_EMPTY)->GetAllFiles();
+	result->file_names =
+	    multi_file_reader->CreateFileList(context, input.inputs[0], FileGlobOptions::ALLOW_EMPTY)->GetAllFiles();
 
 	names.push_back("file_name");
 	return_types.push_back(LogicalType::VARCHAR);

@@ -29,6 +29,7 @@ public:
 		RegisterStGeomFromHEXWKB(db);
 		RegisterStGeomFromText(db);
 		RegisterStGeomFromWKB(db);
+		RegisterStHas(db);
 		RegisterStHaversine(db);
 		RegisterStHilbert(db);
 		RegisterStIntersects(db);
@@ -45,6 +46,7 @@ public:
 		RegisterStPerimeter(db);
 		RegisterStPoint(db);
 		RegisterStPointN(db);
+		RegisterStPoints(db);
 		RegisterStQuadKey(db);
 		RegisterStRemoveRepeatedPoints(db);
 		RegisterStStartPoint(db);
@@ -126,6 +128,9 @@ private:
 	// ST_GeomFromWKB
 	static void RegisterStGeomFromWKB(DatabaseInstance &db);
 
+	// ST_Has(M/Z) + ST_ZMFlag
+	static void RegisterStHas(DatabaseInstance &db);
+
 	// ST_Haversine
 	static void RegisterStHaversine(DatabaseInstance &db);
 
@@ -173,6 +178,9 @@ private:
 
 	// ST_PointN
 	static void RegisterStPointN(DatabaseInstance &db);
+
+	// ST_Points
+	static void RegisterStPoints(DatabaseInstance &db);
 
 	// ST_RemoveRepeatedPoints
 	static void RegisterStRemoveRepeatedPoints(DatabaseInstance &db);
