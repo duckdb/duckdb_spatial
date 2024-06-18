@@ -230,6 +230,10 @@ ExternalProject_Add(
     -DBUILD_DOCUMENTATION=OFF
 )
 
+if(${CMAKE_SIZEOF_VOID_P} LESS 8)
+    set(BUILD_WITHOUT_64BIT_OFFSET 1)
+endif()
+
 # GDAL
 ExternalProject_Add(
     GDAL
@@ -347,7 +351,8 @@ ExternalProject_Add(
     # Remove bindings
     -DBUILD_PYTHON_BINDINGS=OFF
 
-    -DBUILD_WITHOUT_64BIT_OFFSET=1
+    # are we building for 32 bit?
+    -DBUILD_WITHOUT_64BIT_OFFSET=${BUILD_WITHOUT_64BIT_OFFSET}
 )
 
 
