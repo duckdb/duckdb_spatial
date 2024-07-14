@@ -68,6 +68,11 @@ else
 		BUILD_FLAGS += -DBUILD_SHELL=0
 	endif
 endif
+
+ifeq (${BUILD_BENCHMARK}, 1)
+	BUILD_FLAGS += -DBUILD_BENCHMARKS=1
+endif
+
 CLIENT_FLAGS:=
 
 #### Main build

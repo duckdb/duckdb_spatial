@@ -1,4 +1,5 @@
 add_subdirectory(geometry)
+add_subdirectory(index)
 add_subdirectory(functions)
 add_subdirectory(io)
 add_subdirectory(util)

@@ -1,0 +1,17 @@
+# name: benchmark/rtree.benchmark
+# description: Compare RTree index scan
+# group: [rtree]
+
+name rtree
+group rtree
+
+require spatial
+
+cache nyc_taxi.duckdb
+
+load
+CREATE TABLE t1 as SELECT st_point(pickup_longitude, pickup_latitude) as geom, trip_distance, fare_amount
+FROM read_parquet('test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet');
+
+run
+SELECT * FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-74.004936,40.725275,-73.982620,40.745046));

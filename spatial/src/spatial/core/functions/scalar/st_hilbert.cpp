@@ -95,11 +95,46 @@ static void HilbertEncodeFunction(DataChunk &args, ExpressionState &state, Vecto
 	    x_in, y_in, box_in, result, count, [&](DOUBLE_TYPE x, DOUBLE_TYPE y, BOX_TYPE &box) {
 		    auto hilbert_width = max_hilbert / (box.c_val - box.a_val);
 		    auto hilbert_height = max_hilbert / (box.d_val - box.b_val);
+	    	// TODO: Check for overflow
 		    auto hilbert_x = static_cast<uint32_t>((x.val - box.a_val) * hilbert_width);
 		    auto hilbert_y = static_cast<uint32_t>((y.val - box.b_val) * hilbert_height);
 		    auto h = HilbertEncode(16, hilbert_x, hilbert_y);
 		    return UINT32_TYPE {h};
 	    });
+}
+
+
+static void HilbertEncodeBoundsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input = args.data[0];
+	auto count = args.size();
+
+	auto max_hilbert = std::numeric_limits<uint16_t>::max();
+
+	UnaryExecutor::Execute<geometry_t, uint32_t>(
+		input, result, count, [&](const geometry_t &geom) {
+			BoundingBox box;
+			if (!geom.TryGetCachedBounds(box)) {
+				throw InvalidInputException("Could not get bounding box for geometry");
+			}
+
+			auto x = box.minx + (box.maxx - box.minx) / 2;
+			auto y = box.miny + (box.maxy - box.miny) / 2;
+
+			// TODO: Pass bounds as arguments
+			auto min_x = -180.0;
+			auto max_x = 180.0;
+			auto min_y = -90.0;
+			auto max_y = 90.0;
+
+			auto hilbert_width = max_hilbert / (max_x - min_x);
+			auto hilbert_height = max_hilbert / (max_y - min_y);
+			// TODO: Check for overflow
+
+			auto hilbert_x = static_cast<uint32_t>((x - min_x) * hilbert_width);
+			auto hilbert_y = static_cast<uint32_t>((y - min_y) * hilbert_height);
+			auto h = HilbertEncode(16, hilbert_x, hilbert_y);
+			return h;
+		});
 }
 
 //------------------------------------------------------------------------------
@@ -119,6 +154,10 @@ void CoreScalarFunctions::RegisterStHilbert(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Hilbert");
 	set.AddFunction(ScalarFunction({LogicalType::DOUBLE, LogicalType::DOUBLE, GeoTypes::BOX_2D()},
 	                               LogicalType::UINTEGER, HilbertEncodeFunction));
+
+
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UINTEGER, HilbertEncodeBoundsFunction));
+
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_Hilbert", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 }

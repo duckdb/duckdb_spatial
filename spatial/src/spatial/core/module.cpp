@@ -9,6 +9,7 @@
 #include "spatial/core/functions/macros.hpp"
 #include "spatial/core/optimizer_rules.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/index/rtree/rtree_module.hpp"
 
 namespace spatial {
 
@@ -20,8 +21,16 @@ void CoreModule::Register(DatabaseInstance &db) {
 	CoreCastFunctions::Register(db);
 	CoreTableFunctions::Register(db);
 	CoreAggregateFunctions::Register(db);
-	CoreOptimizerRules::Register(db);
 	CoreScalarMacros::Register(db);
+
+	// RTree index
+	RTreeModule::RegisterIndex(db);
+	RTreeModule::RegisterIndexScan(db);
+	RTreeModule::RegisterIndexPlanCreate(db);
+	RTreeModule::RegisterIndexPlanScan(db);
+
+	// Register the optimizer extensions
+	CoreOptimizerRules::Register(db);
 }
 
 } // namespace core

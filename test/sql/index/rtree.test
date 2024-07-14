@@ -1,0 +1,13 @@
+require spatial
+
+statement ok
+CREATE TABLE t1 (geom GEOMETRY);
+
+statement ok
+INSERT INTO t1 VALUES ('POINT(0 0)'::GEOMETRY), ('POINT(40 40)'::GEOMETRY), ('POINT(2 2)'::GEOMETRY);
+
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE (geom);
+
+statement ok
+EXPLAIN SELECT * FROM t1 WHERE st_within(geom, 'POINT (1 2)'::GEOMETRY);
