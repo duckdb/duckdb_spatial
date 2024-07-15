@@ -33,9 +33,6 @@ public:
 	unique_ptr<IndexScanState> InitializeScan(const RTreeBounds &query) const;
 	idx_t Scan(IndexScanState &state, Vector &result) const;
 
-	void Construct(DataChunk &input, Vector &row_ids, idx_t thread_idx);
-	void PersistToDisk();
-
 public:
 	//! Called when data is appended to the index. The lock obtained from InitializeLock must be held
 	ErrorData Append(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) override;

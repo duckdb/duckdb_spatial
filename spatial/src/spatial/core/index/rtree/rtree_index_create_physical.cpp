@@ -45,7 +45,7 @@ public:
 	//! The bottom most layer of the RTree
 	vector<RTreePointer> bottom_layer;
 
-	bool node_is_full = true;
+	idx_t entry_idx = RTreeNode::CAPACITY;
 };
 
 unique_ptr<GlobalSinkState> PhysicalCreateRTreeIndex::GetGlobalSinkState(ClientContext &context) const {
@@ -86,16 +86,16 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 	while(elem_idx < chunk.size()){
 
 		// Initialize a new node, if needed
-		if(gstate.node_is_full) {
+		if(gstate.entry_idx == RTreeNode::CAPACITY) {
 			layer.emplace_back();
 			RTreePointer::NewBranch(rtree, layer.back());
-			gstate.node_is_full = false;
+			gstate.entry_idx = 0;
 		}
 
 		// Pick the last node in the layer
 		auto &node = RTreePointer::RefMutable(rtree, layer.back());
 
-		const auto remaining_capacity = RTreeNode::CAPACITY - node.count;
+		const auto remaining_capacity = RTreeNode::CAPACITY - gstate.entry_idx;
 		const auto remaining_elements = chunk.size() - elem_idx;
 
 		for(idx_t j = 0; j < MinValue<idx_t>(remaining_capacity, remaining_elements); j++) {
@@ -108,16 +108,10 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 			}
 
 			auto child_ptr = RTreePointer::NewLeaf(rowid);
-			node.AddChild(child_ptr, RTreeBounds(bbox));
+			node.entries[gstate.entry_idx++] = { child_ptr, RTreeBounds(bbox) };
 			elem_idx++;
 		}
-
-		// If we filled the node, we need to create a new one in the next iteration
-		gstate.node_is_full = node.IsFull();
 	}
-
-	// Create a new node and push it to the current layer
-	// 992192
 
 	return SinkResultType::NEED_MORE_INPUT;
 }
@@ -160,7 +154,7 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 				auto &child_ptr = (*current_layer_ptr)[child_idx];
 				auto &child = RTreePointer::Ref(rtree, child_ptr);
 				D_ASSERT(child_ptr.IsBranch());
-				node.AddChild(child_ptr, child.GetBounds());
+				node.entries[j] = { child_ptr, child.GetBounds() };
 			}
 		}
 
@@ -173,12 +167,6 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 
 	// Now actually add the index to the storage
 	auto &storage = table.GetStorage();
-
-	// If not in memory, persist the index to disk
-	if (!storage.db.GetStorageManager().InMemory()) {
-		// Finalize the index
-		gstate.rtree->PersistToDisk();
-	}
 
 	if (!storage.IsRoot()) {
 		throw TransactionException("Cannot create index on non-root transaction");

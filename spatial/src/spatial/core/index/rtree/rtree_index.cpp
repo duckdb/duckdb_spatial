@@ -56,8 +56,8 @@ unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const RTreeBounds &query) 
 	return std::move(state);
 }
 
-idx_t RTreeIndex::Scan(IndexScanState &isstate, Vector &result) const {
-	auto &state = isstate.Cast<RTreeIndexScanState>();
+idx_t RTreeIndex::Scan(IndexScanState &state_p, Vector &result) const {
+	auto &state = state_p.Cast<RTreeIndexScanState>();
 
 	idx_t total_scanned = 0;
 	const auto row_ids = FlatVector::GetData<row_t>(result);
@@ -65,21 +65,22 @@ idx_t RTreeIndex::Scan(IndexScanState &isstate, Vector &result) const {
 	while(!state.stack.empty()) {
 		auto &ptr = state.stack.back();
 		if(ptr.IsLeaf()) {
+			// Its a leaf! Collect the row id
 			row_ids[total_scanned++] = ptr.GetRowId();
 			state.stack.pop_back();
 			if(total_scanned == STANDARD_VECTOR_SIZE) {
+				// We've filled the result vector, yield!
 				return total_scanned;
 			}
 		} else {
+			// Its a branch! Add the valid intersecting children to the stack and continue
 			// Even though we modify the stack, we've already dereferenced the current node
-			// so its ok if the ptr gets invalidated
+			// so its ok if the ptr gets invalidated when we pop_back();
 			auto &node = RTreePointer::Ref(*this, ptr);
 			state.stack.pop_back();
-			for(idx_t i = 0; i < node.count; i++) {
-				auto &child_bounds = node.bounds[i];
-				if(child_bounds.Intersects(state.query_bounds)) {
-					auto &child_ptr = node.entries[i];
-					state.stack.emplace_back(child_ptr);
+			for(auto &entry : node.entries) {
+				if(entry.IsSet() && entry.bounds.Intersects(state.query_bounds)) {
+					state.stack.emplace_back(entry.pointer);
 				}
 			}
 		}
@@ -91,10 +92,6 @@ void RTreeIndex::CommitDrop(IndexLock &index_lock) {
 	// TODO: Maybe we can drop these much earlier?
 	node_allocator->Reset();
 	root_block_ptr.Clear();
-}
-
-void RTreeIndex::Construct(DataChunk &input, Vector &row_ids, idx_t thread_idx) {
-
 }
 
 void RTreeIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
@@ -119,13 +116,7 @@ void RTreeIndex::VerifyAppend(DataChunk &chunk, ConflictManager &conflict_manage
 	// There is nothing to verify here as we dont support constraints anyway
 }
 
-void RTreeIndex::PersistToDisk() {
-
-}
-
 IndexStorageInfo RTreeIndex::GetStorageInfo(const bool get_buffers) {
-
-	PersistToDisk();
 
 	IndexStorageInfo info;
 	info.name = name;

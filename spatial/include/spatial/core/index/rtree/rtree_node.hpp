@@ -25,7 +25,7 @@ enum class RTreeNodeType : uint8_t {
 class RTreePointer final : public IndexPointer {
 	static constexpr idx_t AND_ROW_ID = 0x00FFFFFFFFFFFFFF;
 public:
-	RTreePointer() : IndexPointer() {}
+	RTreePointer() = default;
 	explicit RTreePointer(const IndexPointer &ptr) : IndexPointer(ptr) {}
 	//! Get a new pointer to a node, might cause a new buffer allocation, and initialize it
 	static RTreeNode& NewBranch(RTreeIndex &index, RTreePointer &pointer);
@@ -102,47 +102,45 @@ struct RTreeBounds {
 // The RTreeNode contains up to CAPACITY entries
 // each represented by a bounds and a pointer
 // Node is kind of a bad name, maybe a "RTreePage" would be better
+struct RTreeEntry {
+	RTreePointer pointer;
+	RTreeBounds bounds;
+	RTreeEntry() = default;
+	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {}
+	bool IsSet() const { return pointer.Get() != 0; }
+};
+
 class RTreeNode {
 public:
 	friend class RTreePointer;
 	static constexpr idx_t CAPACITY = 16;
 public:
-	RTreeBounds bounds[CAPACITY];
-	RTreePointer entries[CAPACITY];
-	int32_t count = 0;
-	void AddChild(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) {
-		D_ASSERT(count < CAPACITY);
-		entries[count] = pointer_p;
-		bounds[count] = bounds_p;
-		count++;
-	}
-
-	bool IsFull() const {
-		return count == CAPACITY;
-	}
+	RTreeEntry entries[CAPACITY];
 
 	// Compute the bounds of this node by summing up all the child entries bounds
 	RTreeBounds GetBounds() const {
 		RTreeBounds result;
-		for(auto i = 0; i < count; i++) {
-			result.minx = std::min(result.minx, bounds[i].minx);
-			result.miny = std::min(result.miny, bounds[i].miny);
-			result.maxx = std::max(result.maxx, bounds[i].maxx);
-			result.maxy = std::max(result.maxy, bounds[i].maxy);
+		for(const auto & entry : entries) {
+			if(entry.IsSet()) {
+				auto &bounds = entry.bounds;
+				result.minx = std::min(result.minx, bounds.minx);
+				result.miny = std::min(result.miny, bounds.miny);
+				result.maxx = std::max(result.maxx, bounds.maxx);
+				result.maxy = std::max(result.maxy, bounds.maxy);
+			}
 		}
 		return result;
 	}
 };
 
 inline RTreeNode& RTreePointer::NewBranch(RTreeIndex &index, RTreePointer &pointer) {
-	// Allocate a new node
+	// Allocate a new node. This will also memset the entries to 0
 	pointer = index.node_allocator->New();
 
 	// Set the pointer to the type
 	pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::BRANCH));
 	auto &ref = RTreePointer::RefMutable(index, pointer);
-	// TODO: Is this necessary?
-	ref.count = 0;
+
 	return ref;
 }
 
