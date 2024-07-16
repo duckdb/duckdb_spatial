@@ -18,7 +18,7 @@ struct SimpleWKBReader {
 	SimpleWKBReader(const char *data, uint32_t length) : data(data), length(length) {
 	}
 
-	vector<PointXY> ReadLine() {
+	vector<VertexXY> ReadLine() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
 		(void)byte_order;
@@ -28,7 +28,7 @@ struct SimpleWKBReader {
 		auto num_points = ReadInt();
 		D_ASSERT(num_points > 0);
 		D_ASSERT(cursor + num_points * 2 * sizeof(double) <= length);
-		vector<PointXY> result;
+		vector<VertexXY> result;
 		for (uint32_t i = 0; i < num_points; i++) {
 			auto x = ReadDouble();
 			auto y = ReadDouble();
@@ -37,7 +37,7 @@ struct SimpleWKBReader {
 		return result;
 	}
 
-	PointXY ReadPoint() {
+	VertexXY ReadPoint() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
 		(void)byte_order;
@@ -46,10 +46,10 @@ struct SimpleWKBReader {
 		(void)type;
 		auto x = ReadDouble();
 		auto y = ReadDouble();
-		return PointXY(x, y);
+		return VertexXY(x, y);
 	}
 
-	vector<vector<PointXY>> ReadPolygon() {
+	vector<vector<VertexXY>> ReadPolygon() {
 		auto byte_order = ReadByte();
 		D_ASSERT(byte_order == 1); // Little endian
 		(void)byte_order;
@@ -58,12 +58,12 @@ struct SimpleWKBReader {
 		(void)type;
 		auto num_rings = ReadInt();
 		D_ASSERT(num_rings > 0);
-		vector<vector<PointXY>> result;
+		vector<vector<VertexXY>> result;
 		for (uint32_t i = 0; i < num_rings; i++) {
 			auto num_points = ReadInt();
 			D_ASSERT(num_points > 0);
 			D_ASSERT(cursor + num_points * 2 * sizeof(double) <= length);
-			vector<PointXY> ring;
+			vector<VertexXY> ring;
 			for (uint32_t j = 0; j < num_points; j++) {
 				auto x = ReadDouble();
 				auto y = ReadDouble();

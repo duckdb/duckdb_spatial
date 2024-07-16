@@ -14,7 +14,7 @@ namespace core {
 
 // This is created by the optimizer rule
 struct RTreeIndexScanBindData : public TableFunctionData {
-	explicit RTreeIndexScanBindData(DuckTableEntry &table, Index &index, const BoundingBox &bbox)
+	explicit RTreeIndexScanBindData(DuckTableEntry &table, Index &index, const RTreeBounds &bbox)
 		: table(table), index(index), bbox(bbox) {
 	}
 

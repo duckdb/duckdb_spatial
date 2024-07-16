@@ -101,13 +101,19 @@ public:
 			const auto str = target_value.GetValueUnsafe<string_t>();
 			const geometry_t blob(str);
 
-			BoundingBox bbox;
+			Box2D<double> bbox;
 			if(!blob.TryGetCachedBounds(bbox)) {
 				return false;
 			}
 
+			Box2D<float> bbox_f;
+			bbox_f.min.x = MathUtil::DoubleToFloatDown(bbox.min.x);
+			bbox_f.min.y = MathUtil::DoubleToFloatDown(bbox.min.y);
+			bbox_f.max.x = MathUtil::DoubleToFloatUp(bbox.max.x);
+			bbox_f.max.y = MathUtil::DoubleToFloatUp(bbox.max.y);
+
 			// Create the bind data for this index given the bounding box
-			bind_data = make_uniq<RTreeIndexScanBindData>(duck_table, index_entry, bbox);
+			bind_data = make_uniq<RTreeIndexScanBindData>(duck_table, index_entry, bbox_f);
 			return true;
 		});
 

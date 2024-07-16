@@ -78,30 +78,12 @@ public:
 	}
 };
 
-// The bounding box for a entry
-struct RTreeBounds {
-	float minx = NumericLimits<float>::Maximum();
-	float miny = NumericLimits<float>::Maximum();
-	float maxx = NumericLimits<float>::Minimum();
-	float maxy = NumericLimits<float>::Minimum();
-
-	RTreeBounds() = default;
-
-	explicit RTreeBounds(const BoundingBox &box) {
-		minx = MathUtil::DoubleToFloatDown(box.minx);
-		miny = MathUtil::DoubleToFloatDown(box.miny);
-		maxx = MathUtil::DoubleToFloatUp(box.maxx);
-		maxy = MathUtil::DoubleToFloatUp(box.maxy);
-	}
-
-	bool Intersects(const RTreeBounds &other) const {
-		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);
-	}
-};
-
 // The RTreeNode contains up to CAPACITY entries
 // each represented by a bounds and a pointer
 // Node is kind of a bad name, maybe a "RTreePage" would be better
+
+using RTreeBounds = Box2D<float>;
+
 struct RTreeEntry {
 	RTreePointer pointer;
 	RTreeBounds bounds;
@@ -123,10 +105,10 @@ public:
 		for(const auto & entry : entries) {
 			if(entry.IsSet()) {
 				auto &bounds = entry.bounds;
-				result.minx = std::min(result.minx, bounds.minx);
-				result.miny = std::min(result.miny, bounds.miny);
-				result.maxx = std::max(result.maxx, bounds.maxx);
-				result.maxy = std::max(result.maxy, bounds.maxy);
+				result.min.x = std::min(result.min.x, bounds.min.x);
+				result.min.y = std::min(result.min.y, bounds.min.y);
+				result.max.x = std::max(result.max.x, bounds.max.x);
+				result.max.y = std::max(result.max.y, bounds.max.y);
 			}
 		}
 		return result;

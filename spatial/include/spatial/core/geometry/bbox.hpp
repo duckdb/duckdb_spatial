@@ -7,57 +7,35 @@ namespace spatial {
 
 namespace core {
 
-struct BoundingBox {
-	double minx = std::numeric_limits<double>::max();
-	double miny = std::numeric_limits<double>::max();
-	double maxx = std::numeric_limits<double>::lowest();
-	double maxy = std::numeric_limits<double>::lowest();
-	double minz = std::numeric_limits<double>::max();
-	double maxz = std::numeric_limits<double>::lowest();
-	double minm = std::numeric_limits<double>::max();
-	double maxm = std::numeric_limits<double>::lowest();
+template<class V>
+struct Box {
+	using VERTEX_TYPE = V;
+	using VALUE_TYPE = typename V::VALUE_TYPE;
 
-	bool Intersects(const BoundingBox &other) const {
-		return !(minx > other.maxx || maxx < other.minx || miny > other.maxy || maxy < other.miny);
-	}
+	V min;
+	V max;
 
-	// Update the bounding box to include the specified vertex
-	void Stretch(const VertexXY &vertex) {
-		minx = std::min(minx, vertex.x);
-		miny = std::min(miny, vertex.y);
-		maxx = std::max(maxx, vertex.x);
-		maxy = std::max(maxy, vertex.y);
-	}
+	Box() : min(NumericLimits<VALUE_TYPE>::Maximum()), max(NumericLimits<VALUE_TYPE>::Minimum()) {
+    }
 
-	void Stretch(const VertexXYZ &vertex) {
-		minx = std::min(minx, vertex.x);
-		miny = std::min(miny, vertex.y);
-		maxx = std::max(maxx, vertex.x);
-		maxy = std::max(maxy, vertex.y);
-		minz = std::min(minz, vertex.z);
-		maxz = std::max(maxz, vertex.z);
-	}
+	Box(const V &min_p, const V &max_p) : min(min_p), max(max_p) {
+    }
 
-	void Stretch(const VertexXYM &vertex) {
-		minx = std::min(minx, vertex.x);
-		miny = std::min(miny, vertex.y);
-		maxx = std::max(maxx, vertex.x);
-		maxy = std::max(maxy, vertex.y);
-		minm = std::min(minm, vertex.m);
-		maxm = std::max(maxm, vertex.m);
-	}
+	// Only does a 2D intersection check
+	bool Intersects(const Box &other) const {
+        return !(min.x > other.max.x || max.x < other.min.x || min.y > other.max.y || max.y < other.min.y);
+    }
 
-	void Stretch(const VertexXYZM &vertex) {
-		minx = std::min(minx, vertex.x);
-		miny = std::min(miny, vertex.y);
-		maxx = std::max(maxx, vertex.x);
-		maxy = std::max(maxy, vertex.y);
-		minz = std::min(minz, vertex.z);
-		maxz = std::max(maxz, vertex.z);
-		minm = std::min(minm, vertex.m);
-		maxm = std::max(maxm, vertex.m);
-	}
+	void Stretch(const V &vertex) {
+		for(idx_t i = 0; i < V::SIZE; i++) {
+			min[i] = MinValue(min[i], vertex[i]);
+			max[i] = MaxValue(max[i], vertex[i]);
+		}
+    }
 };
+
+template<class T>
+using Box2D = Box<PointXY<T>>;
 
 } // namespace core
 

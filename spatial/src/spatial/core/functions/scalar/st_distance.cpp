@@ -4,6 +4,7 @@
 #include "spatial/core/functions/common.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/geometry/vertex.hpp"
 
 namespace spatial {
 
@@ -12,9 +13,10 @@ namespace core {
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
-static PointXY ClosestPointOnSegment(const PointXY &p, const PointXY &p1, const PointXY &p2) {
+template<class T>
+static PointXY<T> ClosestPointOnSegment(const PointXY<T> &p, const PointXY<T> &p1, const PointXY<T> &p2) {
 	// If the segment is a Vertex, then return that Vertex
-	if (p1 == p2) {
+	if (p1.ApproxEqualTo(p2)) {
 		return p1;
 	}
 	auto n1 = ((p.x - p1.x) * (p2.x - p1.x) + (p.y - p1.y) * (p2.y - p1.y));
@@ -29,10 +31,11 @@ static PointXY ClosestPointOnSegment(const PointXY &p, const PointXY &p1, const 
 		return p2;
 	}
 	// Interpolate between p1 and p2
-	return PointXY(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
+	return PointXY<T>(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
 }
 
-static double DistanceToSegmentSquared(const PointXY &px, const PointXY &ax, const PointXY &bx) {
+template<class T>
+static double DistanceToSegmentSquared(const PointXY<T> &px, const PointXY<T> &ax, const PointXY<T> &bx) {
 	auto point = ClosestPointOnSegment(px, ax, bx);
 	auto dx = px.x - point.x;
 	auto dy = px.y - point.y;
@@ -100,12 +103,12 @@ static void PointToLineStringDistanceOperation(Vector &in_point, Vector &in_line
 		auto length = lines[i].length;
 
 		double min_distance = std::numeric_limits<double>::max();
-		auto p = PointXY(p_x_data[i], p_y_data[i]);
+		auto p = PointXY<double>(p_x_data[i], p_y_data[i]);
 
 		// Loop over the segments and find the closes one to the point
 		for (idx_t j = 0; j < length - 1; j++) {
-			auto a = PointXY(x_data[offset + j], y_data[offset + j]);
-			auto b = PointXY(x_data[offset + j + 1], y_data[offset + j + 1]);
+			auto a = PointXY<double>(x_data[offset + j], y_data[offset + j]);
+			auto b = PointXY<double>(x_data[offset + j + 1], y_data[offset + j + 1]);
 
 			auto distance = DistanceToSegmentSquared(p, a, b);
 			if (distance < min_distance) {

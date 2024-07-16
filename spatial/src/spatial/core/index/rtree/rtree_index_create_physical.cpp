@@ -102,13 +102,19 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 			const auto &geom = geom_data[elem_idx];
 			const auto &rowid = rowid_data[elem_idx];
 
-			BoundingBox bbox;
+			Box2D<double> bbox;
 			if(!geom.TryGetCachedBounds(bbox)) {
 				throw NotImplementedException("Geometry does not have cached bounds");
 			}
 
+			Box2D<float> bbox_f;
+			bbox_f.min.x = MathUtil::DoubleToFloatDown(bbox.min.x);
+			bbox_f.min.y = MathUtil::DoubleToFloatDown(bbox.min.y);
+			bbox_f.max.x = MathUtil::DoubleToFloatUp(bbox.max.x);
+			bbox_f.max.y = MathUtil::DoubleToFloatUp(bbox.max.y);
+
 			auto child_ptr = RTreePointer::NewLeaf(rowid);
-			node.entries[gstate.entry_idx++] = { child_ptr, RTreeBounds(bbox) };
+			node.entries[gstate.entry_idx++] = { child_ptr, bbox_f };
 			elem_idx++;
 		}
 	}

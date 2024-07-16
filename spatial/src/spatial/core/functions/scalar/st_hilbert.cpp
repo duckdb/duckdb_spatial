@@ -112,13 +112,13 @@ static void HilbertEncodeBoundsFunction(DataChunk &args, ExpressionState &state,
 
 	UnaryExecutor::Execute<geometry_t, uint32_t>(
 		input, result, count, [&](const geometry_t &geom) {
-			BoundingBox box;
+			Box2D<double> box;
 			if (!geom.TryGetCachedBounds(box)) {
 				throw InvalidInputException("Could not get bounding box for geometry");
 			}
 
-			auto x = box.minx + (box.maxx - box.minx) / 2;
-			auto y = box.miny + (box.maxy - box.miny) / 2;
+			auto x = box.min.x + (box.max.x - box.min.x) / 2;
+			auto y = box.min.y + (box.max.y - box.min.y) / 2;
 
 			// TODO: Pass bounds as arguments
 			auto min_x = -180.0;

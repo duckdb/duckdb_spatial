@@ -45,21 +45,21 @@ struct EnvelopeAggFunction {
 
 	template <class INPUT_TYPE, class STATE, class OP>
 	static void Operation(STATE &state, const INPUT_TYPE &input, AggregateUnaryInput &) {
-		BoundingBox bbox;
+		Box2D<double> bbox;
 		if (!state.is_set) {
 			if (input.TryGetCachedBounds(bbox)) {
 				state.is_set = true;
-				state.xmin = bbox.minx;
-				state.xmax = bbox.maxx;
-				state.ymin = bbox.miny;
-				state.ymax = bbox.maxy;
+				state.xmin = bbox.min.x;
+				state.xmax = bbox.max.x;
+				state.ymin = bbox.min.y;
+				state.ymax = bbox.max.y;
 			}
 		} else {
 			if (input.TryGetCachedBounds(bbox)) {
-				state.xmin = std::min(state.xmin, bbox.minx);
-				state.xmax = std::max(state.xmax, bbox.maxx);
-				state.ymin = std::min(state.ymin, bbox.miny);
-				state.ymax = std::max(state.ymax, bbox.maxy);
+				state.xmin = std::min(state.xmin, bbox.min.x);
+				state.xmax = std::max(state.xmax, bbox.max.x);
+				state.ymin = std::min(state.ymin, bbox.min.y);
+				state.ymax = std::max(state.ymax, bbox.max.y);
 			}
 		}
 	}

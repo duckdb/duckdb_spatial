@@ -28,19 +28,18 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	input.ToUnifiedFormat(count, input_vdata);
 	auto input_data = reinterpret_cast<geometry_t *>(input_vdata.data);
 
-	BoundingBox bbox;
-
 	for (idx_t i = 0; i < count; i++) {
 		auto row_idx = input_vdata.sel->get_index(i);
 		if (input_vdata.validity.RowIsValid(row_idx)) {
 			auto &blob = input_data[row_idx];
 
 			// Try to get the cached bounding box from the blob
+			Box2D<double> bbox;
 			if (blob.TryGetCachedBounds(bbox)) {
-				min_x_data[i] = bbox.minx;
-				min_y_data[i] = bbox.miny;
-				max_x_data[i] = bbox.maxx;
-				max_y_data[i] = bbox.maxy;
+				min_x_data[i] = bbox.min.x;
+				min_y_data[i] = bbox.min.y;
+				max_x_data[i] = bbox.max.x;
+				max_y_data[i] = bbox.max.y;
 			} else {
 				// No bounding box, return null
 				FlatVector::SetNull(result, i, true);

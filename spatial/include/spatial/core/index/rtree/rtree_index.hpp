@@ -1,16 +1,14 @@
 #pragma once
 
 #include "duckdb/execution/index/bound_index.hpp"
-#include "duckdb/execution/index/index_pointer.hpp"
 #include "duckdb/execution/index/fixed_size_allocator.hpp"
-
+#include "duckdb/execution/index/index_pointer.hpp"
 #include "spatial/common.hpp"
+#include "spatial/core/geometry/bbox.hpp"
 
 namespace spatial {
 
 namespace core {
-
-struct RTreeBounds;
 
 class RTreeIndex final : public BoundIndex {
 public:
@@ -30,7 +28,7 @@ public:
 	//! The allocator used to persist linked blocks
 	unique_ptr<FixedSizeAllocator> node_allocator;
 
-	unique_ptr<IndexScanState> InitializeScan(const RTreeBounds &query) const;
+	unique_ptr<IndexScanState> InitializeScan(const Box2D<float> &query) const;
 	idx_t Scan(IndexScanState &state, Vector &result) const;
 
 public:
