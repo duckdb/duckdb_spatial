@@ -12,6 +12,8 @@
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
 #include "spatial/core/geometry/geometry_type.hpp"
+#include "spatial/core/util/math.hpp"
+#include "spatial/core/util/managed_collection.hpp"
 
 namespace spatial {
 
@@ -43,13 +45,19 @@ public:
 	unique_ptr<RTreeIndex> rtree;
 
 	//! The bottom most layer of the RTree
-	vector<RTreePointer> bottom_layer;
+	ManagedCollection<RTreePointer> bottom_layer;
+	ManagedCollectionAppendState append_state;
+	RTreePointer current_pointer;
 
 	idx_t entry_idx = RTreeNode::CAPACITY;
+
+	explicit CreateRTreeIndexGlobalState(ClientContext &context) : bottom_layer(BufferManager::GetBufferManager(context)), append_state() {
+		bottom_layer.InitializeAppend(append_state);
+	}
 };
 
 unique_ptr<GlobalSinkState> PhysicalCreateRTreeIndex::GetGlobalSinkState(ClientContext &context) const {
-	auto gstate = make_uniq<CreateRTreeIndexGlobalState>();
+	auto gstate = make_uniq<CreateRTreeIndexGlobalState>(context);
 
 	// Create the index
 	auto &storage = table.GetStorage();
@@ -70,7 +78,6 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
                                              OperatorSinkInput &input) const {
 	auto &gstate = input.global_state.Cast<CreateRTreeIndexGlobalState>();
 	auto &rtree = *gstate.rtree;
-	auto &layer = gstate.bottom_layer;
 
 	if(chunk.size() == 0) {
 		return SinkResultType::NEED_MORE_INPUT;
@@ -82,18 +89,21 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 	const auto &geom_data = FlatVector::GetData<geometry_t>(chunk.data[0]);
 	const auto &rowid_data = FlatVector::GetData<row_t>(chunk.data[1]);
 
+
 	idx_t elem_idx = 0;
 	while(elem_idx < chunk.size()){
 
 		// Initialize a new node, if needed
 		if(gstate.entry_idx == RTreeNode::CAPACITY) {
-			layer.emplace_back();
-			RTreePointer::NewBranch(rtree, layer.back());
+			RTreePointer::NewBranch(rtree, gstate.current_pointer);
 			gstate.entry_idx = 0;
+
+			// Append the current node to the layer
+			gstate.bottom_layer.Append(gstate.append_state, gstate.current_pointer);
 		}
 
 		// Pick the last node in the layer
-		auto &node = RTreePointer::RefMutable(rtree, layer.back());
+		auto &node = RTreePointer::RefMutable(rtree, gstate.current_pointer);
 
 		const auto remaining_capacity = RTreeNode::CAPACITY - gstate.entry_idx;
 		const auto remaining_elements = chunk.size() - elem_idx;
@@ -125,43 +135,55 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 //-------------------------------------------------------------
 // Finalize
 //-------------------------------------------------------------
-SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
-                                                   OperatorSinkFinalizeInput &input) const {
-	auto &gstate = input.global_state.Cast<CreateRTreeIndexGlobalState>();
+
+static void BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalState &gstate) {
 	auto &rtree = *gstate.rtree;
 	auto &bottom_layer = gstate.bottom_layer;
 
 	// Now, we have our base layer with all the leaves, we need to build the rest of the tree layer by layer
-	vector<RTreePointer> next_layer;
+	ManagedCollection<RTreePointer> next_layer(BufferManager::GetBufferManager(context));
 
-	vector<RTreePointer> *current_layer_ptr = &bottom_layer;
-	vector<RTreePointer> *next_layer_ptr = &next_layer;
+	ManagedCollection<RTreePointer> *current_layer_ptr = &bottom_layer;
+	ManagedCollection<RTreePointer> *next_layer_ptr = &next_layer;
 
 	// TODO: Do this in a task so we can yield
-	while(current_layer_ptr->size() != 1) {
+	while(current_layer_ptr->Count() != 1) {
+
 		// Recurse
-		next_layer_ptr->clear();
+		next_layer_ptr->Clear();
 
-		const auto next_layer_size = (current_layer_ptr->size() + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY;
-		next_layer_ptr->reserve(next_layer_size);
+		const auto next_layer_size = (current_layer_ptr->Count() + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY;
+		ManagedCollectionAppendState append_state;
+		next_layer_ptr->InitializeAppend(append_state, next_layer_size);
 
-		// Add the new node to the next layer
-		for(idx_t i = 0; i < next_layer_size; i++) {
-			next_layer_ptr->emplace_back();
-			auto &node = RTreePointer::NewBranch(rtree, next_layer_ptr->back());
+		ManagedCollectionScanState scan_state;
+		current_layer_ptr->InitializeScan(scan_state, true);
 
-			// Add the children
-			for(idx_t j = 0; j < RTreeNode::CAPACITY; j++) {
-				const idx_t child_idx = i * RTreeNode::CAPACITY + j;
-				if(child_idx >= current_layer_ptr->size()) {
-					break;
-				}
+		RTreePointer scan_buffer[RTreeNode::CAPACITY];
 
-				auto &child_ptr = (*current_layer_ptr)[child_idx];
-				auto &child = RTreePointer::Ref(rtree, child_ptr);
-				D_ASSERT(child_ptr.IsBranch());
-				node.entries[j] = { child_ptr, child.GetBounds() };
+		// Scan up to RTreeNode::CAPACITY nodes at a time
+		const auto buffer_beg = scan_buffer;
+		const auto buffer_end = scan_buffer + RTreeNode::CAPACITY;
+
+		auto scan_end = buffer_end;
+		while(scan_end == buffer_end) {
+			scan_end = current_layer_ptr->Scan(scan_state, buffer_beg, buffer_end);
+
+			if(scan_end == buffer_beg) {
+				// nothing scanned, dont allocate a new node.
+				break;
 			}
+
+			RTreePointer new_ptr;
+			auto &node = RTreePointer::NewBranch(rtree, new_ptr);
+			idx_t i = 0;
+			for(auto scan_beg = buffer_beg; scan_beg != scan_end; scan_beg++) {
+				auto &child_ptr = *scan_beg;
+				D_ASSERT(child_ptr.IsBranch());
+				auto &child = RTreePointer::Ref(rtree, child_ptr);
+				node.entries[i++] = { child_ptr, child.GetBounds() };
+			}
+			next_layer_ptr->Append(append_state, new_ptr);
 		}
 
 		// Swap the layers
@@ -169,7 +191,14 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 	}
 
 	// Set the root node!
-	rtree.root_block_ptr = current_layer_ptr->back();
+	rtree.root_block_ptr = current_layer_ptr->Fetch(0);
+}
+
+SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
+                                                   OperatorSinkFinalizeInput &input) const {
+	auto &gstate = input.global_state.Cast<CreateRTreeIndexGlobalState>();
+
+	BuildRTreeBottomUp(context, gstate);
 
 	// Now actually add the index to the storage
 	auto &storage = table.GetStorage();

@@ -11,9 +11,9 @@ namespace spatial {
 
 namespace core {
 
-class PhysicalCreateRTreeIndex : public PhysicalOperator {
+class PhysicalCreateRTreeIndex final : public PhysicalOperator {
 public:
-	static constexpr const PhysicalOperatorType TYPE = PhysicalOperatorType::EXTENSION;
+	static constexpr auto TYPE = PhysicalOperatorType::EXTENSION;
 
 public:
 	PhysicalCreateRTreeIndex(LogicalOperator &op, TableCatalogEntry &table, const vector<column_t> &column_ids,

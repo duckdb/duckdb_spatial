@@ -6,7 +6,7 @@ namespace spatial {
 
 namespace core {
 
-class LogicalCreateRTreeIndex : public LogicalExtensionOperator {
+class LogicalCreateRTreeIndex final : public LogicalExtensionOperator {
 public:
 	// Info for index creation
 	unique_ptr<CreateIndexInfo> info;

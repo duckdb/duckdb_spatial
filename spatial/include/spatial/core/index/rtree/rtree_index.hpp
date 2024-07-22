@@ -13,7 +13,7 @@ namespace core {
 class RTreeIndex final : public BoundIndex {
 public:
 	// The type name of the RTreeIndex
-	static constexpr const char *TYPE_NAME = "RTREE";
+	static constexpr auto TYPE_NAME = "RTREE";
 
 public:
 	RTreeIndex(const string &name, IndexConstraintType index_constraint_type, const vector<column_t> &column_ids,
@@ -66,73 +66,6 @@ public:
 		return "Constraint violation in RTree index";
 	}
 };
-
-
-/*
-class RTreePointer : public IndexPointer {
-	bool IsLeaf() const {
-		return !HasMetadata();
-	}
-	bool IsNode() const {
-		return HasMetadata();
-	}
-	explicit RTreePointer(row_t row_id) {
-		Set(row_id);
-	}
-	// todo create from buffer;
-};
-
-class RTreeEntry {
-	RTreePointer ptr;
-	float bbox[4];
-};
-
-// The tape is basically a very simple ColumnDataCollection
-class ExternalTape {
-	static constexpr const idx_t ENTRIES_PER_BLOCK = Storage::BLOCK_SIZE / sizeof(RTreeEntry);
-public:
-	BufferManager &manager;
-	vector<shared_ptr<BlockHandle>> blocks;
-	shared_ptr<BlockHandle> current_block;
-
-	// The current amount of entries in the current block;
-	idx_t current_entry_count;
-
-public:
-	void Reserve(idx_t entry_count) {
-		auto required_size = entry_count * sizeof(RTreeEntry);
-		if(required_size < Storage::BLOCK_SIZE) {
-			// Create a temporary block
-			current_block = manager.RegisterSmallMemory(required_size);
-
-			auto buf = manager.Pin(current_block);
-			buf.Ptr();
-		}
-	}
-
-	void Append(DataChunk &chunk) {
-		auto count = chunk.size();
-
-		// TODO: Dont flatten
-		chunk.Flatten();
-
-		idx_t remaining = count;
-		while(remaining > 0) {
-			if(current_entry_count == ENTRIES_PER_BLOCK) {
-				// Pop a new block
-			}
-
-			remaining--;
-		}
-	}
-
-	void foo() {
-		auto size = Storage::BLOCK_SIZE;
-		blocks.emplace_back();
-		manager.Allocate(MemoryTag::EXTENSION, Storage::BLOCK_SIZE, true, &blocks.back());
-	}
-};
-*/
 
 } // namespace core
 

@@ -6,8 +6,6 @@
 #include "spatial/core/geometry/bbox.hpp"
 #include "spatial/core/index/rtree/rtree_index.hpp"
 
-#include <spatial/core/util/math.hpp>
-
 namespace spatial {
 
 namespace core {

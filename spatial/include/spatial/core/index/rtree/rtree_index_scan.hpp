@@ -13,7 +13,7 @@ namespace spatial {
 namespace core {
 
 // This is created by the optimizer rule
-struct RTreeIndexScanBindData : public TableFunctionData {
+struct RTreeIndexScanBindData final : public TableFunctionData {
 	explicit RTreeIndexScanBindData(DuckTableEntry &table, Index &index, const RTreeBounds &bbox)
 		: table(table), index(index), bbox(bbox) {
 	}

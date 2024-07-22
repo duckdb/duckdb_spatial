@@ -4,18 +4,17 @@
 #include "duckdb/optimizer/remove_unused_columns.hpp"
 #include "duckdb/planner/expression/bound_constant_expression.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
-#include "duckdb/planner/expression_iterator.hpp"
 #include "duckdb/planner/operator/logical_filter.hpp"
 #include "duckdb/planner/operator/logical_get.hpp"
-#include "duckdb/planner/operator/logical_projection.hpp"
 #include "duckdb/storage/data_table.hpp"
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_index_scan.hpp"
 #include "spatial/core/index/rtree/rtree_module.hpp"
 
-#include <spatial/core/geometry/bbox.hpp>
-#include <spatial/core/geometry/geometry_type.hpp>
-#include <spatial/core/types.hpp>
+#include "spatial/core/geometry/bbox.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
+#include "spatial/core/types.hpp"
+#include "spatial/core/util/math.hpp"
 
 namespace spatial {
 
