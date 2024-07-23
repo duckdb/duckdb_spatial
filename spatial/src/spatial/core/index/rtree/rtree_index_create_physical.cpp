@@ -4,15 +4,12 @@
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
 #include "duckdb/main/attached_database.hpp"
-#include "duckdb/main/database.hpp"
 #include "duckdb/storage/storage_manager.hpp"
 #include "duckdb/storage/table_io_manager.hpp"
 #include "duckdb/common/exception/transaction_exception.hpp"
 
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
-#include "spatial/core/geometry/geometry_type.hpp"
-#include "spatial/core/util/math.hpp"
 #include "spatial/core/util/managed_collection.hpp"
 
 namespace spatial {
@@ -86,9 +83,12 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 	// TODO: Dont flatten chunk
 	chunk.Flatten();
 
-	const auto &geom_data = FlatVector::GetData<geometry_t>(chunk.data[0]);
+	const auto &bbox_vecs = StructVector::GetEntries(chunk.data[0]);
 	const auto &rowid_data = FlatVector::GetData<row_t>(chunk.data[1]);
-
+	const auto min_x_data = FlatVector::GetData<float>(*bbox_vecs[0]);
+	const auto min_y_data = FlatVector::GetData<float>(*bbox_vecs[1]);
+	const auto max_x_data = FlatVector::GetData<float>(*bbox_vecs[2]);
+	const auto max_y_data = FlatVector::GetData<float>(*bbox_vecs[3]);
 
 	idx_t elem_idx = 0;
 	while(elem_idx < chunk.size()){
@@ -109,22 +109,16 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 		const auto remaining_elements = chunk.size() - elem_idx;
 
 		for(idx_t j = 0; j < MinValue<idx_t>(remaining_capacity, remaining_elements); j++) {
-			const auto &geom = geom_data[elem_idx];
 			const auto &rowid = rowid_data[elem_idx];
 
-			Box2D<double> bbox;
-			if(!geom.TryGetCachedBounds(bbox)) {
-				throw NotImplementedException("Geometry does not have cached bounds");
-			}
-
-			Box2D<float> bbox_f;
-			bbox_f.min.x = MathUtil::DoubleToFloatDown(bbox.min.x);
-			bbox_f.min.y = MathUtil::DoubleToFloatDown(bbox.min.y);
-			bbox_f.max.x = MathUtil::DoubleToFloatUp(bbox.max.x);
-			bbox_f.max.y = MathUtil::DoubleToFloatUp(bbox.max.y);
+			Box2D<float> bbox;
+			bbox.min.x = min_x_data[elem_idx];
+			bbox.min.y = min_y_data[elem_idx];
+			bbox.max.x = max_x_data[elem_idx];
+			bbox.max.y = max_y_data[elem_idx];
 
 			auto child_ptr = RTreePointer::NewLeaf(rowid);
-			node.entries[gstate.entry_idx++] = { child_ptr, bbox_f };
+			node.entries[gstate.entry_idx++] = { child_ptr, bbox };
 			elem_idx++;
 		}
 	}
@@ -168,11 +162,6 @@ static void BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalSta
 		auto scan_end = buffer_end;
 		while(scan_end == buffer_end) {
 			scan_end = current_layer_ptr->Scan(scan_state, buffer_beg, buffer_end);
-
-			if(scan_end == buffer_beg) {
-				// nothing scanned, dont allocate a new node.
-				break;
-			}
 
 			RTreePointer new_ptr;
 			auto &node = RTreePointer::NewBranch(rtree, new_ptr);

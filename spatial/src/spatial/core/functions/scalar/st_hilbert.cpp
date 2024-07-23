@@ -79,62 +79,106 @@ inline uint32_t HilbertEncode(uint32_t n, uint32_t x, uint32_t y) {
 //------------------------------------------------------------------------------
 // Coordinates
 //------------------------------------------------------------------------------
-static void HilbertEncodeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+static void HilbertEncodeCoordsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &x_in = args.data[0];
 	auto &y_in = args.data[1];
 	auto &box_in = args.data[2];
-	auto count = args.size();
+
+	const auto count = args.size();
 
 	using DOUBLE_TYPE = PrimitiveType<double>;
 	using UINT32_TYPE = PrimitiveType<uint32_t>;
 	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 
-	auto max_hilbert = std::numeric_limits<uint16_t>::max();
+	auto constexpr max_hilbert = std::numeric_limits<uint16_t>::max();
 
 	GenericExecutor::ExecuteTernary<DOUBLE_TYPE, DOUBLE_TYPE, BOX_TYPE, UINT32_TYPE>(
 	    x_in, y_in, box_in, result, count, [&](DOUBLE_TYPE x, DOUBLE_TYPE y, BOX_TYPE &box) {
-		    auto hilbert_width = max_hilbert / (box.c_val - box.a_val);
-		    auto hilbert_height = max_hilbert / (box.d_val - box.b_val);
+		    const auto hilbert_width = max_hilbert / (box.c_val - box.a_val);
+		    const auto hilbert_height = max_hilbert / (box.d_val - box.b_val);
+
 	    	// TODO: Check for overflow
-		    auto hilbert_x = static_cast<uint32_t>((x.val - box.a_val) * hilbert_width);
-		    auto hilbert_y = static_cast<uint32_t>((y.val - box.b_val) * hilbert_height);
-		    auto h = HilbertEncode(16, hilbert_x, hilbert_y);
+		    const auto hilbert_x = static_cast<uint32_t>((x.val - box.a_val) * hilbert_width);
+		    const auto hilbert_y = static_cast<uint32_t>((y.val - box.b_val) * hilbert_height);
+		    const auto h = HilbertEncode(16, hilbert_x, hilbert_y);
 		    return UINT32_TYPE {h};
 	    });
 }
 
-
+//------------------------------------------------------------------------------
+// GEOMETRY (points)
+//------------------------------------------------------------------------------
 static void HilbertEncodeBoundsFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &input = args.data[0];
-	auto count = args.size();
+	auto &input_vec = args.data[0];
+	auto &bounds_vec = args.data[1];
 
-	auto max_hilbert = std::numeric_limits<uint16_t>::max();
+	const auto count = args.size();
 
-	UnaryExecutor::Execute<geometry_t, uint32_t>(
-		input, result, count, [&](const geometry_t &geom) {
-			Box2D<double> box;
-			if (!geom.TryGetCachedBounds(box)) {
-				throw InvalidInputException("Could not get bounding box for geometry");
+	auto constexpr max_hilbert = std::numeric_limits<uint16_t>::max();
+
+	using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
+	using GEOM_TYPE = PrimitiveType<geometry_t>;
+	using UINT32_TYPE = PrimitiveType<uint32_t>;
+
+	ArenaAllocator dummy_allocator(Allocator::DefaultAllocator());
+
+	GenericExecutor::ExecuteBinary<GEOM_TYPE, BOX_TYPE, UINT32_TYPE>(
+		input_vec, bounds_vec, result, count, [&](const GEOM_TYPE &geom_type, const BOX_TYPE &bounds) {
+			const auto geom = geom_type.val;
+
+			if(geom.GetType() != GeometryType::POINT) {
+				throw InvalidInputException("ST_Hilbert only supports points");
+			}
+			const auto point = Geometry::Deserialize(dummy_allocator, geom);
+			if(Point::IsEmpty(point)) {
+				throw InvalidInputException("ST_Hilbert does not support empty points");
 			}
 
-			auto x = box.min.x + (box.max.x - box.min.x) / 2;
-			auto y = box.min.y + (box.max.y - box.min.y) / 2;
+			const auto v = Point::GetVertex(point);
+			const auto x = v.x;
+			const auto y = v.y;
 
-			// TODO: Pass bounds as arguments
-			auto min_x = -180.0;
-			auto max_x = 180.0;
-			auto min_y = -90.0;
-			auto max_y = 90.0;
-
-			auto hilbert_width = max_hilbert / (max_x - min_x);
-			auto hilbert_height = max_hilbert / (max_y - min_y);
+			const auto hilbert_width = max_hilbert / (bounds.c_val - bounds.a_val);
+			const auto hilbert_height = max_hilbert / (bounds.d_val - bounds.b_val);
 			// TODO: Check for overflow
+			const auto hilbert_x = static_cast<uint32_t>((x - bounds.a_val) * hilbert_width);
+			const auto hilbert_y = static_cast<uint32_t>((y - bounds.b_val) * hilbert_height);
 
-			auto hilbert_x = static_cast<uint32_t>((x - min_x) * hilbert_width);
-			auto hilbert_y = static_cast<uint32_t>((y - min_y) * hilbert_height);
-			auto h = HilbertEncode(16, hilbert_x, hilbert_y);
-			return h;
+			const auto h = HilbertEncode(16, hilbert_x, hilbert_y);
+			return UINT32_TYPE {h};
 		});
+}
+
+//------------------------------------------------------------------------------
+// BOX_2D/BOX_2DF
+//------------------------------------------------------------------------------
+template<class T>
+static void HilbertEncodeBoxFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &input_vec = args.data[0];
+	auto &bounds_vec = args.data[1];
+	auto count = args.size();
+
+	constexpr auto max_hilbert = std::numeric_limits<uint16_t>::max();
+
+	using BOX_TYPE = StructTypeQuaternary<T, T, T, T>;
+	using UINT32_TYPE = PrimitiveType<uint32_t>;
+
+	GenericExecutor::ExecuteBinary<BOX_TYPE, BOX_TYPE, UINT32_TYPE>(
+		input_vec, bounds_vec, result, count, [&](BOX_TYPE &box, BOX_TYPE &bounds) {
+
+			const auto x = box.a_val + (box.c_val - box.a_val) / static_cast<T>(2);
+			const auto y = box.b_val + (box.d_val - box.b_val) / static_cast<T>(2);
+
+			const auto hilbert_width = max_hilbert / (bounds.c_val - bounds.a_val);
+			const auto hilbert_height = max_hilbert / (bounds.d_val - bounds.b_val);
+
+			// TODO: Check for overflow
+			const auto hilbert_x = static_cast<uint32_t>((x - bounds.a_val) * hilbert_width);
+			const auto hilbert_y = static_cast<uint32_t>((y - bounds.b_val) * hilbert_height);
+			const auto h = HilbertEncode(16, hilbert_x, hilbert_y);
+			return UINT32_TYPE {h};
+		});
+
 }
 
 //------------------------------------------------------------------------------
@@ -142,7 +186,10 @@ static void HilbertEncodeBoundsFunction(DataChunk &args, ExpressionState &state,
 //------------------------------------------------------------------------------
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};
 static constexpr const char *DOC_DESCRIPTION = R"(
-    Encodes the X and Y values as the hilbert curve index for a curve covering the given bounding box
+    Encodes the X and Y values as the hilbert curve index for a curve covering the given bounding box.
+
+	Only POINT geometries are supported for the GEOMETRY variant.
+	For the BOX_2D and BOX_2DF variants, the center of the box is used as the point to encode.
 )";
 static constexpr const char *DOC_EXAMPLE = R"(
 
@@ -152,11 +199,10 @@ static constexpr const char *DOC_EXAMPLE = R"(
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStHilbert(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_Hilbert");
-	set.AddFunction(ScalarFunction({LogicalType::DOUBLE, LogicalType::DOUBLE, GeoTypes::BOX_2D()},
-	                               LogicalType::UINTEGER, HilbertEncodeFunction));
-
-
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UINTEGER, HilbertEncodeBoundsFunction));
+	set.AddFunction(ScalarFunction({LogicalType::DOUBLE, LogicalType::DOUBLE, GeoTypes::BOX_2D()}, LogicalType::UINTEGER, HilbertEncodeCoordsFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), GeoTypes::BOX_2D()}, LogicalType::UINTEGER, HilbertEncodeBoundsFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D(), GeoTypes::BOX_2D()}, LogicalType::UINTEGER, HilbertEncodeBoxFunction<double>));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2DF(), GeoTypes::BOX_2DF()}, LogicalType::UINTEGER, HilbertEncodeBoxFunction<float>));
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_Hilbert", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);

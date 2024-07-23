@@ -49,6 +49,8 @@ public:
 			return false;
 		}
 		auto &expr_func = expr->Cast<BoundFunctionExpression>();
+
+		// TODO: Look for other spatial functions
 		if(expr_func.function.name != "ST_Within") {
 			return false;
 		}
@@ -93,9 +95,6 @@ public:
 		unique_ptr<RTreeIndexScanBindData> bind_data = nullptr;
 		table_info.GetIndexes().BindAndScan<RTreeIndex>(context, table_info, [&](RTreeIndex &index_entry) {
 
-			// TODO: Verify
-			// auto &rtree_index = index_entry.Cast<RTreeIndex>();
-
 			// Create a query vector from the constant value
 			const auto str = target_value.GetValueUnsafe<string_t>();
 			const geometry_t blob(str);
@@ -122,7 +121,6 @@ public:
 		}
 
 		// Replace the scan with our custom index scan function
-
 		get.function = RTreeIndexScanFunction::GetFunction();
 		auto cardinality = get.function.cardinality(context, bind_data.get());
 		get.has_estimated_cardinality = cardinality->has_estimated_cardinality;

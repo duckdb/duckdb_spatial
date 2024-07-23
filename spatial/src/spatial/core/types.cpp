@@ -39,6 +39,16 @@ LogicalType GeoTypes::BOX_2D() {
 	return type;
 }
 
+LogicalType GeoTypes::BOX_2DF() {
+	auto type = LogicalType::STRUCT({{"min_x", LogicalType::FLOAT},
+	                                 {"min_y", LogicalType::FLOAT},
+	                                 {"max_x", LogicalType::FLOAT},
+	                                 {"max_y", LogicalType::FLOAT}});
+	type.SetAlias("BOX_2DF");
+	return type;
+}
+
+
 LogicalType GeoTypes::LINESTRING_2D() {
 	auto type = LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}}));
 	type.SetAlias("LINESTRING_2D");
@@ -95,6 +105,9 @@ void GeoTypes::Register(DatabaseInstance &db) {
 
 	// Box2D
 	ExtensionUtil::RegisterType(db, "BOX_2D", GeoTypes::BOX_2D());
+
+	// Box2DF
+	ExtensionUtil::RegisterType(db, "BOX_2DF", GeoTypes::BOX_2DF());
 
 	// GEOMETRY
 	ExtensionUtil::RegisterType(db, "GEOMETRY", GeoTypes::GEOMETRY());

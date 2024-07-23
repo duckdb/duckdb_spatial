@@ -12,6 +12,7 @@ struct GeoTypes {
 	static LogicalType LINESTRING_2D();
 	static LogicalType POLYGON_2D();
 	static LogicalType BOX_2D();
+	static LogicalType BOX_2DF();
 	static LogicalType GEOMETRY();
 	static LogicalType WKB_BLOB();
 
