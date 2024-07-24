@@ -126,16 +126,22 @@ void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T &
 struct ManagedCollectionScanState {
 	// The index of the current block
 	idx_t block_idx = 0;
+	idx_t total_blocks = 0;
 	bool destroy_scanned = false;
 
 	idx_t scan_idx = 0;
 	idx_t scan_capacity = 0;
 	BufferHandle handle;
+
+	bool IsDone() const {
+		return block_idx >= total_blocks;
+	}
 };
 
 template <class T>
 void ManagedCollection<T>::InitializeScan(ManagedCollectionScanState &state, bool destroy_scanned) {
 	state.block_idx = 0;
+	state.total_blocks = blocks.size();
 	state.destroy_scanned = destroy_scanned;
 
 	auto &block = blocks[state.block_idx];

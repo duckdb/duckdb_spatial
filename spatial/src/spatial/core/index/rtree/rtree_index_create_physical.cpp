@@ -3,14 +3,16 @@
 #include "duckdb/catalog/catalog_entry/duck_index_entry.hpp"
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
+#include "duckdb/common/exception/transaction_exception.hpp"
 #include "duckdb/main/attached_database.hpp"
 #include "duckdb/storage/storage_manager.hpp"
 #include "duckdb/storage/table_io_manager.hpp"
-#include "duckdb/common/exception/transaction_exception.hpp"
-
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
 #include "spatial/core/util/managed_collection.hpp"
+
+#include "duckdb/common/sort/sort.hpp"
+#include "duckdb/parallel/base_pipeline_event.hpp"
 
 namespace spatial {
 
@@ -42,14 +44,24 @@ public:
 	unique_ptr<RTreeIndex> rtree;
 
 	//! The bottom most layer of the RTree
-	ManagedCollection<RTreePointer> bottom_layer;
+	ManagedCollection<RTreePointer> curr_layer;
+	ManagedCollection<RTreePointer> next_layer;
+
 	ManagedCollectionAppendState append_state;
+	ManagedCollectionScanState scan_state;
+
+	ManagedCollection<RTreePointer>* curr_layer_ptr;
+	ManagedCollection<RTreePointer>* next_layer_ptr;
+
 	RTreePointer current_pointer;
 
 	idx_t entry_idx = RTreeNode::CAPACITY;
 
-	explicit CreateRTreeIndexGlobalState(ClientContext &context) : bottom_layer(BufferManager::GetBufferManager(context)), append_state() {
-		bottom_layer.InitializeAppend(append_state);
+	explicit CreateRTreeIndexGlobalState(ClientContext &context) :
+		curr_layer(BufferManager::GetBufferManager(context)),
+		next_layer(BufferManager::GetBufferManager(context)),
+		curr_layer_ptr(&next_layer), // We swap the order here so that it initializes properly later
+		next_layer_ptr(&curr_layer) {
 	}
 };
 
@@ -64,6 +76,8 @@ unique_ptr<GlobalSinkState> PhysicalCreateRTreeIndex::GetGlobalSinkState(ClientC
 	gstate->rtree =
 	    make_uniq<RTreeIndex>(info->index_name, constraint_type, storage_ids, table_manager, unbound_expressions, db,
 	                         info->options, IndexStorageInfo(), estimated_cardinality);
+
+	gstate->curr_layer.InitializeAppend(gstate->append_state);
 
 	return std::move(gstate);
 }
@@ -99,7 +113,7 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 			gstate.entry_idx = 0;
 
 			// Append the current node to the layer
-			gstate.bottom_layer.Append(gstate.append_state, gstate.current_pointer);
+			gstate.curr_layer.Append(gstate.append_state, gstate.current_pointer);
 		}
 
 		// Pick the last node in the layer
@@ -127,31 +141,26 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 }
 
 //-------------------------------------------------------------
-// Finalize
+// RTree Construction
 //-------------------------------------------------------------
-
-static void BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalState &gstate) {
+static TaskExecutionResult BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalState &gstate, TaskExecutionMode mode, Event &event) {
 	auto &rtree = *gstate.rtree;
-	auto &bottom_layer = gstate.bottom_layer;
 
 	// Now, we have our base layer with all the leaves, we need to build the rest of the tree layer by layer
-	ManagedCollection<RTreePointer> next_layer(BufferManager::GetBufferManager(context));
+	while(gstate.curr_layer_ptr->Count() != 1) {
+		if(gstate.scan_state.IsDone()) {
+			std::swap(gstate.curr_layer_ptr, gstate.next_layer_ptr);
 
-	ManagedCollection<RTreePointer> *current_layer_ptr = &bottom_layer;
-	ManagedCollection<RTreePointer> *next_layer_ptr = &next_layer;
+			if(gstate.curr_layer_ptr->Count() == 1) {
+				// We are done!
+				break;
+			}
 
-	// TODO: Do this in a task so we can yield
-	while(current_layer_ptr->Count() != 1) {
-
-		// Recurse
-		next_layer_ptr->Clear();
-
-		const auto next_layer_size = (current_layer_ptr->Count() + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY;
-		ManagedCollectionAppendState append_state;
-		next_layer_ptr->InitializeAppend(append_state, next_layer_size);
-
-		ManagedCollectionScanState scan_state;
-		current_layer_ptr->InitializeScan(scan_state, true);
+			const auto next_layer_size = (gstate.curr_layer_ptr->Count() + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY;
+			gstate.next_layer_ptr->Clear();
+			gstate.next_layer_ptr->InitializeAppend(gstate.append_state, next_layer_size);
+			gstate.curr_layer_ptr->InitializeScan(gstate.scan_state, true);
+		}
 
 		RTreePointer scan_buffer[RTreeNode::CAPACITY];
 
@@ -161,7 +170,7 @@ static void BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalSta
 
 		auto scan_end = buffer_end;
 		while(scan_end == buffer_end) {
-			scan_end = current_layer_ptr->Scan(scan_state, buffer_beg, buffer_end);
+			scan_end = gstate.curr_layer_ptr->Scan(gstate.scan_state, buffer_beg, buffer_end);
 
 			RTreePointer new_ptr;
 			auto &node = RTreePointer::NewBranch(rtree, new_ptr);
@@ -172,50 +181,98 @@ static void BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalSta
 				auto &child = RTreePointer::Ref(rtree, child_ptr);
 				node.entries[i++] = { child_ptr, child.GetBounds() };
 			}
-			next_layer_ptr->Append(append_state, new_ptr);
+			gstate.next_layer_ptr->Append(gstate.append_state, new_ptr);
 		}
 
-		// Swap the layers
-		std::swap(current_layer_ptr, next_layer_ptr);
+		// Yield if we are in partial mode and the scan is exhausted
+		if(mode == TaskExecutionMode::PROCESS_PARTIAL) {
+			return TaskExecutionResult::TASK_NOT_FINISHED;
+		}
 	}
 
 	// Set the root node!
-	rtree.root_block_ptr = current_layer_ptr->Fetch(0);
+	rtree.root_block_ptr = gstate.curr_layer_ptr->Fetch(0);
+	event.FinishTask();
+	return TaskExecutionResult::TASK_FINISHED;
 }
 
+class RTreeIndexConstructionTask final : public ExecutorTask {
+public:
+	RTreeIndexConstructionTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate)
+		: ExecutorTask(context, std::move(event_p)), context(context), state(gstate) {
+	}
+
+	TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
+		return BuildRTreeBottomUp(context, state, mode, *event);
+	}
+
+private:
+	ClientContext &context;
+	CreateRTreeIndexGlobalState &state;
+};
+
+class RTreeIndexConstructionEvent final : public BasePipelineEvent {
+public:
+	RTreeIndexConstructionEvent(CreateRTreeIndexGlobalState &gstate_p, Pipeline &pipeline_p, CreateIndexInfo &info_p, DuckTableEntry &table_p)
+		: BasePipelineEvent(pipeline_p), gstate(gstate_p), info(info_p), table(table_p) {
+	}
+
+	void Schedule() override {
+		auto &context = pipeline->GetClientContext();
+
+		// We only schedule 1 task, as the bottom-up construction is single-threaded.
+		vector<shared_ptr<Task>> tasks;
+		tasks.push_back(make_uniq<RTreeIndexConstructionTask>(shared_from_this(), context, gstate));
+		SetTasks(std::move(tasks));
+	}
+
+	void FinishEvent() override {
+		auto &context = pipeline->GetClientContext();
+
+		// Now actually add the index to the storage
+		auto &storage = table.GetStorage();
+
+		if (!storage.IsRoot()) {
+			throw TransactionException("Cannot create index on non-root transaction");
+		}
+
+		// Create the index entry in the catalog
+		auto &schema = table.schema;
+		const auto index_entry = schema.CreateIndex(context, info, table).get();
+		if (!index_entry) {
+			D_ASSERT(info.on_conflict == OnCreateConflict::IGNORE_ON_CONFLICT);
+			// index already exists, but error ignored because of IF NOT EXISTS
+			return;
+		}
+
+		// Get the entry as a DuckIndexEntry
+		auto &duck_index = index_entry->Cast<DuckIndexEntry>();
+		duck_index.initial_index_size = gstate.rtree->Cast<BoundIndex>().GetInMemorySize();
+		duck_index.info = make_uniq<IndexDataTableInfo>(storage.GetDataTableInfo(), duck_index.name);
+		for (auto &parsed_expr : info.parsed_expressions) {
+			duck_index.parsed_expressions.push_back(parsed_expr->Copy());
+		}
+
+		// Finally add it to storage
+		storage.AddIndex(std::move(gstate.rtree));
+	}
+private:
+	CreateRTreeIndexGlobalState &gstate;
+	CreateIndexInfo &info;
+	DuckTableEntry &table;
+};
+
+//-------------------------------------------------------------
+// Finalize
+//-------------------------------------------------------------
 SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &event, ClientContext &context,
                                                    OperatorSinkFinalizeInput &input) const {
 	auto &gstate = input.global_state.Cast<CreateRTreeIndexGlobalState>();
-
-	BuildRTreeBottomUp(context, gstate);
-
-	// Now actually add the index to the storage
-	auto &storage = table.GetStorage();
-
-	if (!storage.IsRoot()) {
-		throw TransactionException("Cannot create index on non-root transaction");
-	}
-
-	// Create the index entry in the catalog
-	auto &schema = table.schema;
 	info->column_ids = storage_ids;
-	const auto index_entry = schema.CreateIndex(context, *info, table).get();
-	if (!index_entry) {
-		D_ASSERT(info->on_conflict == OnCreateConflict::IGNORE_ON_CONFLICT);
-		// index already exists, but error ignored because of IF NOT EXISTS
-		return SinkFinalizeType::READY;
-	}
 
-	// Get the entry as a DuckIndexEntry
-	auto &duck_index = index_entry->Cast<DuckIndexEntry>();
-	duck_index.initial_index_size = gstate.rtree->Cast<BoundIndex>().GetInMemorySize();
-	duck_index.info = make_uniq<IndexDataTableInfo>(storage.GetDataTableInfo(), duck_index.name);
-	for (auto &parsed_expr : info->parsed_expressions) {
-		duck_index.parsed_expressions.push_back(parsed_expr->Copy());
-	}
-
-	// Finally add it to storage
-	storage.AddIndex(std::move(gstate.rtree));
+	// Schedule the construction of the RTree
+	auto construction_event = make_uniq<RTreeIndexConstructionEvent>(gstate, pipeline, *info, table);
+	event.InsertEvent(std::move(construction_event));
 
 	return SinkFinalizeType::READY;
 }
