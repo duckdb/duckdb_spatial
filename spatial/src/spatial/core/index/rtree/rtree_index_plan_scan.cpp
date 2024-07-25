@@ -50,8 +50,12 @@ public:
 		}
 		auto &expr_func = expr->Cast<BoundFunctionExpression>();
 
-		// TODO: Look for other spatial functions
-		if(expr_func.function.name != "ST_Within") {
+
+		case_insensitive_set_t predicates = {"st_equals", "st_intersects", "st_touches", "st_crosses",
+									 "st_within", "st_contains", "st_overlaps", "st_covers",
+									 "st_coveredby", "st_containsproperly"};
+
+		if(predicates.find(expr_func.function.name) == predicates.end()) {
 			return false;
 		}
 
