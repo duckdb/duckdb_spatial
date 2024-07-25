@@ -93,7 +93,7 @@ struct RTreeEntry {
 class RTreeNode {
 public:
 	friend class RTreePointer;
-	static constexpr idx_t CAPACITY = 16;
+	static constexpr idx_t CAPACITY = 128;
 public:
 	RTreeEntry entries[CAPACITY];
 

@@ -1,0 +1,18 @@
+# name: benchmark/rtree.benchmark
+# description: Compare RTree index scan
+# group: [rtree]
+
+name rtree
+group rtree
+
+require spatial
+
+load
+CREATE TABLE t1 AS SELECT point::GEOMETRY as geom
+FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 10_000_000, 1337);
+
+run
+SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+
+result I
+3986
