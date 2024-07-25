@@ -43,7 +43,8 @@ public:
 
 	// Scan the collection, writing as many elements as possible to the output buffer
 	// Returns the pointer one past the last element written to the output buffer
-	T* Scan(ManagedCollectionScanState &state, T *begin, T *end);
+	template<class ITERATOR>
+	ITERATOR Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end);
 
 	T Fetch(idx_t idx);
 
@@ -150,8 +151,9 @@ void ManagedCollection<T>::InitializeScan(ManagedCollectionScanState &state, boo
 	state.scan_idx = 0;
 }
 
-template<class T>
-T* ManagedCollection<T>::Scan(ManagedCollectionScanState &state, T *begin, T *end) {
+template <class T>
+template <class ITERATOR>
+ITERATOR ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end) {
 	while (begin != end) {
 		if(state.scan_idx >= state.scan_capacity) {
 

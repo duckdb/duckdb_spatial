@@ -43,6 +43,10 @@ public:
 	//! Global index to be added to the table
 	unique_ptr<RTreeIndex> rtree;
 
+	//! The total number of leaf nodes in the RTree
+	idx_t entry_count = 0;
+	idx_t slice_size = 0;
+
 	//! The bottom most layer of the RTree
 	ManagedCollection<RTreePointer> curr_layer;
 	ManagedCollection<RTreePointer> next_layer;
@@ -94,6 +98,9 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 		return SinkResultType::NEED_MORE_INPUT;
 	}
 
+	// Count the number of entries
+	gstate.entry_count += chunk.size();
+
 	// TODO: Dont flatten chunk
 	chunk.Flatten();
 
@@ -143,45 +150,76 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 //-------------------------------------------------------------
 // RTree Construction
 //-------------------------------------------------------------
-static TaskExecutionResult BuildRTreeBottomUp(ClientContext &context, CreateRTreeIndexGlobalState &gstate, TaskExecutionMode mode, Event &event) {
-	auto &rtree = *gstate.rtree;
+static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state, TaskExecutionMode mode, Event &event) {
+	auto &rtree = *state.rtree;
+
+	unsafe_vector<RTreePointer> slice(state.slice_size);
+	unsafe_vector<idx_t> slice_idx(state.slice_size);
+	unsafe_vector<Box2D<float>> slice_bounds(state.slice_size);
 
 	// Now, we have our base layer with all the leaves, we need to build the rest of the tree layer by layer
-	while(gstate.curr_layer_ptr->Count() != 1) {
-		if(gstate.scan_state.IsDone()) {
-			std::swap(gstate.curr_layer_ptr, gstate.next_layer_ptr);
+	while(state.curr_layer_ptr->Count() != 1) {
+		if(state.scan_state.IsDone()) {
 
-			if(gstate.curr_layer_ptr->Count() == 1) {
+			// Swap the layers and initialize the next layer
+			std::swap(state.curr_layer_ptr, state.next_layer_ptr);
+
+			if(state.curr_layer_ptr->Count() == 1) {
 				// We are done!
 				break;
 			}
 
-			const auto next_layer_size = (gstate.curr_layer_ptr->Count() + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY;
-			gstate.next_layer_ptr->Clear();
-			gstate.next_layer_ptr->InitializeAppend(gstate.append_state, next_layer_size);
-			gstate.curr_layer_ptr->InitializeScan(gstate.scan_state, true);
+			const auto next_layer_size = (state.curr_layer_ptr->Count() + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY;
+			state.next_layer_ptr->Clear();
+			state.next_layer_ptr->InitializeAppend(state.append_state, next_layer_size);
+			state.curr_layer_ptr->InitializeScan(state.scan_state, true);
 		}
 
-		RTreePointer scan_buffer[RTreeNode::CAPACITY];
+		const auto buffer_beg = slice.begin();
+		const auto buffer_end = slice.end();
+		auto scan_end = slice.end();
 
-		// Scan up to RTreeNode::CAPACITY nodes at a time
-		const auto buffer_beg = scan_buffer;
-		const auto buffer_end = scan_buffer + RTreeNode::CAPACITY;
+		idx_t child_idx = RTreeNode::CAPACITY;
+		RTreePointer current_ptr;
 
-		auto scan_end = buffer_end;
 		while(scan_end == buffer_end) {
-			scan_end = gstate.curr_layer_ptr->Scan(gstate.scan_state, buffer_beg, buffer_end);
+			scan_end = state.curr_layer_ptr->Scan(state.scan_state, buffer_beg, buffer_end);
 
-			RTreePointer new_ptr;
-			auto &node = RTreePointer::NewBranch(rtree, new_ptr);
-			idx_t i = 0;
-			for(auto scan_beg = buffer_beg; scan_beg != scan_end; scan_beg++) {
-				auto &child_ptr = *scan_beg;
-				D_ASSERT(child_ptr.IsBranch());
-				auto &child = RTreePointer::Ref(rtree, child_ptr);
-				node.entries[i++] = { child_ptr, child.GetBounds() };
+			// Sort the slice by the bounding box y-min value
+			const auto scan_count = scan_end - buffer_beg;
+			for(idx_t i = 0; i < scan_count; i++) {
+				const auto &node = RTreePointer::Ref(rtree, slice[i]);
+				slice_idx[i] = i;
+				slice_bounds[i] = node.GetBounds();
 			}
-			gstate.next_layer_ptr->Append(gstate.append_state, new_ptr);
+			std::stable_sort(slice_idx.begin(), slice_idx.begin() + scan_count, [&](const idx_t &a, const idx_t &b) {
+				return slice_bounds[a].min.y < slice_bounds[b].min.y;
+			});
+
+			idx_t scan_idx = 0;
+			while(scan_idx < scan_count) {
+
+				// Initialize a new node if we have to
+				if(child_idx == RTreeNode::CAPACITY) {
+					RTreePointer::NewBranch(rtree, current_ptr);
+					child_idx = 0;
+
+					// Append the current node to the layer
+					state.next_layer_ptr->Append(state.append_state, current_ptr);
+				}
+
+				// Pick the last node in the layer
+				auto &node = RTreePointer::RefMutable(rtree, current_ptr);
+
+				const auto remaining_capacity = RTreeNode::CAPACITY - child_idx;
+				const auto remaining_elements = scan_count - scan_idx;
+
+				for(idx_t j = 0; j < MinValue<idx_t>(remaining_capacity, remaining_elements); j++) {
+					const auto &child_ptr = slice[slice_idx[scan_idx++]];
+					auto &child = RTreePointer::Ref(rtree, child_ptr);
+					node.entries[child_idx++] = { child_ptr, child.GetBounds() };
+				}
+			}
 		}
 
 		// Yield if we are in partial mode and the scan is exhausted
@@ -191,7 +229,7 @@ static TaskExecutionResult BuildRTreeBottomUp(ClientContext &context, CreateRTre
 	}
 
 	// Set the root node!
-	rtree.root_block_ptr = gstate.curr_layer_ptr->Fetch(0);
+	rtree.root_block_ptr = state.curr_layer_ptr->Fetch(0);
 	event.FinishTask();
 	return TaskExecutionResult::TASK_FINISHED;
 }
@@ -199,15 +237,14 @@ static TaskExecutionResult BuildRTreeBottomUp(ClientContext &context, CreateRTre
 class RTreeIndexConstructionTask final : public ExecutorTask {
 public:
 	RTreeIndexConstructionTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate)
-		: ExecutorTask(context, std::move(event_p)), context(context), state(gstate) {
+		: ExecutorTask(context, std::move(event_p)), state(gstate) {
 	}
 
 	TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
-		return BuildRTreeBottomUp(context, state, mode, *event);
+		return BuildRTreeBottomUp(state, mode, *event);
 	}
 
 private:
-	ClientContext &context;
 	CreateRTreeIndexGlobalState &state;
 };
 
@@ -269,6 +306,10 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
                                                    OperatorSinkFinalizeInput &input) const {
 	auto &gstate = input.global_state.Cast<CreateRTreeIndexGlobalState>();
 	info->column_ids = storage_ids;
+
+	// Calculate the vertical slice size
+	// square root of the total number of entries divide by the capacity of a node, rounded up
+	gstate.slice_size = NumericCast<idx_t>(std::ceil(std::sqrt((gstate.entry_count + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY)));
 
 	// Schedule the construction of the RTree
 	auto construction_event = make_uniq<RTreeIndexConstructionEvent>(gstate, pipeline, *info, table);

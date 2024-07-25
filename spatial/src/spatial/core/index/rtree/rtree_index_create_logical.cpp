@@ -10,8 +10,6 @@
 #include "duckdb/planner/expression/bound_reference_expression.hpp"
 #include "duckdb/planner/operator/logical_create_index.hpp"
 #include "duckdb/catalog/catalog_entry/scalar_function_catalog_entry.hpp"
-#include "duckdb/planner/expression/bound_cast_expression.hpp"
-#include "duckdb/planner/expression/bound_constant_expression.hpp"
 
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_index_create_physical.hpp"
@@ -84,34 +82,21 @@ static unique_ptr<PhysicalOperator> CreateBoundingBoxProjection(const LogicalCre
 	return make_uniq<PhysicalProjection>(types, std::move(select_list), op.estimated_cardinality);
 }
 
-static unique_ptr<PhysicalOperator> CreateOrderByHilbert(const LogicalCreateRTreeIndex &op, const vector<LogicalType> &types, ClientContext &context) {
+static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIndex &op, const vector<LogicalType> &types, ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	// Get the hilbert value function
-	auto &hilbert_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_hilbert").Cast<ScalarFunctionCatalogEntry>();
-	auto hilbert_func = hilbert_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::BOX_2DF(), GeoTypes::BOX_2DF()});
-	vector<unique_ptr<Expression>> hilbert_args;
+	// Get the xmin value function
+	auto &xmin_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin").Cast<ScalarFunctionCatalogEntry>();
+	auto xmin_func = xmin_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::BOX_2DF()});
+	vector<unique_ptr<Expression>> xmin_func_args;
 
 	// Reference the geometry column
 	auto geom_ref_expr = make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::BOX_2DF(), 0);
-	hilbert_args.push_back(std::move(geom_ref_expr));
-
-	// Create a constant containing the bounding box
-	auto bbox_value = Value::STRUCT({
-		{"min_x", Value::FLOAT(-180)},
-		{"min_y", Value::FLOAT(-90)},
-		{"max_x", Value::FLOAT(180)},
-		{"max_y", Value::FLOAT(90)}
-	});
-
-	auto bbox_expr = make_uniq_base<Expression, BoundConstantExpression>(std::move(bbox_value));
-	auto cast_expr = BoundCastExpression::AddCastToType(context, std::move(bbox_expr), GeoTypes::BOX_2DF());
-	hilbert_args.push_back(std::move(cast_expr));
-
-	auto hilbert_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::UINTEGER, hilbert_func, std::move(hilbert_args), nullptr);
+	xmin_func_args.push_back(std::move(geom_ref_expr));
+	auto xmin_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::FLOAT, xmin_func, std::move(xmin_func_args), nullptr);
 
 	vector<BoundOrderByNode> orders;
-	orders.emplace_back(OrderType::ASCENDING, OrderByNullType::NULLS_FIRST, std::move(hilbert_expr));
+	orders.emplace_back(OrderType::ASCENDING, OrderByNullType::NULLS_FIRST, std::move(xmin_expr));
 	vector<idx_t> projections = {0, 1};
 	return make_uniq<PhysicalOrder>(types, std::move(orders), projections, op.estimated_cardinality);
 }
@@ -180,8 +165,8 @@ unique_ptr<PhysicalOperator> LogicalCreateRTreeIndex::CreatePlan(ClientContext &
 	auto bbox_proj = CreateBoundingBoxProjection(op, projected_types, context);
 	bbox_proj->children.push_back(std::move(null_filter));
 
-	// Create an ORDER_BY operator to sort the bounding boxes by the hilbert value
-	auto physical_order = CreateOrderByHilbert(op, projected_types, context);
+	// Create an ORDER_BY operator to sort the bounding boxes by the xmin value
+	auto physical_order = CreateOrderByMinX(op, projected_types, context);
 	physical_order->children.push_back(std::move(bbox_proj));
 
 	// Now finally create the actual physical create index operator
