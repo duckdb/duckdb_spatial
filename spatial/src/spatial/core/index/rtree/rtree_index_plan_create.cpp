@@ -35,11 +35,6 @@ public:
 			return;
 		}
 
-		// Verify the options
-		for (auto &option : create_index.info->options) {
-
-		}
-
 		// Verify the number of expressions
 		if (create_index.expressions.size() != 1) {
 			throw BinderException("RTree indexes can only be created over a single column of keys.");
@@ -71,7 +66,7 @@ public:
 		for (auto &child : plan->children) {
 			Optimize(input, child);
 		}
-	};
+	}
 };
 
 //-------------------------------------------------------------
