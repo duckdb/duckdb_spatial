@@ -12,7 +12,7 @@ namespace core {
 // Bind
 //------------------------------------------------------------------------------
 struct GeneratePointsBindData final : public TableFunctionData {
-	int64_t count = 0;
+	idx_t count = 0;
 	int64_t seed = -1;
 	Box2D<double> bbox;
 };
@@ -34,7 +34,11 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 
 	// Extract the count
 	const auto &count_value = input.inputs[1];
-	result->count = count_value.GetValue<int64_t>();
+	const auto count = count_value.GetValue<int64_t>();
+	if(count < 0) {
+		throw BinderException("Count must be a non-negative integer");
+	}
+	result->count = UnsafeNumericCast<idx_t>(count);
 
 	// Extract the seed (optional)
 	if(input.inputs.size() == 3) {
@@ -49,7 +53,7 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 //------------------------------------------------------------------------------
 struct GeneratePointsState final : public GlobalTableFunctionState {
 	RandomEngine rng;
-	int64_t current_idx;
+	idx_t current_idx;
 
 	explicit GeneratePointsState(const int64_t seed) : rng(seed), current_idx(0) {
 	}
@@ -106,7 +110,6 @@ void CoreTableFunctions::RegisterGeneratePointsTableFunction(DatabaseInstance &d
 	// Overload with seed
 	generate_points.arguments = {GeoTypes::BOX_2D(), LogicalType::BIGINT, LogicalType::BIGINT};
 	set.AddFunction(generate_points);
-
 	ExtensionUtil::RegisterFunction(db, set);
 }
 
