@@ -44,7 +44,7 @@ public:
 	// Scan the collection, writing as many elements as possible to the output buffer
 	// Returns the pointer one past the last element written to the output buffer
 	template<class ITERATOR>
-	ITERATOR Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end);
+	typename ITERATOR::difference_type Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end);
 
 	T Fetch(idx_t idx);
 
@@ -153,8 +153,9 @@ void ManagedCollection<T>::InitializeScan(ManagedCollectionScanState &state, boo
 
 template <class T>
 template <class ITERATOR>
-ITERATOR ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end) {
-	while (begin != end) {
+typename ITERATOR::difference_type ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end) {
+	auto pos = begin;
+	while (pos != end) {
 		if(state.scan_idx >= state.scan_capacity) {
 
 			if(state.destroy_scanned) {
@@ -177,7 +178,7 @@ ITERATOR ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR 
 
 		// Compute how much we can copy before the block is empty or we run out of space
 		const auto remaining_capacity = state.scan_capacity - state.scan_idx;
-		const auto remaining_elements = end - begin;
+		const auto remaining_elements = end - pos;
 		const auto to_copy = MinValue<idx_t>(remaining_capacity, remaining_elements);
 
 		// Get the readable pointer to the block
@@ -185,13 +186,14 @@ ITERATOR ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR 
 
 		// Copy as many elements as we can
 		for(idx_t i = 0; i < to_copy; i++) {
-			*begin = Load<T>(ptr);
-			++begin;
+			*pos = Load<T>(ptr);
+			++pos;
 			++state.scan_idx;
 			ptr += sizeof(T);
 		}
 	}
-	return begin;
+	// Return the number of elements written to the output buffer
+	return pos - begin;
 }
 
 template<class T>
