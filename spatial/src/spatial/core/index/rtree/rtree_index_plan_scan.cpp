@@ -28,6 +28,51 @@ public:
 		optimize_function = RTreeIndexScanOptimizer::Optimize;
 	}
 
+	static bool IsSpatialPredicate(const ScalarFunction &function) {
+		case_insensitive_set_t predicates = {"st_equals", "st_intersects", "st_touches", "st_crosses",
+									 "st_within", "st_contains", "st_overlaps", "st_covers",
+									 "st_coveredby", "st_containsproperly"};
+
+		if(predicates.find(function.name) == predicates.end()) {
+			return false;
+		}
+		if (function.arguments.size() < 2) {
+			// We can only optimize if there are two children
+			return false;
+		}
+		if (function.arguments[0] != GeoTypes::GEOMETRY()) {
+			// We can only optimize if the first child is a GEOMETRY
+			return false;
+		}
+		if(function.arguments[1] != GeoTypes::GEOMETRY()) {
+			// We can only optimize if the second child is a GEOMETRY
+			return false;
+		}
+		if (function.return_type != LogicalType::BOOLEAN) {
+			// We can only optimize if the return type is a BOOLEAN
+			return false;
+		}
+		return true;
+	}
+
+	static Box2D<float> GetBoundingBox(const Value &value) {
+		const auto str = value.GetValueUnsafe<string_t>();
+		const geometry_t blob(str);
+
+		Box2D<double> bbox;
+		if(!blob.TryGetCachedBounds(bbox)) {
+			throw InternalException("Could not get bounding box from geometry");
+		}
+
+		Box2D<float> bbox_f;
+		bbox_f.min.x = MathUtil::DoubleToFloatDown(bbox.min.x);
+		bbox_f.min.y = MathUtil::DoubleToFloatDown(bbox.min.y);
+		bbox_f.max.x = MathUtil::DoubleToFloatUp(bbox.max.x);
+		bbox_f.max.y = MathUtil::DoubleToFloatUp(bbox.max.y);
+
+		return bbox_f;
+	}
+
 	static bool TryOptimize(ClientContext &context, unique_ptr<LogicalOperator> &plan) {
 		// Look for a FILTER with a spatial predicate followed by a LOGICAL_GET table scan
 		auto &op = *plan;
@@ -50,28 +95,8 @@ public:
 		}
 		auto &expr_func = expr->Cast<BoundFunctionExpression>();
 
-
-		case_insensitive_set_t predicates = {"st_equals", "st_intersects", "st_touches", "st_crosses",
-									 "st_within", "st_contains", "st_overlaps", "st_covers",
-									 "st_coveredby", "st_containsproperly"};
-
-		if(predicates.find(expr_func.function.name) == predicates.end()) {
-			return false;
-		}
-
-		// Figure out the query vector
-		Value target_value;
-		if (expr_func.children[0]->IsFoldable()) {
-			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[0]);
-		}
-		else if (expr_func.children[1]->IsFoldable()) {
-			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[1]);
-		} else {
-			// We can only optimize if one of the children is a constant
-			return false;
-		}
-		if (target_value.type() != GeoTypes::GEOMETRY()) {
-			// We can only optimize if the constant is a GEOMETRY
+		// Check that the function is a spatial predicate
+		if(!IsSpatialPredicate(expr_func.function)) {
 			return false;
 		}
 
@@ -92,30 +117,28 @@ public:
 			return false;
 		}
 
-		auto &duck_table = table.Cast<DuckTableEntry>();
-		auto &table_info = *table.GetStorage().GetDataTableInfo();
+		// Get the query geometry
+		Value target_value;
+		if (expr_func.children[0]->return_type == GeoTypes::GEOMETRY() && expr_func.children[0]->IsFoldable()) {
+			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[0]);
+		}
+		else if (expr_func.children[1]->return_type == GeoTypes::GEOMETRY() && expr_func.children[1]->IsFoldable()) {
+			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[1]);
+		} else {
+			// We can only optimize if one of the children is a constant
+			return false;
+		}
+
+		// Compute the bounding box
+		auto bbox = GetBoundingBox(target_value);
 
 		// Find the index
+		auto &duck_table = table.Cast<DuckTableEntry>();
+		auto &table_info = *table.GetStorage().GetDataTableInfo();
 		unique_ptr<RTreeIndexScanBindData> bind_data = nullptr;
 		table_info.GetIndexes().BindAndScan<RTreeIndex>(context, table_info, [&](RTreeIndex &index_entry) {
-
-			// Create a query vector from the constant value
-			const auto str = target_value.GetValueUnsafe<string_t>();
-			const geometry_t blob(str);
-
-			Box2D<double> bbox;
-			if(!blob.TryGetCachedBounds(bbox)) {
-				return false;
-			}
-
-			Box2D<float> bbox_f;
-			bbox_f.min.x = MathUtil::DoubleToFloatDown(bbox.min.x);
-			bbox_f.min.y = MathUtil::DoubleToFloatDown(bbox.min.y);
-			bbox_f.max.x = MathUtil::DoubleToFloatUp(bbox.max.x);
-			bbox_f.max.y = MathUtil::DoubleToFloatUp(bbox.max.y);
-
 			// Create the bind data for this index given the bounding box
-			bind_data = make_uniq<RTreeIndexScanBindData>(duck_table, index_entry, bbox_f);
+			bind_data = make_uniq<RTreeIndexScanBindData>(duck_table, index_entry, bbox);
 			return true;
 		});
 
