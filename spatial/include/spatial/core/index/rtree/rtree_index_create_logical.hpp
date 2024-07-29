@@ -26,6 +26,10 @@ public:
 
 	// Actually create and plan the index creation
 	unique_ptr<PhysicalOperator> CreatePlan(ClientContext &context, PhysicalPlanGenerator &generator) override;
+
+	void Serialize(Serializer &writer) const override {
+		throw InternalException("Cannot serialize RTree Create index");
+	}
 };
 
 } // namespace core

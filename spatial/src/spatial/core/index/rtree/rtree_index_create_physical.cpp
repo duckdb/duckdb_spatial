@@ -116,7 +116,7 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 
 		// Initialize a new node, if needed
 		if(gstate.entry_idx == RTreeNode::CAPACITY) {
-			RTreePointer::NewBranch(rtree, gstate.current_pointer);
+			RTreePointer::NewPage(rtree, gstate.current_pointer, RTreeNodeType::LEAF_PAGE);
 			gstate.entry_idx = 0;
 
 			// Append the current node to the layer
@@ -138,7 +138,7 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 			bbox.max.x = max_x_data[elem_idx];
 			bbox.max.y = max_y_data[elem_idx];
 
-			auto child_ptr = RTreePointer::NewLeaf(rowid);
+			auto child_ptr = RTreePointer::NewRowId(rowid);
 			node.entries[gstate.entry_idx++] = { child_ptr, bbox };
 			elem_idx++;
 		}
@@ -197,7 +197,7 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 				// Initialize a new node if we have to
 				if(child_idx == RTreeNode::CAPACITY) {
-					RTreePointer::NewBranch(rtree, current_ptr);
+					RTreePointer::NewPage(rtree, current_ptr, RTreeNodeType::BRANCH_PAGE);
 					child_idx = 0;
 
 					// Append the current node to the layer
@@ -263,7 +263,7 @@ public:
 		if(gstate.rtree_size == 0) {
 			// No entries to build the RTree from, just create an empty root node
 			RTreePointer root_ptr;
-			RTreePointer::NewBranch(*gstate.rtree, root_ptr);
+			RTreePointer::NewPage(*gstate.rtree, root_ptr, RTreeNodeType::LEAF_PAGE);
 			gstate.rtree->root_block_ptr = root_ptr;
 			return;
 		}

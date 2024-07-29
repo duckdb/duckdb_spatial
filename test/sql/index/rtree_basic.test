@@ -9,5 +9,11 @@ INSERT INTO t1 VALUES ('POINT(0 0)'::GEOMETRY), ('POINT(40 40)'::GEOMETRY), ('PO
 statement ok
 CREATE INDEX my_idx ON t1 USING RTREE (geom);
 
+# Check that we get the index scan plan
+query II
+EXPLAIN SELECT * FROM t1 WHERE st_within(geom, 'POINT (1 2)'::GEOMETRY);
+----
+physical_plan	<REGEX>:.*RTREE_INDEX_SCAN.*
+
 statement ok
 EXPLAIN SELECT * FROM t1 WHERE st_within(geom, 'POINT (1 2)'::GEOMETRY);

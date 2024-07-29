@@ -16,8 +16,10 @@ namespace core {
 class RTreeNode;
 
 enum class RTreeNodeType : uint8_t {
-	LEAF = 1,
-	BRANCH = 2,
+	UNSET = 0,
+	ROW_ID = 1,
+	LEAF_PAGE = 2,
+	BRANCH_PAGE = 3,
 };
 
 class RTreePointer final : public IndexPointer {
@@ -26,31 +28,31 @@ public:
 	RTreePointer() = default;
 	explicit RTreePointer(const IndexPointer &ptr) : IndexPointer(ptr) {}
 	//! Get a new pointer to a node, might cause a new buffer allocation, and initialize it
-	static RTreeNode& NewBranch(RTreeIndex &index, RTreePointer &pointer);
+	static RTreeNode& NewPage(RTreeIndex &index, RTreePointer &pointer, RTreeNodeType type = RTreeNodeType::BRANCH_PAGE);
 
-	static RTreePointer NewLeaf(row_t row_id) {
+	static RTreePointer NewRowId(row_t row_id) {
 		RTreePointer pointer;
-		pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::LEAF));
+		pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::ROW_ID));
 		pointer.SetRowId(row_id);
 		return pointer;
 	}
 
 	//! Free the node (and the subtree)
-	// static void Free(RTreeIndex &index, RTreePointer &pointer);
+	static void Free(RTreeIndex &index, RTreePointer &pointer);
 
 	//! Get a reference to the allocator
 	static FixedSizeAllocator &GetAllocator(const RTreeIndex &index) {
 		return *index.node_allocator;
 	}
 
-	//! Get reference to the node (immutable). If dirty is false, then T should be a const class
+	//! Get reference to the node (immutable).
 	static const RTreeNode &Ref(const RTreeIndex &index, const RTreePointer ptr) {
 		return *(GetAllocator(index).Get<const RTreeNode>(ptr, false));
 	}
 
-	//! Get a reference to the node (mutable). If dirty is false, then T should be a const class
+	//! Get a reference to the node (mutable), marking the node as dirty.
 	static RTreeNode &RefMutable(const RTreeIndex &index, const RTreePointer ptr) {
-		return *(GetAllocator(index).Get<RTreeNode>(ptr, false));
+		return *(GetAllocator(index).Get<RTreeNode>(ptr, true));
 	}
 
 	//! Get the RowID from this pointer
@@ -66,8 +68,11 @@ public:
 		return static_cast<RTreeNodeType>(GetMetadata());
 	}
 
-	bool IsLeaf() const { return GetType() == RTreeNodeType::LEAF; }
-	bool IsBranch() const { return GetType() == RTreeNodeType::BRANCH; }
+	bool IsRowId() const { return GetType() == RTreeNodeType::ROW_ID; }
+	bool IsLeafPage() const { return GetType() == RTreeNodeType::LEAF_PAGE; }
+	bool IsBranchPage() const { return GetType() == RTreeNodeType::BRANCH_PAGE; }
+	bool IsPage() const { return IsLeafPage() || IsBranchPage(); }
+	bool IsSet() const { return Get() != 0; }
 
 	//! Assign operator
 	RTreePointer& operator=(const IndexPointer &ptr) {
@@ -88,6 +93,7 @@ struct RTreeEntry {
 	RTreeEntry() = default;
 	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {}
 	bool IsSet() const { return pointer.Get() != 0; }
+	void Clear() { pointer.Set(0); }
 };
 
 class RTreeNode {
@@ -102,23 +108,48 @@ public:
 		RTreeBounds result;
 		for(const auto & entry : entries) {
 			if(entry.IsSet()) {
-				auto &bounds = entry.bounds;
-				result.min.x = std::min(result.min.x, bounds.min.x);
-				result.min.y = std::min(result.min.y, bounds.min.y);
-				result.max.x = std::max(result.max.x, bounds.max.x);
-				result.max.y = std::max(result.max.y, bounds.max.y);
+				result.Union(entry.bounds);
+			} else {
+				break;
 			}
 		}
 		return result;
 	}
+
+	// Swap the entry at the given index with the last entry in the node
+	// and clear the last entry
+	RTreeEntry RemoveAndSwap(idx_t index, idx_t count) {
+		D_ASSERT(index < count);
+        const auto entry = entries[index];
+        entries[index] = entries[count - 1];
+        entries[count - 1].Clear();
+        return entry;
+	}
+
+	void Verify() {
+#ifdef DEBUG
+	for(idx_t i = 0; i < CAPACITY; i++) {
+		// If the entry is not set
+		if(!entries[i].IsSet()) {
+			// Then all the following entries should be unset
+			for(idx_t j = i; j < CAPACITY; j++) {
+                D_ASSERT(!entries[j].IsSet());
+            }
+			break;
+		}
+	}
+#endif
+	}
 };
 
-inline RTreeNode& RTreePointer::NewBranch(RTreeIndex &index, RTreePointer &pointer) {
+inline RTreeNode& RTreePointer::NewPage(RTreeIndex &index, RTreePointer &pointer, RTreeNodeType type) {
+	D_ASSERT(type == RTreeNodeType::BRANCH_PAGE || type == RTreeNodeType::LEAF_PAGE);
+
 	// Allocate a new node. This will also memset the entries to 0
 	pointer = index.node_allocator->New();
 
 	// Set the pointer to the type
-	pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::BRANCH));
+	pointer.SetMetadata(static_cast<uint8_t>(type));
 	auto &ref = RTreePointer::RefMutable(index, pointer);
 
 	return ref;

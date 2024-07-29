@@ -32,6 +32,31 @@ struct Box {
 			max[i] = MaxValue(max[i], vertex[i]);
 		}
     }
+
+	void Union(const Box &other) {
+		for(idx_t i = 0; i < V::SIZE; i++) {
+			min[i] = MinValue(min[i], other.min[i]);
+			max[i] = MaxValue(max[i], other.max[i]);
+		}
+	}
+
+	// 2D area
+	VALUE_TYPE Area() const {
+		return (max.x - min.x) * (max.y - min.y);
+	}
+
+	// 2D Perimeter
+	VALUE_TYPE Perimeter() const {
+		return 2 * (max.x - min.x + max.y - min.y);
+	}
+
+	bool operator ==(const Box &other) const {
+		return min == other.min && max == other.max;
+	}
+
+	bool operator !=(const Box &other) const {
+		return !(*this == other);
+	}
 };
 
 template<class T>

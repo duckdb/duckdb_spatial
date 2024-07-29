@@ -14,6 +14,11 @@ SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-74.004936,40.7252
 statement ok
 CREATE INDEX my_idx ON t1 USING RTREE (geom);
 
+query II
+EXPLAIN SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-74.004936,40.725275,-73.982620,40.745046));
+----
+physical_plan	<REGEX>:.*RTREE_INDEX_SCAN.*
+
 query I
 SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-74.004936,40.725275,-73.982620,40.745046));
 ----

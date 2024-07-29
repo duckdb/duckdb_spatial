@@ -6,15 +6,17 @@
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/planner/operator/logical_filter.hpp"
 #include "duckdb/planner/operator/logical_get.hpp"
+#include "duckdb/planner/operator_extension.hpp"
 #include "duckdb/storage/data_table.hpp"
+#include "spatial/core/geometry/bbox.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_index_scan.hpp"
 #include "spatial/core/index/rtree/rtree_module.hpp"
-
-#include "spatial/core/geometry/bbox.hpp"
-#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/types.hpp"
 #include "spatial/core/util/math.hpp"
+
+#include <spatial/core/index/rtree/rtree_index_create_logical.hpp>
 
 namespace spatial {
 
@@ -136,6 +138,7 @@ public:
 		auto &duck_table = table.Cast<DuckTableEntry>();
 		auto &table_info = *table.GetStorage().GetDataTableInfo();
 		unique_ptr<RTreeIndexScanBindData> bind_data = nullptr;
+
 		table_info.GetIndexes().BindAndScan<RTreeIndex>(context, table_info, [&](RTreeIndex &index_entry) {
 			// Create the bind data for this index given the bounding box
 			bind_data = make_uniq<RTreeIndexScanBindData>(duck_table, index_entry, bbox);
