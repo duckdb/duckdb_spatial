@@ -7,12 +7,14 @@ group rtree
 
 require spatial
 
-cache nyc_taxi.duckdb
 
 load
-CREATE TABLE t1 as SELECT st_point(pickup_longitude, pickup_latitude) as geom, trip_distance, fare_amount
-FROM read_parquet('test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet');
+CREATE TABLE t1 as SELECT ST_GeomFromWKB(wkb) as geom, id,
+FROM read_parquet('test/data/nyc_taxi/overture_nyc_buildings.parquet');
 CREATE INDEX my_idx ON t1 USING RTREE (geom);
 
 run
-SELECT * FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-74.004936,40.725275,-73.982620,40.745046));
+SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-74.004936,40.725275,-73.982620,40.745046));
+
+result I
+7390

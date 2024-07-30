@@ -26,6 +26,11 @@ struct Box {
         return !(min.x > other.max.x || max.x < other.min.x || min.y > other.max.y || max.y < other.min.y);
     }
 
+	// Only does a 2D containment check
+	bool Contains(const Box &other) const {
+		return min.x <= other.min.x && min.y <= other.min.y && max.x >= other.max.x && max.y >= other.max.y;
+	}
+
 	void Stretch(const V &vertex) {
 		for(idx_t i = 0; i < V::SIZE; i++) {
 			min[i] = MinValue(min[i], vertex[i]);

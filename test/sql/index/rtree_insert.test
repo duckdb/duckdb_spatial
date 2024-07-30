@@ -1,0 +1,14 @@
+require spatial
+
+statement ok
+CREATE TABLE t1 (geom GEOMETRY);
+
+statement ok
+INSERT INTO t1 (geom) VALUES ('POINT(1 1)');
+
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE (geom);
+
+# Now insert a few more points
+statement ok
+INSERT INTO t1 SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);

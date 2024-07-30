@@ -116,6 +116,17 @@ public:
 		return result;
 	}
 
+	// Returns the index of the first non-set entry
+	idx_t GetCount() const {
+		idx_t i;
+		for(i = 0; i < CAPACITY; i++) {
+            if(!entries[i].IsSet()) {
+                break;
+            }
+        }
+		return i;
+	}
+
 	// Swap the entry at the given index with the last entry in the node
 	// and clear the last entry
 	RTreeEntry RemoveAndSwap(idx_t index, idx_t count) {
