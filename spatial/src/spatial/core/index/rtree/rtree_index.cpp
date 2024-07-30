@@ -101,165 +101,6 @@ void RTreeIndex::CommitDrop(IndexLock &index_lock) {
 }
 
 
-// TODO: maybe add a NO_CHANGE to signal that the rowid was deleted but the bounds did not change
-enum class RTreeNodeDeleteResult {
-	NOT_FOUND = 0,
-	MODIFIED,
-	DELETED,
-};
-
-static RTreeNodeDeleteResult DeleteRecursive(RTreeIndex &rtree, const Box2D<float> &bounds, const row_t& rowid, RTreeEntry &entry, vector<RTreePointer> &orphans) {
-	D_ASSERT(entry.pointer.IsSet());
-	if(entry.pointer.IsRowId() && entry.pointer.GetRowId() == rowid) {
-		entry.Clear();
-		return RTreeNodeDeleteResult::DELETED;
-	}
-	D_ASSERT(entry.pointer.IsPage());
-	if(entry.bounds.Intersects(bounds)) {
-		auto &node = RTreePointer::RefMutable(rtree, entry.pointer);
-		auto result = RTreeNodeDeleteResult::NOT_FOUND;
-
-		idx_t last_idx = RTreeNode::CAPACITY;
-		idx_t found_idx = 0;
-
-		for(idx_t i = 0; i < last_idx; i++) {
-			if(!node.entries[i].IsSet()) {
-				// This is the end of the valid entries.
-				last_idx = i;
-				break;
-			}
-			if(result == RTreeNodeDeleteResult::NOT_FOUND) {
-				result = DeleteRecursive(rtree, bounds, rowid, node.entries[i], orphans);
-				found_idx = i;
-			}
-		}
-
-		// Was the rowid found?
-		if(result == RTreeNodeDeleteResult::NOT_FOUND) {
-			node.Verify();
-			return RTreeNodeDeleteResult::NOT_FOUND;
-		}
-
-		if(result == RTreeNodeDeleteResult::DELETED) {
-			// Did we delete the last child?
-			if(found_idx == 0 && last_idx == 1) {
-				// We did, free the node and clear the entry
-				RTreePointer::Free(rtree, entry.pointer);
-				entry.Clear();
-
-				node.Verify();
-				return RTreeNodeDeleteResult::DELETED;
-			}
-
-			// Otherwise, swap the last entry with the deleted entry
-			// (it has already been zeroed out in the recursive call)
-			std::swap(node.entries[found_idx], node.entries[--last_idx]);
-
-			// Is this branch now an orphan?
-			if(last_idx < RTreeNode::CAPACITY / 2) {
-				// We have too few children, add this node to the orphans list
-
-				orphans.push_back(entry.pointer);
-				// Clear the entry
-				entry.Clear();
-
-				// We mark this as deleted, as we want to reinsert it into the root.
-				return RTreeNodeDeleteResult::DELETED;
-			}
-		}
-
-		// We've modified the bounding box, update it
-		entry.bounds = node.GetBounds();
-		node.Verify();
-		return RTreeNodeDeleteResult::MODIFIED;
-	}
-
-	return RTreeNodeDeleteResult::NOT_FOUND;
-}
-
-void RTreeIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
-	const auto count = input.size();
-
-	UnifiedVectorFormat geom_format;
-	UnifiedVectorFormat rowid_format;
-
-	input.data[0].ToUnifiedFormat(count, geom_format);
-	rowid_vec.ToUnifiedFormat(count, rowid_format);
-
-	for(idx_t i = 0; i < count; i++) {
-		const auto geom_idx = geom_format.sel->get_index(i);
-		const auto rowid_idx = rowid_format.sel->get_index(i);
-
-		if(!geom_format.validity.RowIsValid(geom_idx) || !rowid_format.validity.RowIsValid(rowid_idx)) {
-			continue;
-		}
-
-		auto &geom = UnifiedVectorFormat::GetData<geometry_t>(geom_format)[geom_idx];
-		auto &rowid = UnifiedVectorFormat::GetData<row_t>(rowid_format)[rowid_idx];
-
-		Box2D<double> raw_bounds;
-		if(!geom.TryGetCachedBounds(raw_bounds)) {
-			continue;
-		}
-
-		Box2D<float> approx_bounds;
-		approx_bounds.min.x = MathUtil::DoubleToFloatDown(raw_bounds.min.x);
-		approx_bounds.min.y = MathUtil::DoubleToFloatDown(raw_bounds.min.y);
-		approx_bounds.max.x = MathUtil::DoubleToFloatUp(raw_bounds.max.x);
-		approx_bounds.max.y = MathUtil::DoubleToFloatUp(raw_bounds.max.y);
-
-		// Orphans
-		vector<RTreePointer> orphans;
-
-		auto &root = RTreePointer::RefMutable(*this, RTreePointer(root_block_ptr));
-		bool found = false;
-		idx_t found_idx = 0;
-		idx_t last_idx = RTreeNode::CAPACITY;
-		for(idx_t entry_idx = 0; entry_idx < last_idx; entry_idx++) {
-			auto &entry = root.entries[entry_idx];
-			if(!entry.IsSet()) {
-				last_idx = entry_idx;
-				break;
-			}
-			if(!found) {
-				if(DeleteRecursive(*this, approx_bounds, rowid, entry, orphans) != RTreeNodeDeleteResult::NOT_FOUND) {
-					found = true;
-					found_idx = entry_idx;
-				}
-			}
-		}
-		// Swap	the last entry with the deleted entry (to keep the entries contiguous)
-		if(found) {
-			std::swap(root.entries[found_idx], root.entries[--last_idx]);
-		}
-
-		for(auto &orphan : orphans) {
-			// Reinsert the orphan into the root
-			// TODO: Handle deletes
-			// Insert(*this, root, orphan);
-		}
-
-		root.Verify();
-
-		D_ASSERT(found);
-	}
-}
-
-void RTreePointer::Free(RTreeIndex &index, RTreePointer &ptr) {
-	if(ptr.IsRowId()) {
-		// Nothing to do here
-		return;
-	}
-	auto &node = RTreePointer::RefMutable(index, ptr);
-	for(auto &entry : node.entries) {
-		if(entry.IsSet()) {
-			Free(index, entry.pointer);
-		}
-	}
-	index.node_allocator->Free(ptr);
-}
-
-
 //------------------------------------------------------------------------------
 // Insert
 //------------------------------------------------------------------------------
@@ -392,11 +233,12 @@ struct InsertResult {
 	bool grown;
 };
 
-InsertResult NodeInsert(RTreeIndex &rtree, RTreeEntry &n, const RTreeEntry &new_entry) {
-	auto &node = RTreePointer::RefMutable(rtree, n.pointer);
-	auto count = node.GetCount();
+InsertResult NodeInsert(RTreeIndex &rtree, RTreeEntry &entry, const RTreeEntry &new_entry) {
+	auto &node = RTreePointer::RefMutable(rtree, entry.pointer);
 
-	if(n.pointer.IsLeafPage()) {
+	// Is this a leaf?
+	if(entry.pointer.IsLeafPage()) {
+		auto count = node.GetCount();
 		// Is this leaf full?
 		if(count == RTreeNode::CAPACITY) {
 			return InsertResult { true, false };
@@ -405,41 +247,44 @@ InsertResult NodeInsert(RTreeIndex &rtree, RTreeEntry &n, const RTreeEntry &new_
 		node.entries[count++] = new_entry;
 
 		// Do we need to grow the bounding box?
-		const auto grown = !n.bounds.Contains(new_entry.bounds);
+		const auto grown = !entry.bounds.Contains(new_entry.bounds);
 
 		return InsertResult { false, grown };
 	}
 
-	// choose a subtree
+	// Otherwise: this is a branch node
+	D_ASSERT(entry.pointer.IsBranchPage());
+
+	// Choose a subtree
 	// TODO: Optimize: if any child contains the new bbox completely, pick that immediately
-	const auto idx = GetSmallestEnlargment(node.entries, new_entry);
+	const auto child_idx = GetSmallestEnlargment(node.entries, new_entry);
 
 	// Insert into the selected child
-	const auto result = NodeInsert(rtree, node.entries[idx], new_entry);
+	const auto result = NodeInsert(rtree, node.entries[child_idx], new_entry);
 	if(result.split) {
-
+		auto count = node.GetCount();
 		if(count == RTreeNode::CAPACITY) {
 			// This node is also full!, we need to split it first.
 			return InsertResult { true, false };
 		}
 
 		// Otherwise, split the selected child
-		auto &left = node.entries[idx];
+		auto &left = node.entries[child_idx];
 		auto right = SplitNode(rtree, left);
 
 		// Insert the new right node into the current node
 		node.entries[count++] = right;
 
 		// Now insert again
-		return NodeInsert(rtree, n, new_entry);
+		return NodeInsert(rtree, entry, new_entry);
 	}
 
 	if(result.grown) {
-		// The child rectangle must expand to accomadate the new item.
-		n.bounds.Union(new_entry.bounds);
+		// Update the bounding box of the child
+		node.entries[child_idx].bounds.Union(new_entry.bounds);
 
 		// Do we need to grow the bounding box?
-		const auto grown = !n.bounds.Contains(new_entry.bounds);
+		const auto grown = !entry.bounds.Contains(new_entry.bounds);
 
 		return InsertResult { false, grown };
 	}
@@ -523,6 +368,175 @@ void RTreeIndex::VerifyAppend(DataChunk &chunk) {
 void RTreeIndex::VerifyAppend(DataChunk &chunk, ConflictManager &conflict_manager) {
 	// There is nothing to verify here as we dont support constraints anyway
 }
+
+//------------------------------------------------------------------------------
+// Delete
+//------------------------------------------------------------------------------
+
+// TODO: maybe add a NO_CHANGE to signal that the rowid was deleted but the bounds did not change
+enum class RTreeNodeDeleteResult {
+	NOT_FOUND = 0,
+	MODIFIED,
+	DELETED,
+};
+
+static RTreeNodeDeleteResult DeleteRecursive(RTreeIndex &rtree, const Box2D<float> &bounds, const row_t& rowid, RTreeEntry &entry, vector<RTreeEntry> &orphans) {
+	D_ASSERT(entry.pointer.IsSet());
+	if(entry.pointer.IsRowId() && entry.pointer.GetRowId() == rowid) {
+		entry.Clear();
+		return RTreeNodeDeleteResult::DELETED;
+	}
+	D_ASSERT(entry.pointer.IsPage());
+	if(entry.bounds.Intersects(bounds)) {
+		auto &node = RTreePointer::RefMutable(rtree, entry.pointer);
+		auto result = RTreeNodeDeleteResult::NOT_FOUND;
+
+		idx_t last_idx = RTreeNode::CAPACITY;
+		idx_t found_idx = 0;
+
+		for(idx_t i = 0; i < last_idx; i++) {
+			if(!node.entries[i].IsSet()) {
+				// This is the end of the valid entries.
+				last_idx = i;
+				break;
+			}
+			if(result == RTreeNodeDeleteResult::NOT_FOUND) {
+				result = DeleteRecursive(rtree, bounds, rowid, node.entries[i], orphans);
+				found_idx = i;
+			}
+		}
+
+		// Was the rowid found?
+		if(result == RTreeNodeDeleteResult::NOT_FOUND) {
+			node.Verify();
+			return RTreeNodeDeleteResult::NOT_FOUND;
+		}
+
+		if(result == RTreeNodeDeleteResult::DELETED) {
+			// Did we delete the last child?
+			if(found_idx == 0 && last_idx == 1) {
+				// We did, free the node and clear the entry
+				RTreePointer::Free(rtree, entry.pointer);
+				entry.Clear();
+
+				node.Verify();
+				return RTreeNodeDeleteResult::DELETED;
+			}
+
+			// Otherwise, swap the last entry with the deleted entry
+			// (it has already been zeroed out in the recursive call)
+			std::swap(node.entries[found_idx], node.entries[--last_idx]);
+
+			// Is this branch now an orphan?
+			if(last_idx < RTreeNode::CAPACITY / 2) {
+				// We have too few children, add this node to the orphans list
+
+				orphans.push_back(entry);
+				// Clear the entry
+				entry.Clear();
+
+				// We mark this as deleted, as we want to reinsert it into the root.
+				return RTreeNodeDeleteResult::DELETED;
+			}
+		}
+
+		// We've modified the bounding box, update it
+		entry.bounds = node.GetBounds();
+		node.Verify();
+		return RTreeNodeDeleteResult::MODIFIED;
+	}
+
+	return RTreeNodeDeleteResult::NOT_FOUND;
+}
+
+void RTreeIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
+	const auto count = input.size();
+
+	UnifiedVectorFormat geom_format;
+	UnifiedVectorFormat rowid_format;
+
+	input.data[0].ToUnifiedFormat(count, geom_format);
+	rowid_vec.ToUnifiedFormat(count, rowid_format);
+
+	for(idx_t i = 0; i < count; i++) {
+		const auto geom_idx = geom_format.sel->get_index(i);
+		const auto rowid_idx = rowid_format.sel->get_index(i);
+
+		if(!geom_format.validity.RowIsValid(geom_idx) || !rowid_format.validity.RowIsValid(rowid_idx)) {
+			continue;
+		}
+
+		auto &geom = UnifiedVectorFormat::GetData<geometry_t>(geom_format)[geom_idx];
+		auto &rowid = UnifiedVectorFormat::GetData<row_t>(rowid_format)[rowid_idx];
+
+		Box2D<double> raw_bounds;
+		if(!geom.TryGetCachedBounds(raw_bounds)) {
+			continue;
+		}
+
+		Box2D<float> approx_bounds;
+		approx_bounds.min.x = MathUtil::DoubleToFloatDown(raw_bounds.min.x);
+		approx_bounds.min.y = MathUtil::DoubleToFloatDown(raw_bounds.min.y);
+		approx_bounds.max.x = MathUtil::DoubleToFloatUp(raw_bounds.max.x);
+		approx_bounds.max.y = MathUtil::DoubleToFloatUp(raw_bounds.max.y);
+
+		// Orphans
+		vector<RTreeEntry> orphans;
+
+		auto &root = RTreePointer::RefMutable(*this, RTreePointer(root_block_ptr));
+		bool found = false;
+		idx_t found_idx = 0;
+		idx_t last_idx = RTreeNode::CAPACITY;
+		for(idx_t entry_idx = 0; entry_idx < last_idx; entry_idx++) {
+			auto &entry = root.entries[entry_idx];
+			if(!entry.IsSet()) {
+				last_idx = entry_idx;
+				break;
+			}
+			if(!found) {
+				if(DeleteRecursive(*this, approx_bounds, rowid, entry, orphans) != RTreeNodeDeleteResult::NOT_FOUND) {
+					found = true;
+					found_idx = entry_idx;
+				}
+			}
+		}
+		// Swap	the last entry with the deleted entry (to keep the entries contiguous)
+		if(found) {
+			std::swap(root.entries[found_idx], root.entries[--last_idx]);
+		}
+
+		if(!orphans.empty()) {
+			RTreeEntry root_entry;
+			root_entry.pointer = root_block_ptr;
+			root_entry.bounds = root.GetBounds();
+
+			for (auto &orphan : orphans) {
+				RootInsert(*this, root_entry, orphan);
+			}
+
+			root_block_ptr = root_entry.pointer;
+		}
+
+		root.Verify();
+
+		D_ASSERT(found);
+	}
+}
+
+void RTreePointer::Free(RTreeIndex &index, RTreePointer &ptr) {
+	if(ptr.IsRowId()) {
+		// Nothing to do here
+		return;
+	}
+	auto &node = RTreePointer::RefMutable(index, ptr);
+	for(auto &entry : node.entries) {
+		if(entry.IsSet()) {
+			Free(index, entry.pointer);
+		}
+	}
+	index.node_allocator->Free(ptr);
+}
+
 
 IndexStorageInfo RTreeIndex::GetStorageInfo(const bool get_buffers) {
 
