@@ -6,5 +6,6 @@ set(EXTENSION_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_plan_create.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_plan_scan.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_scan.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_pragmas.cpp
         PARENT_SCOPE
 )

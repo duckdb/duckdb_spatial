@@ -11,6 +11,7 @@ struct RTreeModule {
 	static void RegisterIndexScan(DatabaseInstance &db);
 	static void RegisterIndexPlanScan(DatabaseInstance &db);
 	static void RegisterIndexPlanCreate(DatabaseInstance &db);
+	static void RegisterIndexPragmas(DatabaseInstance &db);
 };
 
 } // namespace core

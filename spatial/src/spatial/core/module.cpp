@@ -28,6 +28,7 @@ void CoreModule::Register(DatabaseInstance &db) {
 	RTreeModule::RegisterIndexScan(db);
 	RTreeModule::RegisterIndexPlanCreate(db);
 	RTreeModule::RegisterIndexPlanScan(db);
+	RTreeModule::RegisterIndexPragmas(db);
 
 	// Register the optimizer extensions
 	CoreOptimizerRules::Register(db);
