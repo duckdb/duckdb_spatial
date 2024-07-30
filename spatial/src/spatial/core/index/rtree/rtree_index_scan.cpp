@@ -39,7 +39,7 @@ struct RTreeIndexScanGlobalState : public GlobalTableFunctionState {
 };
 
 static unique_ptr<GlobalTableFunctionState> RTreeIndexScanInitGlobal(ClientContext &context,
-                                                                    TableFunctionInitInput &input) {
+                                                                     TableFunctionInitInput &input) {
 	auto &bind_data = input.bind_data->Cast<RTreeIndexScanBindData>();
 
 	auto result = make_uniq<RTreeIndexScanGlobalState>();
@@ -93,7 +93,7 @@ static void RTreeIndexScanExecute(ClientContext &context, TableFunctionInput &da
 // Statistics
 //-------------------------------------------------------------------------
 static unique_ptr<BaseStatistics> RTreeIndexScanStatistics(ClientContext &context, const FunctionData *bind_data_p,
-                                                          column_t column_id) {
+                                                           column_t column_id) {
 	auto &bind_data = bind_data_p->Cast<RTreeIndexScanBindData>();
 	auto &local_storage = LocalStorage::Get(context, bind_data.table.catalog);
 	if (local_storage.Find(bind_data.table.GetStorage())) {

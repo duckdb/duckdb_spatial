@@ -6,7 +6,7 @@
 namespace duckdb {
 class DuckTableEntry;
 class Index;
-}
+} // namespace duckdb
 
 namespace spatial {
 
@@ -15,7 +15,7 @@ namespace core {
 // This is created by the optimizer rule
 struct RTreeIndexScanBindData final : public TableFunctionData {
 	explicit RTreeIndexScanBindData(DuckTableEntry &table, Index &index, const RTreeBounds &bbox)
-		: table(table), index(index), bbox(bbox) {
+	    : table(table), index(index), bbox(bbox) {
 	}
 
 	//! The table to scan

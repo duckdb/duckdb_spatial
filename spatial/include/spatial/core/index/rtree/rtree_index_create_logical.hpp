@@ -19,7 +19,7 @@ public:
 
 public:
 	LogicalCreateRTreeIndex(unique_ptr<CreateIndexInfo> info_p, vector<unique_ptr<Expression>> expressions_p,
-						   TableCatalogEntry &table_p);
+	                        TableCatalogEntry &table_p);
 	void ResolveTypes() override;
 	void ResolveColumnBindings(ColumnBindingResolver &res, vector<ColumnBinding> &bindings) override;
 	string GetExtensionName() const override;

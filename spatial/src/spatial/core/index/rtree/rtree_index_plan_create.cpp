@@ -49,7 +49,7 @@ public:
 		// We can replace this with a operator that creates the index
 		// The "LogicalCreateRTreeIndex" operator is a custom operator that we defined in the extension
 		auto create_rtree_index = make_uniq<LogicalCreateRTreeIndex>(
-			std::move(create_index.info), std::move(create_index.expressions), create_index.table);
+		    std::move(create_index.info), std::move(create_index.expressions), create_index.table);
 
 		// Move the children
 		create_rtree_index->children = std::move(create_index.children);

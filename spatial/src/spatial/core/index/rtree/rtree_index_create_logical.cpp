@@ -15,13 +15,13 @@
 #include "spatial/core/index/rtree/rtree_index_create_physical.hpp"
 #include "spatial/core/types.hpp"
 
-
 namespace spatial {
 
 namespace core {
 
 LogicalCreateRTreeIndex::LogicalCreateRTreeIndex(unique_ptr<CreateIndexInfo> info_p,
-                                               vector<unique_ptr<Expression>> expressions_p, TableCatalogEntry &table_p)
+                                                 vector<unique_ptr<Expression>> expressions_p,
+                                                 TableCatalogEntry &table_p)
     : LogicalExtensionOperator(), info(std::move(info_p)), table(table_p) {
 	for (auto &expr : expressions_p) {
 		this->unbound_expressions.push_back(expr->Copy());
@@ -46,11 +46,13 @@ string LogicalCreateRTreeIndex::GetExtensionName() const {
 }
 
 // TODO: We should also filter for EMPTY geometries.
-static unique_ptr<PhysicalOperator> CreateNullFilter(const LogicalCreateRTreeIndex &op, const vector<LogicalType> &types) {
+static unique_ptr<PhysicalOperator> CreateNullFilter(const LogicalCreateRTreeIndex &op,
+                                                     const vector<LogicalType> &types) {
 	vector<unique_ptr<Expression>> filter_select_list;
 
 	// Filter NOT NULL on the GEOMETRY column
-	auto is_not_null_expr = make_uniq<BoundOperatorExpression>(ExpressionType::OPERATOR_IS_NOT_NULL, LogicalType::BOOLEAN);
+	auto is_not_null_expr =
+	    make_uniq<BoundOperatorExpression>(ExpressionType::OPERATOR_IS_NOT_NULL, LogicalType::BOOLEAN);
 	auto bound_ref = make_uniq<BoundReferenceExpression>(types[0], 0);
 	is_not_null_expr->children.push_back(std::move(bound_ref));
 
@@ -59,18 +61,23 @@ static unique_ptr<PhysicalOperator> CreateNullFilter(const LogicalCreateRTreeInd
 	return make_uniq<PhysicalFilter>(types, std::move(filter_select_list), op.estimated_cardinality);
 }
 
-static unique_ptr<PhysicalOperator> CreateBoundingBoxProjection(const LogicalCreateRTreeIndex &op, const vector<LogicalType> &types, ClientContext &context) {
+static unique_ptr<PhysicalOperator> CreateBoundingBoxProjection(const LogicalCreateRTreeIndex &op,
+                                                                const vector<LogicalType> &types,
+                                                                ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	// Get the bounding box function
-	auto &bbox_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "ST_Extent_Approx").Cast<ScalarFunctionCatalogEntry>();
+	auto &bbox_func_entry =
+	    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "ST_Extent_Approx")
+	        .Cast<ScalarFunctionCatalogEntry>();
 	auto bbox_func = bbox_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::GEOMETRY()});
 
 	auto geom_ref_expr = make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::GEOMETRY(), 0);
 	vector<unique_ptr<Expression>> bbox_args;
 	bbox_args.push_back(std::move(geom_ref_expr));
 
-	auto bbox_expr = make_uniq_base<Expression, BoundFunctionExpression>(GeoTypes::BOX_2DF(), bbox_func, std::move(bbox_args), nullptr);
+	auto bbox_expr = make_uniq_base<Expression, BoundFunctionExpression>(GeoTypes::BOX_2DF(), bbox_func,
+	                                                                     std::move(bbox_args), nullptr);
 
 	// Also project the rowid column
 	auto rowid_expr = make_uniq_base<Expression, BoundReferenceExpression>(LogicalType::ROW_TYPE, 1);
@@ -82,18 +89,21 @@ static unique_ptr<PhysicalOperator> CreateBoundingBoxProjection(const LogicalCre
 	return make_uniq<PhysicalProjection>(types, std::move(select_list), op.estimated_cardinality);
 }
 
-static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIndex &op, const vector<LogicalType> &types, ClientContext &context) {
+static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIndex &op,
+                                                      const vector<LogicalType> &types, ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	// Get the xmin value function
-	auto &xmin_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin").Cast<ScalarFunctionCatalogEntry>();
+	auto &xmin_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")
+	                            .Cast<ScalarFunctionCatalogEntry>();
 	auto xmin_func = xmin_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::BOX_2DF()});
 	vector<unique_ptr<Expression>> xmin_func_args;
 
 	// Reference the geometry column
 	auto geom_ref_expr = make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::BOX_2DF(), 0);
 	xmin_func_args.push_back(std::move(geom_ref_expr));
-	auto xmin_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::FLOAT, xmin_func, std::move(xmin_func_args), nullptr);
+	auto xmin_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::FLOAT, xmin_func,
+	                                                                     std::move(xmin_func_args), nullptr);
 
 	vector<BoundOrderByNode> orders;
 	orders.emplace_back(OrderType::ASCENDING, OrderByNullType::NULLS_FIRST, std::move(xmin_expr));
@@ -102,7 +112,7 @@ static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIn
 }
 
 unique_ptr<PhysicalOperator> LogicalCreateRTreeIndex::CreatePlan(ClientContext &context,
-                                                                PhysicalPlanGenerator &generator) {
+                                                                 PhysicalPlanGenerator &generator) {
 
 	auto &op = *this;
 
@@ -172,7 +182,7 @@ unique_ptr<PhysicalOperator> LogicalCreateRTreeIndex::CreatePlan(ClientContext &
 	// Now finally create the actual physical create index operator
 	auto physical_create_index =
 	    make_uniq<PhysicalCreateRTreeIndex>(op, op.table, op.info->column_ids, std::move(op.info),
-	                                       std::move(op.unbound_expressions), op.estimated_cardinality);
+	                                        std::move(op.unbound_expressions), op.estimated_cardinality);
 
 	physical_create_index->children.push_back(std::move(physical_order));
 

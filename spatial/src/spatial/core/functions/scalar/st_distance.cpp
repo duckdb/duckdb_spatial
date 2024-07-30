@@ -13,7 +13,7 @@ namespace core {
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
-template<class T>
+template <class T>
 static PointXY<T> ClosestPointOnSegment(const PointXY<T> &p, const PointXY<T> &p1, const PointXY<T> &p2) {
 	// If the segment is a Vertex, then return that Vertex
 	if (p1.ApproxEqualTo(p2)) {
@@ -34,7 +34,7 @@ static PointXY<T> ClosestPointOnSegment(const PointXY<T> &p, const PointXY<T> &p
 	return PointXY<T>(p1.x + r * (p2.x - p1.x), p1.y + r * (p2.y - p1.y));
 }
 
-template<class T>
+template <class T>
 static double DistanceToSegmentSquared(const PointXY<T> &px, const PointXY<T> &ax, const PointXY<T> &bx) {
 	auto point = ClosestPointOnSegment(px, ax, bx);
 	auto dx = px.x - point.x;

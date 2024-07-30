@@ -228,8 +228,7 @@ struct SerializeOp {
 	}
 };
 
-
-template<class V>
+template <class V>
 void SerializeTemplated(const Geometry &geom, Cursor &cursor, bool has_bbox, uint32_t bbox_size) {
 
 	// All geometries except points have a bounding box
@@ -254,7 +253,7 @@ void SerializeTemplated(const Geometry &geom, Cursor &cursor, bool has_bbox, uin
 		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.max.y));
 
 		// Write the extra M and Z values, if needed
-		for(idx_t i = 2; i < V::SIZE; i++) {
+		for (idx_t i = 2; i < V::SIZE; i++) {
 			cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.min[i]));
 			cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.max[i]));
 		}

@@ -48,7 +48,6 @@ LogicalType GeoTypes::BOX_2DF() {
 	return type;
 }
 
-
 LogicalType GeoTypes::LINESTRING_2D() {
 	auto type = LogicalType::LIST(LogicalType::STRUCT({{"x", LogicalType::DOUBLE}, {"y", LogicalType::DOUBLE}}));
 	type.SetAlias("LINESTRING_2D");

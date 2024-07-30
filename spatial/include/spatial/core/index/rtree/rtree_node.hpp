@@ -24,11 +24,14 @@ enum class RTreeNodeType : uint8_t {
 
 class RTreePointer final : public IndexPointer {
 	static constexpr idx_t AND_ROW_ID = 0x00FFFFFFFFFFFFFF;
+
 public:
 	RTreePointer() = default;
-	explicit RTreePointer(const IndexPointer &ptr) : IndexPointer(ptr) {}
+	explicit RTreePointer(const IndexPointer &ptr) : IndexPointer(ptr) {
+	}
 	//! Get a new pointer to a node, might cause a new buffer allocation, and initialize it
-	static RTreeNode& NewPage(RTreeIndex &index, RTreePointer &pointer, RTreeNodeType type = RTreeNodeType::BRANCH_PAGE);
+	static RTreeNode &NewPage(RTreeIndex &index, RTreePointer &pointer,
+	                          RTreeNodeType type = RTreeNodeType::BRANCH_PAGE);
 
 	static RTreePointer NewRowId(row_t row_id) {
 		RTreePointer pointer;
@@ -68,14 +71,24 @@ public:
 		return static_cast<RTreeNodeType>(GetMetadata());
 	}
 
-	bool IsRowId() const { return GetType() == RTreeNodeType::ROW_ID; }
-	bool IsLeafPage() const { return GetType() == RTreeNodeType::LEAF_PAGE; }
-	bool IsBranchPage() const { return GetType() == RTreeNodeType::BRANCH_PAGE; }
-	bool IsPage() const { return IsLeafPage() || IsBranchPage(); }
-	bool IsSet() const { return Get() != 0; }
+	bool IsRowId() const {
+		return GetType() == RTreeNodeType::ROW_ID;
+	}
+	bool IsLeafPage() const {
+		return GetType() == RTreeNodeType::LEAF_PAGE;
+	}
+	bool IsBranchPage() const {
+		return GetType() == RTreeNodeType::BRANCH_PAGE;
+	}
+	bool IsPage() const {
+		return IsLeafPage() || IsBranchPage();
+	}
+	bool IsSet() const {
+		return Get() != 0;
+	}
 
 	//! Assign operator
-	RTreePointer& operator=(const IndexPointer &ptr) {
+	RTreePointer &operator=(const IndexPointer &ptr) {
 		Set(ptr.Get());
 		return *this;
 	}
@@ -91,23 +104,29 @@ struct RTreeEntry {
 	RTreePointer pointer;
 	RTreeBounds bounds;
 	RTreeEntry() = default;
-	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {}
-	bool IsSet() const { return pointer.Get() != 0; }
-	void Clear() { pointer.Set(0); }
+	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {
+	}
+	bool IsSet() const {
+		return pointer.Get() != 0;
+	}
+	void Clear() {
+		pointer.Set(0);
+	}
 };
 
 class RTreeNode {
 public:
 	friend class RTreePointer;
 	static constexpr idx_t CAPACITY = 128;
+
 public:
 	RTreeEntry entries[CAPACITY];
 
 	// Compute the bounds of this node by summing up all the child entries bounds
 	RTreeBounds GetBounds() const {
 		RTreeBounds result;
-		for(const auto & entry : entries) {
-			if(entry.IsSet()) {
+		for (const auto &entry : entries) {
+			if (entry.IsSet()) {
 				result.Union(entry.bounds);
 			} else {
 				break;
@@ -119,11 +138,11 @@ public:
 	// Returns the index of the first non-set entry
 	idx_t GetCount() const {
 		idx_t i;
-		for(i = 0; i < CAPACITY; i++) {
-            if(!entries[i].IsSet()) {
-                break;
-            }
-        }
+		for (i = 0; i < CAPACITY; i++) {
+			if (!entries[i].IsSet()) {
+				break;
+			}
+		}
 		return i;
 	}
 
@@ -131,29 +150,29 @@ public:
 	// and clear the last entry
 	RTreeEntry RemoveAndSwap(idx_t index, idx_t count) {
 		D_ASSERT(index < count);
-        const auto entry = entries[index];
-        entries[index] = entries[count - 1];
-        entries[count - 1].Clear();
-        return entry;
+		const auto entry = entries[index];
+		entries[index] = entries[count - 1];
+		entries[count - 1].Clear();
+		return entry;
 	}
 
 	void Verify() {
 #ifdef DEBUG
-	for(idx_t i = 0; i < CAPACITY; i++) {
-		// If the entry is not set
-		if(!entries[i].IsSet()) {
-			// Then all the following entries should be unset
-			for(idx_t j = i; j < CAPACITY; j++) {
-                D_ASSERT(!entries[j].IsSet());
-            }
-			break;
+		for (idx_t i = 0; i < CAPACITY; i++) {
+			// If the entry is not set
+			if (!entries[i].IsSet()) {
+				// Then all the following entries should be unset
+				for (idx_t j = i; j < CAPACITY; j++) {
+					D_ASSERT(!entries[j].IsSet());
+				}
+				break;
+			}
 		}
-	}
 #endif
 	}
 };
 
-inline RTreeNode& RTreePointer::NewPage(RTreeIndex &index, RTreePointer &pointer, RTreeNodeType type) {
+inline RTreeNode &RTreePointer::NewPage(RTreeIndex &index, RTreePointer &pointer, RTreeNodeType type) {
 	D_ASSERT(type == RTreeNodeType::BRANCH_PAGE || type == RTreeNodeType::LEAF_PAGE);
 
 	// Allocate a new node. This will also memset the entries to 0
@@ -166,8 +185,8 @@ inline RTreeNode& RTreePointer::NewPage(RTreeIndex &index, RTreePointer &pointer
 	return ref;
 }
 
-}
+} // namespace core
 
-}
+} // namespace spatial
 
 // -74.0891647, -0.0194350015, 0.0184550006, 40.8297081)

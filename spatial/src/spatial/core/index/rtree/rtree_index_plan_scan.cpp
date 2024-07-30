@@ -31,11 +31,11 @@ public:
 	}
 
 	static bool IsSpatialPredicate(const ScalarFunction &function) {
-		case_insensitive_set_t predicates = {"st_equals", "st_intersects", "st_touches", "st_crosses",
-									 "st_within", "st_contains", "st_overlaps", "st_covers",
-									 "st_coveredby", "st_containsproperly"};
+		case_insensitive_set_t predicates = {"st_equals",    "st_intersects",      "st_touches",  "st_crosses",
+		                                     "st_within",    "st_contains",        "st_overlaps", "st_covers",
+		                                     "st_coveredby", "st_containsproperly"};
 
-		if(predicates.find(function.name) == predicates.end()) {
+		if (predicates.find(function.name) == predicates.end()) {
 			return false;
 		}
 		if (function.arguments.size() < 2) {
@@ -46,7 +46,7 @@ public:
 			// We can only optimize if the first child is a GEOMETRY
 			return false;
 		}
-		if(function.arguments[1] != GeoTypes::GEOMETRY()) {
+		if (function.arguments[1] != GeoTypes::GEOMETRY()) {
 			// We can only optimize if the second child is a GEOMETRY
 			return false;
 		}
@@ -62,7 +62,7 @@ public:
 		const geometry_t blob(str);
 
 		Box2D<double> bbox;
-		if(!blob.TryGetCachedBounds(bbox)) {
+		if (!blob.TryGetCachedBounds(bbox)) {
 			throw InternalException("Could not get bounding box from geometry");
 		}
 
@@ -98,16 +98,16 @@ public:
 		auto &expr_func = expr->Cast<BoundFunctionExpression>();
 
 		// Check that the function is a spatial predicate
-		if(!IsSpatialPredicate(expr_func.function)) {
+		if (!IsSpatialPredicate(expr_func.function)) {
 			return false;
 		}
 
 		// Look for a table scan
-		if(filter.children.front()->type != LogicalOperatorType::LOGICAL_GET) {
+		if (filter.children.front()->type != LogicalOperatorType::LOGICAL_GET) {
 			return false;
 		}
 		auto &get = filter.children.front()->Cast<LogicalGet>();
-		if(get.function.name != "seq_scan") {
+		if (get.function.name != "seq_scan") {
 			return false;
 		}
 
@@ -123,8 +123,7 @@ public:
 		Value target_value;
 		if (expr_func.children[0]->return_type == GeoTypes::GEOMETRY() && expr_func.children[0]->IsFoldable()) {
 			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[0]);
-		}
-		else if (expr_func.children[1]->return_type == GeoTypes::GEOMETRY() && expr_func.children[1]->IsFoldable()) {
+		} else if (expr_func.children[1]->return_type == GeoTypes::GEOMETRY() && expr_func.children[1]->IsFoldable()) {
 			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[1]);
 		} else {
 			// We can only optimize if one of the children is a constant
@@ -161,9 +160,9 @@ public:
 	}
 
 	static void Optimize(OptimizerExtensionInput &input, unique_ptr<LogicalOperator> &plan) {
-		if(!TryOptimize(input.context, plan)) {
+		if (!TryOptimize(input.context, plan)) {
 			// No match: continue with the children
-			for(auto &child : plan->children) {
+			for (auto &child : plan->children) {
 				Optimize(input, child);
 			}
 		}

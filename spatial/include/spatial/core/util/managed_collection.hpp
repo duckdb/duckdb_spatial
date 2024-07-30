@@ -13,20 +13,23 @@ public:
 	idx_t item_capacity;
 	idx_t item_count;
 
-	explicit ManagedCollectionBlock(idx_t item_capacity) : handle(nullptr), item_capacity(item_capacity), item_count(0) {};
+	explicit ManagedCollectionBlock(idx_t item_capacity)
+	    : handle(nullptr), item_capacity(item_capacity), item_count(0) {};
 	ManagedCollectionBlock(shared_ptr<BlockHandle> handle, idx_t item_capacity)
-		: handle(std::move(handle)), item_capacity(item_capacity), item_count(0) {}
+	    : handle(std::move(handle)), item_capacity(item_capacity), item_count(0) {
+	}
 };
 
-template<class T>
+template <class T>
 class ManagedCollection {
 	static constexpr idx_t BLOCK_CAPACITY = Storage::BLOCK_SIZE / sizeof(T);
 	BufferManager &manager;
 	vector<ManagedCollectionBlock> blocks;
 	idx_t size = 0;
-public:
 
-	explicit ManagedCollection(BufferManager &manager) : manager(manager) {}
+public:
+	explicit ManagedCollection(BufferManager &manager) : manager(manager) {
+	}
 
 	// Initialize append state, optionally with a lower initial capacity. This is useful for small collections.
 	void InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity = BLOCK_CAPACITY);
@@ -43,12 +46,14 @@ public:
 
 	// Scan the collection, writing as many elements as possible to the output buffer
 	// Returns the pointer one past the last element written to the output buffer
-	template<class ITERATOR>
+	template <class ITERATOR>
 	typename ITERATOR::difference_type Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end);
 
 	T Fetch(idx_t idx);
 
-	idx_t Count() const { return size; }
+	idx_t Count() const {
+		return size;
+	}
 
 	void Clear() {
 		blocks.clear();
@@ -56,22 +61,22 @@ public:
 	}
 };
 
-template<class T>
+template <class T>
 constexpr idx_t ManagedCollection<T>::BLOCK_CAPACITY;
 
 struct ManagedCollectionAppendState {
 	BufferHandle handle;
-	ManagedCollectionBlock* block = nullptr;
+	ManagedCollectionBlock *block = nullptr;
 };
 
 template <class T>
 void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity) {
 	D_ASSERT(initial_capacity <= BLOCK_CAPACITY);
 
-	//state.block.item_count = 0;
-	//state.block.item_capacity = initial_capacity;
+	// state.block.item_count = 0;
+	// state.block.item_capacity = initial_capacity;
 
-	if(initial_capacity < BLOCK_CAPACITY) {
+	if (initial_capacity < BLOCK_CAPACITY) {
 		// Allocate a new small block
 		blocks.emplace_back(manager.RegisterSmallMemory(initial_capacity * sizeof(T)), initial_capacity);
 		state.block = &blocks.back();
@@ -88,10 +93,10 @@ void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state,
 	}
 }
 
-template<class T>
+template <class T>
 void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T *begin, const T *end) {
-	while(begin != end) {
-		if(state.block->item_count >= state.block->item_capacity) {
+	while (begin != end) {
+		if (state.block->item_count >= state.block->item_capacity) {
 			// Allocate a new standard block
 			blocks.emplace_back(BLOCK_CAPACITY);
 			state.block = &blocks.back();
@@ -109,7 +114,7 @@ void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T *
 		auto ptr = state.handle.Ptr() + state.block->item_count * sizeof(T);
 
 		// Store as many elements as we can
-		for(idx_t i = 0; i < to_copy; i++) {
+		for (idx_t i = 0; i < to_copy; i++) {
 			Store<T>(*begin, ptr);
 			++begin;
 			++size;
@@ -119,7 +124,7 @@ void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T *
 	}
 }
 
-template<class T>
+template <class T>
 void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T &value) {
 	Append(state, &value, &value + 1);
 }
@@ -153,19 +158,20 @@ void ManagedCollection<T>::InitializeScan(ManagedCollectionScanState &state, boo
 
 template <class T>
 template <class ITERATOR>
-typename ITERATOR::difference_type ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR begin, ITERATOR end) {
+typename ITERATOR::difference_type ManagedCollection<T>::Scan(ManagedCollectionScanState &state, ITERATOR begin,
+                                                              ITERATOR end) {
 	auto pos = begin;
 	while (pos != end) {
-		if(state.scan_idx >= state.scan_capacity) {
+		if (state.scan_idx >= state.scan_capacity) {
 
-			if(state.destroy_scanned) {
+			if (state.destroy_scanned) {
 				// Destroy the current block
 				state.handle.Destroy();
 			}
 
 			// Move to the next block
 			state.block_idx++;
-			if(state.block_idx >= blocks.size()) {
+			if (state.block_idx >= blocks.size()) {
 				// We reached the end of the collection
 				break;
 			}
@@ -185,7 +191,7 @@ typename ITERATOR::difference_type ManagedCollection<T>::Scan(ManagedCollectionS
 		auto ptr = state.handle.Ptr() + state.scan_idx * sizeof(T);
 
 		// Copy as many elements as we can
-		for(idx_t i = 0; i < to_copy; i++) {
+		for (idx_t i = 0; i < to_copy; i++) {
 			*pos = Load<T>(ptr);
 			++pos;
 			++state.scan_idx;
@@ -196,7 +202,7 @@ typename ITERATOR::difference_type ManagedCollection<T>::Scan(ManagedCollectionS
 	return pos - begin;
 }
 
-template<class T>
+template <class T>
 T ManagedCollection<T>::Fetch(idx_t idx) {
 	auto block_idx = idx / BLOCK_CAPACITY;
 	auto block_offset = idx % BLOCK_CAPACITY;

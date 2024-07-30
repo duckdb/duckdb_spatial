@@ -18,7 +18,7 @@ struct GeneratePointsBindData final : public TableFunctionData {
 };
 
 static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
-												  vector<LogicalType> &return_types, vector<string> &names) {
+                                     vector<LogicalType> &return_types, vector<string> &names) {
 	auto result = make_uniq<GeneratePointsBindData>();
 
 	return_types.push_back(GeoTypes::POINT_2D());
@@ -35,13 +35,13 @@ static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindIn
 	// Extract the count
 	const auto &count_value = input.inputs[1];
 	const auto count = count_value.GetValue<int64_t>();
-	if(count < 0) {
+	if (count < 0) {
 		throw BinderException("Count must be a non-negative integer");
 	}
 	result->count = UnsafeNumericCast<idx_t>(count);
 
 	// Extract the seed (optional)
-	if(input.inputs.size() == 3) {
+	if (input.inputs.size() == 3) {
 		result->seed = input.inputs[2].GetValue<int64_t>();
 	}
 
@@ -77,7 +77,7 @@ static void Execute(ClientContext &context, TableFunctionInput &data_p, DataChun
 	const auto &y_data = FlatVector::GetData<double>(*point_vec[1]);
 
 	const auto chunk_size = MinValue<idx_t>(STANDARD_VECTOR_SIZE, bind_data.count - state.current_idx);
-	for(idx_t i = 0; i < chunk_size; i++) {
+	for (idx_t i = 0; i < chunk_size; i++) {
 
 		x_data[i] = state.rng.NextRandom(bind_data.bbox.min.x, bind_data.bbox.max.x);
 		y_data[i] = state.rng.NextRandom(bind_data.bbox.min.y, bind_data.bbox.max.y);
@@ -101,7 +101,7 @@ unique_ptr<NodeStatistics> Cardinality(ClientContext &context, const FunctionDat
 void CoreTableFunctions::RegisterGeneratePointsTableFunction(DatabaseInstance &db) {
 	TableFunctionSet set("ST_GeneratePoints");
 
-	TableFunction generate_points( {GeoTypes::BOX_2D(), LogicalType::BIGINT}, Execute, Bind, Init);
+	TableFunction generate_points({GeoTypes::BOX_2D(), LogicalType::BIGINT}, Execute, Bind, Init);
 	generate_points.cardinality = Cardinality;
 
 	// Overload without seed

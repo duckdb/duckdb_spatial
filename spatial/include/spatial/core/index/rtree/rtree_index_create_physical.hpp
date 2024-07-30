@@ -17,8 +17,8 @@ public:
 
 public:
 	PhysicalCreateRTreeIndex(LogicalOperator &op, TableCatalogEntry &table, const vector<column_t> &column_ids,
-	                        unique_ptr<CreateIndexInfo> info, vector<unique_ptr<Expression>> unbound_expressions,
-	                        idx_t estimated_cardinality);
+	                         unique_ptr<CreateIndexInfo> info, vector<unique_ptr<Expression>> unbound_expressions,
+	                         idx_t estimated_cardinality);
 
 	//! The table to create the index for
 	DuckTableEntry &table;
@@ -56,4 +56,4 @@ public:
 
 } // namespace core
 
-} // namespace duckdb
+} // namespace spatial

@@ -123,7 +123,8 @@ void CoreScalarFunctions::RegisterStExtent(DatabaseInstance &db) {
 	DocUtil::AddDocumentation(db, "ST_Extent", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
 
 	ScalarFunctionSet approx_set("ST_Extent_Approx");
-	approx_set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2DF(), ExtentCachedFunction, nullptr, nullptr, nullptr));
+	approx_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2DF(), ExtentCachedFunction, nullptr, nullptr, nullptr));
 	ExtensionUtil::RegisterFunction(db, approx_set);
 }
 

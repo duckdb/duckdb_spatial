@@ -23,7 +23,7 @@ namespace core {
 
 // BIND
 static unique_ptr<FunctionData> RTreeindexInfoBind(ClientContext &context, TableFunctionBindInput &input,
-                                                  vector<LogicalType> &return_types, vector<string> &names) {
+                                                   vector<LogicalType> &return_types, vector<string> &names) {
 	names.emplace_back("catalog_name");
 	return_types.emplace_back(LogicalType::VARCHAR);
 
@@ -45,8 +45,7 @@ struct RTreeIndexInfoState : public GlobalTableFunctionState {
 	vector<reference<IndexCatalogEntry>> entries;
 };
 
-static unique_ptr<GlobalTableFunctionState> RTreeIndexInfoInit(ClientContext &context,
-                                                                    TableFunctionInitInput &input) {
+static unique_ptr<GlobalTableFunctionState> RTreeIndexInfoInit(ClientContext &context, TableFunctionInitInput &input) {
 	auto result = make_uniq<RTreeIndexInfoState>();
 
 	// scan all the schemas for indexes and collect them
@@ -108,10 +107,10 @@ static optional_ptr<RTreeIndex> TryGetIndex(ClientContext &context, const string
 	// look up the index name in the catalog
 	Binder::BindSchemaOrCatalog(context, qname.catalog, qname.schema);
 	auto &index_entry = Catalog::GetEntry(context, CatalogType::INDEX_ENTRY, qname.catalog, qname.schema, qname.name)
-							.Cast<IndexCatalogEntry>();
+	                        .Cast<IndexCatalogEntry>();
 	auto &table_entry = Catalog::GetEntry(context, CatalogType::TABLE_ENTRY, qname.catalog, index_entry.GetSchemaName(),
-										  index_entry.GetTableName())
-							.Cast<TableCatalogEntry>();
+	                                      index_entry.GetTableName())
+	                        .Cast<TableCatalogEntry>();
 
 	auto &storage = table_entry.GetStorage();
 	RTreeIndex *rtree_index = nullptr;
@@ -137,7 +136,7 @@ struct RTreeIndexDumpBindData : public TableFunctionData {
 };
 
 static unique_ptr<FunctionData> RTreeIndexDumpBind(ClientContext &context, TableFunctionBindInput &input,
-												  vector<LogicalType> &return_types, vector<string> &names) {
+                                                   vector<LogicalType> &return_types, vector<string> &names) {
 	auto result = make_uniq<RTreeIndexDumpBindData>();
 
 	result->index_name = input.inputs[0].GetValue<string>();
@@ -160,7 +159,7 @@ struct RTreeIndexDumpStackFrame {
 	RTreePointer pointer;
 	idx_t entry_idx = 0;
 	RTreeIndexDumpStackFrame(const RTreePointer &pointer_p, idx_t entry_idx_p)
-		: pointer(pointer_p), entry_idx(entry_idx_p) {
+	    : pointer(pointer_p), entry_idx(entry_idx_p) {
 	}
 };
 
@@ -168,6 +167,7 @@ struct RTreeIndexDumpState final : public GlobalTableFunctionState {
 	const RTreeIndex &index;
 	vector<RTreeIndexDumpStackFrame> stack;
 	int32_t level = 0;
+
 public:
 	explicit RTreeIndexDumpState(const RTreeIndex &index) : index(index) {
 	}
@@ -200,14 +200,14 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 	const auto rowid_data = FlatVector::GetData<row_t>(output.data[2]);
 
 	// Depth-first scan of all nodes in the RTree
-	while(!state.stack.empty()) {
+	while (!state.stack.empty()) {
 		auto &frame = state.stack.back();
 		const auto &node = RTreePointer::Ref(state.index, frame.pointer);
 
-		if(frame.pointer.IsLeafPage()) {
-			while(frame.entry_idx < RTreeNode::CAPACITY) {
+		if (frame.pointer.IsLeafPage()) {
+			while (frame.entry_idx < RTreeNode::CAPACITY) {
 				auto &entry = node.entries[frame.entry_idx];
-				if(entry.IsSet()) {
+				if (entry.IsSet()) {
 					level_data[total_scanned] = state.level;
 					xmin_data[total_scanned] = entry.bounds.min.x;
 					ymin_data[total_scanned] = entry.bounds.min.y;
@@ -216,7 +216,7 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 					rowid_data[total_scanned] = entry.pointer.GetRowId();
 					total_scanned++;
 					frame.entry_idx++;
-					if(total_scanned == STANDARD_VECTOR_SIZE) {
+					if (total_scanned == STANDARD_VECTOR_SIZE) {
 						// We've filled the result vector, yield!
 						output.SetCardinality(total_scanned);
 						return;
@@ -230,7 +230,7 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 		} else {
 			D_ASSERT(frame.pointer.IsBranchPage());
 			auto &entry = node.entries[frame.entry_idx];
-			if(frame.entry_idx < RTreeNode::CAPACITY && entry.IsSet()) {
+			if (frame.entry_idx < RTreeNode::CAPACITY && entry.IsSet()) {
 				level_data[total_scanned] = state.level;
 				xmin_data[total_scanned] = entry.bounds.min.x;
 				ymin_data[total_scanned] = entry.bounds.min.y;
@@ -243,7 +243,7 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 				state.level++;
 				state.stack.emplace_back(entry.pointer, 0);
 
-				if(total_scanned == STANDARD_VECTOR_SIZE) {
+				if (total_scanned == STANDARD_VECTOR_SIZE) {
 					output.SetCardinality(total_scanned);
 					return;
 				}
@@ -269,7 +269,8 @@ void RTreeModule::RegisterIndexPragmas(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterFunction(db, info_function);
 
-	TableFunction dump_function("rtree_index_dump", {LogicalType::VARCHAR}, RTreeIndexDumpExecute, RTreeIndexDumpBind, RTreeIndexDumpInit);
+	TableFunction dump_function("rtree_index_dump", {LogicalType::VARCHAR}, RTreeIndexDumpExecute, RTreeIndexDumpBind,
+	                            RTreeIndexDumpInit);
 
 	ExtensionUtil::RegisterFunction(db, dump_function);
 }
