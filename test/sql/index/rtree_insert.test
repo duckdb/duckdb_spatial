@@ -7,8 +7,40 @@ statement ok
 INSERT INTO t1 (geom) VALUES ('POINT(1 1)');
 
 statement ok
-CREATE INDEX my_idx ON t1 USING RTREE (geom);
+pragma threads=1;
+
+statement ok
+CREATE TABLE points AS SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
 
 # Now insert a few more points
 statement ok
-INSERT INTO t1 SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
+INSERT INTO t1 SELECT * FROM points;
+
+query I rowsort sanitycheck
+SELECT count(geom) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-1, -1, 10001, 10001));
+
+query I rowsort res
+SELECT count(geom) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+----
+
+# Now delete the points again
+statement ok
+DELETE FROM t1;
+
+statement ok
+INSERT INTO t1 (geom) VALUES ('POINT(1 1)');
+
+# Create and index
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE (geom);
+
+# Now insert the same points again
+statement ok
+INSERT INTO t1 SELECT * FROM points;
+
+query I rowsort sanitycheck
+SELECT count(geom) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(-1, -1, 10001, 10001));
+
+query I rowsort res
+SELECT count(st_astext(geom)) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+----

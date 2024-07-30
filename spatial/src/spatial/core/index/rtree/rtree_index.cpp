@@ -6,9 +6,8 @@
 #include "duckdb/storage/table/scan_state.hpp"
 #include "spatial/core/index/rtree/rtree_module.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
-
-#include <spatial/core/geometry/geometry_type.hpp>
-#include <spatial/core/util/math.hpp>
+#include "spatial/core/geometry/geometry_type.hpp"
+#include "spatial/core/util/math.hpp"
 
 namespace spatial {
 
@@ -82,8 +81,12 @@ idx_t RTreeIndex::Scan(IndexScanState &state_p, Vector &result) const {
 			// so its ok if the ptr gets invalidated when we pop_back();
 			state.stack.pop_back();
 			for(auto &entry : node.entries) {
-				if(entry.IsSet() && entry.bounds.Intersects(state.query_bounds)) {
-					state.stack.emplace_back(entry.pointer);
+				if(entry.IsSet()) {
+					if(entry.bounds.Intersects(state.query_bounds)) {
+						state.stack.emplace_back(entry.pointer);
+					}
+				} else {
+					break;
 				}
 			}
 		}
@@ -286,11 +289,12 @@ static idx_t GetSmallestEnlargment(const RTreeEntry entries[], const RTreeEntry 
 }
 
 
-static RTreeEntry NodeSplit(RTreeIndex &rtree, RTreeEntry &entry) {
-	auto &page = RTreePointer::RefMutable(rtree, entry.pointer);
+static RTreeEntry SplitNode(RTreeIndex &rtree, RTreeEntry &entry) {
+	auto &left_page = RTreePointer::RefMutable(rtree, entry.pointer);
 
-	// How many valid entries the page has
-	idx_t entry_count = 0;
+	D_ASSERT(left_page.GetCount() == RTreeNode::CAPACITY);
+
+	auto &left_entries = left_page.entries;
 
 	// The two entries that are the farthest apart
 	idx_t left_idx = 0;
@@ -299,22 +303,20 @@ static RTreeEntry NodeSplit(RTreeIndex &rtree, RTreeEntry &entry) {
 	auto diff = NumericLimits<float>::Minimum();
 	for (auto dim = 0; dim < 2; dim++)
 	{
-		entry_count = 0;
-
 		idx_t min_child_idx = 0;
 		idx_t max_child_idx = 0;
 
-		auto min_value = page.entries[min_child_idx].bounds.min[dim];
-		auto max_value = page.entries[max_child_idx].bounds.max[dim];
+		auto min_value = left_page.entries[min_child_idx].bounds.min[dim];
+		auto max_value = left_page.entries[max_child_idx].bounds.max[dim];
 
 		for (idx_t child_idx = 1; child_idx < RTreeNode::CAPACITY; child_idx++)
 		{
-			auto &child = page.entries[child_idx];
+			auto &child = left_page.entries[child_idx];
 			if(child.IsSet()) {
-				if (child.bounds.min[dim] > page.entries[min_child_idx].bounds.min[dim]) {
+				if (child.bounds.min[dim] > left_page.entries[min_child_idx].bounds.min[dim]) {
 					min_child_idx = child_idx;
 				}
-				if (child.bounds.max[dim] < page.entries[max_child_idx].bounds.max[dim]) {
+				if (child.bounds.max[dim] < left_page.entries[max_child_idx].bounds.max[dim]) {
 					max_child_idx = child_idx;
 				}
 				min_value = std::min(child.bounds.min[dim], min_value);
@@ -322,11 +324,10 @@ static RTreeEntry NodeSplit(RTreeIndex &rtree, RTreeEntry &entry) {
 			} else {
 				break;
 			}
-			entry_count++;
 		}
 
 		// Normalize the distance between the two children by the length of the bounding box
-		const auto dist = page.entries[min_child_idx].bounds.min[dim] - page.entries[max_child_idx].bounds.max[dim];
+		const auto dist = left_page.entries[min_child_idx].bounds.min[dim] - left_page.entries[max_child_idx].bounds.max[dim];
 		auto len = max_value - min_value;
 		if (len <= 0) {
 			len = 1;
@@ -349,31 +350,38 @@ static RTreeEntry NodeSplit(RTreeIndex &rtree, RTreeEntry &entry) {
 	}
 
 	// We now have the two entries that are the farthest apart
-	auto &left_entries = page.entries;
-
 	// Create a new page for the right entries
 	RTreePointer new_page_ptr;
 	auto &right_page = RTreePointer::NewPage(rtree, new_page_ptr, entry.pointer.GetType());
 	auto &right_entries = right_page.entries;
 
-	// Move the two farthest entries to each page
+	// Move the right seed entry to the new right page
 	right_entries[0] = left_entries[right_idx];
-	left_entries[right_idx] = left_entries[entry_count--];
 
-	left_entries[0] = left_entries[left_idx];
-	left_entries[left_idx] = left_entries[entry_count--];
+	// Move the left idx so that it is in the first half of the entries
+	const auto left_swap_idx = right_idx == 0 ? 1 : 0;
+	std::swap(left_entries[left_idx], left_entries[left_swap_idx]);
+
+	// Compact the left page by swapping the right seed entry with the last entry
+	left_entries[right_idx] = left_entries[RTreeNode::CAPACITY - 1];
 
 	// How many entries to move
-	const auto half = entry_count / 2;
+	constexpr auto half = RTreeNode::CAPACITY / 2;
 
-	// Move the second half of the entries to the new right page
-	memcpy(right_entries + 1, left_entries + half, half * sizeof(RTreeEntry));
+	// Copy the second half of the entries to the new right page
+	// (except the last entry, which was already moved during compaction)
+	memcpy(right_entries + 1, left_entries + half, (half - 1) * sizeof(RTreeEntry));
 
-	// Clear the second half of the left page
+	// Clear the second half of the entries in the left page
 	memset(left_entries + half, 0, half * sizeof(RTreeEntry));
 
 	// Recalculate the bounding box for the left page
-	entry.bounds = page.GetBounds();
+	entry.bounds = left_page.GetBounds();
+
+	// Asserts
+	D_ASSERT(left_page.GetCount() == right_page.GetCount());
+	left_page.Verify();
+	right_page.Verify();
 
 	// Return the new right page
 	return { new_page_ptr, right_page.GetBounds() };
@@ -417,7 +425,7 @@ InsertResult NodeInsert(RTreeIndex &rtree, RTreeEntry &n, const RTreeEntry &new_
 
 		// Otherwise, split the selected child
 		auto &left = node.entries[idx];
-		auto right = NodeSplit(rtree, left);
+		auto right = SplitNode(rtree, left);
 
 		// Insert the new right node into the current node
 		node.entries[count++] = right;
@@ -452,7 +460,7 @@ static void RootInsert(RTreeIndex &rtree, RTreeEntry &root_entry, const RTreeEnt
 		new_root.entries[0] = root_entry;
 
 		// Split the old root
-		auto right = NodeSplit(rtree, new_root.entries[0]);
+		auto right = SplitNode(rtree, new_root.entries[0]);
 
 		// Insert the new right node into the new root
 		new_root.entries[1] = right;
