@@ -13,6 +13,7 @@ public:
 		RegisterStAsText(db);
 		RegisterStAsWKB(db);
 		RegisterStAsHEXWKB(db);
+		RegisterStAsSVG(db);
 		RegisterStCentroid(db);
 		RegisterStCollect(db);
 		RegisterStCollectionExtract(db);
@@ -75,6 +76,9 @@ private:
 
 	// ST_AsHextWKB
 	static void RegisterStAsHEXWKB(DatabaseInstance &db);
+
+	// ST_AsSVG
+	static void RegisterStAsSVG(DatabaseInstance &db);
 
 	// ST_AsWKB
 	static void RegisterStAsWKB(DatabaseInstance &db);

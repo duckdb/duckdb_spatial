@@ -11,11 +11,11 @@
 #include "duckdb/storage/table/scan_state.hpp"
 #include "duckdb/transaction/duck_transaction.hpp"
 #include "duckdb/transaction/local_storage.hpp"
+
+#include "spatial/core/types.hpp"
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_module.hpp"
-
-#include <spatial/core/index/rtree/rtree_node.hpp>
-#include <spatial/core/types.hpp>
+#include "spatial/core/index/rtree/rtree_node.hpp"
 
 namespace spatial {
 
@@ -40,7 +40,7 @@ static unique_ptr<FunctionData> RTreeindexInfoBind(ClientContext &context, Table
 }
 
 // INIT GLOBAL
-struct RTreeIndexInfoState : public GlobalTableFunctionState {
+struct RTreeIndexInfoState final : public GlobalTableFunctionState {
 	idx_t offset = 0;
 	vector<reference<IndexCatalogEntry>> entries;
 };
@@ -131,7 +131,7 @@ static optional_ptr<RTreeIndex> TryGetIndex(ClientContext &context, const string
 // RTree Index Dump
 //-------------------------------------------------------------------------
 // BIND
-struct RTreeIndexDumpBindData : public TableFunctionData {
+struct RTreeIndexDumpBindData final : public TableFunctionData {
 	string index_name;
 };
 
@@ -263,7 +263,6 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 //-------------------------------------------------------------------------
 void RTreeModule::RegisterIndexPragmas(DatabaseInstance &db) {
 
-	// TODO: This is kind of ugly and maybe should just take a parameter instead...
 	TableFunction info_function("pragma_rtree_index_info", {}, RTreeIndexInfoExecute, RTreeindexInfoBind,
 	                            RTreeIndexInfoInit);
 

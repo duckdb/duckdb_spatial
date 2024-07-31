@@ -7,6 +7,23 @@ namespace core {
 // We've got this exposed upstream, we just need to wait for the next release
 extern "C" int geos_d2sfixed_buffered_n(double f, uint32_t precision, char *result);
 
+void MathUtil::format_coord(double x, double y, vector<char> &buffer, int32_t precision) {
+	D_ASSERT(precision >= 0 && precision <= 15);
+
+	char buf[51];
+	auto res_x = geos_d2sfixed_buffered_n(x, 15, buf);
+	buf[res_x++] = ' ';
+	auto res_y = geos_d2sfixed_buffered_n(y, 15, buf + res_x);
+	buffer.insert(buffer.end(), buf, buf + res_x + res_y);
+}
+
+void MathUtil::format_coord(double d, vector<char> &buffer, int32_t precision) {
+	D_ASSERT(precision >= 0 && precision <= 15);
+	char buf[25];
+	auto len = geos_d2sfixed_buffered_n(d, 15, buf);
+	buffer.insert(buffer.end(), buf, buf + len);
+}
+
 string MathUtil::format_coord(double d) {
 	char buf[25];
 	auto len = geos_d2sfixed_buffered_n(d, 15, buf);
