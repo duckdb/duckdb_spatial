@@ -93,16 +93,27 @@ static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIn
                                                       const vector<LogicalType> &types, ClientContext &context) {
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
-	// Get the xmin value function
-	auto &xmin_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")
-	                            .Cast<ScalarFunctionCatalogEntry>();
-	auto xmin_func = xmin_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::BOX_2DF()});
-	vector<unique_ptr<Expression>> xmin_func_args;
+	// Get the centroid value function
+	auto &centroid_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_centroid")
+	                               .Cast<ScalarFunctionCatalogEntry>();
+	auto centroid_func = centroid_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::BOX_2DF()});
+	vector<unique_ptr<Expression>> centroid_func_args;
 
 	// Reference the geometry column
 	auto geom_ref_expr = make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::BOX_2DF(), 0);
-	xmin_func_args.push_back(std::move(geom_ref_expr));
-	auto xmin_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::FLOAT, xmin_func,
+	centroid_func_args.push_back(make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::BOX_2DF(), 0));
+	auto centroid_expr = make_uniq_base<Expression, BoundFunctionExpression>(GeoTypes::POINT_2D(), centroid_func,
+	                                                                       std::move(centroid_func_args), nullptr);
+
+	// Get the xmin value function
+	auto &xmin_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")
+	                            .Cast<ScalarFunctionCatalogEntry>();
+	auto xmin_func = xmin_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::POINT_2D()});
+	vector<unique_ptr<Expression>> xmin_func_args;
+
+	// Reference the centroid
+	xmin_func_args.push_back(std::move(centroid_expr));
+	auto xmin_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::DOUBLE, xmin_func,
 	                                                                     std::move(xmin_func_args), nullptr);
 
 	vector<BoundOrderByNode> orders;

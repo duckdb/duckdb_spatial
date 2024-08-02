@@ -4,7 +4,6 @@
 #include "duckdb/execution/index/index_pointer.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/bbox.hpp"
-#include "spatial/core/index/rtree/rtree_index.hpp"
 
 namespace spatial {
 
@@ -14,6 +13,7 @@ namespace core {
 // RTree Pointer
 //-------------------------------------------------------------
 class RTreeNode;
+class RTreeIndex;
 
 enum class RTreeNodeType : uint8_t {
 	UNSET = 0,
@@ -44,9 +44,7 @@ public:
 	static void Free(RTreeIndex &index, RTreePointer &pointer);
 
 	//! Get a reference to the allocator
-	static FixedSizeAllocator &GetAllocator(const RTreeIndex &index) {
-		return *index.node_allocator;
-	}
+	static FixedSizeAllocator &GetAllocator(const RTreeIndex &index);
 
 	//! Get reference to the node (immutable).
 	static const RTreeNode &Ref(const RTreeIndex &index, const RTreePointer ptr) {
@@ -156,7 +154,7 @@ public:
 		return entry;
 	}
 
-	void Verify() {
+	void Verify() const {
 #ifdef DEBUG
 		for (idx_t i = 0; i < CAPACITY; i++) {
 			// If the entry is not set
@@ -171,19 +169,6 @@ public:
 #endif
 	}
 };
-
-inline RTreeNode &RTreePointer::NewPage(RTreeIndex &index, RTreePointer &pointer, RTreeNodeType type) {
-	D_ASSERT(type == RTreeNodeType::BRANCH_PAGE || type == RTreeNodeType::LEAF_PAGE);
-
-	// Allocate a new node. This will also memset the entries to 0
-	pointer = index.node_allocator->New();
-
-	// Set the pointer to the type
-	pointer.SetMetadata(static_cast<uint8_t>(type));
-	auto &ref = RTreePointer::RefMutable(index, pointer);
-
-	return ref;
-}
 
 } // namespace core
 

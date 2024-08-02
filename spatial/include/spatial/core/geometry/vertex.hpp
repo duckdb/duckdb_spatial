@@ -34,12 +34,29 @@ public:
 	PointXY operator+(const PointXY &other) const {
 		return PointXY(x + other.x, y + other.y);
 	}
+
 	PointXY operator-(const PointXY &other) const {
 		return PointXY(x - other.x, y - other.y);
 	}
 
-	bool ApproxEqualTo(const PointXY<T> &other) const {
+	PointXY operator*(const T &factor) const {
+		return PointXY(x * factor, y * factor);
+	}
+
+	PointXY operator/(const T &factor) const {
+		return PointXY(x / factor, y / factor);
+	}
+
+	bool ApproxEqualTo(const PointXY &other) const {
 		return std::abs(x - other.x) < 1e-6 && std::abs(y - other.y) < 1e-6;
+	}
+
+	bool operator==(const PointXY &other) const {
+		return x == other.x && y == other.y;
+	}
+
+	bool operator!=(const PointXY &other) const {
+		return x != other.x || y != other.y;
 	}
 };
 

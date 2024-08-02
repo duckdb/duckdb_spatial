@@ -5,6 +5,7 @@
 #include "duckdb/execution/index/index_pointer.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/bbox.hpp"
+#include "spatial/core/index/rtree/rtree_node.hpp"
 
 namespace spatial {
 
@@ -22,7 +23,9 @@ public:
 	           const IndexStorageInfo &info = IndexStorageInfo(), idx_t estimated_cardinality = 0);
 
 	//! Block pointer to the root of the index
-	IndexPointer root_block_ptr;
+	// IndexPointer root_block_ptr;
+
+	RTreeEntry root_entry;
 
 	//! The allocator used to persist linked blocks
 	unique_ptr<FixedSizeAllocator> node_allocator;

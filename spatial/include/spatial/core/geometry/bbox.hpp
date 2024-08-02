@@ -55,6 +55,10 @@ struct Box {
 		return 2 * (max.x - min.x + max.y - min.y);
 	}
 
+	VERTEX_TYPE Center() const {
+        return (min + max) / 2;
+    }
+
 	bool operator==(const Box &other) const {
 		return min == other.min && max == other.max;
 	}
