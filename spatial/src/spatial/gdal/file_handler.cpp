@@ -385,10 +385,9 @@ string GDALClientContextState::GetPrefix(const string &value) const {
 }
 
 GDALClientContextState &GDALClientContextState::GetOrCreate(ClientContext &context) {
-	if (!context.registered_state["gdal"]) {
-		context.registered_state["gdal"] = make_uniq<GDALClientContextState>(context);
-	}
-	return *dynamic_cast<GDALClientContextState *>(context.registered_state["gdal"].get());
+	auto &manager = *context.registered_state;
+	auto state = manager.GetOrCreate<GDALClientContextState>("gdal", context);
+	return state->Cast<GDALClientContextState>();
 }
 
 } // namespace gdal

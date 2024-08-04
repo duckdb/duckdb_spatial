@@ -24,10 +24,11 @@ concurrency:
 jobs:
   duckdb-stable-build:
     name: Build extension binaries
-    uses: ./.github/workflows/_extension_distribution.yml
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
     with:
       duckdb_version: main
       extension_name: spatial
+      build_duckdb_shell: false # Dont build the shell, doesnt work on windows due to sqlite lib conflicts
 
   duckdb-stable-deploy:
     name: Deploy extension binaries
