@@ -28,6 +28,7 @@ jobs:
     with:
       duckdb_version: main
       extension_name: spatial
+      build_duckdb_shell: false # Dont build the shell, doesnt work on windows due to sqlite lib conflicts
 
   duckdb-stable-deploy:
     name: Deploy extension binaries
