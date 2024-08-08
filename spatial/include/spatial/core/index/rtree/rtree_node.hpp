@@ -116,8 +116,11 @@ class RTreeNode {
 public:
 	friend class RTreePointer;
 	static constexpr idx_t CAPACITY = 128;
+	static constexpr idx_t MIN_CAPACITY = CAPACITY / 2;
 
 public:
+	RTreeNode() = default;
+
 	RTreeEntry entries[CAPACITY];
 
 	// Compute the bounds of this node by summing up all the child entries bounds

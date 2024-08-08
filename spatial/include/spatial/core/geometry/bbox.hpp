@@ -31,6 +31,10 @@ struct Box {
 		return min.x <= other.min.x && min.y <= other.min.y && max.x >= other.max.x && max.y >= other.max.y;
 	}
 
+	bool Contains(const V &vertex) const {
+		return min.x <= vertex.x && min.y <= vertex.y && max.x >= vertex.x && max.y >= vertex.y;
+	}
+
 	void Stretch(const V &vertex) {
 		for (idx_t i = 0; i < V::SIZE; i++) {
 			min[i] = MinValue(min[i], vertex[i]);
@@ -43,6 +47,18 @@ struct Box {
 			min[i] = MinValue(min[i], other.min[i]);
 			max[i] = MaxValue(max[i], other.max[i]);
 		}
+	}
+
+	static Box Union(const Box &left, const Box &right) {
+		Box result = left;
+		result.Union(right);
+		return result;
+	}
+
+	VALUE_TYPE OverlapArea(const Box &other) const {
+		VALUE_TYPE x_overlap = MaxValue(static_cast<VALUE_TYPE>(0), MinValue(max.x, other.max.x) - MaxValue(min.x, other.min.x));
+		VALUE_TYPE y_overlap = MaxValue(static_cast<VALUE_TYPE>(0), MinValue(max.y, other.max.y) - MaxValue(min.y, other.min.y));
+		return x_overlap * y_overlap;
 	}
 
 	// 2D area

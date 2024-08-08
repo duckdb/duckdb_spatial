@@ -143,100 +143,189 @@ static RTreeEntry& PickSubtree(RTreeEntry entries[], const RTreeEntry &new_entry
 	return entries[best_match];
 }
 
+
+
+static void RebalanceSplitNodes(RTreeNode &src, RTreeNode &dst, idx_t& src_cnt, idx_t& dst_cnt, bool split_axis, PointXY<float> &split_point) {
+	D_ASSERT(src_cnt > dst_cnt);
+
+	// How many entries to we need to move until we have the minimum capacity?
+	const auto remaining = RTreeNode::MIN_CAPACITY - dst_cnt;
+
+	// Setup a min heap to keep track of the entries that are closest to the split point
+	vector<pair<float, idx_t>> diff_heap;
+	diff_heap.reserve(remaining);
+
+	auto cmp = [&](const pair<float, idx_t> &a, const pair<float, idx_t> &b) {
+		return a.first > b.first;
+	};
+
+	// Find the entries that are closest to the split point
+	for(idx_t i = 0; i < src_cnt; i++) {
+		D_ASSERT(src.entries[i].IsSet());
+		auto center = src.entries[i].bounds.Center();
+		auto diff = std::abs(center[split_axis] - split_point[split_axis]);
+		if(diff_heap.size() < remaining) {
+			diff_heap.emplace_back(diff, i);
+			if(diff_heap.size() == remaining) {
+				std::make_heap(diff_heap.begin(), diff_heap.end(), cmp);
+			}
+		} else if(diff < diff_heap.front().first) {
+			std::pop_heap(diff_heap.begin(), diff_heap.end(), cmp);
+			diff_heap.back() = {diff, i};
+			std::push_heap(diff_heap.begin(), diff_heap.end(), cmp);
+		}
+	}
+
+	// Sort the heap by entry idx so that we move the entries from the largest idx to the smallest
+	std::sort(diff_heap.begin(), diff_heap.end(), [&](const pair<float, idx_t> &a, const pair<float, idx_t> &b) {
+		return a.second > b.second;
+	});
+
+	// Now move over the selected entries to the destination node
+	for(const auto &entry : diff_heap) {
+		dst.entries[dst_cnt++] = src.entries[entry.second];
+		// Compact the source node
+		src.entries[entry.second] = src.entries[src_cnt - 1];
+		src.entries[src_cnt - 1].Clear();
+		src_cnt--;
+	}
+}
+
+/*
+	Split a node, using the Corner-Based Split Strategy (CBS) from:
+		Corner-based splitting: An improved node splitting algorithm for R-tree (2014)
+ */
 static RTreeEntry SplitNode(RTreeIndex &rtree, RTreeEntry &entry) {
-	auto &left_page = RTreePointer::RefMutable(rtree, entry.pointer);
+	// Split the entry bounding box into four quadrants
+	auto &node = RTreePointer::RefMutable(rtree, entry.pointer);
+	D_ASSERT(node.GetCount() == RTreeNode::CAPACITY);
 
-	D_ASSERT(left_page.GetCount() == RTreeNode::CAPACITY);
+	/*
+	 *  C1 | C2
+	 *  -------
+	 *  C0 | C3
+	*/
 
-	auto &left_entries = left_page.entries;
+	RTreeBounds quadrants[4];
+	auto center = entry.bounds.Center();
+	quadrants[0] = {entry.bounds.min, center};
+	quadrants[1] = {{ entry.bounds.min.x, center.y}, {center.x, entry.bounds.max.y } };
+	quadrants[2] = {center, entry.bounds.max};
+	quadrants[3] = {{center.x, entry.bounds.min.y}, {entry.bounds.max.x, center.y}};
 
-	// The two entries that are the farthest apart
-	idx_t left_idx = 0;
-	idx_t right_idx = 1;
+	idx_t		q_counts[4] = {0, 0, 0, 0};
+	RTreeBounds q_bounds[4];
+	uint8_t		q_assign[RTreeNode::CAPACITY] = {0};
+	uint8_t		q_node[4] = {0, 0, 0, 0};
 
-	auto diff = NumericLimits<float>::Minimum();
-	for (auto dim = 0; dim < 2; dim++) {
-		idx_t min_child_idx = 0;
-		idx_t max_child_idx = 0;
-
-		auto min_value = left_page.entries[min_child_idx].bounds.min[dim];
-		auto max_value = left_page.entries[max_child_idx].bounds.max[dim];
-
-		for (idx_t child_idx = 1; child_idx < RTreeNode::CAPACITY; child_idx++) {
-			auto &child = left_page.entries[child_idx];
-			if (child.IsSet()) {
-				if (child.bounds.min[dim] > left_page.entries[min_child_idx].bounds.min[dim]) {
-					min_child_idx = child_idx;
-				}
-				if (child.bounds.max[dim] < left_page.entries[max_child_idx].bounds.max[dim]) {
-					max_child_idx = child_idx;
-				}
-				min_value = std::min(child.bounds.min[dim], min_value);
-				max_value = std::max(child.bounds.max[dim], max_value);
-			} else {
+	for(idx_t i = 0 ; i < RTreeNode::CAPACITY; i++) {
+		D_ASSERT(node.entries[i].IsSet());
+		auto child_center = node.entries[i].bounds.Center();
+		for(idx_t q_idx = 0; q_idx < 4; q_idx++) {
+			if(quadrants[q_idx].Contains(child_center)) {
+				q_counts[q_idx]++;
+				q_assign[i] = q_idx;
+				q_bounds[q_idx].Union(node.entries[i].bounds);
 				break;
 			}
 		}
-
-		// Normalize the distance between the two children by the length of the bounding box
-		const auto dist =
-		    left_page.entries[min_child_idx].bounds.min[dim] - left_page.entries[max_child_idx].bounds.max[dim];
-		auto len = max_value - min_value;
-		if (len <= 0) {
-			len = 1;
-		}
-		const auto norm = dist / len;
-		if (norm > diff) {
-			left_idx = max_child_idx;
-			right_idx = min_child_idx;
-			diff = norm;
-		}
 	}
 
-	if (left_idx == right_idx) {
-		if (right_idx == 0) {
-			right_idx++;
+	// Create a temporary node for the first split
+	auto n1_ptr = make_uniq<RTreeNode>();
+	auto &n1 = *n1_ptr;
+
+	RTreePointer n2_ptr;
+	auto &n2 = RTreePointer::NewPage(rtree, n2_ptr, entry.pointer.GetType());
+
+	idx_t node_count[2] = {0, 0};
+	reference<RTreeNode> node_ref[2] = {n1, n2};
+
+	// Setup the first two nodes
+	if(q_counts[0] > q_counts[2]) {
+		q_node[0] = 0;
+		q_node[2] = 1;
+	} else if(q_counts[0] < q_counts[2]) {
+		q_node[0] = 1;
+		q_node[2] = 0;
+	}
+
+	// Setup the last two nodes
+	if(q_counts[1] > q_counts[3]) {
+		q_node[1] = 0;
+		q_node[3] = 1;
+	} else if(q_counts[1] < q_counts[3]) {
+		q_node[1] = 1;
+		q_node[3] = 0;
+	} else {
+		// Tie break!
+		// Select based on least overlap
+		const auto &b0 = q_bounds[0];
+		const auto &b1 = q_bounds[1];
+		const auto &b2 = q_bounds[2];
+		const auto &b3 = q_bounds[3];
+
+		const auto overlap_v = b0.OverlapArea(b1) + b2.OverlapArea(b3);
+		const auto overlap_h= b0.OverlapArea(b3) + b1.OverlapArea(b2);
+		if(overlap_h < overlap_v) {
+			q_node[1] = q_node[0];
+			q_node[3] = q_node[2];
+		} else if (overlap_h > overlap_v) {
+			q_node[1] = q_node[2];
+			q_node[3] = q_node[0];
 		} else {
-			right_idx--;
+			// Still a tie!, theres no overlap between the two splits!
+			// Select based on what split would increase the area the least
+			const auto area_v = RTreeBounds::Union(b0, b1).Area() + RTreeBounds::Union(b2, b3).Area();
+			const auto area_h = RTreeBounds::Union(b0, b3).Area() + RTreeBounds::Union(b1, b2).Area();
+			if(area_v < area_h) {
+				q_node[1] = q_node[0];
+				q_node[3] = q_node[2];
+			} else {
+				q_node[1] = q_node[2];
+				q_node[3] = q_node[0];
+			}
 		}
 	}
 
-	// We now have the two entries that are the farthest apart
-	// Create a new page for the right entries
-	RTreePointer new_page_ptr;
-	auto &right_page = RTreePointer::NewPage(rtree, new_page_ptr, entry.pointer.GetType());
-	auto &right_entries = right_page.entries;
+	// Distribute the entries to the two nodes
+	for(idx_t i = 0; i < RTreeNode::CAPACITY; i++) {
+		const auto q_idx = q_assign[i];
+		const auto n_idx = q_node[q_idx];
+		auto &dst = node_ref[n_idx].get();
+		auto &cnt = node_count[n_idx];
+		dst.entries[cnt++] = node.entries[i];
+	}
 
-	// Move the right seed entry to the new right page
-	right_entries[0] = left_entries[right_idx];
+	// IF we join c0 with c1, we split along the y-axis
+	// If c0 has more entries than c2
+	// - Join c0 with c1 or c3 depending on which has the least entries
+	// else
+	// - Join c0 with c1 or c3 depending on which has the most entries
+	const auto split_along_y_axis = q_node[0] == q_node[1];
 
-	// Move the left idx so that it is in the first half of the entries
-	const auto left_swap_idx = right_idx == 0 ? 1 : 0;
-	std::swap(left_entries[left_idx], left_entries[left_swap_idx]);
+	// If one of the nodes have less than the minimum capacity, we need to move entries from the other node
+	// but do so by moving the entries that are closest to the splitting line
+	if(node_count[0] < RTreeNode::MIN_CAPACITY) {
+		RebalanceSplitNodes(n2, n1, node_count[1], node_count[0], split_along_y_axis, center);
+	}
+	else if (node_count[1] < RTreeNode::MIN_CAPACITY) {
+		RebalanceSplitNodes(n1, n2, node_count[0], node_count[1], split_along_y_axis, center);
+	}
 
-	// Compact the left page by swapping the right seed entry with the last entry
-	left_entries[right_idx] = left_entries[RTreeNode::CAPACITY - 1];
+	D_ASSERT(node_count[0] >= RTreeNode::MIN_CAPACITY);
+	D_ASSERT(node_count[1] >= RTreeNode::MIN_CAPACITY);
 
-	// How many entries to move
-	constexpr auto half = RTreeNode::CAPACITY / 2;
+	// Replace the current node with the first n1
+	memset(node.entries, 0, sizeof(RTreeEntry) * RTreeNode::CAPACITY);
+	memcpy(node.entries, n1.entries, sizeof(RTreeEntry) * node_count[0]);
+	entry.bounds = n1.GetBounds();
 
-	// Copy the second half of the entries to the new right page
-	// (except the last entry, which was already moved during compaction)
-	memcpy(right_entries + 1, left_entries + half, (half - 1) * sizeof(RTreeEntry));
+	node.Verify();
+	n2.Verify();
 
-	// Clear the second half of the entries in the left page
-	memset(left_entries + half, 0, half * sizeof(RTreeEntry));
-
-	// Recalculate the bounding box for the left page
-	entry.bounds = left_page.GetBounds();
-
-	// Asserts
-	D_ASSERT(left_page.GetCount() == right_page.GetCount());
-	left_page.Verify();
-	right_page.Verify();
-
-	// Return the new right page
-	return {new_page_ptr, right_page.GetBounds()};
+	// Return a new entry for the second node
+	return {n2_ptr, n2.GetBounds()};
 }
 
 struct InsertResult {
@@ -452,7 +541,7 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 			node.entries[child_count - 1].Clear();
 
 			// Does this node now have too few children?
-			if(child_count < RTreeNode::CAPACITY / 2) {
+			if(child_count < RTreeNode::MIN_CAPACITY) {
 				// Yes, orphan all children and signal that this node should be removed
 				for(idx_t i = 0; i < child_count; i++) {
 					orphans.push_back(node.entries[i]);
@@ -518,7 +607,7 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 		child_count--;
 
 		// Does this node now have too few children?
-		if(child_count < RTreeNode::CAPACITY / 2) {
+		if(child_count < RTreeNode::MIN_CAPACITY) {
 			// Yes, orphan all children and signal that this node should be removed
 			for(idx_t i = 0; i < child_count; i++) {
 				orphans.push_back(node.entries[i]);

@@ -259,6 +259,37 @@ private:
 	CreateRTreeIndexGlobalState &state;
 };
 
+
+static void AddIndexToCatalog(ClientContext &context, CreateRTreeIndexGlobalState &gstate, CreateIndexInfo &info, DuckTableEntry &table) {
+
+	// Now actually add the index to the storage
+	auto &storage = table.GetStorage();
+
+	if (!storage.IsRoot()) {
+		throw TransactionException("Cannot create index on non-root transaction");
+	}
+
+	// Create the index entry in the catalog
+	auto &schema = table.schema;
+	const auto index_entry = schema.CreateIndex(context, info, table).get();
+	if (!index_entry) {
+		D_ASSERT(info.on_conflict == OnCreateConflict::IGNORE_ON_CONFLICT);
+		// index already exists, but error ignored because of IF NOT EXISTS
+		return;
+	}
+
+	// Get the entry as a DuckIndexEntry
+	auto &duck_index = index_entry->Cast<DuckIndexEntry>();
+	duck_index.initial_index_size = gstate.rtree->Cast<BoundIndex>().GetInMemorySize();
+	duck_index.info = make_uniq<IndexDataTableInfo>(storage.GetDataTableInfo(), duck_index.name);
+	for (auto &parsed_expr : info.parsed_expressions) {
+		duck_index.parsed_expressions.push_back(parsed_expr->Copy());
+	}
+
+	// Finally add it to storage
+	storage.AddIndex(std::move(gstate.rtree));
+}
+
 class RTreeIndexConstructionEvent final : public BasePipelineEvent {
 public:
 	RTreeIndexConstructionEvent(CreateRTreeIndexGlobalState &gstate_p, Pipeline &pipeline_p, CreateIndexInfo &info_p,
@@ -276,34 +307,7 @@ public:
 	}
 
 	void FinishEvent() override {
-		auto &context = pipeline->GetClientContext();
-
-		// Now actually add the index to the storage
-		auto &storage = table.GetStorage();
-
-		if (!storage.IsRoot()) {
-			throw TransactionException("Cannot create index on non-root transaction");
-		}
-
-		// Create the index entry in the catalog
-		auto &schema = table.schema;
-		const auto index_entry = schema.CreateIndex(context, info, table).get();
-		if (!index_entry) {
-			D_ASSERT(info.on_conflict == OnCreateConflict::IGNORE_ON_CONFLICT);
-			// index already exists, but error ignored because of IF NOT EXISTS
-			return;
-		}
-
-		// Get the entry as a DuckIndexEntry
-		auto &duck_index = index_entry->Cast<DuckIndexEntry>();
-		duck_index.initial_index_size = gstate.rtree->Cast<BoundIndex>().GetInMemorySize();
-		duck_index.info = make_uniq<IndexDataTableInfo>(storage.GetDataTableInfo(), duck_index.name);
-		for (auto &parsed_expr : info.parsed_expressions) {
-			duck_index.parsed_expressions.push_back(parsed_expr->Copy());
-		}
-
-		// Finally add it to storage
-		storage.AddIndex(std::move(gstate.rtree));
+		AddIndexToCatalog(pipeline->GetClientContext(), gstate, info, table);
 	}
 
 private:
@@ -322,6 +326,7 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 
 	if (gstate.rtree_size == 0) {
 		// No entries to build the RTree from, we are done
+		AddIndexToCatalog(context, gstate, *info, table);
 		return SinkFinalizeType::READY;
 	}
 
