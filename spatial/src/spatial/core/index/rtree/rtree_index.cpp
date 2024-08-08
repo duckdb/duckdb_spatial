@@ -122,17 +122,11 @@ static RTreeEntry &PickSubtree(RTreeEntry entries[], const RTreeEntry &new_entry
 			break;
 		}
 
-		// Optimization: if the new entry is completely contained in a subtree, return that immediately
-		if (entry.bounds.Contains(new_entry.bounds)) {
-			return entry;
-		}
-
 		auto &old_bounds = entry.bounds;
-		auto new_bounds = old_bounds;
-		new_bounds.Union(new_entry.bounds);
+		auto new_bounds = RTreeBounds::Union(new_entry.bounds, old_bounds);
 
-		const auto old_area = old_bounds.Area();
-		const auto new_area = new_bounds.Area();
+		const auto old_area = old_bounds.Perimeter();
+		const auto new_area = new_bounds.Perimeter();
 		const auto diff = new_area - old_area;
 		if (diff < best_diff || (diff <= best_diff && old_area < best_area)) {
 			best_diff = diff;
@@ -572,6 +566,8 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 				// Yes, orphan all children and signal that this node should be removed
 				for (idx_t i = 0; i < child_count; i++) {
 					orphans.push_back(node.entries[i]);
+					// Clear the child pointer so we dont free it if we end up freeing the node
+					node.entries[i].Clear();
 				}
 				return {true, true, true};
 			}
@@ -631,7 +627,6 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 		// Swap the removed entry with the last entry and clear it
 		std::swap(node.entries[child_idx], node.entries[child_count - 1]);
 		RTreePointer::Free(rtree, node.entries[child_count - 1].pointer);
-		;
 		child_count--;
 
 		// Does this node now have too few children?
@@ -639,6 +634,8 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 			// Yes, orphan all children and signal that this node should be removed
 			for (idx_t i = 0; i < child_count; i++) {
 				orphans.push_back(node.entries[i]);
+				// Clear the child pointer so we dont free them if we end up freeing the node
+				node.entries[i].Clear();
 			}
 			return {true, true, true};
 		}
@@ -674,22 +671,16 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 
 static void ReInsertNode(RTreeIndex &rtree, RTreeEntry &root, const RTreeEntry &target) {
 	D_ASSERT(target.IsSet());
-	auto &node = RTreePointer::Ref(rtree, target.pointer);
-	if (target.pointer.IsLeafPage()) {
-		// Insert all the entries
+	if (target.pointer.IsRowId()) {
+		RootInsert(rtree, root, target);
+	} else {
+		D_ASSERT(target.pointer.IsPage());
+		auto &node = RTreePointer::Ref(rtree, target.pointer);
 		for (const auto &entry : node.entries) {
 			if (!entry.IsSet()) {
 				break;
 			}
 			D_ASSERT(entry.pointer.IsRowId());
-			RootInsert(rtree, root, entry);
-		}
-	} else {
-		D_ASSERT(target.pointer.IsBranchPage());
-		for (const auto &entry : node.entries) {
-			if (!entry.IsSet()) {
-				break;
-			}
 			ReInsertNode(rtree, root, entry);
 		}
 	}
@@ -708,10 +699,16 @@ static void RootDelete(RTreeIndex &rtree, RTreeEntry &root, const RTreeEntry &ta
 	// but if there are orphans we keep the root around.
 	if (result.remove) {
 		root.bounds = RTreeBounds();
+		// Also turn the root into a leaf node so we can insert the orphans properly
+		// root.pointer.ClearMetadata();
+		// root.pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::LEAF_PAGE));
 		if (orphans.empty()) {
 			// The entire tree was removed, clear the root node
 			RTreePointer::Free(rtree, root.pointer);
 		} else {
+			RTreePointer::Free(rtree, root.pointer);
+			// Allocate a new root
+			RTreePointer::NewPage(rtree, root.pointer, RTreeNodeType::LEAF_PAGE);
 			for (auto &orphan : orphans) {
 				ReInsertNode(rtree, root, orphan);
 			}

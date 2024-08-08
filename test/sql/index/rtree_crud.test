@@ -34,7 +34,7 @@ statement ok
 DROP INDEX my_idx;
 
 statement ok
-INSERT INTO t1 (geom) SELECT st_point(random()*10000, random()*10000) FROM generate_series(1, 1000);
+INSERT INTO t1 (geom) SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 1000, 1337);
 
 query I
 SELECT count(*) FROM t1;

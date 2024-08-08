@@ -28,11 +28,13 @@ void RTreePointer::Free(RTreeIndex &index, RTreePointer &ptr) {
 		// Nothing to do here
 		return;
 	}
+
 	auto &node = RTreePointer::RefMutable(index, ptr);
 	for (auto &entry : node.entries) {
-		if (entry.IsSet()) {
-			Free(index, entry.pointer);
+		if (!entry.IsSet()) {
+			break;
 		}
+		Free(index, entry.pointer);
 	}
 	index.node_allocator->Free(ptr);
 	ptr.Clear();
