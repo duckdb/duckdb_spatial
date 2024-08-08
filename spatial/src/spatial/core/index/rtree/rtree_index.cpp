@@ -356,6 +356,7 @@ struct InsertResult {
 // Insert a rowid into a node
 InsertResult NodeInsert(RTreeIndex &rtree, RTreeEntry &entry, const RTreeEntry &new_entry) {
 	D_ASSERT(new_entry.pointer.IsRowId());
+	D_ASSERT(entry.IsSet());
 
 	auto &node = RTreePointer::RefMutable(rtree, entry.pointer);
 
@@ -380,6 +381,10 @@ InsertResult NodeInsert(RTreeIndex &rtree, RTreeEntry &entry, const RTreeEntry &
 
 	// Choose a subtree
 	auto &target = PickSubtree(node.entries, new_entry);
+
+	if (!target.IsSet()) {
+		throw InternalException("RTreeIndex::NodeInsert: target is not set");
+	}
 
 	// Insert into the selected child
 	const auto result = NodeInsert(rtree, target, new_entry);
@@ -550,9 +555,11 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 		if (child_idx_opt.IsValid()) {
 			// Found the target entry
 			const auto child_idx = child_idx_opt.GetIndex();
+
 			if (child_idx == 0 && child_count == 1) {
 				// This is the only entry in the leaf, we can remove the entire leaf
 				node.entries[0].Clear();
+				node.Verify();
 				return DeleteResult {true, true, true};
 			}
 
@@ -560,6 +567,7 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 			// to compact the leaf
 			node.entries[child_idx] = node.entries[child_count - 1];
 			node.entries[child_count - 1].Clear();
+			child_count--;
 
 			// Does this node now have too few children?
 			if (child_count < RTreeNode::MIN_CAPACITY) {
@@ -569,6 +577,7 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 					// Clear the child pointer so we dont free it if we end up freeing the node
 					node.entries[i].Clear();
 				}
+				node.Verify();
 				return {true, true, true};
 			}
 
@@ -619,6 +628,7 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 	// Should we delete the child entirely?
 	if (result.remove) {
 		// If this is the only child in the branch, we can remove the entire branch
+
 		if (child_idx == 0 && child_count == 1) {
 			RTreePointer::Free(rtree, node.entries[0].pointer);
 			return {true, true, true};
@@ -669,20 +679,23 @@ static DeleteResult NodeDelete(RTreeIndex &rtree, RTreeEntry &entry, const RTree
 	return {true, shrunk, false};
 }
 
-static void ReInsertNode(RTreeIndex &rtree, RTreeEntry &root, const RTreeEntry &target) {
+static void ReInsertNode(RTreeIndex &rtree, RTreeEntry &root, RTreeEntry &target) {
 	D_ASSERT(target.IsSet());
 	if (target.pointer.IsRowId()) {
 		RootInsert(rtree, root, target);
 	} else {
 		D_ASSERT(target.pointer.IsPage());
-		auto &node = RTreePointer::Ref(rtree, target.pointer);
-		for (const auto &entry : node.entries) {
+		auto &node = RTreePointer::RefMutable(rtree, target.pointer);
+		for (auto &entry : node.entries) {
 			if (!entry.IsSet()) {
 				break;
 			}
 			D_ASSERT(entry.pointer.IsRowId());
 			ReInsertNode(rtree, root, entry);
 		}
+
+		// Also free the page after we've reinserted all the rowids
+		RTreePointer::Free(rtree, target.pointer);
 	}
 }
 
@@ -696,17 +709,12 @@ static void RootDelete(RTreeIndex &rtree, RTreeEntry &root, const RTreeEntry &ta
 	D_ASSERT(result.found);
 
 	// If the node was removed, we need to clear the root
-	// but if there are orphans we keep the root around.
 	if (result.remove) {
 		root.bounds = RTreeBounds();
-		// Also turn the root into a leaf node so we can insert the orphans properly
-		// root.pointer.ClearMetadata();
-		// root.pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::LEAF_PAGE));
-		if (orphans.empty()) {
-			// The entire tree was removed, clear the root node
-			RTreePointer::Free(rtree, root.pointer);
-		} else {
-			RTreePointer::Free(rtree, root.pointer);
+		RTreePointer::Free(rtree, root.pointer);
+
+		// Are there orphans?
+		if (!orphans.empty()) {
 			// Allocate a new root
 			RTreePointer::NewPage(rtree, root.pointer, RTreeNodeType::LEAF_PAGE);
 			for (auto &orphan : orphans) {

@@ -30,6 +30,7 @@ void RTreePointer::Free(RTreeIndex &index, RTreePointer &ptr) {
 	}
 
 	auto &node = RTreePointer::RefMutable(index, ptr);
+
 	for (auto &entry : node.entries) {
 		if (!entry.IsSet()) {
 			break;
