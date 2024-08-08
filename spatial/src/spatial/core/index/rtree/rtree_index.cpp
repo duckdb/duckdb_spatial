@@ -219,14 +219,18 @@ static RTreeEntry SplitNode(RTreeIndex &rtree, RTreeEntry &entry) {
 	for (idx_t i = 0; i < RTreeNode::CAPACITY; i++) {
 		D_ASSERT(node.entries[i].IsSet());
 		auto child_center = node.entries[i].bounds.Center();
+		auto found = false;
 		for (idx_t q_idx = 0; q_idx < 4; q_idx++) {
 			if (quadrants[q_idx].Contains(child_center)) {
 				q_counts[q_idx]++;
 				q_assign[i] = q_idx;
 				q_bounds[q_idx].Union(node.entries[i].bounds);
+				found = true;
 				break;
 			}
 		}
+		D_ASSERT(found);
+		(void)found;
 	}
 
 	// Create a temporary node for the first split
@@ -256,15 +260,20 @@ static RTreeEntry SplitNode(RTreeIndex &rtree, RTreeEntry &entry) {
 		q_node[1] = 1;
 		q_node[3] = 0;
 	} else {
-		// Tie break!
-		// Select based on least overlap
-		const auto &b0 = q_bounds[0];
-		const auto &b1 = q_bounds[1];
-		const auto &b2 = q_bounds[2];
-		const auto &b3 = q_bounds[3];
+		// Tie break! Select based on least overlap
 
-		const auto overlap_v = b0.OverlapArea(b1) + b2.OverlapArea(b3);
-		const auto overlap_h = b0.OverlapArea(b3) + b1.OverlapArea(b2);
+		// The two bounds if we were to split from top to bottom
+		const auto bounds_v_l = RTreeBounds::Union(q_bounds[0], q_bounds[1]);
+		const auto bounds_v_r = RTreeBounds::Union(q_bounds[2], q_bounds[3]);
+
+		// The two bounds if we were to split from left to right
+		const auto bounds_h_t = RTreeBounds::Union(q_bounds[0], q_bounds[3]);
+		const auto bounds_h_b = RTreeBounds::Union(q_bounds[1], q_bounds[2]);
+
+		// How much overlap would each half have?
+		const auto overlap_v = bounds_v_l.OverlapArea(bounds_v_r);
+		const auto overlap_h = bounds_h_t.OverlapArea(bounds_h_b);
+
 		if (overlap_h < overlap_v) {
 			q_node[1] = q_node[0];
 			q_node[3] = q_node[2];
@@ -274,8 +283,9 @@ static RTreeEntry SplitNode(RTreeIndex &rtree, RTreeEntry &entry) {
 		} else {
 			// Still a tie!, theres no overlap between the two splits!
 			// Select based on what split would increase the area the least
-			const auto area_v = RTreeBounds::Union(b0, b1).Area() + RTreeBounds::Union(b2, b3).Area();
-			const auto area_h = RTreeBounds::Union(b0, b3).Area() + RTreeBounds::Union(b1, b2).Area();
+			const auto area_v = bounds_v_l.Area() + bounds_v_r.Area();
+			const auto area_h = bounds_h_t.Area() + bounds_h_b.Area();
+
 			if (area_v < area_h) {
 				q_node[1] = q_node[0];
 				q_node[3] = q_node[2];
@@ -300,23 +310,42 @@ static RTreeEntry SplitNode(RTreeIndex &rtree, RTreeEntry &entry) {
 	// - Join c0 with c1 or c3 depending on which has the least entries
 	// else
 	// - Join c0 with c1 or c3 depending on which has the most entries
-	const auto split_along_y_axis = q_node[0] == q_node[1];
+
+	// If we join c0 with c1, we split the node top to bottom, so when we rebalance we want to move entries that are
+	// closest to the split line, i.e. calculate the distance on the axis perpendicular to the split line
+	const auto perp_split_axis = q_node[0] != q_node[1];
 
 	// If one of the nodes have less than the minimum capacity, we need to move entries from the other node
 	// but do so by moving the entries that are closest to the splitting line
 	if (node_count[0] < RTreeNode::MIN_CAPACITY) {
-		RebalanceSplitNodes(n2, n1, node_count[1], node_count[0], split_along_y_axis, center);
+		RebalanceSplitNodes(n2, n1, node_count[1], node_count[0], perp_split_axis, center);
 	} else if (node_count[1] < RTreeNode::MIN_CAPACITY) {
-		RebalanceSplitNodes(n1, n2, node_count[0], node_count[1], split_along_y_axis, center);
+		RebalanceSplitNodes(n1, n2, node_count[0], node_count[1], perp_split_axis, center);
 	}
 
 	D_ASSERT(node_count[0] >= RTreeNode::MIN_CAPACITY);
 	D_ASSERT(node_count[1] >= RTreeNode::MIN_CAPACITY);
 
-	// Replace the current node with the first n1
+	// Replace the current node with n1
 	memset(node.entries, 0, sizeof(RTreeEntry) * RTreeNode::CAPACITY);
 	memcpy(node.entries, n1.entries, sizeof(RTreeEntry) * node_count[0]);
+
+	// TODO: Reuse q_bounds if we didnt have to rebalance the nodes
 	entry.bounds = n1.GetBounds();
+
+	// Sort both node entries on the min x-coordinate
+	// This is not really necessary, but produces a slightly nicer tree
+	std::sort(node.entries, node.entries + node_count[0], [&](const RTreeEntry &a, const RTreeEntry &b) {
+		D_ASSERT(a.IsSet());
+		D_ASSERT(b.IsSet());
+		return a.bounds.min.x < b.bounds.min.x;
+	});
+
+	std::sort(n2.entries, n2.entries + node_count[1], [&](const RTreeEntry &a, const RTreeEntry &b) {
+		D_ASSERT(a.IsSet());
+		D_ASSERT(b.IsSet());
+		return a.bounds.min.x < b.bounds.min.x;
+	});
 
 	node.Verify();
 	n2.Verify();
