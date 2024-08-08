@@ -18,9 +18,10 @@ static void GeometrySVGFunction(DataChunk &args, ExpressionState &state, Vector 
 
 	struct op {
 
-		static void PrintVertices(const Geometry &geom, const bool rel, const int32_t max_digits, bool close, vector<char> &buffer) {
+		static void PrintVertices(const Geometry &geom, const bool rel, const int32_t max_digits, bool close,
+		                          vector<char> &buffer) {
 			const auto vertex_count = LineString::VertexCount(geom);
-			if(vertex_count == 0) {
+			if (vertex_count == 0) {
 				return;
 			}
 
@@ -29,16 +30,16 @@ static void GeometrySVGFunction(DataChunk &args, ExpressionState &state, Vector 
 			buffer.push_back(' ');
 			MathUtil::format_coord(last_vert.x, -last_vert.y, buffer, max_digits);
 
-			if(vertex_count == 1) {
+			if (vertex_count == 1) {
 				return;
 			}
 
 			buffer.push_back(' ');
-			buffer.push_back(rel ? 'l': 'L');
+			buffer.push_back(rel ? 'l' : 'L');
 
-			if(rel) {
-				for(uint32_t i = 1; i < vertex_count; i++) {
-					if(i == vertex_count - 1 && close) {
+			if (rel) {
+				for (uint32_t i = 1; i < vertex_count; i++) {
+					if (i == vertex_count - 1 && close) {
 						buffer.push_back(' ');
 						buffer.push_back('z');
 					} else {
@@ -50,8 +51,8 @@ static void GeometrySVGFunction(DataChunk &args, ExpressionState &state, Vector 
 					}
 				}
 			} else {
-				for(uint32_t i = 1; i < vertex_count; i++) {
-					if(i == vertex_count - 1 && close) {
+				for (uint32_t i = 1; i < vertex_count; i++) {
+					if (i == vertex_count - 1 && close) {
 						buffer.push_back(' ');
 						buffer.push_back('Z');
 					} else {
@@ -63,10 +64,11 @@ static void GeometrySVGFunction(DataChunk &args, ExpressionState &state, Vector 
 			}
 		}
 
-		static void Case(Geometry::Tags::Point, const Geometry &geom, const bool rel, const int32_t max_digits, vector<char> &buffer) {
-			if(!Point::IsEmpty(geom)) {
+		static void Case(Geometry::Tags::Point, const Geometry &geom, const bool rel, const int32_t max_digits,
+		                 vector<char> &buffer) {
+			if (!Point::IsEmpty(geom)) {
 				const auto vert = Point::GetVertex(geom);
-				if(!rel) {
+				if (!rel) {
 					constexpr auto cx = "cx=\"";
 					constexpr auto cy = "cy=\"";
 					buffer.insert(buffer.end(), cx, cx + 4);
@@ -89,28 +91,31 @@ static void GeometrySVGFunction(DataChunk &args, ExpressionState &state, Vector 
 				}
 			}
 		}
-		static void Case(Geometry::Tags::LineString, const Geometry &geom, const bool rel, const int32_t max_digits, vector<char> &buffer) {
+		static void Case(Geometry::Tags::LineString, const Geometry &geom, const bool rel, const int32_t max_digits,
+		                 vector<char> &buffer) {
 			PrintVertices(geom, rel, max_digits, false, buffer);
 		}
-		static void Case(Geometry::Tags::Polygon, const Geometry &geom, const bool rel, const int32_t max_digits, vector<char> &buffer) {
+		static void Case(Geometry::Tags::Polygon, const Geometry &geom, const bool rel, const int32_t max_digits,
+		                 vector<char> &buffer) {
 			const auto ring_count = Polygon::PartCount(geom);
-			for(uint32_t i = 0; i < ring_count; i++) {
+			for (uint32_t i = 0; i < ring_count; i++) {
 				const auto &ring = Polygon::Part(geom, i);
 				PrintVertices(ring, rel, max_digits, true, buffer);
 			}
 		}
-		static void Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom, const bool rel, const int32_t max_digits, vector<char> &buffer) {
+		static void Case(Geometry::Tags::MultiPartGeometry, const Geometry &geom, const bool rel,
+		                 const int32_t max_digits, vector<char> &buffer) {
 			// Special delimiter for multipoint and geometry collections
 			char delimiter = ' ';
-			if(geom.GetType() == GeometryType::MULTIPOINT) {
+			if (geom.GetType() == GeometryType::MULTIPOINT) {
 				delimiter = ',';
-			} else if(geom.GetType() == GeometryType::GEOMETRYCOLLECTION) {
+			} else if (geom.GetType() == GeometryType::GEOMETRYCOLLECTION) {
 				delimiter = ';';
 			}
 
 			const auto part_count = MultiPartGeometry::PartCount(geom);
-			for(uint32_t i = 0; i < part_count; i++) {
-				if(i > 0) {
+			for (uint32_t i = 0; i < part_count; i++) {
+				if (i > 0) {
 					buffer.push_back(delimiter);
 				}
 				auto &part = MultiPartGeometry::Part(geom, i);
@@ -123,21 +128,20 @@ static void GeometrySVGFunction(DataChunk &args, ExpressionState &state, Vector 
 	vector<char> buffer;
 
 	TernaryExecutor::Execute<geometry_t, bool, int32_t, string_t>(
-		args.data[0], args.data[1], args.data[2], result, args.size(),
-		[&](const geometry_t &blob, bool rel, int32_t max_digits) {
+	    args.data[0], args.data[1], args.data[2], result, args.size(),
+	    [&](const geometry_t &blob, bool rel, int32_t max_digits) {
+		    if (max_digits < 0 || max_digits > 15) {
+			    throw InvalidInputException("max_digits must be between 0 and 15");
+		    }
 
-		if(max_digits < 0 || max_digits > 15) {
-			throw InvalidInputException("max_digits must be between 0 and 15");
-		}
+		    buffer.clear();
 
-		buffer.clear();
+		    auto geom = Geometry::Deserialize(arena, blob);
 
-		auto geom = Geometry::Deserialize(arena, blob);
+		    Geometry::Match<op>(geom, rel, max_digits, buffer);
 
-		Geometry::Match<op>(geom, rel, max_digits, buffer);
-
-		return StringVector::AddString(result, buffer.data(), buffer.size());
-	});
+		    return StringVector::AddString(result, buffer.data(), buffer.size());
+	    });
 }
 
 //------------------------------------------------------------------------------
@@ -168,7 +172,9 @@ static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversi
 void CoreScalarFunctions::RegisterStAsSVG(DatabaseInstance &db) {
 
 	ScalarFunctionSet set("ST_AsSVG");
-	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::BOOLEAN, LogicalType::INTEGER}, LogicalType::VARCHAR, GeometrySVGFunction, nullptr, nullptr, nullptr, GeometryFunctionLocalState::Init));
+	set.AddFunction(ScalarFunction({GeoTypes::GEOMETRY(), LogicalType::BOOLEAN, LogicalType::INTEGER},
+	                               LogicalType::VARCHAR, GeometrySVGFunction, nullptr, nullptr, nullptr,
+	                               GeometryFunctionLocalState::Init));
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_AsSVG", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
@@ -177,5 +183,3 @@ void CoreScalarFunctions::RegisterStAsSVG(DatabaseInstance &db) {
 } // namespace core
 
 } // namespace spatial
-
-

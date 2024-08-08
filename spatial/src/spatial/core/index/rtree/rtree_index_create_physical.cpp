@@ -114,7 +114,7 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 
 	// Vectorized conversion from columnar to row-wise
 	RTreeEntry entries[STANDARD_VECTOR_SIZE];
-	for(idx_t elem_idx = 0; elem_idx < chunk.size(); elem_idx++) {
+	for (idx_t elem_idx = 0; elem_idx < chunk.size(); elem_idx++) {
 		auto &entry = entries[elem_idx];
 		entry.pointer = RTreePointer::NewRowId(rowid_data[elem_idx]);
 		entry.bounds.min.x = min_x_data[elem_idx];
@@ -136,12 +136,12 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
                                               Event &event) {
 	auto &rtree = *state.rtree;
 
-	//unsafe_vector<RTreeEntry> slice(state.slice_size);
-	auto slice_begin = reinterpret_cast<RTreeEntry*>(state.slice_buffer.get());
+	// unsafe_vector<RTreeEntry> slice(state.slice_size);
+	auto slice_begin = reinterpret_cast<RTreeEntry *>(state.slice_buffer.get());
 	auto slice_end = slice_begin + state.slice_size;
 
 	// unsafe_vector<idx_t> slice_idx(state.slice_size);
-	//unsafe_vector<Box2D<float>> slice_bounds(state.slice_size);
+	// unsafe_vector<Box2D<float>> slice_bounds(state.slice_size);
 
 	// Now, we have our base layer with all the leaves, we need to build the rest of the tree layer by layer
 	while (state.curr_layer_ptr->Count() != 1) {
@@ -168,7 +168,6 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 		auto scan_count = state.curr_layer_ptr->Scan(state.scan_state, slice_begin, slice_end);
 
-
 		while (scan_count != 0) {
 
 			// Sort the slice by the bounding box y-min value
@@ -182,7 +181,9 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 				// Initialize a new node if we have to
 				if (child_idx == RTreeNode::CAPACITY) {
-					RTreePointer::NewPage(rtree, current_ptr, state.rtree_level == 0 ? RTreeNodeType::LEAF_PAGE : RTreeNodeType::BRANCH_PAGE);
+					RTreePointer::NewPage(rtree, current_ptr,
+					                      state.rtree_level == 0 ? RTreeNodeType::LEAF_PAGE
+					                                             : RTreeNodeType::BRANCH_PAGE);
 					child_idx = 0;
 					needs_insertion = true;
 				}
@@ -197,23 +198,23 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 					node.entries[child_idx++] = slice_begin[scan_idx++];
 				}
 
-				if(child_idx == RTreeNode::CAPACITY) {
+				if (child_idx == RTreeNode::CAPACITY) {
 					// Append the current node to the layer
 					auto node_bounds = node.GetBounds();
-					state.next_layer_ptr->Append(state.append_state, RTreeEntry { current_ptr, node_bounds } );
+					state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 					needs_insertion = false;
 				}
 			}
 
 			// Scan the next batch
-			scan_count = state.curr_layer_ptr->Scan(state.scan_state, slice_begin,  slice_end);
+			scan_count = state.curr_layer_ptr->Scan(state.scan_state, slice_begin, slice_end);
 		}
 
 		// If the layer was exhausted before we filled the last node, we need to insert it now
-		if(needs_insertion) {
+		if (needs_insertion) {
 			auto &node = RTreePointer::Ref(rtree, current_ptr);
 			auto node_bounds = node.GetBounds();
-			state.next_layer_ptr->Append(state.append_state, RTreeEntry { current_ptr, node_bounds } );
+			state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 			needs_insertion = false;
 		}
 
@@ -229,12 +230,12 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 	// Set the root node!
 	auto root = state.curr_layer_ptr->Fetch(0);
 
-	if(root.pointer.GetType() == RTreeNodeType::ROW_ID) {
+	if (root.pointer.GetType() == RTreeNodeType::ROW_ID) {
 		// Create a leaf node to hold this row id
 		RTreePointer root_leaf_ptr;
 		auto &node = RTreePointer::NewPage(rtree, root_leaf_ptr, RTreeNodeType::LEAF_PAGE);
-		node.entries[0] = RTreeEntry { root.pointer, root.bounds };
-		rtree.root_entry = RTreeEntry { root_leaf_ptr, root.bounds };
+		node.entries[0] = RTreeEntry {root.pointer, root.bounds};
+		rtree.root_entry = RTreeEntry {root_leaf_ptr, root.bounds};
 	} else {
 		// Else, just set the root node
 		D_ASSERT(root.pointer.IsPage());
@@ -259,8 +260,8 @@ private:
 	CreateRTreeIndexGlobalState &state;
 };
 
-
-static void AddIndexToCatalog(ClientContext &context, CreateRTreeIndexGlobalState &gstate, CreateIndexInfo &info, DuckTableEntry &table) {
+static void AddIndexToCatalog(ClientContext &context, CreateRTreeIndexGlobalState &gstate, CreateIndexInfo &info,
+                              DuckTableEntry &table) {
 
 	// Now actually add the index to the storage
 	auto &storage = table.GetStorage();
@@ -335,12 +336,13 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 	// Calculate the vertical slice size
 	// square root of the total number of entries divide by the capacity of a node, rounded up
 	gstate.slice_size =
-		NumericCast<idx_t>(std::ceil(std::sqrt((gstate.rtree_size + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY))) * RTreeNode::CAPACITY;
+	    NumericCast<idx_t>(std::ceil(std::sqrt((gstate.rtree_size + RTreeNode::CAPACITY - 1) / RTreeNode::CAPACITY))) *
+	    RTreeNode::CAPACITY;
 
 	// Allocate a buffer for the vertical slice
 	// (this can get quite large, so we allocate it on the buffer manager)
-	gstate.slice_buffer = BufferManager::GetBufferManager(context).GetBufferAllocator().Allocate(gstate.slice_size * sizeof(RTreeEntry));
-
+	gstate.slice_buffer =
+	    BufferManager::GetBufferManager(context).GetBufferAllocator().Allocate(gstate.slice_size * sizeof(RTreeEntry));
 
 	// Schedule the construction of the RTree
 	auto construction_event = make_uniq<RTreeIndexConstructionEvent>(gstate, pipeline, *info, table);

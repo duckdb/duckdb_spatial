@@ -94,8 +94,9 @@ static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIn
 	auto &catalog = Catalog::GetSystemCatalog(context);
 
 	// Get the centroid value function
-	auto &centroid_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_centroid")
-	                               .Cast<ScalarFunctionCatalogEntry>();
+	auto &centroid_func_entry =
+	    catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_centroid")
+	        .Cast<ScalarFunctionCatalogEntry>();
 	auto centroid_func = centroid_func_entry.functions.GetFunctionByArguments(context, {GeoTypes::BOX_2DF()});
 	vector<unique_ptr<Expression>> centroid_func_args;
 
@@ -103,7 +104,7 @@ static unique_ptr<PhysicalOperator> CreateOrderByMinX(const LogicalCreateRTreeIn
 	auto geom_ref_expr = make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::BOX_2DF(), 0);
 	centroid_func_args.push_back(make_uniq_base<Expression, BoundReferenceExpression>(GeoTypes::BOX_2DF(), 0));
 	auto centroid_expr = make_uniq_base<Expression, BoundFunctionExpression>(GeoTypes::POINT_2D(), centroid_func,
-	                                                                       std::move(centroid_func_args), nullptr);
+	                                                                         std::move(centroid_func_args), nullptr);
 
 	// Get the xmin value function
 	auto &xmin_func_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "st_xmin")

@@ -165,7 +165,7 @@ static void PolygonCentroidFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // BOX_2D
 //------------------------------------------------------------------------------
-template<class T>
+template <class T>
 static void BoxCentroidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	// using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	// using POINT_TYPE = StructTypeBinary<double, double>;
@@ -208,7 +208,6 @@ void CoreScalarFunctions::RegisterStCentroid(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction<double>));
 	set.AddFunction(ScalarFunction({GeoTypes::BOX_2DF()}, GeoTypes::POINT_2D(), BoxCentroidFunction<float>));
-
 
 	ExtensionUtil::RegisterFunction(db, set);
 }

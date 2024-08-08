@@ -46,7 +46,7 @@ public:
 
 	// Scan the collection, writing as many elements as possible to the output buffer
 	// Returns the number of elements written to the output buffer
-	idx_t Scan(ManagedCollectionScanState &state, T* begin, T* end);
+	idx_t Scan(ManagedCollectionScanState &state, T *begin, T *end);
 
 	T Fetch(idx_t idx);
 
@@ -156,7 +156,7 @@ void ManagedCollection<T>::InitializeScan(ManagedCollectionScanState &state, boo
 }
 
 template <class T>
-idx_t ManagedCollection<T>::Scan(ManagedCollectionScanState &state, T* begin, T* end) {
+idx_t ManagedCollection<T>::Scan(ManagedCollectionScanState &state, T *begin, T *end) {
 	auto pos = begin;
 	while (pos != end) {
 		if (state.scan_idx >= state.scan_capacity) {

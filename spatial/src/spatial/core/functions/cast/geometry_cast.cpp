@@ -267,8 +267,8 @@ void CoreCastFunctions::RegisterGeometryCasts(DatabaseInstance &db) {
 	    BoundCastInfo(Box2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 
 	ExtensionUtil::RegisterCastFunction(
-			db, GeoTypes::BOX_2DF(), GeoTypes::GEOMETRY(),
-			BoundCastInfo(Box2DFToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+	    db, GeoTypes::BOX_2DF(), GeoTypes::GEOMETRY(),
+	    BoundCastInfo(Box2DFToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

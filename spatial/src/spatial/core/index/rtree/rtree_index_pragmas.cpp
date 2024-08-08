@@ -182,7 +182,7 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexDumpInit(ClientContext &co
 	}
 
 	auto result = make_uniq<RTreeIndexDumpState>(*rtree_index);
-	if(rtree_index->root_entry.pointer.IsSet()) {
+	if (rtree_index->root_entry.pointer.IsSet()) {
 		result->stack.emplace_back(rtree_index->root_entry.pointer, 0);
 	}
 	return std::move(result);

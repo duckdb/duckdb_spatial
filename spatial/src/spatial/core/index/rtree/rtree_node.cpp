@@ -18,7 +18,7 @@ RTreeNode &RTreePointer::NewPage(RTreeIndex &index, RTreePointer &pointer, RTree
 	return ref;
 }
 
-FixedSizeAllocator& RTreePointer::GetAllocator(const RTreeIndex &index) {
+FixedSizeAllocator &RTreePointer::GetAllocator(const RTreeIndex &index) {
 	return *index.node_allocator;
 }
 
@@ -37,7 +37,6 @@ void RTreePointer::Free(RTreeIndex &index, RTreePointer &ptr) {
 	index.node_allocator->Free(ptr);
 	ptr.Clear();
 }
-
 
 } // namespace core
 

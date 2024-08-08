@@ -56,8 +56,10 @@ struct Box {
 	}
 
 	VALUE_TYPE OverlapArea(const Box &other) const {
-		VALUE_TYPE x_overlap = MaxValue(static_cast<VALUE_TYPE>(0), MinValue(max.x, other.max.x) - MaxValue(min.x, other.min.x));
-		VALUE_TYPE y_overlap = MaxValue(static_cast<VALUE_TYPE>(0), MinValue(max.y, other.max.y) - MaxValue(min.y, other.min.y));
+		VALUE_TYPE x_overlap =
+		    MaxValue(static_cast<VALUE_TYPE>(0), MinValue(max.x, other.max.x) - MaxValue(min.x, other.min.x));
+		VALUE_TYPE y_overlap =
+		    MaxValue(static_cast<VALUE_TYPE>(0), MinValue(max.y, other.max.y) - MaxValue(min.y, other.min.y));
 		return x_overlap * y_overlap;
 	}
 
@@ -72,8 +74,8 @@ struct Box {
 	}
 
 	VERTEX_TYPE Center() const {
-        return (min + max) / 2;
-    }
+		return (min + max) / 2;
+	}
 
 	bool operator==(const Box &other) const {
 		return min == other.min && max == other.max;
