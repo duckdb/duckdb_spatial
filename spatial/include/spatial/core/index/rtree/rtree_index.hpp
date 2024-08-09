@@ -6,6 +6,7 @@
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/bbox.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
+#include "spatial/core/index/rtree/rtree.hpp"
 
 namespace spatial {
 
@@ -22,13 +23,13 @@ public:
 	           AttachedDatabase &db, const case_insensitive_map_t<Value> &options,
 	           const IndexStorageInfo &info = IndexStorageInfo(), idx_t estimated_cardinality = 0);
 
-	//! Block pointer to the root of the index
-	// IndexPointer root_block_ptr;
+	// The root entry of the RTreeIndex
+	// RTreeEntry root_entry;
 
-	RTreeEntry root_entry;
+	unique_ptr<RTree> tree;
 
 	//! The allocator used to persist linked blocks
-	unique_ptr<FixedSizeAllocator> node_allocator;
+	// unique_ptr<FixedSizeAllocator> node_allocator;
 
 	unique_ptr<IndexScanState> InitializeScan(const Box2D<float> &query) const;
 	idx_t Scan(IndexScanState &state, Vector &result) const;

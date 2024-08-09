@@ -1,6 +1,5 @@
 #pragma once
 
-#include "duckdb/execution/index/fixed_size_allocator.hpp"
 #include "duckdb/execution/index/index_pointer.hpp"
 #include "spatial/common.hpp"
 #include "spatial/core/geometry/bbox.hpp"
@@ -12,8 +11,6 @@ namespace core {
 //-------------------------------------------------------------
 // RTree Pointer
 //-------------------------------------------------------------
-class RTreeNode;
-class RTreeIndex;
 
 enum class RTreeNodeType : uint8_t {
 	UNSET = 0,
@@ -28,32 +25,6 @@ class RTreePointer final : public IndexPointer {
 public:
 	RTreePointer() = default;
 	explicit RTreePointer(const IndexPointer &ptr) : IndexPointer(ptr) {
-	}
-	//! Get a new pointer to a node, might cause a new buffer allocation, and initialize it
-	static RTreeNode &NewPage(RTreeIndex &index, RTreePointer &pointer,
-	                          RTreeNodeType type = RTreeNodeType::BRANCH_PAGE);
-
-	static RTreePointer NewRowId(row_t row_id) {
-		RTreePointer pointer;
-		pointer.SetMetadata(static_cast<uint8_t>(RTreeNodeType::ROW_ID));
-		pointer.SetRowId(row_id);
-		return pointer;
-	}
-
-	//! Free the node (and the subtree)
-	static void Free(RTreeIndex &index, RTreePointer &pointer);
-
-	//! Get a reference to the allocator
-	static FixedSizeAllocator &GetAllocator(const RTreeIndex &index);
-
-	//! Get reference to the node (immutable).
-	static const RTreeNode &Ref(const RTreeIndex &index, const RTreePointer ptr) {
-		return *(GetAllocator(index).Get<const RTreeNode>(ptr, false));
-	}
-
-	//! Get a reference to the node (mutable), marking the node as dirty.
-	static RTreeNode &RefMutable(const RTreeIndex &index, const RTreePointer ptr) {
-		return *(GetAllocator(index).Get<RTreeNode>(ptr, true));
 	}
 
 	//! Get the RowID from this pointer
@@ -92,10 +63,6 @@ public:
 	}
 };
 
-// The RTreeNode contains up to CAPACITY entries
-// each represented by a bounds and a pointer
-// Node is kind of a bad name, maybe a "RTreePage" would be better
-
 using RTreeBounds = Box2D<float>;
 
 struct RTreeEntry {
@@ -112,69 +79,6 @@ struct RTreeEntry {
 	}
 };
 
-class RTreeNode {
-public:
-	friend class RTreePointer;
-	static constexpr idx_t CAPACITY = 128;
-	static constexpr idx_t MIN_CAPACITY = CAPACITY / 2;
-
-public:
-	RTreeNode() = default;
-
-	RTreeEntry entries[CAPACITY];
-
-	// Compute the bounds of this node by summing up all the child entries bounds
-	RTreeBounds GetBounds() const {
-		RTreeBounds result;
-		for (const auto &entry : entries) {
-			if (entry.IsSet()) {
-				result.Union(entry.bounds);
-			} else {
-				break;
-			}
-		}
-		return result;
-	}
-
-	// Returns the index of the first non-set entry
-	idx_t GetCount() const {
-		idx_t i;
-		for (i = 0; i < CAPACITY; i++) {
-			if (!entries[i].IsSet()) {
-				break;
-			}
-		}
-		return i;
-	}
-
-	// Swap the entry at the given index with the last entry in the node
-	// and clear the last entry
-	RTreeEntry RemoveAndSwap(idx_t index, idx_t count) {
-		D_ASSERT(index < count);
-		const auto entry = entries[index];
-		entries[index] = entries[count - 1];
-		entries[count - 1].Clear();
-		return entry;
-	}
-
-	void Verify() const {
-#ifdef DEBUG
-		for (idx_t i = 0; i < CAPACITY; i++) {
-			// If the entry is not set
-			if (!entries[i].IsSet()) {
-				// Then all the following entries should be unset
-				for (idx_t j = i; j < CAPACITY; j++) {
-					D_ASSERT(!entries[j].IsSet());
-				}
-				break;
-			}
-		}
-#endif
-	}
-};
-
 } // namespace core
 
 } // namespace spatial
-
-// -74.0891647, -0.0194350015, 0.0184550006, 40.8297081)

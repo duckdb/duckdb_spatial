@@ -182,8 +182,10 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexDumpInit(ClientContext &co
 	}
 
 	auto result = make_uniq<RTreeIndexDumpState>(*rtree_index);
-	if (rtree_index->root_entry.pointer.IsSet()) {
-		result->stack.emplace_back(rtree_index->root_entry.pointer, 0);
+	const auto &root_entry = rtree_index->tree->GetRoot();
+
+	if (root_entry.pointer.IsSet()) {
+		result->stack.emplace_back(root_entry.pointer, 0);
 	}
 	return std::move(result);
 }
@@ -201,14 +203,17 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 	const auto ymax_data = FlatVector::GetData<float>(*bounds_vectors[3]);
 	const auto rowid_data = FlatVector::GetData<row_t>(output.data[2]);
 
+	const auto &tree = *state.index.tree;
+	const auto max_node_capacity = tree.GetNodeCapacity();
+
 	// Depth-first scan of all nodes in the RTree
 	while (!state.stack.empty()) {
 		auto &frame = state.stack.back();
-		const auto &node = RTreePointer::Ref(state.index, frame.pointer);
+		const auto &node = tree.Ref(frame.pointer);
 
 		if (frame.pointer.IsLeafPage()) {
-			while (frame.entry_idx < RTreeNode::CAPACITY) {
-				auto &entry = node.entries[frame.entry_idx];
+			while (frame.entry_idx < max_node_capacity) {
+				auto &entry = node[frame.entry_idx];
 				if (entry.IsSet()) {
 					level_data[total_scanned] = state.level;
 					xmin_data[total_scanned] = entry.bounds.min.x;
@@ -224,15 +229,15 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 						return;
 					}
 				} else {
-					frame.entry_idx = RTreeNode::CAPACITY;
+					frame.entry_idx = max_node_capacity;
 				}
 			}
 			state.stack.pop_back();
 			state.level--;
 		} else {
 			D_ASSERT(frame.pointer.IsBranchPage());
-			auto &entry = node.entries[frame.entry_idx];
-			if (frame.entry_idx < RTreeNode::CAPACITY && entry.IsSet()) {
+			auto &entry = node[frame.entry_idx];
+			if (frame.entry_idx < max_node_capacity && entry.IsSet()) {
 				level_data[total_scanned] = state.level;
 				xmin_data[total_scanned] = entry.bounds.min.x;
 				ymin_data[total_scanned] = entry.bounds.min.y;

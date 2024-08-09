@@ -1,5 +1,6 @@
 set(EXTENSION_SOURCES
         ${EXTENSION_SOURCES}
+        ${CMAKE_CURRENT_SOURCE_DIR}/rtree.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_create_logical.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_create_physical.cpp
@@ -7,6 +8,5 @@ set(EXTENSION_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_plan_scan.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_scan.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rtree_index_pragmas.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/rtree_node.cpp
         PARENT_SCOPE
 )
