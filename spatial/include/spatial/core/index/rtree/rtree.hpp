@@ -45,7 +45,7 @@ public:
 		root.pointer.Set(root_ptr);
 		// Compute the bounds
 		const auto node = Ref(root.pointer);
-		root.bounds = GetNodeBounds(node);
+		root.bounds = node.GetBounds(max_node_capacity);
 	}
 
 	void SetRoot(const RTreeEntry &entry) {
@@ -58,26 +58,22 @@ public:
 		root.bounds = RTreeBounds();
 	}
 
-	const RTreeEntry *Ref(const RTreePointer &pointer) const;
-	RTreeEntry *RefMutable(const RTreePointer &pointer) const;
+	ConstRTreeNodeRef Ref(const RTreePointer &pointer) const;
+	MutableRTreeNodeRef RefMutable(const RTreePointer &pointer) const;
 
 	RTreePointer MakePage(RTreeNodeType type) const;
 	static RTreePointer MakeRowId(row_t row_id);
-
-	RTreeBounds GetNodeBounds(const RTreeEntry node[]) const;
-	idx_t GetNodeCount(const RTreeEntry node[]) const;
-	void VerifyNode(const RTreeEntry node[]) const;
 
 private:
 	void Free(RTreePointer &pointer);
 
 	void RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry);
 	InsertResult NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry);
-	RTreeEntry &PickSubtree(RTreeEntry entries[], const RTreeEntry &new_entry) const;
+	RTreeEntry &PickSubtree(const MutableRTreeNodeRef &node, const RTreeEntry &new_entry) const;
 
 	RTreeEntry SplitNode(RTreeEntry &entry);
-	void RebalanceSplitNodes(RTreeEntry src[], RTreeEntry dst[], idx_t &src_cnt, idx_t &dst_cnt, bool split_axis,
-	                         PointXY<float> &split_point) const;
+	void RebalanceSplitNodes(const MutableRTreeNodeRef &src, const MutableRTreeNodeRef &dst, idx_t &src_cnt,
+	                         idx_t &dst_cnt, bool split_axis, PointXY<float> &split_point) const;
 
 	void RootDelete(RTreeEntry &root, const RTreeEntry &target);
 	DeleteResult NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans);

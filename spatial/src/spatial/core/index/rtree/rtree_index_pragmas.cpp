@@ -213,7 +213,7 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 
 		if (frame.pointer.IsLeafPage()) {
 			while (frame.entry_idx < max_node_capacity) {
-				auto &entry = node[frame.entry_idx];
+				auto &entry = node.entries[frame.entry_idx];
 				if (entry.IsSet()) {
 					level_data[total_scanned] = state.level;
 					xmin_data[total_scanned] = entry.bounds.min.x;
@@ -236,7 +236,7 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 			state.level--;
 		} else {
 			D_ASSERT(frame.pointer.IsBranchPage());
-			auto &entry = node[frame.entry_idx];
+			auto &entry = node.entries[frame.entry_idx];
 			if (frame.entry_idx < max_node_capacity && entry.IsSet()) {
 				level_data[total_scanned] = state.level;
 				xmin_data[total_scanned] = entry.bounds.min.x;

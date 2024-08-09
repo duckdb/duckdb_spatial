@@ -198,12 +198,12 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 				const auto remaining_elements = scan_count - scan_idx;
 
 				for (idx_t j = 0; j < MinValue<idx_t>(remaining_capacity, remaining_elements); j++) {
-					node[child_idx++] = slice_begin[scan_idx++];
+					node.entries[child_idx++] = slice_begin[scan_idx++];
 				}
 
 				if (child_idx == state.max_node_capacity) {
 					// Append the current node to the layer
-					auto node_bounds = tree.GetNodeBounds(node);
+					auto node_bounds = node.GetBounds(state.max_node_capacity);
 					state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 					needs_insertion = false;
 				}
@@ -216,7 +216,7 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 		// If the layer was exhausted before we filled the last node, we need to insert it now
 		if (needs_insertion) {
 			auto node = tree.Ref(current_ptr);
-			auto node_bounds = tree.GetNodeBounds(node);
+			auto node_bounds = node.GetBounds(state.max_node_capacity);
 			state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 			needs_insertion = false;
 		}
@@ -237,7 +237,7 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 		// Create a leaf node to hold this row id
 		auto root_leaf_ptr = tree.MakePage(RTreeNodeType::LEAF_PAGE);
 		auto node = tree.RefMutable(root_leaf_ptr);
-		node[0] = RTreeEntry {root.pointer, root.bounds};
+		node.entries[0] = RTreeEntry {root.pointer, root.bounds};
 		tree.SetRoot(RTreeEntry {root_leaf_ptr, root.bounds});
 	} else {
 		// Else, just set the root node

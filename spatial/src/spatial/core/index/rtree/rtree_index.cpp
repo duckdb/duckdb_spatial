@@ -89,7 +89,7 @@ idx_t RTreeIndex::Scan(IndexScanState &state_p, Vector &result) const {
 			// so its ok if the ptr gets invalidated when we pop_back();
 			state.stack.pop_back();
 			for (idx_t i = 0; i < tree->GetNodeCapacity(); i++) {
-				auto &entry = node[i];
+				auto &entry = node.entries[i];
 				if (entry.IsSet()) {
 					if (entry.bounds.Intersects(state.query_bounds)) {
 						state.stack.emplace_back(entry.pointer);
