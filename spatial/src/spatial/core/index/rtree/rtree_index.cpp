@@ -38,14 +38,44 @@ RTreeIndex::RTreeIndex(const string &name, IndexConstraintType index_constraint_
 		throw NotImplementedException("RTree indexes do not support unique or primary key constraints");
 	}
 
-	constexpr auto max_node_capacity = 128;
-	constexpr auto min_node_capacity = max_node_capacity / 2;
+	// Defaults
+	idx_t max_node_capacity = 64;
+	idx_t min_node_capacity = 24;
 
-	// Create a allocator for the linked blocks
+	const auto max_cap_param_search = options.find("max_node_capacity");
+	if (max_cap_param_search != options.end()) {
+		const auto val = max_cap_param_search->second.GetValue<int32_t>();
+		if (val < 4) {
+			throw InvalidInputException("RTree: max_node_capacity must be at least 4");
+		}
+		if (val > 255) {
+			throw InvalidInputException("RTree: max_node_capacity must be at most 255");
+		}
+		max_node_capacity = UnsafeNumericCast<idx_t>(val);
+	}
+
+	const auto min_cap_search = options.find("min_node_capacity");
+	if (min_cap_search != options.end()) {
+		const auto val = min_cap_search->second.GetValue<int32_t>();
+		if (val < 0) {
+			throw InvalidInputException("RTree: min_node_capacity must be at least 0");
+		}
+		if (val > max_node_capacity / 2) {
+			throw InvalidInputException("RTree: min_node_capacity must be at most 'max_node_capacity / 2'");
+		}
+		min_node_capacity = UnsafeNumericCast<idx_t>(val);
+	} else {
+		// If no min capacity is set, set it to 40% of the max capacity
+		if (max_cap_param_search != options.end()) {
+			min_node_capacity = std::ceil(UnsafeNumericCast<double>(max_node_capacity) * 0.4);
+		}
+	}
+
+	// TODO: Check the block manager for the current block size and see if our bounds are ok
+
+	// Create the RTree
 	auto &block_manager = table_io_manager.GetIndexBlockManager();
 	tree = make_uniq<RTree>(block_manager, max_node_capacity, min_node_capacity);
-
-	// node_allocator = make_uniq<FixedSizeAllocator>(node_size, block_manager);
 
 	if (info.IsValid()) {
 		// This is an old index that needs to be loaded

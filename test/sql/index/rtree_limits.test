@@ -1,0 +1,25 @@
+require spatial
+
+statement ok
+CREATE TABLE t1 AS SELECT point::GEOMETRY as geom
+FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
+
+statement error
+CREATE INDEX my_idx ON t1 USING RTREE (geom) WITH (max_node_capacity = 2);
+----
+RTree: max_node_capacity must be at least 4
+
+statement error
+CREATE INDEX my_idx on t1 USING RTREE (geom) WITH (max_node_capacity = 256)
+----
+RTree: max_node_capacity must be at most 255
+
+statement error
+CREATE INDEX my_idx on t1 USING RTREE (geom) WITH (min_node_capacity = -5)
+----
+RTree: min_node_capacity must be at least 0
+
+statement error
+CREATE INDEX my_idx on t1 USING RTREE (geom) WITH (min_node_capacity = 33)
+----
+RTree: min_node_capacity must be at most 'max_node_capacity / 2'

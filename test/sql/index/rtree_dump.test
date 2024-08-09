@@ -5,7 +5,7 @@ CREATE TABLE t1 AS SELECT point::GEOMETRY as geom
 FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
 
 statement ok
-CREATE INDEX my_idx ON t1 USING RTREE (geom);
+CREATE INDEX my_idx ON t1 USING RTREE (geom) WITH (max_node_capacity = 128, min_node_capacity = 64);
 
 query I
 SELECT count(*) from rtree_index_dump('my_idx');

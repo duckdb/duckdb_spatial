@@ -10,17 +10,6 @@ INSERT INTO t1 (geom) VALUES ('POINT(1 1)');
 statement ok
 CREATE INDEX my_idx ON t1 USING RTREE (geom);
 
-# Try to insert/update/delete from the table
-#statement error
-#INSERT INTO t1 (geom) VALUES ('POINT(1 1)');
-#----
-#RTreeIndex does not support modifications to the base table yet. Drop the index, perform the modifications and recreate the index to work around this.
-
-#statement error
-#UPDATE t1 SET geom = 'POINT(2 2)' WHERE geom = 'POINT(1 1)';
-#----
-#RTreeIndex does not support modifications to the base table yet. Drop the index, perform the modifications and recreate the index to work around this.
-
 query I
 DELETE FROM t1 WHERE geom = 'POINT(1 1)';
 ----
