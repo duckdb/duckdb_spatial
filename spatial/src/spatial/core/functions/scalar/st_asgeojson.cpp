@@ -238,10 +238,10 @@ static void GeometryToGeoJSONFragmentFunction(DataChunk &args, ExpressionState &
 		Geometry::Match<ToGeoJSONFunctor>(geom, doc, obj);
 
 		size_t json_size = 0;
-		// TODO: YYJSON_WRITE_PRETTY
-		auto json_data = yyjson_mut_write(doc, 0, &json_size);
-		auto json_str = StringVector::AddString(result, json_data, json_size);
-		return json_str;
+		char *json_data = yyjson_mut_write_opts(doc, 0, json_allocator.GetYYJSONAllocator(), &json_size, nullptr);
+		// Because the arena allocator only resets after each pipeline invocation, we can safely just point into the
+		// arena here without needing to copy the data to the string heap with StringVector::AddString
+		return string_t(json_data, json_size);
 	});
 }
 
