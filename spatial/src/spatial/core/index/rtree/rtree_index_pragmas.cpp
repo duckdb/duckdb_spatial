@@ -16,6 +16,7 @@
 #include "spatial/core/index/rtree/rtree_index.hpp"
 #include "spatial/core/index/rtree/rtree_module.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
+#include "spatial/core/index/rtree/rtree_scanner.hpp"
 
 namespace spatial {
 
@@ -165,8 +166,7 @@ struct RTreeIndexDumpStackFrame {
 
 struct RTreeIndexDumpState final : public GlobalTableFunctionState {
 	const RTreeIndex &index;
-	vector<RTreeIndexDumpStackFrame> stack;
-	int32_t level = 0;
+	RTreeScanner scanner;
 
 public:
 	explicit RTreeIndexDumpState(const RTreeIndex &index) : index(index) {
@@ -185,7 +185,7 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexDumpInit(ClientContext &co
 	const auto &root_entry = rtree_index->tree->GetRoot();
 
 	if (root_entry.pointer.IsSet()) {
-		result->stack.emplace_back(root_entry.pointer, 0);
+		result->scanner.Init(root_entry);
 	}
 	return std::move(result);
 }
@@ -194,7 +194,8 @@ static unique_ptr<GlobalTableFunctionState> RTreeIndexDumpInit(ClientContext &co
 static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &data_p, DataChunk &output) {
 	auto &state = data_p.global_state->Cast<RTreeIndexDumpState>();
 
-	idx_t total_scanned = 0;
+	idx_t output_idx = 0;
+
 	const auto level_data = FlatVector::GetData<int32_t>(output.data[0]);
 	const auto &bounds_vectors = StructVector::GetEntries(output.data[1]);
 	const auto xmin_data = FlatVector::GetData<float>(*bounds_vectors[0]);
@@ -204,60 +205,23 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 	const auto rowid_data = FlatVector::GetData<row_t>(output.data[2]);
 
 	const auto &tree = *state.index.tree;
-	// const auto max_node_capacity = tree.GetNodeCapacity();
 
-	// Depth-first scan of all nodes in the RTree
-	while (!state.stack.empty()) {
-		auto &frame = state.stack.back();
-		const auto &node = tree.Ref(frame.pointer);
-
-		if (frame.pointer.IsLeafPage()) {
-			while (frame.entry_idx < node.GetCount()) {
-				auto &entry = node[frame.entry_idx];
-				level_data[total_scanned] = state.level;
-				xmin_data[total_scanned] = entry.bounds.min.x;
-				ymin_data[total_scanned] = entry.bounds.min.y;
-				xmax_data[total_scanned] = entry.bounds.max.x;
-				ymax_data[total_scanned] = entry.bounds.max.y;
-				rowid_data[total_scanned] = entry.pointer.GetRowId();
-				total_scanned++;
-				frame.entry_idx++;
-				if (total_scanned == STANDARD_VECTOR_SIZE) {
-					// We've filled the result vector, yield!
-					output.SetCardinality(total_scanned);
-					return;
-				}
-			}
-			state.stack.pop_back();
-			state.level--;
-		} else {
-			D_ASSERT(frame.pointer.IsBranchPage());
-			if (frame.entry_idx < node.GetCount()) {
-				auto &entry = node[frame.entry_idx];
-				level_data[total_scanned] = state.level;
-				xmin_data[total_scanned] = entry.bounds.min.x;
-				ymin_data[total_scanned] = entry.bounds.min.y;
-				xmax_data[total_scanned] = entry.bounds.max.x;
-				ymax_data[total_scanned] = entry.bounds.max.y;
-				FlatVector::SetNull(output.data[2], total_scanned, true);
-
-				total_scanned++;
-				frame.entry_idx++;
-				state.level++;
-				state.stack.emplace_back(entry.pointer, 0);
-
-				if (total_scanned == STANDARD_VECTOR_SIZE) {
-					output.SetCardinality(total_scanned);
-					return;
-				}
-			} else {
-				// We've exhausted the branch, pop it from the stack
-				state.stack.pop_back();
-				state.level--;
-			}
+	state.scanner.Scan(tree, [&](const RTreeEntry &entry, const idx_t &level) {
+		level_data[output_idx] = UnsafeNumericCast<int32_t>(level);
+		xmin_data[output_idx] = entry.bounds.min.x;
+		ymin_data[output_idx] = entry.bounds.min.y;
+		xmax_data[output_idx] = entry.bounds.max.x;
+		ymax_data[output_idx] = entry.bounds.max.y;
+		rowid_data[output_idx] = entry.pointer.GetRowId();
+		output_idx++;
+		if (output_idx == STANDARD_VECTOR_SIZE) {
+			// We've filled the result vector, yield!
+			return RTreeScanResult::YIELD;
 		}
-	}
-	output.SetCardinality(total_scanned);
+		return RTreeScanResult::CONTINUE;
+	});
+
+	output.SetCardinality(output_idx);
 }
 
 //-------------------------------------------------------------------------

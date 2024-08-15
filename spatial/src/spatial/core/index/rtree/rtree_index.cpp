@@ -1,12 +1,13 @@
 #include "spatial/core/index/rtree/rtree_index.hpp"
+#include "spatial/core/index/rtree/rtree_scanner.hpp"
 
 #include "duckdb/common/serializer/binary_deserializer.hpp"
 #include "duckdb/common/serializer/binary_serializer.hpp"
 #include "duckdb/execution/index/fixed_size_allocator.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
+#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/index/rtree/rtree_module.hpp"
 #include "spatial/core/index/rtree/rtree_node.hpp"
-#include "spatial/core/geometry/geometry_type.hpp"
 #include "spatial/core/util/math.hpp"
 
 namespace spatial {
@@ -19,7 +20,7 @@ namespace core {
 class RTreeIndexScanState final : public IndexScanState {
 public:
 	RTreeBounds query_bounds;
-	vector<RTreePointer> stack;
+	RTreeScanner scanner;
 };
 
 //------------------------------------------------------------------------------
@@ -91,42 +92,34 @@ unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const RTreeBounds &query) 
 	state->query_bounds = query;
 	auto &root = tree->GetRoot();
 	if (root.IsSet() && state->query_bounds.Intersects(root.bounds)) {
-		state->stack.emplace_back(root.pointer);
+		state->scanner.Init(root);
 	}
 	return std::move(state);
 }
 
-idx_t RTreeIndex::Scan(IndexScanState &state_p, Vector &result) const {
-	auto &state = state_p.Cast<RTreeIndexScanState>();
-
-	idx_t total_scanned = 0;
+idx_t RTreeIndex::Scan(IndexScanState &state, Vector &result) const {
+	auto &sstate = state.Cast<RTreeIndexScanState>();
 	const auto row_ids = FlatVector::GetData<row_t>(result);
 
-	while (!state.stack.empty()) {
-		auto &ptr = state.stack.back();
-		if (ptr.IsRowId()) {
-			// Its a leaf! Collect the row id
-			row_ids[total_scanned++] = ptr.GetRowId();
-			state.stack.pop_back();
-			if (total_scanned == STANDARD_VECTOR_SIZE) {
-				// We've filled the result vector, yield!
-				return total_scanned;
-			}
-		} else {
-			// Its a page! Add the valid intersecting children to the stack and continue
-			D_ASSERT(ptr.IsPage());
-			auto &node = tree->Ref(ptr);
-			// Even though we modify the stack, we've already dereferenced the current node
-			// so its ok if the ptr gets invalidated when we pop_back();
-			state.stack.pop_back();
-			for(auto &entry : node) {
-				if(entry.bounds.Intersects(state.query_bounds)) {
-					state.stack.emplace_back(entry.pointer);
-				}
+	idx_t output_idx = 0;
+	sstate.scanner.Scan(*tree, [&](const RTreeEntry &entry, const idx_t &) {
+		// Does this entry intersect with the query bounds?
+		if (!sstate.query_bounds.Intersects(entry.bounds)) {
+			// No, skip it
+			return RTreeScanResult::SKIP;
+		}
+		// Is this a row id?
+		if (entry.pointer.IsRowId()) {
+			row_ids[output_idx++] = entry.pointer.GetRowId();
+			// Have we filled the result vector?
+			if (output_idx == STANDARD_VECTOR_SIZE) {
+				return RTreeScanResult::YIELD;
 			}
 		}
-	}
-	return total_scanned;
+		// Continue scanning
+		return RTreeScanResult::CONTINUE;
+	});
+	return output_idx;
 }
 
 void RTreeIndex::CommitDrop(IndexLock &index_lock) {

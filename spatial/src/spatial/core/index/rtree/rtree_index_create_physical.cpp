@@ -202,7 +202,7 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 				if (child_idx == state.max_node_capacity) {
 					// Append the current node to the layer
-					if(current_ptr.GetType() == RTreeNodeType::LEAF_PAGE) {
+					if (current_ptr.GetType() == RTreeNodeType::LEAF_PAGE) {
 						// If the node is a leaf node, sort it by row id
 						node.SortEntriesByRowId();
 					}
@@ -219,7 +219,7 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 		// If the layer was exhausted before we filled the last node, we need to insert it now
 		if (needs_insertion) {
 			auto &node = tree.RefMutable(current_ptr);
-			if(current_ptr.GetType() == RTreeNodeType::LEAF_PAGE) {
+			if (current_ptr.GetType() == RTreeNodeType::LEAF_PAGE) {
 				// If the node is a leaf node, sort it by row id
 				node.SortEntriesByRowId();
 			}

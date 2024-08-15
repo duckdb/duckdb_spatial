@@ -59,8 +59,8 @@ public:
 		root.bounds = RTreeBounds();
 	}
 
-	const RTreeNode& Ref(const RTreePointer &pointer) const;
-	RTreeNode& RefMutable(const RTreePointer &pointer) const;
+	const RTreeNode &Ref(const RTreePointer &pointer) const;
+	RTreeNode &RefMutable(const RTreePointer &pointer) const;
 
 	RTreePointer MakePage(RTreeNodeType type) const;
 	static RTreePointer MakeRowId(row_t row_id);
@@ -73,8 +73,7 @@ private:
 	RTreeEntry &PickSubtree(RTreeNode &node, const RTreeEntry &new_entry) const;
 
 	RTreeEntry SplitNode(RTreeEntry &entry) const;
-	void RebalanceSplitNodes(RTreeNode &src, RTreeNode &dst, bool split_axis,
-		PointXY<float> &split_point) const;
+	void RebalanceSplitNodes(RTreeNode &src, RTreeNode &dst, bool split_axis, PointXY<float> &split_point) const;
 
 	void RootDelete(RTreeEntry &root, const RTreeEntry &target);
 	DeleteResult NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans);

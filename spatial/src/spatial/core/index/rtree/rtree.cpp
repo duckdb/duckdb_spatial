@@ -41,11 +41,11 @@ RTreePointer RTree::MakeRowId(row_t row_id) {
 	return pointer;
 }
 
-RTreeNode& RTree::RefMutable(const RTreePointer &pointer) const {
+RTreeNode &RTree::RefMutable(const RTreePointer &pointer) const {
 	return *allocator->Get<RTreeNode>(pointer, true);
 }
 
-const RTreeNode& RTree::Ref(const RTreePointer &pointer) const {
+const RTreeNode &RTree::Ref(const RTreePointer &pointer) const {
 	return *allocator->Get<const RTreeNode>(pointer, false);
 }
 
@@ -56,7 +56,7 @@ void RTree::Free(RTreePointer &pointer) {
 		return;
 	}
 	auto &node = RefMutable(pointer);
-	for(auto &entry : node) {
+	for (auto &entry : node) {
 		Free(entry.pointer);
 	}
 	node.Clear();
@@ -154,13 +154,13 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) const {
 	// Create a temporary node for the first split
 	// Create a buffer to hold all the entries we are going to move
 	const auto entry_buffer = make_unsafe_uniq_array<RTreeEntry>(max_node_capacity);
-	for(idx_t i = 0; i < max_node_capacity; i++) {
+	for (idx_t i = 0; i < max_node_capacity; i++) {
 		entry_buffer[i] = left_node[i];
 	}
 	left_node.Clear();
 
 	auto right_ptr = MakePage(entry.pointer.GetType());
-	auto& right_node = RefMutable(right_ptr);
+	auto &right_node = RefMutable(right_ptr);
 
 	const reference<RTreeNode> node_ref[2] = {left_node, right_node};
 
@@ -251,7 +251,7 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) const {
 
 	// Sort both node entries on the min x-coordinate
 	// This is not really necessary, but produces a slightly nicer tree
-	if(entry.pointer.IsBranchPage()) {
+	if (entry.pointer.IsBranchPage()) {
 		left_node.SortEntriesByXMin();
 		right_node.SortEntriesByXMin();
 	} else {
@@ -412,10 +412,9 @@ DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 
 		// Do a binary search with std::lower_bound to find the matching rowid
 		// This is faster than a linear search
-		auto it = std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
-			[](const RTreeEntry &item, const row_t &row) {
-			return item.pointer.GetRowId() < row;
-		});
+		auto it =
+		    std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
+		                     [](const RTreeEntry &item, const row_t &row) { return item.pointer.GetRowId() < row; });
 		if (it == node.end()) {
 			// Not found in this leaf
 			return {false, false, false};
@@ -524,7 +523,7 @@ void RTree::ReInsertNode(RTreeEntry &root, RTreeEntry &target) {
 	} else {
 		D_ASSERT(target.pointer.IsPage());
 		auto &node = RefMutable(target.pointer);
-		for(auto &entry : node) {
+		for (auto &entry : node) {
 			ReInsertNode(root, entry);
 		}
 		// Also free the page after we've reinserted all the rowids

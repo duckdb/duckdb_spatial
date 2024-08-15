@@ -121,14 +121,15 @@ public:
 	void Verify(const idx_t capacity) const {
 #ifdef DEBUG
 		D_ASSERT(count <= capacity);
-		if(count != 0) {
-			if(begin()[0].pointer.GetType() == RTreeNodeType::ROW_ID) {
+		if (count != 0) {
+			if (begin()[0].pointer.GetType() == RTreeNodeType::ROW_ID) {
 				// This is a leaf node, rowids should be sorted
-				std::is_sorted(begin(), end(), [](const RTreeEntry &a, const RTreeEntry &b) {
+				const auto ok = std::is_sorted(begin(), end(), [](const RTreeEntry &a, const RTreeEntry &b) {
 					D_ASSERT(a.IsSet());
 					D_ASSERT(b.IsSet());
 					return a.pointer.GetRowId() < b.pointer.GetRowId();
 				});
+				D_ASSERT(ok);
 			}
 		}
 #endif
@@ -144,27 +145,36 @@ public:
 
 	void SortEntriesByRowId() {
 		std::sort(begin(), end(), [&](const RTreeEntry &a, const RTreeEntry &b) {
-		    D_ASSERT(a.IsSet());
-		    D_ASSERT(b.IsSet());
-		    return a.pointer.GetRowId() < b.pointer.GetRowId();
+			D_ASSERT(a.IsSet());
+			D_ASSERT(b.IsSet());
+			return a.pointer.GetRowId() < b.pointer.GetRowId();
 		});
 	}
 
 public: // Collection interface
-	RTreeEntry* begin() { return reinterpret_cast<RTreeEntry*>(this + 1); }
-	RTreeEntry* end() { return begin() + count; }
-	const RTreeEntry* begin() const { return reinterpret_cast<const RTreeEntry*>(this + 1); }
-	const RTreeEntry* end() const { return begin() + count; }
+	RTreeEntry *begin() {
+		return reinterpret_cast<RTreeEntry *>(this + 1);
+	}
+	RTreeEntry *end() {
+		return begin() + count;
+	}
+	const RTreeEntry *begin() const {
+		return reinterpret_cast<const RTreeEntry *>(this + 1);
+	}
+	const RTreeEntry *end() const {
+		return begin() + count;
+	}
 
-	RTreeEntry& operator[](const idx_t idx) {
+	RTreeEntry &operator[](const idx_t idx) {
 		D_ASSERT(idx < count);
 		return begin()[idx];
 	}
 
-	const RTreeEntry& operator[](const idx_t idx) const {
+	const RTreeEntry &operator[](const idx_t idx) const {
 		D_ASSERT(idx < count);
 		return begin()[idx];
 	}
+
 private:
 	uint32_t count;
 
@@ -173,95 +183,6 @@ private:
 	uint64_t _unused2;
 	uint64_t _unused3;
 };
-
-/*
-template <bool CONST>
-struct RTreeNodeRefBase {
-	using header_type = typename std::conditional<CONST, const RTreeHeader, RTreeHeader>::type;
-	using entry_type = typename std::conditional<CONST, const RTreeEntry, RTreeEntry>::type;
-
-	header_type &header;
-	entry_type *entries;
-
-	explicit RTreeNodeRefBase(header_type *header_p, entry_type *entries_p) : header(*header_p), entries(entries_p) {
-	}
-
-	entry_type* begin() const {
-        return entries;
-    }
-
-	entry_type* end() const {
-        return entries + header.count;
-    }
-
-	entry_type& operator[](idx_t idx) const {
-        D_ASSERT(idx < header.count);
-		D_ASSERT(entries[idx].IsSet());
-        return entries[idx];
-    }
-
-	idx_t GetCount() const {
-        return header.count;
-    }
-
-	RTreeBounds GetBounds() const {
-		RTreeBounds result;
-		for (idx_t i = 0; i < header.count; i++) {
-			auto &entry = entries[i];
-			D_ASSERT(entry.IsSet());
-			result.Union(entry.bounds);
-		}
-		return result;
-	}
-
-	void Verify(idx_t capacity) const {
-#ifdef DEBUG
-		for (idx_t i = 0; i < capacity; i++) {
-			// If the entry is not set
-			if (!entries[i].IsSet()) {
-				// Then all the following entries should be unset
-				for (idx_t j = i; j < capacity; j++) {
-					D_ASSERT(!entries[j].IsSet());
-				}
-				break;
-			}
-		}
-#endif
-	}
-};
-
-struct MutableRTreeNodeRef : public RTreeNodeRefBase<false> {
-
-	MutableRTreeNodeRef(RTreeHeader *header_p, RTreeEntry *entries_p)
-		: RTreeNodeRefBase(header_p, entries_p) { }
-
-
-
-	void PushEntry(const RTreeEntry &entry) {
-		D_ASSERT(entry.IsSet());
-        entries[header.count++] = entry;
-    }
-
-	void Clear() {
-		header.count = 0;
-	}
-
-	RTreeEntry SwapRemove(idx_t idx) {
-		D_ASSERT(idx < header.count);
-		const auto result = entries[idx];
-        entries[idx] = entries[--header.count];
-		return result;
-	}
-};
-
-struct ConstRTreeNodeRef : public RTreeNodeRefBase<true> {
-
-	ConstRTreeNodeRef(const RTreeHeader *header_p, const RTreeEntry *entries_p)
-		: RTreeNodeRefBase(header_p, entries_p) { }
-
-};
-
-*/
 
 } // namespace core
 

@@ -70,7 +70,7 @@ struct ManagedCollectionAppendState {
 
 template <class T>
 void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity) {
-	//D_ASSERT(initial_capacity <= BLOCK_CAPACITY);
+	// D_ASSERT(initial_capacity <= BLOCK_CAPACITY);
 
 	// TODO: Allow allocating multiple blocks at once?
 
