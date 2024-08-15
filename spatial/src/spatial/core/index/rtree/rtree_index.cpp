@@ -67,7 +67,7 @@ RTreeIndex::RTreeIndex(const string &name, IndexConstraintType index_constraint_
 	} else {
 		// If no min capacity is set, set it to 40% of the max capacity
 		if (max_cap_param_search != options.end()) {
-			min_node_capacity = std::ceil(UnsafeNumericCast<double>(max_node_capacity) * 0.4);
+			min_node_capacity = std::ceil(static_cast<double>(max_node_capacity) * 0.4);
 		}
 	}
 
@@ -114,18 +114,14 @@ idx_t RTreeIndex::Scan(IndexScanState &state_p, Vector &result) const {
 			}
 		} else {
 			// Its a page! Add the valid intersecting children to the stack and continue
-			auto node = tree->Ref(ptr);
+			D_ASSERT(ptr.IsPage());
+			auto &node = tree->Ref(ptr);
 			// Even though we modify the stack, we've already dereferenced the current node
 			// so its ok if the ptr gets invalidated when we pop_back();
 			state.stack.pop_back();
-			for (idx_t i = 0; i < tree->GetNodeCapacity(); i++) {
-				auto &entry = node.entries[i];
-				if (entry.IsSet()) {
-					if (entry.bounds.Intersects(state.query_bounds)) {
-						state.stack.emplace_back(entry.pointer);
-					}
-				} else {
-					break;
+			for(auto &entry : node) {
+				if(entry.bounds.Intersects(state.query_bounds)) {
+					state.stack.emplace_back(entry.pointer);
 				}
 			}
 		}

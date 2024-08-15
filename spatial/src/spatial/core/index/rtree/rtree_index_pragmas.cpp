@@ -204,7 +204,7 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 	const auto rowid_data = FlatVector::GetData<row_t>(output.data[2]);
 
 	const auto &tree = *state.index.tree;
-	const auto max_node_capacity = tree.GetNodeCapacity();
+	// const auto max_node_capacity = tree.GetNodeCapacity();
 
 	// Depth-first scan of all nodes in the RTree
 	while (!state.stack.empty()) {
@@ -212,32 +212,28 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 		const auto &node = tree.Ref(frame.pointer);
 
 		if (frame.pointer.IsLeafPage()) {
-			while (frame.entry_idx < max_node_capacity) {
-				auto &entry = node.entries[frame.entry_idx];
-				if (entry.IsSet()) {
-					level_data[total_scanned] = state.level;
-					xmin_data[total_scanned] = entry.bounds.min.x;
-					ymin_data[total_scanned] = entry.bounds.min.y;
-					xmax_data[total_scanned] = entry.bounds.max.x;
-					ymax_data[total_scanned] = entry.bounds.max.y;
-					rowid_data[total_scanned] = entry.pointer.GetRowId();
-					total_scanned++;
-					frame.entry_idx++;
-					if (total_scanned == STANDARD_VECTOR_SIZE) {
-						// We've filled the result vector, yield!
-						output.SetCardinality(total_scanned);
-						return;
-					}
-				} else {
-					frame.entry_idx = max_node_capacity;
+			while (frame.entry_idx < node.GetCount()) {
+				auto &entry = node[frame.entry_idx];
+				level_data[total_scanned] = state.level;
+				xmin_data[total_scanned] = entry.bounds.min.x;
+				ymin_data[total_scanned] = entry.bounds.min.y;
+				xmax_data[total_scanned] = entry.bounds.max.x;
+				ymax_data[total_scanned] = entry.bounds.max.y;
+				rowid_data[total_scanned] = entry.pointer.GetRowId();
+				total_scanned++;
+				frame.entry_idx++;
+				if (total_scanned == STANDARD_VECTOR_SIZE) {
+					// We've filled the result vector, yield!
+					output.SetCardinality(total_scanned);
+					return;
 				}
 			}
 			state.stack.pop_back();
 			state.level--;
 		} else {
 			D_ASSERT(frame.pointer.IsBranchPage());
-			auto &entry = node.entries[frame.entry_idx];
-			if (frame.entry_idx < max_node_capacity && entry.IsSet()) {
+			if (frame.entry_idx < node.GetCount()) {
+				auto &entry = node[frame.entry_idx];
 				level_data[total_scanned] = state.level;
 				xmin_data[total_scanned] = entry.bounds.min.x;
 				ymin_data[total_scanned] = entry.bounds.min.y;
@@ -254,7 +250,6 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 					output.SetCardinality(total_scanned);
 					return;
 				}
-
 			} else {
 				// We've exhausted the branch, pop it from the stack
 				state.stack.pop_back();

@@ -144,9 +144,6 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 	auto slice_begin = reinterpret_cast<RTreeEntry *>(state.slice_buffer.get());
 	auto slice_end = slice_begin + state.slice_size;
 
-	// unsafe_vector<idx_t> slice_idx(state.slice_size);
-	// unsafe_vector<Box2D<float>> slice_bounds(state.slice_size);
-
 	// Now, we have our base layer with all the leaves, we need to build the rest of the tree layer by layer
 	while (state.curr_layer_ptr->Count() != 1) {
 		if (state.scan_state.IsDone()) {
@@ -192,18 +189,24 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 					needs_insertion = true;
 				}
 
-				// Dereference the current node
-				auto node = tree.RefMutable(current_ptr);
 				const auto remaining_capacity = state.max_node_capacity - child_idx;
 				const auto remaining_elements = scan_count - scan_idx;
 
+				// Dereference the current node
+				auto &node = tree.RefMutable(current_ptr);
+
 				for (idx_t j = 0; j < MinValue<idx_t>(remaining_capacity, remaining_elements); j++) {
-					node.entries[child_idx++] = slice_begin[scan_idx++];
+					node.PushEntry(slice_begin[scan_idx++]);
+					child_idx++;
 				}
 
 				if (child_idx == state.max_node_capacity) {
 					// Append the current node to the layer
-					auto node_bounds = node.GetBounds(state.max_node_capacity);
+					if(current_ptr.GetType() == RTreeNodeType::LEAF_PAGE) {
+						// If the node is a leaf node, sort it by row id
+						node.SortEntriesByRowId();
+					}
+					auto node_bounds = node.GetBounds();
 					state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 					needs_insertion = false;
 				}
@@ -215,8 +218,12 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 		// If the layer was exhausted before we filled the last node, we need to insert it now
 		if (needs_insertion) {
-			auto node = tree.Ref(current_ptr);
-			auto node_bounds = node.GetBounds(state.max_node_capacity);
+			auto &node = tree.RefMutable(current_ptr);
+			if(current_ptr.GetType() == RTreeNodeType::LEAF_PAGE) {
+				// If the node is a leaf node, sort it by row id
+				node.SortEntriesByRowId();
+			}
+			auto node_bounds = node.GetBounds();
 			state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 			needs_insertion = false;
 		}
@@ -236,8 +243,8 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 	if (root.pointer.GetType() == RTreeNodeType::ROW_ID) {
 		// Create a leaf node to hold this row id
 		auto root_leaf_ptr = tree.MakePage(RTreeNodeType::LEAF_PAGE);
-		auto node = tree.RefMutable(root_leaf_ptr);
-		node.entries[0] = RTreeEntry {root.pointer, root.bounds};
+		auto &node = tree.RefMutable(root_leaf_ptr);
+		node.PushEntry(RTreeEntry {root.pointer, root.bounds});
 		tree.SetRoot(RTreeEntry {root_leaf_ptr, root.bounds});
 	} else {
 		// Else, just set the root node

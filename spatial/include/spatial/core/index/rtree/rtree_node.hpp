@@ -79,33 +79,139 @@ struct RTreeEntry {
 	}
 };
 
-template <bool CONST>
-struct RTreeNodeRefBase {
-	using element_type = typename std::conditional<CONST, const RTreeEntry, RTreeEntry>::type;
-	element_type *entries;
-	explicit RTreeNodeRefBase(element_type *entries_p) : entries(entries_p) {
+struct alignas(RTreeEntry) RTreeNode {
+
+	// Delete copy
+	RTreeNode(const RTreeNode &) = delete;
+	RTreeNode &operator=(const RTreeNode &) = delete;
+	// Delete move
+	RTreeNode(RTreeNode &&) = delete;
+	RTreeNode &operator=(RTreeNode &&) = delete;
+
+public:
+	idx_t GetCount() const {
+		return count;
 	}
 
-	RTreeBounds GetBounds(idx_t capacity) const {
+	RTreeBounds GetBounds() const {
 		RTreeBounds result;
-		for (idx_t i = 0; i < capacity; i++) {
-			auto &entry = entries[i];
-			if (!entry.IsSet()) {
-				break;
-			}
+		for (idx_t i = 0; i < count; i++) {
+			auto &entry = begin()[i];
+			D_ASSERT(entry.IsSet());
 			result.Union(entry.bounds);
 		}
 		return result;
 	}
 
-	idx_t GetCount(idx_t capacity) const {
-		idx_t i;
-		for (i = 0; i < capacity; i++) {
-			if (!entries[i].IsSet()) {
-				break;
+	void Clear() {
+		count = 0;
+	}
+
+	void PushEntry(const RTreeEntry &entry) {
+		begin()[count++] = entry;
+	}
+
+	RTreeEntry SwapRemove(const idx_t idx) {
+		D_ASSERT(idx < count);
+		const auto result = begin()[idx];
+		begin()[idx] = begin()[--count];
+		return result;
+	}
+
+	void Verify(const idx_t capacity) const {
+#ifdef DEBUG
+		D_ASSERT(count <= capacity);
+		if(count != 0) {
+			if(begin()[0].pointer.GetType() == RTreeNodeType::ROW_ID) {
+				// This is a leaf node, rowids should be sorted
+				std::is_sorted(begin(), end(), [](const RTreeEntry &a, const RTreeEntry &b) {
+					D_ASSERT(a.IsSet());
+					D_ASSERT(b.IsSet());
+					return a.pointer.GetRowId() < b.pointer.GetRowId();
+				});
 			}
 		}
-		return i;
+#endif
+	}
+
+	void SortEntriesByXMin() {
+		std::sort(begin(), end(), [&](const RTreeEntry &a, const RTreeEntry &b) {
+			D_ASSERT(a.IsSet());
+			D_ASSERT(b.IsSet());
+			return a.bounds.min.x < b.bounds.min.x;
+		});
+	}
+
+	void SortEntriesByRowId() {
+		std::sort(begin(), end(), [&](const RTreeEntry &a, const RTreeEntry &b) {
+		    D_ASSERT(a.IsSet());
+		    D_ASSERT(b.IsSet());
+		    return a.pointer.GetRowId() < b.pointer.GetRowId();
+		});
+	}
+
+public: // Collection interface
+	RTreeEntry* begin() { return reinterpret_cast<RTreeEntry*>(this + 1); }
+	RTreeEntry* end() { return begin() + count; }
+	const RTreeEntry* begin() const { return reinterpret_cast<const RTreeEntry*>(this + 1); }
+	const RTreeEntry* end() const { return begin() + count; }
+
+	RTreeEntry& operator[](const idx_t idx) {
+		D_ASSERT(idx < count);
+		return begin()[idx];
+	}
+
+	const RTreeEntry& operator[](const idx_t idx) const {
+		D_ASSERT(idx < count);
+		return begin()[idx];
+	}
+private:
+	uint32_t count;
+
+	// We got 12 bytes for the future
+	uint32_t _unused1;
+	uint64_t _unused2;
+	uint64_t _unused3;
+};
+
+/*
+template <bool CONST>
+struct RTreeNodeRefBase {
+	using header_type = typename std::conditional<CONST, const RTreeHeader, RTreeHeader>::type;
+	using entry_type = typename std::conditional<CONST, const RTreeEntry, RTreeEntry>::type;
+
+	header_type &header;
+	entry_type *entries;
+
+	explicit RTreeNodeRefBase(header_type *header_p, entry_type *entries_p) : header(*header_p), entries(entries_p) {
+	}
+
+	entry_type* begin() const {
+        return entries;
+    }
+
+	entry_type* end() const {
+        return entries + header.count;
+    }
+
+	entry_type& operator[](idx_t idx) const {
+        D_ASSERT(idx < header.count);
+		D_ASSERT(entries[idx].IsSet());
+        return entries[idx];
+    }
+
+	idx_t GetCount() const {
+        return header.count;
+    }
+
+	RTreeBounds GetBounds() const {
+		RTreeBounds result;
+		for (idx_t i = 0; i < header.count; i++) {
+			auto &entry = entries[i];
+			D_ASSERT(entry.IsSet());
+			result.Union(entry.bounds);
+		}
+		return result;
 	}
 
 	void Verify(idx_t capacity) const {
@@ -125,22 +231,37 @@ struct RTreeNodeRefBase {
 };
 
 struct MutableRTreeNodeRef : public RTreeNodeRefBase<false> {
-	explicit MutableRTreeNodeRef(const data_ptr_t &ptr) : RTreeNodeRefBase(reinterpret_cast<element_type *>(ptr)) {
+
+	MutableRTreeNodeRef(RTreeHeader *header_p, RTreeEntry *entries_p)
+		: RTreeNodeRefBase(header_p, entries_p) { }
+
+
+
+	void PushEntry(const RTreeEntry &entry) {
+		D_ASSERT(entry.IsSet());
+        entries[header.count++] = entry;
+    }
+
+	void Clear() {
+		header.count = 0;
 	}
 
-	void SortEntriesByXMin(idx_t count) {
-		std::sort(entries, entries + count, [&](const RTreeEntry &a, const RTreeEntry &b) {
-			D_ASSERT(a.IsSet());
-			D_ASSERT(b.IsSet());
-			return a.bounds.min.x < b.bounds.min.x;
-		});
+	RTreeEntry SwapRemove(idx_t idx) {
+		D_ASSERT(idx < header.count);
+		const auto result = entries[idx];
+        entries[idx] = entries[--header.count];
+		return result;
 	}
 };
 
 struct ConstRTreeNodeRef : public RTreeNodeRefBase<true> {
-	explicit ConstRTreeNodeRef(const const_data_ptr_t &ptr) : RTreeNodeRefBase(reinterpret_cast<element_type *>(ptr)) {
-	}
+
+	ConstRTreeNodeRef(const RTreeHeader *header_p, const RTreeEntry *entries_p)
+		: RTreeNodeRefBase(header_p, entries_p) { }
+
 };
+
+*/
 
 } // namespace core
 

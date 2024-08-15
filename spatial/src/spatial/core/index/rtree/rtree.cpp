@@ -41,14 +41,12 @@ RTreePointer RTree::MakeRowId(row_t row_id) {
 	return pointer;
 }
 
-MutableRTreeNodeRef RTree::RefMutable(const RTreePointer &pointer) const {
-	auto ptr = allocator->Get<data_t>(pointer, true);
-	return MutableRTreeNodeRef(ptr);
+RTreeNode& RTree::RefMutable(const RTreePointer &pointer) const {
+	return *allocator->Get<RTreeNode>(pointer, true);
 }
 
-ConstRTreeNodeRef RTree::Ref(const RTreePointer &pointer) const {
-	auto ptr = allocator->Get<const data_t>(pointer, false);
-	return ConstRTreeNodeRef(ptr);
+const RTreeNode& RTree::Ref(const RTreePointer &pointer) const {
+	return *allocator->Get<const RTreeNode>(pointer, false);
 }
 
 void RTree::Free(RTreePointer &pointer) {
@@ -57,14 +55,11 @@ void RTree::Free(RTreePointer &pointer) {
 		// Nothing to do here
 		return;
 	}
-	const auto node = RefMutable(pointer);
-	for (idx_t i = 0; i < max_node_capacity; i++) {
-		auto &entry = node.entries[i];
-		if (!entry.IsSet()) {
-			break;
-		}
+	auto &node = RefMutable(pointer);
+	for(auto &entry : node) {
 		Free(entry.pointer);
 	}
+	node.Clear();
 	allocator->Free(pointer);
 	pointer.Clear();
 }
@@ -72,12 +67,11 @@ void RTree::Free(RTreePointer &pointer) {
 //------------------------------------------------------------------------------
 // Split
 //------------------------------------------------------------------------------
-void RTree::RebalanceSplitNodes(const MutableRTreeNodeRef &src, const MutableRTreeNodeRef &dst, idx_t &src_cnt,
-                                idx_t &dst_cnt, bool split_axis, PointXY<float> &split_point) const {
-	D_ASSERT(src_cnt > dst_cnt);
+void RTree::RebalanceSplitNodes(RTreeNode &src, RTreeNode &dst, bool split_axis, PointXY<float> &split_point) const {
+	D_ASSERT(src.GetCount() > dst.GetCount());
 
 	// How many entries to we need to move until we have the minimum capacity?
-	const auto remaining = min_node_capacity - dst_cnt;
+	const auto remaining = min_node_capacity - dst.GetCount();
 
 	// Setup a min heap to keep track of the entries that are closest to the split point
 	vector<pair<float, idx_t>> diff_heap;
@@ -88,9 +82,9 @@ void RTree::RebalanceSplitNodes(const MutableRTreeNodeRef &src, const MutableRTr
 	};
 
 	// Find the entries that are closest to the split point
-	for (idx_t i = 0; i < src_cnt; i++) {
-		D_ASSERT(src.entries[i].IsSet());
-		auto center = src.entries[i].bounds.Center();
+	for (idx_t i = 0; i < src.GetCount(); i++) {
+		D_ASSERT(src[i].IsSet());
+		auto center = src[i].bounds.Center();
 		auto diff = std::abs(center[split_axis] - split_point[split_axis]);
 		if (diff_heap.size() < remaining) {
 			diff_heap.emplace_back(diff, i);
@@ -105,23 +99,20 @@ void RTree::RebalanceSplitNodes(const MutableRTreeNodeRef &src, const MutableRTr
 	}
 
 	// Sort the heap by entry idx so that we move the entries from the largest idx to the smallest
+	// Which allows us to SwapRemove all the ways
 	std::sort(diff_heap.begin(), diff_heap.end(),
 	          [&](const pair<float, idx_t> &a, const pair<float, idx_t> &b) { return a.second > b.second; });
 
 	// Now move over the selected entries to the destination node
-	for (const auto &entry : diff_heap) {
-		dst.entries[dst_cnt++] = src.entries[entry.second];
-		// Compact the source node
-		src.entries[entry.second] = src.entries[src_cnt - 1];
-		src.entries[src_cnt - 1].Clear();
-		src_cnt--;
+	for (const auto &pair : diff_heap) {
+		dst.PushEntry(src.SwapRemove(pair.second));
 	}
 }
 
-RTreeEntry RTree::SplitNode(RTreeEntry &entry) {
-	// Split the entry bounding box into four quadrants
-	auto node = RefMutable(entry.pointer);
-	D_ASSERT(node.GetCount(max_node_capacity) == max_node_capacity);
+RTreeEntry RTree::SplitNode(RTreeEntry &entry) const {
+
+	auto &left_node = RefMutable(entry.pointer);
+	D_ASSERT(left_node.GetCount() == max_node_capacity);
 
 	/*
 	 *  C1 | C2
@@ -129,6 +120,7 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) {
 	 *  C0 | C3
 	 */
 
+	// Split the entry bounding box into four quadrants
 	RTreeBounds quadrants[4];
 	auto center = entry.bounds.Center();
 	quadrants[0] = {entry.bounds.min, center};
@@ -138,18 +130,19 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) {
 
 	idx_t q_counts[4] = {0, 0, 0, 0};
 	RTreeBounds q_bounds[4];
-	auto q_assign = make_unsafe_uniq_array<uint8_t>(max_node_capacity);
+	const auto q_assign = make_unsafe_uniq_array<uint8_t>(max_node_capacity);
 	uint8_t q_node[4] = {0, 0, 0, 0};
 
+	// Figure out which quadrant each entry in the node belongs to
 	for (idx_t i = 0; i < max_node_capacity; i++) {
-		D_ASSERT(node.entries[i].IsSet());
-		auto child_center = node.entries[i].bounds.Center();
+		D_ASSERT(left_node[i].IsSet());
+		auto child_center = left_node[i].bounds.Center();
 		auto found = false;
 		for (idx_t q_idx = 0; q_idx < 4; q_idx++) {
 			if (quadrants[q_idx].Contains(child_center)) {
 				q_counts[q_idx]++;
 				q_assign[i] = q_idx;
-				q_bounds[q_idx].Union(node.entries[i].bounds);
+				q_bounds[q_idx].Union(left_node[i].bounds);
 				found = true;
 				break;
 			}
@@ -159,15 +152,17 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) {
 	}
 
 	// Create a temporary node for the first split
-	auto n1_ptr = make_uniq_array<RTreeEntry>(max_node_capacity);
-	MutableRTreeNodeRef n1(data_ptr_cast(n1_ptr.get()));
+	// Create a buffer to hold all the entries we are going to move
+	const auto entry_buffer = make_unsafe_uniq_array<RTreeEntry>(max_node_capacity);
+	for(idx_t i = 0; i < max_node_capacity; i++) {
+		entry_buffer[i] = left_node[i];
+	}
+	left_node.Clear();
 
-	RTreePointer n2_ptr = MakePage(entry.pointer.GetType());
-	auto n2 = RefMutable(n2_ptr);
-	// auto &n2 = RTreePointer::NewPage(rtree, n2_ptr, entry.pointer.GetType());
+	auto right_ptr = MakePage(entry.pointer.GetType());
+	auto& right_node = RefMutable(right_ptr);
 
-	idx_t node_count[2] = {0, 0};
-	MutableRTreeNodeRef node_ref[2] = {n1, n2};
+	const reference<RTreeNode> node_ref[2] = {left_node, right_node};
 
 	// Setup the first two nodes
 	if (q_counts[0] > q_counts[2]) {
@@ -226,9 +221,8 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) {
 	for (idx_t i = 0; i < max_node_capacity; i++) {
 		const auto q_idx = q_assign[i];
 		const auto n_idx = q_node[q_idx];
-		const auto &dst = node_ref[n_idx];
-		auto &cnt = node_count[n_idx];
-		dst.entries[cnt++] = node.entries[i];
+		auto &dst = node_ref[n_idx];
+		dst.get().PushEntry(entry_buffer[i]);
 	}
 
 	// IF we join c0 with c1, we split along the y-axis
@@ -243,47 +237,46 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) {
 
 	// If one of the nodes have less than the minimum capacity, we need to move entries from the other node
 	// but do so by moving the entries that are closest to the splitting line
-	if (node_count[0] < min_node_capacity) {
-		RebalanceSplitNodes(n2, n1, node_count[1], node_count[0], perp_split_axis, center);
-	} else if (node_count[1] < min_node_capacity) {
-		RebalanceSplitNodes(n1, n2, node_count[0], node_count[1], perp_split_axis, center);
+	if (left_node.GetCount() < min_node_capacity) {
+		RebalanceSplitNodes(right_node, left_node, perp_split_axis, center);
+	} else if (right_node.GetCount() < min_node_capacity) {
+		RebalanceSplitNodes(left_node, right_node, perp_split_axis, center);
 	}
 
-	D_ASSERT(node_count[0] >= min_node_capacity);
-	D_ASSERT(node_count[1] >= min_node_capacity);
-
-	// Replace the current node with n1
-	memset(node.entries, 0, sizeof(RTreeEntry) * max_node_capacity);
-	memcpy(node.entries, n1.entries, sizeof(RTreeEntry) * node_count[0]);
+	D_ASSERT(left_node.GetCount() >= min_node_capacity);
+	D_ASSERT(right_node.GetCount() >= min_node_capacity);
 
 	// TODO: Reuse q_bounds if we didnt have to rebalance the nodes
-	entry.bounds = n1.GetBounds(node_count[0]);
+	entry.bounds = left_node.GetBounds();
 
 	// Sort both node entries on the min x-coordinate
 	// This is not really necessary, but produces a slightly nicer tree
-	node.SortEntriesByXMin(node_count[0]);
-	n2.SortEntriesByXMin(node_count[1]);
+	if(entry.pointer.IsBranchPage()) {
+		left_node.SortEntriesByXMin();
+		right_node.SortEntriesByXMin();
+	} else {
+		// Or sort by rowid to maintain the order
+		left_node.SortEntriesByRowId();
+		right_node.SortEntriesByRowId();
+	}
 
-	node.Verify(max_node_capacity);
-	n2.Verify(max_node_capacity);
+	left_node.Verify(max_node_capacity);
+	right_node.Verify(max_node_capacity);
 
 	// Return a new entry for the second node
-	return {n2_ptr, n2.GetBounds(max_node_capacity)};
+	return RTreeEntry {right_ptr, right_node.GetBounds()};
 }
 
 //------------------------------------------------------------------------------
 // Insert
 //------------------------------------------------------------------------------
-RTreeEntry &RTree::PickSubtree(const MutableRTreeNodeRef &node, const RTreeEntry &new_entry) const {
+RTreeEntry &RTree::PickSubtree(RTreeNode &node, const RTreeEntry &new_entry) const {
 	idx_t best_match = 0;
 	float best_area = NumericLimits<float>::Maximum();
 	float best_diff = NumericLimits<float>::Maximum();
 
-	for (idx_t i = 0; i < max_node_capacity; i++) {
-		auto &entry = node.entries[i];
-		if (!entry.IsSet()) {
-			break;
-		}
+	for (idx_t i = 0; i < node.GetCount(); i++) {
+		auto &entry = node[i];
 
 		auto &old_bounds = entry.bounds;
 		auto new_bounds = RTreeBounds::Union(new_entry.bounds, old_bounds);
@@ -297,7 +290,7 @@ RTreeEntry &RTree::PickSubtree(const MutableRTreeNodeRef &node, const RTreeEntry
 			best_match = i;
 		}
 	}
-	return node.entries[best_match];
+	return node[best_match];
 }
 
 // Insert a rowid into a node
@@ -305,17 +298,19 @@ InsertResult RTree::NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
 	D_ASSERT(new_entry.pointer.IsRowId());
 	D_ASSERT(entry.IsSet());
 
-	auto node = RefMutable(entry.pointer);
+	auto &node = RefMutable(entry.pointer);
 
 	// Is this a leaf?
 	if (entry.pointer.IsLeafPage()) {
-		auto count = node.GetCount(max_node_capacity);
 		// Is this leaf full?
-		if (count == max_node_capacity) {
+		if (node.GetCount() == max_node_capacity) {
 			return InsertResult {true, false};
 		}
 		// Otherwise, insert at the end
-		node.entries[count++] = new_entry;
+		node.PushEntry(new_entry);
+
+		// Sort by rowid
+		node.SortEntriesByRowId();
 
 		// Do we need to grow the bounding box?
 		const auto grown = !entry.bounds.Contains(new_entry.bounds);
@@ -336,8 +331,7 @@ InsertResult RTree::NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
 	// Insert into the selected child
 	const auto result = NodeInsert(target, new_entry);
 	if (result.split) {
-		auto count = node.GetCount(max_node_capacity);
-		if (count == max_node_capacity) {
+		if (node.GetCount() == max_node_capacity) {
 			// This node is also full!, we need to split it first.
 			return InsertResult {true, false};
 		}
@@ -347,14 +341,9 @@ InsertResult RTree::NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
 		auto right = SplitNode(left);
 
 		// Insert the new right node into the current node
-		node.entries[count++] = right;
+		node.PushEntry(right);
 
-		// Sort all entries by the x-coordinate
-		std::sort(node.entries, node.entries + count, [&](const RTreeEntry &a, const RTreeEntry &b) {
-			D_ASSERT(a.IsSet());
-			D_ASSERT(b.IsSet());
-			return a.bounds.min.x < b.bounds.min.x;
-		});
+		node.SortEntriesByXMin();
 
 		// Now insert again
 		return NodeInsert(entry, new_entry);
@@ -379,8 +368,8 @@ void RTree::RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry) {
 	if (!root_entry.IsSet()) {
 		root_entry.pointer = MakePage(RTreeNodeType::LEAF_PAGE);
 		root_entry.bounds = new_entry.bounds;
-		auto node = RefMutable(root_entry.pointer);
-		node.entries[0] = new_entry;
+
+		RefMutable(root_entry.pointer).PushEntry(new_entry);
 		return;
 	}
 
@@ -389,16 +378,16 @@ void RTree::RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry) {
 	if (result.split) {
 		// The root node was split, we need to create a new root node
 		auto new_root_ptr = MakePage(RTreeNodeType::BRANCH_PAGE);
-		auto new_root = RefMutable(new_root_ptr);
+		auto &new_root = RefMutable(new_root_ptr);
 
 		// Insert the old root into the new root
-		new_root.entries[0] = root_entry;
+		new_root.PushEntry(root_entry);
 
 		// Split the old root
-		auto right = SplitNode(new_root.entries[0]);
+		auto right = SplitNode(new_root[0]);
 
 		// Insert the new right node into the new root
-		new_root.entries[1] = right;
+		new_root.PushEntry(right);
 
 		// Update the root pointer
 		root_entry.pointer = new_root_ptr;
@@ -419,88 +408,64 @@ void RTree::RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry) {
 
 DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans) {
 	if (entry.pointer.IsLeafPage()) {
-		auto node = RefMutable(entry.pointer);
+		auto &node = RefMutable(entry.pointer);
 
-		auto child_idx_opt = optional_idx::Invalid();
-		idx_t child_count = 0;
-		for (; child_count < max_node_capacity; child_count++) {
-			auto &child = node.entries[child_count];
-			if (!child.IsSet()) {
-				break;
-			}
-			D_ASSERT(child.pointer.IsRowId());
-			if (child.pointer.GetRowId() == target.pointer.GetRowId()) {
-				D_ASSERT(!child_idx_opt.IsValid());
-				child_idx_opt = child_count;
-			}
+		// Do a binary search with std::lower_bound to find the matching rowid
+		// This is faster than a linear search
+		auto it = std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
+			[](const RTreeEntry &item, const row_t &row) {
+			return item.pointer.GetRowId() < row;
+		});
+		if (it == node.end()) {
+			// Not found in this leaf
+			return {false, false, false};
 		}
 
-		// Found the target entry
-		if (child_idx_opt.IsValid()) {
-			// Found the target entry
-			const auto child_idx = child_idx_opt.GetIndex();
+		auto &child = *it;
+		auto child_idx = it - node.begin();
 
-			if (child_idx == 0 && child_count == 1) {
-				// This is the only entry in the leaf, we can remove the entire leaf
-				node.entries[0].Clear();
-				node.Verify(max_node_capacity);
-				return DeleteResult {true, true, true};
-			}
+		D_ASSERT(child.pointer.IsRowId());
+		// Overwrite the target entry with the last entry and clear the last entry
+		// to compact the leaf
+		node.SwapRemove(child_idx);
 
-			// Overwrite the target entry with the last entry and clear the last entry
-			// to compact the leaf
-			node.entries[child_idx] = node.entries[child_count - 1];
-			node.entries[child_count - 1].Clear();
-			child_count--;
-
-			// Does this node now have too few children?
-			if (child_count < min_node_capacity) {
-				// Yes, orphan all children and signal that this node should be removed
-				for (idx_t i = 0; i < child_count; i++) {
-					orphans.push_back(node.entries[i]);
-					// Clear the child pointer so we dont free it if we end up freeing the node
-					node.entries[i].Clear();
-				}
-				node.Verify(max_node_capacity);
-				return {true, true, true};
-			}
-
-			// TODO: Check if we actually shrunk and need to update the bounds
-			// We can do this more efficiently by checking if the deleted entry bordered the bounds
-			// Recalculate the bounds
-			auto shrunk = true;
-			if (shrunk) {
-				const auto old_bounds = entry.bounds;
-				entry.bounds = node.GetBounds(max_node_capacity);
-				shrunk = entry.bounds != old_bounds;
-
-				// Assert that the bounds shrunk
-				D_ASSERT(entry.bounds.Area() <= old_bounds.Area());
-			}
-			return DeleteResult {true, shrunk, false};
+		// Does this node now have too few children?
+		if (node.GetCount() < min_node_capacity) {
+			// Yes, orphan all children and signal that this node should be removed
+			orphans.insert(orphans.end(), node.begin(), node.end());
+			node.Clear();
+			node.Verify(max_node_capacity);
+			return {true, true, true};
 		}
 
-		// Not found in this leaf
-		return {false, false, false};
+		// Sort the entries by rowid
+		node.SortEntriesByRowId();
+
+		// TODO: Check if we actually shrunk and need to update the bounds
+		// We can do this more efficiently by checking if the deleted entry bordered the bounds
+		// Recalculate the bounds
+		auto shrunk = true;
+		if (shrunk) {
+			const auto old_bounds = entry.bounds;
+			entry.bounds = node.GetBounds();
+			shrunk = entry.bounds != old_bounds;
+
+			// Assert that the bounds shrunk
+			// TODO: Cant call area blindly here if count == 0 as we get +inf back
+			D_ASSERT(node.GetCount() == 0 || entry.bounds.Area() <= old_bounds.Area());
+		}
+		return DeleteResult {true, shrunk, false};
 	}
 	// Otherwise: this is a branch node
 	D_ASSERT(entry.pointer.IsBranchPage());
-	auto node = RefMutable(entry.pointer);
+	auto &node = RefMutable(entry.pointer);
 
 	DeleteResult result = {false, false, false};
-
-	idx_t child_count = 0;
-	idx_t child_idx = 0;
-	for (; child_count < max_node_capacity; child_count++) {
-		auto &child = node.entries[child_count];
-		if (!child.IsSet()) {
+	idx_t child_idx;
+	for (child_idx = 0; child_idx < node.GetCount(); child_idx++) {
+		result = NodeDelete(node[child_idx], target, orphans);
+		if (result.found) {
 			break;
-		}
-		if (!result.found) {
-			result = NodeDelete(child, target, orphans);
-			if (result.found) {
-				child_idx = child_count;
-			}
 		}
 	}
 
@@ -511,26 +476,15 @@ DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 
 	// Should we delete the child entirely?
 	if (result.remove) {
-		// If this is the only child in the branch, we can remove the entire branch
-
-		if (child_idx == 0 && child_count == 1) {
-			Free(node.entries[0].pointer);
-			return {true, true, true};
-		}
-
 		// Swap the removed entry with the last entry and clear it
-		std::swap(node.entries[child_idx], node.entries[child_count - 1]);
-		Free(node.entries[child_count - 1].pointer);
-		child_count--;
+		node.SwapRemove(child_idx);
 
 		// Does this node now have too few children?
-		if (child_count < min_node_capacity) {
+		if (node.GetCount() < min_node_capacity) {
 			// Yes, orphan all children and signal that this node should be removed
-			for (idx_t i = 0; i < child_count; i++) {
-				orphans.push_back(node.entries[i]);
-				// Clear the child pointer so we dont free them if we end up freeing the node
-				node.entries[i].Clear();
-			}
+			orphans.insert(orphans.end(), node.begin(), node.end());
+			node.Clear();
+			node.Verify(max_node_capacity);
 			return {true, true, true};
 		}
 
@@ -540,7 +494,7 @@ DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 		auto shrunk = true;
 		if (shrunk) {
 			const auto old_bounds = entry.bounds;
-			entry.bounds = node.GetBounds(max_node_capacity);
+			entry.bounds = node.GetBounds();
 			shrunk = entry.bounds != old_bounds;
 
 			// Assert that the bounds shrunk
@@ -554,7 +508,7 @@ DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 	auto shrunk = result.shrunk;
 	if (shrunk) {
 		const auto old_bounds = entry.bounds;
-		entry.bounds = node.GetBounds(max_node_capacity);
+		entry.bounds = node.GetBounds();
 		shrunk = entry.bounds != old_bounds;
 
 		D_ASSERT(entry.bounds.Area() <= old_bounds.Area());
@@ -569,16 +523,10 @@ void RTree::ReInsertNode(RTreeEntry &root, RTreeEntry &target) {
 		RootInsert(root, target);
 	} else {
 		D_ASSERT(target.pointer.IsPage());
-		const auto node = RefMutable(target.pointer);
-		for (idx_t i = 0; i < max_node_capacity; i++) {
-			auto &entry = node.entries[i];
-			if (!entry.IsSet()) {
-				break;
-			}
-			D_ASSERT(entry.pointer.IsRowId());
+		auto &node = RefMutable(target.pointer);
+		for(auto &entry : node) {
 			ReInsertNode(root, entry);
 		}
-
 		// Also free the page after we've reinserted all the rowids
 		Free(target.pointer);
 	}
@@ -609,8 +557,7 @@ void RTree::RootDelete(RTreeEntry &root, const RTreeEntry &target) {
 	} else {
 		if (result.shrunk) {
 			// Update the root bounding box
-			auto node = Ref(root.pointer);
-			root.bounds = node.GetBounds(max_node_capacity);
+			root.bounds = Ref(root.pointer).GetBounds();
 		}
 		// Reinsert orphans
 		for (auto &orphan : orphans) {
