@@ -1,0 +1,11 @@
+require spatial
+
+query I
+SELECT ST_GetGeometry(raster) FROM ST_ReadRaster('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff');
+----
+POLYGON ((541020 4690200, 541020 4796640, 609780 4796640, 609780 4690200, 541020 4690200))
+
+query I
+SELECT raster::geometry FROM ST_ReadRaster('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff');
+----
+POLYGON ((541020 4690200, 541020 4796640, 609780 4796640, 609780 4690200, 541020 4690200))

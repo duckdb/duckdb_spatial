@@ -1,0 +1,20 @@
+require spatial
+
+query IIIIIIIIIII
+SELECT
+	ST_Width(raster) AS cols,
+	ST_Height(raster) AS rows,
+	ST_NumBands(raster) AS num_bands,
+	ST_UpperLeftX(raster) AS ulx,
+	ST_UpperLeftY(raster) AS uly,
+	ST_ScaleX(raster) AS scale_x,
+	ST_ScaleY(raster) AS scale_y,
+	ST_SkewX(raster) AS skew_x,
+	ST_SkewY(raster) AS skew_y,
+	ST_PixelWidth(raster) AS px_width,
+	ST_PixelHeight(raster) AS px_height
+FROM
+	ST_ReadRaster('__WORKING_DIRECTORY__/test/data/mosaic/SCL.tif-land-clip00.tiff')
+;
+----
+3438	5322	1	541020.0	4796640.0	20.0	-20.0	0.0	0.0	20.0	20.0

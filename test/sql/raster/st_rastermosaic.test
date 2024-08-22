@@ -1,0 +1,25 @@
+require spatial
+
+query I
+WITH __input AS (
+	SELECT
+		1 AS mosaic_id,
+		ST_RasterFromFile(file) AS raster
+	FROM
+		glob('__WORKING_DIRECTORY__/test/data/mosaic/*.tiff')
+),
+__mosaic AS (
+	SELECT
+		ST_RasterMosaic_Agg(raster, options => ['-r', 'bilinear']) AS mosaic
+	FROM
+		__input
+	GROUP BY
+		mosaic_id
+)
+SELECT
+	ST_GetGeometry(mosaic) AS result
+FROM
+	__mosaic
+;
+----
+POLYGON ((541020 4640780, 541020 4796640, 685600 4796640, 685600 4640780, 541020 4640780))
