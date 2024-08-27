@@ -37,8 +37,8 @@ struct ShapefileBindData : TableFunctionData {
 	vector<LogicalType> attribute_types;
 
 	explicit ShapefileBindData(string file_name_p)
-	    : file_name(std::move(file_name_p)), shape_count(0), shape_type(0), min_bound {0, 0, 0, 0},
-	      max_bound {0, 0, 0, 0}, attribute_encoding(AttributeEncoding::LATIN1) {
+	    : file_name(std::move(file_name_p)), shape_count(0),
+	      shape_type(0), min_bound {0, 0, 0, 0}, max_bound {0, 0, 0, 0}, attribute_encoding(AttributeEncoding::LATIN1) {
 	}
 };
 

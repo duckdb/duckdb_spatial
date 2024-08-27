@@ -31,9 +31,15 @@ static void GeometryZMFlagFunction(DataChunk &args, ExpressionState &state, Vect
 		const auto has_z = props.HasZ();
 		const auto has_m = props.HasM();
 
-		if(has_z && has_m) { return 3; }
-		if(has_z) { return 2; }
-		if(has_m) { return 1; }
+		if (has_z && has_m) {
+			return 3;
+		}
+		if (has_z) {
+			return 2;
+		}
+		if (has_m) {
+			return 1;
+		}
 		return 0;
 	});
 }
@@ -68,9 +74,15 @@ static void WKBZMFlagFunction(DataChunk &args, ExpressionState &state, Vector &r
 		const auto has_z = (iso_wkb_props == 1) || (iso_wkb_props == 3) || ((type & 0x80000000) != 0);
 		const auto has_m = (iso_wkb_props == 2) || (iso_wkb_props == 3) || ((type & 0x40000000) != 0);
 
-		if(has_z && has_m) { return 3; }
-		if(has_z) { return 2; }
-		if(has_m) { return 1; }
+		if (has_z && has_m) {
+			return 3;
+		}
+		if (has_z) {
+			return 2;
+		}
+		if (has_m) {
+			return 1;
+		}
 		return 0;
 	});
 }
@@ -170,25 +182,16 @@ static constexpr const char *ZMFLAG_EXAMPLE = R"(
 //------------------------------------------------------------------------------
 void CoreScalarFunctions::RegisterStHas(DatabaseInstance &db) {
 	ScalarFunctionSet st_hasz("ST_HasZ");
-	st_hasz.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
-		GeometryHasFunction<true>));
-	st_hasz.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN,
-		WKBHasFunction<true>));
-
+	st_hasz.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, GeometryHasFunction<true>));
+	st_hasz.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBHasFunction<true>));
 
 	ScalarFunctionSet st_hasm("ST_HasM");
-	st_hasm.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN,
-		GeometryHasFunction<false>));
-	st_hasm.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN,
-		WKBHasFunction<false>));
-
+	st_hasm.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::BOOLEAN, GeometryHasFunction<false>));
+	st_hasm.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, LogicalType::BOOLEAN, WKBHasFunction<false>));
 
 	ScalarFunctionSet st_zmflag("ST_ZMFlag");
-	st_zmflag.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UTINYINT,
-		GeometryZMFlagFunction));
-	st_zmflag.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, LogicalType::UTINYINT,
-		WKBZMFlagFunction));
-
+	st_zmflag.AddFunction(ScalarFunction({GeoTypes::GEOMETRY()}, LogicalType::UTINYINT, GeometryZMFlagFunction));
+	st_zmflag.AddFunction(ScalarFunction({GeoTypes::WKB_BLOB()}, LogicalType::UTINYINT, WKBZMFlagFunction));
 
 	ExtensionUtil::RegisterFunction(db, st_hasz);
 	ExtensionUtil::RegisterFunction(db, st_hasm);
