@@ -1,5 +1,5 @@
---- cmake/project-config-version.cmake.in	2024-08-28 10:50:19
-+++ cmake/project-config-version.cmake.in	2024-08-28 11:15:36
+--- /cmake/project-config-version.cmake.in	2024-08-28 10:50:19
++++ /cmake/project-config-version.cmake.in	2024-08-28 11:15:36
 @@ -15,35 +15,7 @@
    math (EXPR MSVC_TOOLSET_MAJOR "${MSVC_TOOLSET_VERSION}/10")
  endif ()

@@ -1,5 +1,5 @@
---- CMakeLists.txt	2024-08-28 12:32:22
-+++ CMakeLists.txt	2024-08-28 12:32:42
+--- /CMakeLists.txt	2024-08-28 12:32:22
++++ /CMakeLists.txt	2024-08-28 12:32:42
 @@ -54,7 +54,7 @@
    -Wswitch
    -Wunused-parameter
