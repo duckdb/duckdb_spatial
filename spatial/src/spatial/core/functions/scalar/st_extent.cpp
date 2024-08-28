@@ -7,7 +7,6 @@
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
 
-
 namespace spatial {
 
 namespace core {
@@ -26,8 +25,9 @@ static uint32_t ReadInt(const bool le, Cursor &cursor) {
 }
 static void ReadWKB(Cursor &cursor, BoundingBox &bbox);
 
-static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const bool has_m, Cursor &cursor, BoundingBox &bbox) {
-	switch(type) {
+static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const bool has_m, Cursor &cursor,
+                    BoundingBox &bbox) {
+	switch (type) {
 	case 1: { // POINT
 		// Points are special in that they can be all-nan (empty)
 		bool all_nan = true;
@@ -44,13 +44,13 @@ static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const 
 	} break;
 	case 2: { // LINESTRING
 		const auto num_verts = ReadInt(le, cursor);
-		for(uint32_t i = 0; i < num_verts; i++) {
+		for (uint32_t i = 0; i < num_verts; i++) {
 			const auto x = ReadDouble(le, cursor);
 			const auto y = ReadDouble(le, cursor);
-			if(has_z) {
+			if (has_z) {
 				ReadDouble(le, cursor);
 			}
-			if(has_m) {
+			if (has_m) {
 				ReadDouble(le, cursor);
 			}
 			bbox.Stretch(x, y);
@@ -58,27 +58,27 @@ static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const 
 	} break;
 	case 3: { // POLYGON
 		const auto num_rings = ReadInt(le, cursor);
-		for(uint32_t i = 0; i < num_rings; i++) {
+		for (uint32_t i = 0; i < num_rings; i++) {
 			const auto num_verts = ReadInt(le, cursor);
-			for(uint32_t j = 0; j < num_verts; j++) {
+			for (uint32_t j = 0; j < num_verts; j++) {
 				const auto x = ReadDouble(le, cursor);
 				const auto y = ReadDouble(le, cursor);
-				if(has_z) {
+				if (has_z) {
 					ReadDouble(le, cursor);
 				}
-				if(has_m) {
+				if (has_m) {
 					ReadDouble(le, cursor);
 				}
 				bbox.Stretch(x, y);
 			}
 		}
 	} break;
-	case 4: // MULTIPOINT
-	case 5: // MULTILINESTRING
-	case 6: // MULTIPOLYGON
+	case 4:   // MULTIPOINT
+	case 5:   // MULTILINESTRING
+	case 6:   // MULTIPOLYGON
 	case 7: { // GEOMETRYCOLLECTION
 		const auto num_items = ReadInt(le, cursor);
-		for(uint32_t i = 0; i < num_items; i++) {
+		for (uint32_t i = 0; i < num_items; i++) {
 			ReadWKB(cursor, bbox);
 		}
 	} break;
@@ -98,7 +98,7 @@ static void ReadWKB(Cursor &cursor, BoundingBox &bbox) {
 
 	// Skip SRID if present
 	const auto has_srid = (type & 0x20000000) != 0;
-	if(has_srid) {
+	if (has_srid) {
 		cursor.Skip(sizeof(uint32_t));
 	}
 

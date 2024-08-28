@@ -284,6 +284,20 @@ struct LocalState : LocalTableFunctionState {
 			string_table.push_back(string_table_reader.get_string());
 		}
 
+		// Need to read ahead without advancing block_reader
+		auto reader_copy = block_reader;
+
+		// Read the granularity and optional offsets
+		if (reader_copy.next(17)) {
+			granularity = reader_copy.get_int32();
+		}
+		if (reader_copy.next(19)) {
+			lat_offset = reader_copy.get_int64();
+		}
+		if (reader_copy.next(20)) {
+			lon_offset = reader_copy.get_int64();
+		}
+
 		state = ParseState::Block;
 	}
 
@@ -310,17 +324,6 @@ struct LocalState : LocalTableFunctionState {
 			case ParseState::Block:
 				if (block_reader.next(2)) {
 					group_reader = block_reader.get_message();
-
-					// Read the granularity and optional offsets
-					if (block_reader.next(17)) {
-						granularity = block_reader.get_int32();
-					}
-					if (block_reader.next(19)) {
-						lat_offset = block_reader.get_int64();
-					}
-					if (block_reader.next(20)) {
-						lon_offset = block_reader.get_int64();
-					}
 					state = ParseState::Group;
 				} else {
 					state = ParseState::End;
