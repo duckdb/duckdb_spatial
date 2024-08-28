@@ -177,7 +177,7 @@ set(GDAL_DEPENDENCIES ${GDAL_DEPENDENCIES} EXPAT)
 # GEOS
 ExternalProject_Add(
     GEOS
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.12.1.tar.bz2
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.13.0beta1.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     # CMake options
@@ -229,7 +229,7 @@ ExternalProject_Add(
 ExternalProject_Add(
     GDAL
     DEPENDS ${GDAL_DEPENDENCIES}
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal385.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal-3.9.2.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS
