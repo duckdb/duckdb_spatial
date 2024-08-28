@@ -9,3 +9,12 @@
    set(PROJ_common_WARN_FLAGS ${PROJ_common_WARN_FLAGS}
      -Wduplicated-cond
      -Wduplicated-branches
+@@ -350,7 +350,7 @@
+ ################################################################################
+ include_directories(${PROJ_SOURCE_DIR}/src)
+
+-add_subdirectory(data)
++#add_subdirectory(data)
+ add_subdirectory(include)
+ add_subdirectory(src)
+ add_subdirectory(man)
