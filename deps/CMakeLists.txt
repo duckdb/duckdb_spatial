@@ -119,7 +119,7 @@ endif()
 ExternalProject_Add(
     PROJ
     DEPENDS SQLITE3 ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/proj-9.1.1.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/proj-9.4.1.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/proj${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS
