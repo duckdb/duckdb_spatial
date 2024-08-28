@@ -34,6 +34,7 @@ if (EMSCRIPTEN)
   set(CMAKE_GDAL_FLAGS -DACCEPT_MISSING_LINUX_FS_HEADER=ON -DSIZEOF_INT=4 -DSIZEOF_UNSIGNED_LONG=4 -DSIZEOF_OFF_T=4 -DGEOS_DIR=${LOCAL_INSTALL_DIR}/lib/cmake/geos -DGeographicLib_DIR=${LOCAL_INSTALL_DIR}/lib/cmake/GeographicLib -DSQLITE3_LIBRARY=${LOCAL_INSTALL_DIR}/lib/libsqlite3.a)
   set(PATCH_NAME_ENDING _wasm)
   set(OGR_ENABLE_DRIVER_OPENFILEGDB OFF)
+  message(STATUS "Building for Emscripten, patch suffix: ${PATCH_NAME_ENDING}")
 endif()
 
 # ZLIB
@@ -119,7 +120,7 @@ endif()
 ExternalProject_Add(
     PROJ
     DEPENDS SQLITE3 ZLIB
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/proj-9.1.1.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/proj-9.4.1.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/proj${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS
@@ -177,7 +178,7 @@ set(GDAL_DEPENDENCIES ${GDAL_DEPENDENCIES} EXPAT)
 # GEOS
 ExternalProject_Add(
     GEOS
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.12.1.tar.bz2
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/geos-3.13.0beta1.tar.bz2
     CONFIGURE_HANDLED_BY_BUILD TRUE
     CMAKE_ARGS 
     # CMake options
@@ -229,7 +230,7 @@ ExternalProject_Add(
 ExternalProject_Add(
     GDAL
     DEPENDS ${GDAL_DEPENDENCIES}
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal385.zip
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal-3.9.2.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
     PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS

@@ -1,0 +1,20 @@
+--- /CMakeLists.txt	2024-08-28 12:32:22
++++ /CMakeLists.txt	2024-08-28 12:32:42
+@@ -54,7 +54,7 @@
+   -Wswitch
+   -Wunused-parameter
+ )
+-if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
++if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0)
+   set(PROJ_common_WARN_FLAGS ${PROJ_common_WARN_FLAGS}
+     -Wduplicated-cond
+     -Wduplicated-branches
+@@ -350,7 +350,7 @@
+ ################################################################################
+ include_directories(${PROJ_SOURCE_DIR}/src)
+
+-add_subdirectory(data)
++#add_subdirectory(data)
+ add_subdirectory(include)
+ add_subdirectory(src)
+ add_subdirectory(man)
