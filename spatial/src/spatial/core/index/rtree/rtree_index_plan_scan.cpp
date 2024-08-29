@@ -16,7 +16,9 @@
 #include "spatial/core/types.hpp"
 #include "spatial/core/util/math.hpp"
 
-#include <spatial/core/index/rtree/rtree_index_create_logical.hpp>
+#include "duckdb/optimizer/matcher/expression_matcher.hpp"
+#include "duckdb/optimizer/matcher/function_matcher.hpp"
+#include "spatial/core/index/rtree/rtree_index_create_logical.hpp"
 
 namespace spatial {
 
@@ -30,10 +32,29 @@ public:
 		optimize_function = RTreeIndexScanOptimizer::Optimize;
 	}
 
-	static bool IsSpatialPredicate(const ScalarFunction &function) {
-		case_insensitive_set_t predicates = {"st_equals",    "st_intersects",      "st_touches",  "st_crosses",
-		                                     "st_within",    "st_contains",        "st_overlaps", "st_covers",
-		                                     "st_coveredby", "st_containsproperly"};
+	static void RewriteIndexExpression(Index &index, LogicalGet &get, Expression &expr, bool &rewrite_possible) {
+		if (expr.type == ExpressionType::BOUND_COLUMN_REF) {
+			auto &bound_colref = expr.Cast<BoundColumnRefExpression>();
+			// bound column ref: rewrite to fit in the current set of bound column ids
+			bound_colref.binding.table_index = get.table_index;
+			auto &column_ids = index.GetColumnIds();
+			auto &get_column_ids = get.GetColumnIds();
+			column_t referenced_column = column_ids[bound_colref.binding.column_index];
+			// search for the referenced column in the set of column_ids
+			for (idx_t i = 0; i < get_column_ids.size(); i++) {
+				if (get_column_ids[i] == referenced_column) {
+					bound_colref.binding.column_index = i;
+					return;
+				}
+			}
+			// column id not found in bound columns in the LogicalGet: rewrite not possible
+			rewrite_possible = false;
+		}
+		ExpressionIterator::EnumerateChildren(
+			expr, [&](Expression &child) { RewriteIndexExpression(index, get, child, rewrite_possible); });
+	}
+
+	static bool IsSpatialPredicate(const ScalarFunction &function, const unordered_set<string> &predicates) {
 
 		if (predicates.find(function.name) == predicates.end()) {
 			return false;
@@ -57,22 +78,21 @@ public:
 		return true;
 	}
 
-	static Box2D<float> GetBoundingBox(const Value &value) {
+	static bool TryGetBoundingBox(const Value &value, Box2D<float> &bbox_f) {
 		const auto str = value.GetValueUnsafe<string_t>();
 		const geometry_t blob(str);
 
 		Box2D<double> bbox;
 		if (!blob.TryGetCachedBounds(bbox)) {
-			throw InternalException("Could not get bounding box from geometry");
+			return false;
 		}
 
-		Box2D<float> bbox_f;
 		bbox_f.min.x = MathUtil::DoubleToFloatDown(bbox.min.x);
 		bbox_f.min.y = MathUtil::DoubleToFloatDown(bbox.min.y);
 		bbox_f.max.x = MathUtil::DoubleToFloatUp(bbox.max.x);
 		bbox_f.max.y = MathUtil::DoubleToFloatUp(bbox.max.y);
 
-		return bbox_f;
+		return true;
 	}
 
 	static bool TryOptimize(ClientContext &context, unique_ptr<LogicalOperator> &plan) {
@@ -90,17 +110,7 @@ public:
 			// We can only optimize if there is a single expression right now
 			return false;
 		}
-		auto &expr = filter.expressions[0];
-		if (expr->GetExpressionType() != ExpressionType::BOUND_FUNCTION) {
-			// The expression has to be a function
-			return false;
-		}
-		auto &expr_func = expr->Cast<BoundFunctionExpression>();
-
-		// Check that the function is a spatial predicate
-		if (!IsSpatialPredicate(expr_func.function)) {
-			return false;
-		}
+		auto &filter_expr = filter.expressions[0];
 
 		// Look for a table scan
 		if (filter.children.front()->type != LogicalOperatorType::LOGICAL_GET) {
@@ -119,27 +129,50 @@ public:
 			return false;
 		}
 
-		// Get the query geometry
-		Value target_value;
-		if (expr_func.children[0]->return_type == GeoTypes::GEOMETRY() && expr_func.children[0]->IsFoldable()) {
-			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[0]);
-		} else if (expr_func.children[1]->return_type == GeoTypes::GEOMETRY() && expr_func.children[1]->IsFoldable()) {
-			target_value = ExpressionExecutor::EvaluateScalar(context, *expr_func.children[1]);
-		} else {
-			// We can only optimize if one of the children is a constant
-			return false;
-		}
-
-		// Compute the bounding box
-		auto bbox = GetBoundingBox(target_value);
-
 		// Find the index
 		auto &duck_table = table.Cast<DuckTableEntry>();
 		auto &table_info = *table.GetStorage().GetDataTableInfo();
 		unique_ptr<RTreeIndexScanBindData> bind_data = nullptr;
 
+
+		unordered_set<string> spatial_predicates = { "ST_Equals", "ST_Intersects", "ST_Touches", "ST_Crosses",
+		"ST_Within", "ST_Contains", "ST_Overlaps", "ST_Covers",
+		"ST_CoveredBy", "ST_ContainsProperly" };
+
 		table_info.GetIndexes().BindAndScan<RTreeIndex>(context, table_info, [&](RTreeIndex &index_entry) {
 			// Create the bind data for this index given the bounding box
+			auto index_expr = index_entry.unbound_expressions[0]->Copy();
+			bool rewrite_possible = true;
+			RewriteIndexExpression(index_entry, get, *index_expr, rewrite_possible);
+			if(!rewrite_possible) {
+				// Could not rewrite!
+				return false;
+			}
+
+			FunctionExpressionMatcher matcher;
+			matcher.function = make_uniq<ManyFunctionMatcher>(spatial_predicates);
+			matcher.expr_type = make_uniq<SpecificExpressionTypeMatcher>(ExpressionType::BOUND_FUNCTION);
+			matcher.policy = SetMatcher::Policy::UNORDERED;
+
+			matcher.matchers.push_back(make_uniq<ExpressionEqualityMatcher>(*index_expr));
+			matcher.matchers.push_back(make_uniq<ConstantExpressionMatcher>());
+
+			vector<reference<Expression>> bindings;
+			if(!matcher.Match(*filter_expr, bindings)) {
+				return false;
+			}
+
+			// 		bindings[0] = the expression
+			// 		bindings[1] = the index expression
+			// 		bindings[2] = the constant
+
+			// Compute the bounding box
+			auto constant_value = bindings[2].get().Cast<BoundConstantExpression>().value;
+			Box2D<float> bbox;
+			if(!TryGetBoundingBox(constant_value, bbox)) {
+				return false;
+			}
+
 			bind_data = make_uniq<RTreeIndexScanBindData>(duck_table, index_entry, bbox);
 			return true;
 		});
