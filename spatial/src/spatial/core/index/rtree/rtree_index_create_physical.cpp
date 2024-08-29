@@ -259,8 +259,8 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 class RTreeIndexConstructionTask final : public ExecutorTask {
 public:
-	RTreeIndexConstructionTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate)
-	    : ExecutorTask(context, std::move(event_p)), state(gstate) {
+	RTreeIndexConstructionTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate, const PhysicalCreateRTreeIndex &op)
+	    : ExecutorTask(context, std::move(event_p), op), state(gstate) {
 	}
 
 	TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
@@ -305,8 +305,8 @@ static void AddIndexToCatalog(ClientContext &context, CreateRTreeIndexGlobalStat
 class RTreeIndexConstructionEvent final : public BasePipelineEvent {
 public:
 	RTreeIndexConstructionEvent(CreateRTreeIndexGlobalState &gstate_p, Pipeline &pipeline_p, CreateIndexInfo &info_p,
-	                            DuckTableEntry &table_p)
-	    : BasePipelineEvent(pipeline_p), gstate(gstate_p), info(info_p), table(table_p) {
+	                            DuckTableEntry &table_p, const PhysicalCreateRTreeIndex &op_p)
+	    : BasePipelineEvent(pipeline_p), gstate(gstate_p), info(info_p), table(table_p), op(op_p) {
 	}
 
 	void Schedule() override {
@@ -314,7 +314,7 @@ public:
 
 		// We only schedule 1 task, as the bottom-up construction is single-threaded.
 		vector<shared_ptr<Task>> tasks;
-		tasks.push_back(make_uniq<RTreeIndexConstructionTask>(shared_from_this(), context, gstate));
+		tasks.push_back(make_uniq<RTreeIndexConstructionTask>(shared_from_this(), context, gstate, op));
 		SetTasks(std::move(tasks));
 	}
 
@@ -326,6 +326,7 @@ private:
 	CreateRTreeIndexGlobalState &gstate;
 	CreateIndexInfo &info;
 	DuckTableEntry &table;
+	const PhysicalCreateRTreeIndex &op;
 };
 
 //-------------------------------------------------------------
@@ -346,7 +347,7 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 
 	// Calculate the vertical slice size
 	// square root of the total number of entries divide by the capacity of a node, rounded up
-	gstate.slice_size = NumericCast<idx_t>(std::ceil(
+	gstate.slice_size = ExactNumericCast<idx_t>(std::ceil(
 	                        std::sqrt((gstate.rtree_size + gstate.max_node_capacity - 1) / gstate.max_node_capacity))) *
 	                    gstate.max_node_capacity;
 
@@ -356,7 +357,7 @@ SinkFinalizeType PhysicalCreateRTreeIndex::Finalize(Pipeline &pipeline, Event &e
 	    BufferManager::GetBufferManager(context).GetBufferAllocator().Allocate(gstate.slice_size * sizeof(RTreeEntry));
 
 	// Schedule the construction of the RTree
-	auto construction_event = make_uniq<RTreeIndexConstructionEvent>(gstate, pipeline, *info, table);
+	auto construction_event = make_uniq<RTreeIndexConstructionEvent>(gstate, pipeline, *info, table, *this);
 	event.InsertEvent(std::move(construction_event));
 
 	return SinkFinalizeType::READY;

@@ -22,17 +22,14 @@ public:
 
 template <class T>
 class ManagedCollection {
-	static constexpr idx_t BLOCK_CAPACITY = Storage::BLOCK_SIZE / sizeof(T);
-	BufferManager &manager;
-	vector<ManagedCollectionBlock> blocks;
-	idx_t size = 0;
-
 public:
-	explicit ManagedCollection(BufferManager &manager) : manager(manager) {
+	explicit ManagedCollection(BufferManager &manager)
+		: manager(manager), block_size(manager.GetBlockSize()), block_capacity(block_size / sizeof(T)) {
 	}
 
 	// Initialize append state, optionally with a lower initial capacity. This is useful for small collections.
-	void InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity = BLOCK_CAPACITY);
+	void InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity);
+	void InitializeAppend(ManagedCollectionAppendState &state) { InitializeAppend(state, block_capacity); }
 
 	// Push a single value to the collection, potentially allocating a new block
 	void Append(ManagedCollectionAppendState &state, const T &value);
@@ -58,10 +55,15 @@ public:
 		blocks.clear();
 		size = 0;
 	}
-};
 
-template <class T>
-constexpr idx_t ManagedCollection<T>::BLOCK_CAPACITY;
+private:
+	BufferManager &manager;
+	vector<ManagedCollectionBlock> blocks;
+	idx_t size = 0;
+
+	const idx_t block_size;
+	const idx_t block_capacity;
+};
 
 struct ManagedCollectionAppendState {
 	BufferHandle handle;
@@ -77,7 +79,7 @@ void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state,
 	// state.block.item_count = 0;
 	// state.block.item_capacity = initial_capacity;
 
-	if (initial_capacity < BLOCK_CAPACITY) {
+	if (initial_capacity < block_capacity) {
 		// Allocate a new small block
 		blocks.emplace_back(manager.RegisterSmallMemory(initial_capacity * sizeof(T)), initial_capacity);
 		state.block = &blocks.back();
@@ -90,7 +92,7 @@ void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state,
 		state.block = &blocks.back();
 		state.block->item_count = 0;
 		state.block->item_capacity = initial_capacity;
-		state.handle = manager.Allocate(MemoryTag::EXTENSION, Storage::BLOCK_SIZE, true, &state.block->handle);
+		state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true, &state.block->handle);
 	}
 }
 
@@ -99,11 +101,11 @@ void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T *
 	while (begin != end) {
 		if (state.block->item_count >= state.block->item_capacity) {
 			// Allocate a new standard block
-			blocks.emplace_back(BLOCK_CAPACITY);
+			blocks.emplace_back(block_capacity);
 			state.block = &blocks.back();
-			state.handle = manager.Allocate(MemoryTag::EXTENSION, Storage::BLOCK_SIZE, true, &state.block->handle);
+			state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true, &state.block->handle);
 			state.block->item_count = 0;
-			state.block->item_capacity = BLOCK_CAPACITY;
+			state.block->item_capacity = block_capacity;
 		}
 
 		// Compute how much we can copy before the block is full or we run out of elements
@@ -203,10 +205,10 @@ idx_t ManagedCollection<T>::Scan(ManagedCollectionScanState &state, T *begin, T 
 
 template <class T>
 T ManagedCollection<T>::Fetch(idx_t idx) {
-	auto block_idx = idx / BLOCK_CAPACITY;
-	auto block_offset = idx % BLOCK_CAPACITY;
+	const auto block_idx = idx / block_capacity;
+	const auto block_offset = idx % block_capacity;
 	auto &block = blocks[block_idx];
-	auto ptr = manager.Pin(block.handle).Ptr() + block_offset * sizeof(T);
+	const auto ptr = manager.Pin(block.handle).Ptr() + block_offset * sizeof(T);
 	return Load<T>(ptr);
 }
 

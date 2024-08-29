@@ -213,7 +213,7 @@ void RTreeIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
 	}
 }
 
-IndexStorageInfo RTreeIndex::GetStorageInfo(const bool get_buffers) {
+IndexStorageInfo RTreeIndex::GetStorageInfo(const case_insensitive_map_t<Value> &options, const bool get_buffers) {
 
 	IndexStorageInfo info;
 	info.name = name;
@@ -252,6 +252,10 @@ void RTreeIndex::CheckConstraintsForChunk(DataChunk &input, ConflictManager &con
 
 string RTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
 	throw NotImplementedException("RTreeIndex::VerifyAndToString() not implemented");
+}
+
+void RTreeIndex::VerifyAllocations(IndexLock &state) {
+
 }
 
 //------------------------------------------------------------------------------

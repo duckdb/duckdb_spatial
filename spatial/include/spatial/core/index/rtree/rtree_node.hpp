@@ -80,7 +80,8 @@ struct RTreeEntry {
 };
 
 struct alignas(RTreeEntry) RTreeNode {
-
+	// Delete constructor too
+	RTreeNode() = delete;
 	// Delete copy
 	RTreeNode(const RTreeNode &) = delete;
 	RTreeNode &operator=(const RTreeNode &) = delete;
@@ -179,9 +180,7 @@ private:
 	uint32_t count;
 
 	// We got 12 bytes for the future
-	uint32_t _unused1;
-	uint64_t _unused2;
-	uint64_t _unused3;
+	uint8_t _unused[12];
 };
 
 } // namespace core
