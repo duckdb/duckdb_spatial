@@ -148,16 +148,28 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 	// TODO: Dont flatten chunk
 	input.Flatten();
 
-	const auto &geom_vec = FlatVector::GetData<geometry_t>(input.data[0]);
+	auto &geom_vec = input.data[0];
+	const auto &geom_data = FlatVector::GetData<geometry_t>(geom_vec);
 	const auto &rowid_data = FlatVector::GetData<row_t>(rowid_vec);
 
+	if(geom_data == nullptr || rowid_data == nullptr) {
+		return ErrorData{};
+	}
+
 	RTreeEntry entry_buffer[STANDARD_VECTOR_SIZE];
+	bool valid_buffer[STANDARD_VECTOR_SIZE];
 
 	for (idx_t i = 0; i < input.size(); i++) {
+		if(FlatVector::IsNull(geom_vec, i) || FlatVector::IsNull(rowid_vec, i)) {
+			valid_buffer[i] = false;
+			continue;
+		}
+
 		const auto rowid = rowid_data[i];
 
 		Box2D<double> box_2d;
-		if (!geom_vec[i].TryGetCachedBounds(box_2d)) {
+		if (!geom_data[i].TryGetCachedBounds(box_2d)) {
+			valid_buffer[i] = false;
 			continue;
 		}
 
@@ -168,6 +180,7 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 		bbox.max.y = MathUtil::DoubleToFloatUp(box_2d.max.y);
 
 		entry_buffer[i] = {RTree::MakeRowId(rowid), bbox};
+		valid_buffer[i] = true;
 	}
 
 	// TODO: Investigate this more, is there a better way to insert multiple entries
@@ -176,14 +189,19 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 	// Or insert by smallest first? or largest first?
 	// Or even create a separate subtree entirely, and then insert that into the root?
 	for (idx_t i = 0; i < input.size(); i++) {
-		tree->Insert(entry_buffer[i]);
+		if(valid_buffer[i]) {
+			tree->Insert(entry_buffer[i]);
+		}
 	}
 
 	return ErrorData {};
 }
 
 ErrorData RTreeIndex::Append(IndexLock &lock, DataChunk &appended_data, Vector &row_identifiers) {
-	return Insert(lock, appended_data, row_identifiers);
+	DataChunk expr_chunk;
+	expr_chunk.Initialize(Allocator::DefaultAllocator(), logical_types);
+	ExecuteExpressions(appended_data, expr_chunk);
+	return Insert(lock, expr_chunk, row_identifiers);
 }
 
 void RTreeIndex::VerifyAppend(DataChunk &chunk) {
@@ -197,10 +215,14 @@ void RTreeIndex::VerifyAppend(DataChunk &chunk, ConflictManager &conflict_manage
 void RTreeIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
 	const auto count = input.size();
 
+	DataChunk expr_chunk;
+	expr_chunk.Initialize(Allocator::DefaultAllocator(), logical_types);
+	ExecuteExpressions(input, expr_chunk);
+
 	UnifiedVectorFormat geom_format;
 	UnifiedVectorFormat rowid_format;
 
-	input.data[0].ToUnifiedFormat(count, geom_format);
+	expr_chunk.data[0].ToUnifiedFormat(count, geom_format);
 	rowid_vec.ToUnifiedFormat(count, rowid_format);
 
 	for (idx_t i = 0; i < count; i++) {

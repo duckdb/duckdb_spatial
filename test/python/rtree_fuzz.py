@@ -22,7 +22,7 @@ def generate_insert(con):
     # Generate a random number of points
     num_points = randrange(1000)
     #print("Generating insert: {0} points in rectangle {1}".format(num_points, rect))
-    stmt = "INSERT INTO tbl SELECT geom FROM ST_GeneratePoints({{min_x: {0}, min_y: {1}, max_x: {2}, max_y: {3}}}::BOX_2D, {4}) as pts(geom)".format(rect[0], rect[1], rect[2], rect[3], num_points)
+    stmt = "INSERT INTO tbl SELECT geom::GEOMETRY FROM ST_GeneratePoints({{min_x: {0}, min_y: {1}, max_x: {2}, max_y: {3}}}::BOX_2D, {4}) as pts(geom)".format(rect[0], rect[1], rect[2], rect[3], num_points)
     con.execute(stmt)
     res = con.fetchall()
     print("Inserted {0} rows in rectangle: {1}".format(res[0][0], rect))
@@ -102,3 +102,12 @@ for i in range(10000):
 print("Checkpoints: {0}".format(checkpoints))
 print("Restarts: {0}".format(restarts))
 print("Hard restarts: {0}".format(hard_restarts))
+
+res = con.execute("SELECT current.total_blocks FROM pragma_database_size() as current")
+print("Total blocks in use: {0}".format(res.fetchdf().iloc[0,0]))
+
+con.execute("DROP INDEX idx")
+con.execute("DROP TABLE tbl")
+con.checkpoint()
+res = con.execute("SELECT current.total_blocks FROM pragma_database_size() as current")
+print("Total blocks after drop: {0}".format(res.fetchdf().iloc[0,0]))

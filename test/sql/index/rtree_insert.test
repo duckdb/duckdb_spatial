@@ -10,7 +10,7 @@ statement ok
 pragma threads=1;
 
 statement ok
-CREATE TABLE points AS SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
+CREATE TABLE points AS SELECT geom::GEOMETRY FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337) as pts(geom);
 
 # Now insert a few more points
 statement ok

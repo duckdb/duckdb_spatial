@@ -1,0 +1,92 @@
+require spatial
+
+load __TEST_DIR__/rtree_reclaim_space.db
+
+statement ok
+CREATE TABLE tbl AS SELECT row_number() over () as i, geom::GEOMETRY as geom FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337) as pts(geom);
+
+statement ok
+CHECKPOINT;
+
+# save the block count and the used block count before index creation
+
+statement ok
+CREATE TABLE blocks_tbl AS SELECT total_blocks, used_blocks FROM pragma_database_size();
+
+# index creation
+
+statement ok
+CREATE INDEX idx ON tbl USING RTREE (geom);
+
+query II
+SELECT i, geom FROM tbl WHERE i = 50000;;
+----
+50000	POINT (4732.4060765095055 128.3674407750368)
+
+statement ok
+CHECKPOINT;
+
+# save the total block count and the used block count after creating an index
+statement ok
+CREATE TABLE blocks_idx AS SELECT total_blocks, used_blocks FROM pragma_database_size();
+
+# dropping the index
+
+statement ok
+DROP INDEX idx;
+
+statement ok
+CHECKPOINT;
+
+# save the total block count after dropping the index
+statement ok
+CREATE TABLE blocks_drop_idx AS SELECT total_blocks, used_blocks FROM pragma_database_size();
+
+statement ok
+CREATE INDEX idx ON tbl USING RTREE (geom);
+
+statement ok
+CHECKPOINT;
+
+query II
+SELECT i, geom FROM tbl WHERE i = 50000;
+----
+50000	POINT (4732.4060765095055 128.3674407750368)
+
+# now loop and always DROP INDEX, then recreate (reusing the same blocks)
+
+loop i 0 4
+
+statement ok
+DROP INDEX idx;
+
+statement ok
+CHECKPOINT;
+
+# we added another table, but dropping the index should get us back
+# to more or less the block count that we had before creating the index
+query I
+SELECT current.total_blocks < blocks_drop_idx.total_blocks + 4
+FROM pragma_database_size() AS current, blocks_drop_idx;
+----
+1
+
+statement ok
+CREATE INDEX idx ON tbl USING RTREE (geom);
+
+statement ok
+CHECKPOINT;
+
+# we reclaim blocks, so we stay within some +4 blocks of our previous block count
+query I
+SELECT current.total_blocks < blocks_idx.total_blocks + 5
+FROM pragma_database_size() current, blocks_idx;
+----
+1
+
+query II
+SELECT i, geom FROM tbl WHERE i = 50000;
+----
+50000	POINT (4732.4060765095055 128.3674407750368)
+
+endloop
