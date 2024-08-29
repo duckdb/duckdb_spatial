@@ -11,15 +11,29 @@ namespace core {
 struct InsertResult;
 struct DeleteResult;
 
+struct RTreeConfig {
+	idx_t max_node_capacity;
+	idx_t min_node_capacity;
+
+	// TODO: Allow setting leaf capacity separately
+	// idx_t max_leaf_capacity;
+	// idx_t min_leaf_capacity;
+
+	idx_t GetNodeByteSize() const {
+		return sizeof(RTreeNode) + (sizeof(RTreeEntry) * max_node_capacity);
+	}
+	idx_t GetLeafByteSize() const {
+		return sizeof(RTreeNode) + (sizeof(RTreeEntry) * max_node_capacity);
+	}
+};
+
 struct RTree {
 public:
-	RTree(BlockManager &block_manager, idx_t max_node_capacity_p, idx_t min_node_capacity_p)
-	    : max_node_capacity(max_node_capacity_p), min_node_capacity(min_node_capacity_p) {
+	RTree(BlockManager &block_manager, const RTreeConfig &config_p) : config(config_p) {
 
-		// Compute the size of a node
-		auto node_size = sizeof(RTreeNode) + (sizeof(RTreeEntry) * max_node_capacity);
-
-		allocator = make_uniq<FixedSizeAllocator>(node_size, block_manager);
+		// Create the allocators
+		node_allocator = make_uniq<FixedSizeAllocator>(config.GetNodeByteSize(), block_manager);
+		leaf_allocator = make_uniq<FixedSizeAllocator>(config.GetLeafByteSize(), block_manager);
 	}
 
 	void Insert(const RTreeEntry &entry) {
@@ -30,16 +44,20 @@ public:
 		RootDelete(root, entry);
 	}
 
-	FixedSizeAllocator &GetAllocator() {
-		return *allocator;
+	FixedSizeAllocator &GetNodeAllocator() {
+		return *node_allocator;
+	}
+
+	FixedSizeAllocator &GetLeafAllocator() {
+		return *leaf_allocator;
 	}
 
 	const RTreeEntry &GetRoot() const {
 		return root;
 	}
 
-	idx_t GetNodeCapacity() const {
-		return max_node_capacity;
+	const RTreeConfig& GetConfig() const {
+		return config;
 	}
 
 	void SetRoot(idx_t root_ptr) {
@@ -56,7 +74,8 @@ public:
 	}
 
 	void Reset() {
-		allocator->Reset();
+		node_allocator->Reset();
+		leaf_allocator->Reset();
 		root.Clear();
 		root.bounds = RTreeBounds();
 	}
@@ -86,11 +105,12 @@ private:
 	void ReInsertNode(RTreeEntry &root, RTreeEntry &target);
 
 private:
-	unique_ptr<FixedSizeAllocator> allocator;
+	unique_ptr<FixedSizeAllocator> node_allocator;
+	unique_ptr<FixedSizeAllocator> leaf_allocator;
+
 	RTreeEntry root;
 
-	const idx_t max_node_capacity;
-	const idx_t min_node_capacity;
+	const RTreeConfig config;
 };
 
 } // namespace core

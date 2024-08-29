@@ -84,7 +84,7 @@ unique_ptr<GlobalSinkState> PhysicalCreateRTreeIndex::GetGlobalSinkState(ClientC
 	    make_uniq<RTreeIndex>(info->index_name, constraint_type, storage_ids, table_manager, unbound_expressions, db,
 	                          info->options, IndexStorageInfo(), estimated_cardinality);
 
-	gstate->max_node_capacity = gstate->rtree->tree->GetNodeCapacity();
+	gstate->max_node_capacity = gstate->rtree->tree->GetConfig().max_node_capacity;
 	gstate->entry_idx = gstate->max_node_capacity;
 
 	gstate->curr_layer.InitializeAppend(gstate->append_state);
@@ -140,7 +140,6 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
                                               Event &event) {
 	auto &tree = *state.rtree->tree;
 
-	// unsafe_vector<RTreeEntry> slice(state.slice_size);
 	auto slice_begin = reinterpret_cast<RTreeEntry *>(state.slice_buffer.get());
 	auto slice_end = slice_begin + state.slice_size;
 

@@ -24,6 +24,48 @@ public:
 };
 
 //------------------------------------------------------------------------------
+// RTree Configuration
+//------------------------------------------------------------------------------
+
+static RTreeConfig ParseOptions(const case_insensitive_map_t<Value> &options) {
+	RTreeConfig config = {};
+
+	config.max_node_capacity = 64;
+	config.min_node_capacity = 24;
+
+	const auto max_cap_param_search = options.find("max_node_capacity");
+	if (max_cap_param_search != options.end()) {
+		const auto val = max_cap_param_search->second.GetValue<int32_t>();
+		if (val < 4) {
+			throw InvalidInputException("RTree: max_node_capacity must be at least 4");
+		}
+		if (val > 255) {
+			throw InvalidInputException("RTree: max_node_capacity must be at most 255");
+		}
+		config.max_node_capacity = UnsafeNumericCast<idx_t>(val);
+	}
+
+	const auto min_cap_search = options.find("min_node_capacity");
+	if (min_cap_search != options.end()) {
+		const auto val = min_cap_search->second.GetValue<int32_t>();
+		if (val < 0) {
+			throw InvalidInputException("RTree: min_node_capacity must be at least 0");
+		}
+		if (val > config.max_node_capacity / 2) {
+			throw InvalidInputException("RTree: min_node_capacity must be at most 'max_node_capacity / 2'");
+		}
+		config.min_node_capacity = UnsafeNumericCast<idx_t>(val);
+	} else {
+		// If no min capacity is set, set it to 40% of the max capacity
+		if (max_cap_param_search != options.end()) {
+			config.min_node_capacity = std::ceil(static_cast<double>(config.max_node_capacity) * 0.4);
+		}
+	}
+
+	return config;
+}
+
+//------------------------------------------------------------------------------
 // RTreeIndex Methods
 //------------------------------------------------------------------------------
 
@@ -39,49 +81,24 @@ RTreeIndex::RTreeIndex(const string &name, IndexConstraintType index_constraint_
 		throw NotImplementedException("RTree indexes do not support unique or primary key constraints");
 	}
 
-	// Defaults
-	idx_t max_node_capacity = 64;
-	idx_t min_node_capacity = 24;
-
-	const auto max_cap_param_search = options.find("max_node_capacity");
-	if (max_cap_param_search != options.end()) {
-		const auto val = max_cap_param_search->second.GetValue<int32_t>();
-		if (val < 4) {
-			throw InvalidInputException("RTree: max_node_capacity must be at least 4");
-		}
-		if (val > 255) {
-			throw InvalidInputException("RTree: max_node_capacity must be at most 255");
-		}
-		max_node_capacity = UnsafeNumericCast<idx_t>(val);
-	}
-
-	const auto min_cap_search = options.find("min_node_capacity");
-	if (min_cap_search != options.end()) {
-		const auto val = min_cap_search->second.GetValue<int32_t>();
-		if (val < 0) {
-			throw InvalidInputException("RTree: min_node_capacity must be at least 0");
-		}
-		if (val > max_node_capacity / 2) {
-			throw InvalidInputException("RTree: min_node_capacity must be at most 'max_node_capacity / 2'");
-		}
-		min_node_capacity = UnsafeNumericCast<idx_t>(val);
-	} else {
-		// If no min capacity is set, set it to 40% of the max capacity
-		if (max_cap_param_search != options.end()) {
-			min_node_capacity = std::ceil(static_cast<double>(max_node_capacity) * 0.4);
-		}
-	}
-
-	// TODO: Check the block manager for the current block size and see if our bounds are ok
+	// Create the configuration from the options
+	RTreeConfig config = ParseOptions(options);
 
 	// Create the RTree
 	auto &block_manager = table_io_manager.GetIndexBlockManager();
-	tree = make_uniq<RTree>(block_manager, max_node_capacity, min_node_capacity);
+
+	const auto max_alloc_size = block_manager.GetBlockSize() - sizeof(validity_t);
+	if(config.GetNodeByteSize() > max_alloc_size || config.GetLeafByteSize() > max_alloc_size) {
+		throw InvalidInputException("Cannot instantiate RTree index: The node and/or leaf capacity of RTree index '%s' is too large to fit within the configured block size of this database", name);
+	}
+
+	tree = make_uniq<RTree>(block_manager, config);
 
 	if (info.IsValid()) {
 		// This is an old index that needs to be loaded
 		// Initialize the allocators
-		tree->GetAllocator().Init(info.allocator_infos[0]);
+		tree->GetLeafAllocator().Init(info.allocator_infos[0]);
+		tree->GetNodeAllocator().Init(info.allocator_infos[1]);
 		// Set the root node and recalculate the bounds
 		tree->SetRoot(info.root);
 	}
@@ -213,30 +230,37 @@ void RTreeIndex::Delete(IndexLock &lock, DataChunk &input, Vector &rowid_vec) {
 	}
 }
 
-IndexStorageInfo RTreeIndex::GetStorageInfo(const case_insensitive_map_t<Value> &options, const bool get_buffers) {
+IndexStorageInfo RTreeIndex::GetStorageInfo(const case_insensitive_map_t<Value> &options, const bool to_wal) {
 
 	IndexStorageInfo info;
 	info.name = name;
 	info.root = tree->GetRoot().pointer.Get();
 
-	auto &allocator = tree->GetAllocator();
+	auto &leaf_allocator = tree->GetLeafAllocator();
+	auto &node_allocator = tree->GetNodeAllocator();
 
-	if (!get_buffers) {
+	if (!to_wal) {
 		// use the partial block manager to serialize all allocator data
 		auto &block_manager = table_io_manager.GetIndexBlockManager();
 		PartialBlockManager partial_block_manager(block_manager, PartialBlockType::FULL_CHECKPOINT);
-		allocator.SerializeBuffers(partial_block_manager);
+		leaf_allocator.SerializeBuffers(partial_block_manager);
+		node_allocator.SerializeBuffers(partial_block_manager);
 		partial_block_manager.FlushPartialBlocks();
 	} else {
-		info.buffers.push_back(allocator.InitSerializationToWAL());
+		info.buffers.push_back(leaf_allocator.InitSerializationToWAL());
+		info.buffers.push_back(node_allocator.InitSerializationToWAL());
 	}
 
-	info.allocator_infos.push_back(allocator.GetInfo());
+	info.allocator_infos.push_back(leaf_allocator.GetInfo());
+	info.allocator_infos.push_back(node_allocator.GetInfo());
+
 	return info;
 }
 
 idx_t RTreeIndex::GetInMemorySize(IndexLock &state) {
-	return tree->GetAllocator().GetInMemorySize();
+	const auto &leaf_alloc = tree->GetLeafAllocator();
+	const auto &node_alloc = tree->GetNodeAllocator();
+	return leaf_alloc.GetInMemorySize() + node_alloc.GetInMemorySize();
 }
 
 bool RTreeIndex::MergeIndexes(IndexLock &state, BoundIndex &other_index) {
