@@ -50,7 +50,11 @@ if os.path.exists("fuzz.db"):
 
 con = duckdb.connect("fuzz.db", config = {"allow_unsigned_extensions": "true"})
 # load the rtree extension
-con.execute("LOAD 'build/release/extension/spatial/spatial.duckdb_extension';")
+
+
+EXTENSION_PATH = "build/release/extension/spatial/spatial.duckdb_extension"
+
+con.execute(f"LOAD '{EXTENSION_PATH}';")
 
 setup(con)
 
@@ -62,28 +66,34 @@ hard_restarts = 0
 
 for i in range(10000):
     if(i % 500 == 0):
-        if randrange(2) == 0:
+        if randrange(10) == 0:
             # Checkpoint
             print("\n\n--- CHECKPOINTING ---\n\n")
             con.execute("CHECKPOINT")
             checkpoints += 1
         else:
-            if randrange(2) == 0:
+            if randrange(10) == 0:
                 print("\n\n--- RELOADING EXTENSION ---\n\n")
                 # Disconnect
                 con.close()
                 con = duckdb.connect("fuzz.db", config = {"allow_unsigned_extensions": "true"})
-                con.execute("LOAD 'build/release/extension/spatial/spatial.duckdb_extension';")
+                con.execute(f"LOAD '{EXTENSION_PATH}';")
                 restarts += 1
             else:
                 con.execute("pragma disable_checkpoint_on_shutdown")
                 print("\n\n--- HARD RESTARTING ---\n\n")
                 # Disconnect
                 con.close()
+                print("Reconnecting...")
                 con = duckdb.connect(config = {"allow_unsigned_extensions": "true"})
-                con.execute("LOAD 'build/release/extension/spatial/spatial.duckdb_extension';")
+                print("Reconnected")
+                con.execute(f"LOAD '{EXTENSION_PATH}';")
+                print("loaded extension")
                 con.execute("ATTACH 'fuzz.db'")
+                print("attached")
+                con.execute("USE fuzz")
                 hard_restarts += 1
+                print("\n\n--- HARD RESTARTED ---\n\n")
 
     else:
         generate_query(con)
@@ -91,3 +101,4 @@ for i in range(10000):
 
 print("Checkpoints: {0}".format(checkpoints))
 print("Restarts: {0}".format(restarts))
+print("Hard restarts: {0}".format(hard_restarts))
