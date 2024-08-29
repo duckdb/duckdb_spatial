@@ -66,13 +66,13 @@ hard_restarts = 0
 
 for i in range(10000):
     if(i % 500 == 0):
-        if randrange(10) == 0:
+        if randrange(4) == 0:
             # Checkpoint
             print("\n\n--- CHECKPOINTING ---\n\n")
             con.execute("CHECKPOINT")
             checkpoints += 1
         else:
-            if randrange(10) == 0:
+            if randrange(4) == 0:
                 print("\n\n--- RELOADING EXTENSION ---\n\n")
                 # Disconnect
                 con.close()
