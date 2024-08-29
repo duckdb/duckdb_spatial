@@ -8,6 +8,7 @@
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/planner/expression/bound_operator_expression.hpp"
 #include "duckdb/planner/expression/bound_reference_expression.hpp"
+#include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/planner/operator/logical_create_index.hpp"
 #include "duckdb/catalog/catalog_entry/scalar_function_catalog_entry.hpp"
 
@@ -45,18 +46,33 @@ string LogicalCreateRTreeIndex::GetExtensionName() const {
 	return "rtree_create_index";
 }
 
-// TODO: We should also filter for EMPTY geometries.
 static unique_ptr<PhysicalOperator> CreateNullFilter(const LogicalCreateRTreeIndex &op,
-                                                     const vector<LogicalType> &types) {
+                                                     const vector<LogicalType> &types, ClientContext &context) {
 	vector<unique_ptr<Expression>> filter_select_list;
 
 	// Filter NOT NULL on the GEOMETRY column
 	auto is_not_null_expr =
 	    make_uniq<BoundOperatorExpression>(ExpressionType::OPERATOR_IS_NOT_NULL, LogicalType::BOOLEAN);
 	auto bound_ref = make_uniq<BoundReferenceExpression>(types[0], 0);
-	is_not_null_expr->children.push_back(std::move(bound_ref));
+	is_not_null_expr->children.push_back(bound_ref->Copy());
 
-	filter_select_list.push_back(std::move(is_not_null_expr));
+	// Filter IS_NOT_EMPTY on the GEOMETRY column
+	auto &catalog = Catalog::GetSystemCatalog(context);
+	auto &is_empty_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "ST_IsEmpty")
+	                          .Cast<ScalarFunctionCatalogEntry>();
+
+	auto is_empty_func = is_empty_entry.functions.GetFunctionByArguments(context, {GeoTypes::GEOMETRY()});
+	vector<unique_ptr<Expression>> is_empty_args;
+	is_empty_args.push_back(std::move(bound_ref));
+	auto is_empty_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::BOOLEAN, is_empty_func, std::move(is_empty_args), nullptr);
+
+	auto is_not_empty_expr = make_uniq<BoundOperatorExpression>(ExpressionType::OPERATOR_NOT, LogicalType::BOOLEAN);
+	is_not_empty_expr->children.push_back(std::move(is_empty_expr));
+
+	// Combine into an AND
+	auto and_expr = make_uniq_base<Expression, BoundConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(is_not_null_expr), std::move(is_not_empty_expr));
+
+	filter_select_list.push_back(std::move(and_expr));
 
 	return make_uniq<PhysicalFilter>(types, std::move(filter_select_list), op.estimated_cardinality);
 }
@@ -178,8 +194,8 @@ unique_ptr<PhysicalOperator> LogicalCreateRTreeIndex::CreatePlan(ClientContext &
 	auto projection = make_uniq<PhysicalProjection>(new_column_types, std::move(select_list), op.estimated_cardinality);
 	projection->children.push_back(std::move(table_scan));
 
-	// Filter operator for IS_NOT_NULL on the geometry column
-	auto null_filter = CreateNullFilter(op, new_column_types);
+	// Filter operator for (IS_NOT_NULL) and (NOT ST_IsEmpty) on the geometry column
+	auto null_filter = CreateNullFilter(op, new_column_types, context);
 	null_filter->children.push_back(std::move(projection));
 
 	// Project the bounding box and the row ID
