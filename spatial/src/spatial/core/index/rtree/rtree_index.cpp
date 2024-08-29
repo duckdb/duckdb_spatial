@@ -91,7 +91,7 @@ unique_ptr<IndexScanState> RTreeIndex::InitializeScan(const RTreeBounds &query) 
 	auto state = make_uniq<RTreeIndexScanState>();
 	state->query_bounds = query;
 	auto &root = tree->GetRoot();
-	if (root.IsSet() && state->query_bounds.Intersects(root.bounds)) {
+	if (root.pointer.Get() != 0 && state->query_bounds.Intersects(root.bounds)) {
 		state->scanner.Init(root);
 	}
 	return std::move(state);

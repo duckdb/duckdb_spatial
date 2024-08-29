@@ -70,6 +70,8 @@ private:
 
 	void RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry);
 	InsertResult NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry);
+	InsertResult LeafInsert(RTreeEntry &entry, const RTreeEntry &new_entry);
+	InsertResult BranchInsert(RTreeEntry &entry, const RTreeEntry &new_entry);
 	RTreeEntry &PickSubtree(RTreeNode &node, const RTreeEntry &new_entry) const;
 
 	RTreeEntry SplitNode(RTreeEntry &entry) const;
@@ -77,6 +79,8 @@ private:
 
 	void RootDelete(RTreeEntry &root, const RTreeEntry &target);
 	DeleteResult NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans);
+	DeleteResult LeafDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans);
+	DeleteResult BranchDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans);
 	void ReInsertNode(RTreeEntry &root, RTreeEntry &target);
 
 private:

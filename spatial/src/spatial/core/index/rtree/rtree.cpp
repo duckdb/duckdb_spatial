@@ -83,7 +83,6 @@ void RTree::RebalanceSplitNodes(RTreeNode &src, RTreeNode &dst, bool split_axis,
 
 	// Find the entries that are closest to the split point
 	for (idx_t i = 0; i < src.GetCount(); i++) {
-		D_ASSERT(src[i].IsSet());
 		auto center = src[i].bounds.Center();
 		auto diff = std::abs(center[split_axis] - split_point[split_axis]);
 		if (diff_heap.size() < remaining) {
@@ -135,7 +134,6 @@ RTreeEntry RTree::SplitNode(RTreeEntry &entry) const {
 
 	// Figure out which quadrant each entry in the node belongs to
 	for (idx_t i = 0; i < max_node_capacity; i++) {
-		D_ASSERT(left_node[i].IsSet());
 		auto child_center = left_node[i].bounds.Center();
 		auto found = false;
 		for (idx_t q_idx = 0; q_idx < 4; q_idx++) {
@@ -296,37 +294,44 @@ RTreeEntry &RTree::PickSubtree(RTreeNode &node, const RTreeEntry &new_entry) con
 // Insert a rowid into a node
 InsertResult RTree::NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
 	D_ASSERT(new_entry.pointer.IsRowId());
-	D_ASSERT(entry.IsSet());
+	D_ASSERT(entry.pointer.Get() != 0);
 
+	const auto is_leaf = entry.pointer.IsLeafPage();
+	return is_leaf ? LeafInsert(entry, new_entry) : BranchInsert(entry, new_entry);
+}
+
+InsertResult RTree::LeafInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
+	D_ASSERT(entry.pointer.IsLeafPage());
+
+	// Dereference the node
 	auto &node = RefMutable(entry.pointer);
 
-	// Is this a leaf?
-	if (entry.pointer.IsLeafPage()) {
-		// Is this leaf full?
-		if (node.GetCount() == max_node_capacity) {
-			return InsertResult {true, false};
-		}
-		// Otherwise, insert at the end
-		node.PushEntry(new_entry);
-
-		// Sort by rowid
-		node.SortEntriesByRowId();
-
-		// Do we need to grow the bounding box?
-		const auto grown = !entry.bounds.Contains(new_entry.bounds);
-
-		return InsertResult {false, grown};
+	// Is this leaf full?
+	if (node.GetCount() == max_node_capacity) {
+		return InsertResult {true, false};
 	}
+	// Otherwise, insert at the end
+	node.PushEntry(new_entry);
 
-	// Otherwise: this is a branch node
+	// Sort by rowid
+	node.SortEntriesByRowId();
+
+	// Do we need to grow the bounding box?
+	const auto grown = !entry.bounds.Contains(new_entry.bounds);
+
+	return InsertResult {false, grown};
+}
+
+InsertResult RTree::BranchInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
 	D_ASSERT(entry.pointer.IsBranchPage());
+
+	// Dereference the node
+	auto &node = RefMutable(entry.pointer);
 
 	// Choose a subtree
 	auto &target = PickSubtree(node, new_entry);
 
-	if (!target.IsSet()) {
-		throw InternalException("RTreeIndex::NodeInsert: target is not set");
-	}
+	D_ASSERT(target.pointer.Get() != 0);
 
 	// Insert into the selected child
 	const auto result = NodeInsert(target, new_entry);
@@ -365,7 +370,7 @@ InsertResult RTree::NodeInsert(RTreeEntry &entry, const RTreeEntry &new_entry) {
 
 void RTree::RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry) {
 	// If there is no root node, create one and insert the new entry immediately
-	if (!root_entry.IsSet()) {
+	if (root_entry.pointer.Get() == 0) {
 		root_entry.pointer = MakePage(RTreeNodeType::LEAF_PAGE);
 		root_entry.bounds = new_entry.bounds;
 
@@ -405,58 +410,14 @@ void RTree::RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry) {
 //------------------------------------------------------------------------------
 // Delete
 //------------------------------------------------------------------------------
-
 DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans) {
-	if (entry.pointer.IsLeafPage()) {
-		auto &node = RefMutable(entry.pointer);
+	const auto is_leaf = entry.pointer.IsLeafPage();
+	return is_leaf ? LeafDelete(entry, target, orphans) : BranchDelete(entry, target, orphans);
+}
 
-		// Do a binary search with std::lower_bound to find the matching rowid
-		// This is faster than a linear search
-		auto it =
-		    std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
-		                     [](const RTreeEntry &item, const row_t &row) { return item.pointer.GetRowId() < row; });
-		if (it == node.end()) {
-			// Not found in this leaf
-			return {false, false, false};
-		}
-
-		auto &child = *it;
-		auto child_idx = it - node.begin();
-
-		D_ASSERT(child.pointer.IsRowId());
-		// Overwrite the target entry with the last entry and clear the last entry
-		// to compact the leaf
-		node.SwapRemove(child_idx);
-
-		// Does this node now have too few children?
-		if (node.GetCount() < min_node_capacity) {
-			// Yes, orphan all children and signal that this node should be removed
-			orphans.insert(orphans.end(), node.begin(), node.end());
-			node.Clear();
-			node.Verify(max_node_capacity);
-			return {true, true, true};
-		}
-
-		// Sort the entries by rowid
-		node.SortEntriesByRowId();
-
-		// TODO: Check if we actually shrunk and need to update the bounds
-		// We can do this more efficiently by checking if the deleted entry bordered the bounds
-		// Recalculate the bounds
-		auto shrunk = true;
-		if (shrunk) {
-			const auto old_bounds = entry.bounds;
-			entry.bounds = node.GetBounds();
-			shrunk = entry.bounds != old_bounds;
-
-			// Assert that the bounds shrunk
-			// TODO: Cant call area blindly here if count == 0 as we get +inf back
-			D_ASSERT(node.GetCount() == 0 || entry.bounds.Area() <= old_bounds.Area());
-		}
-		return DeleteResult {true, shrunk, false};
-	}
-	// Otherwise: this is a branch node
+DeleteResult RTree::BranchDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans) {
 	D_ASSERT(entry.pointer.IsBranchPage());
+
 	auto &node = RefMutable(entry.pointer);
 
 	DeleteResult result = {false, false, false};
@@ -516,8 +477,61 @@ DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 	return {true, shrunk, false};
 }
 
+DeleteResult RTree::LeafDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans) {
+	D_ASSERT(entry.pointer.IsLeafPage());
+
+	auto &node = RefMutable(entry.pointer);
+
+	// Do a binary search with std::lower_bound to find the matching rowid
+	// This is faster than a linear search
+	auto it =
+		std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
+						 [](const RTreeEntry &item, const row_t &row) { return item.pointer.GetRowId() < row; });
+	if (it == node.end()) {
+		// Not found in this leaf
+		return {false, false, false};
+	}
+
+	auto &child = *it;
+	auto child_idx = it - node.begin();
+
+	D_ASSERT(child.pointer.IsRowId());
+
+	// If we remove the entry, will this node now have too few children?
+	if (node.GetCount() - 1 < min_node_capacity) {
+		// Yes, orphan all children and signal that this node should be removed
+
+		// But first, remove the actual entry. We dont care about preserving the order here
+		// because we will orphan all children anyway
+		node.SwapRemove(child_idx);
+
+		orphans.insert(orphans.end(), node.begin(), node.end());
+		node.Clear();
+		node.Verify(max_node_capacity);
+		return {true, true, true};
+	}
+
+	// Remove the entry and compact the node, taking care to preserve the order
+	node.CompactRemove(child_idx);
+
+	// TODO: Check if we actually shrunk and need to update the bounds
+	// We can do this more efficiently by checking if the deleted entry bordered the bounds
+	// Recalculate the bounds
+	auto shrunk = true;
+	if (shrunk) {
+		const auto old_bounds = entry.bounds;
+		entry.bounds = node.GetBounds();
+		shrunk = entry.bounds != old_bounds;
+
+		// Assert that the bounds shrunk
+		// TODO: Cant call area blindly here if count == 0 as we get +inf back
+		D_ASSERT(node.GetCount() == 0 || entry.bounds.Area() <= old_bounds.Area());
+	}
+	return DeleteResult {true, shrunk, false};
+}
+
+
 void RTree::ReInsertNode(RTreeEntry &root, RTreeEntry &target) {
-	D_ASSERT(target.IsSet());
 	if (target.pointer.IsRowId()) {
 		RootInsert(root, target);
 	} else {

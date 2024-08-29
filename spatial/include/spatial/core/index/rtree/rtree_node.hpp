@@ -13,10 +13,9 @@ namespace core {
 //-------------------------------------------------------------
 
 enum class RTreeNodeType : uint8_t {
-	UNSET = 0,
-	ROW_ID = 1,
-	LEAF_PAGE = 2,
-	BRANCH_PAGE = 3,
+	ROW_ID = 0,
+	LEAF_PAGE = 1,
+	BRANCH_PAGE = 2,
 };
 
 class RTreePointer final : public IndexPointer {
@@ -29,11 +28,11 @@ public:
 
 	//! Get the RowID from this pointer
 	row_t GetRowId() const {
-		return static_cast<row_t>(Get() & AND_ROW_ID);
+		return static_cast<row_t>(Get());
 	}
 
 	void SetRowId(const row_t row_id) {
-		Set((Get() & AND_METADATA) | UnsafeNumericCast<idx_t>(row_id));
+		Set(UnsafeNumericCast<idx_t>(row_id));
 	}
 
 	RTreeNodeType GetType() const {
@@ -71,9 +70,9 @@ struct RTreeEntry {
 	RTreeEntry() = default;
 	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {
 	}
-	bool IsSet() const {
-		return pointer.Get() != 0;
-	}
+	//bool IsSet() const {
+	//	return pointer.Get() != 0;
+	//}
 	void Clear() {
 		pointer.Set(0);
 	}
@@ -98,7 +97,7 @@ public:
 		RTreeBounds result;
 		for (idx_t i = 0; i < count; i++) {
 			auto &entry = begin()[i];
-			D_ASSERT(entry.IsSet());
+			// D_ASSERT(entry.IsSet());
 			result.Union(entry.bounds);
 		}
 		return result;
@@ -112,10 +111,25 @@ public:
 		begin()[count++] = entry;
 	}
 
+	// Swap the last entry with the entry at the given index and decrement the count
+	// This does NOT preserve the order of the entries
 	RTreeEntry SwapRemove(const idx_t idx) {
 		D_ASSERT(idx < count);
 		const auto result = begin()[idx];
 		begin()[idx] = begin()[--count];
+		return result;
+	}
+
+	// Remove the entry at the given index, decrement the count and compact the entries
+	// by copying all entries after the removed entry one position to the left
+	// This preserves the order of the entries
+	RTreeEntry CompactRemove(const idx_t idx) {
+		D_ASSERT(idx < count);
+		const auto result = begin()[idx];
+		for (idx_t i = idx + 1; i < count; i++) {
+			begin()[i - 1] = begin()[i];
+		}
+		count--;
 		return result;
 	}
 
@@ -126,8 +140,6 @@ public:
 			if (begin()[0].pointer.GetType() == RTreeNodeType::ROW_ID) {
 				// This is a leaf node, rowids should be sorted
 				const auto ok = std::is_sorted(begin(), end(), [](const RTreeEntry &a, const RTreeEntry &b) {
-					D_ASSERT(a.IsSet());
-					D_ASSERT(b.IsSet());
 					return a.pointer.GetRowId() < b.pointer.GetRowId();
 				});
 				D_ASSERT(ok);
@@ -138,16 +150,12 @@ public:
 
 	void SortEntriesByXMin() {
 		std::sort(begin(), end(), [&](const RTreeEntry &a, const RTreeEntry &b) {
-			D_ASSERT(a.IsSet());
-			D_ASSERT(b.IsSet());
 			return a.bounds.min.x < b.bounds.min.x;
 		});
 	}
 
 	void SortEntriesByRowId() {
 		std::sort(begin(), end(), [&](const RTreeEntry &a, const RTreeEntry &b) {
-			D_ASSERT(a.IsSet());
-			D_ASSERT(b.IsSet());
 			return a.pointer.GetRowId() < b.pointer.GetRowId();
 		});
 	}
