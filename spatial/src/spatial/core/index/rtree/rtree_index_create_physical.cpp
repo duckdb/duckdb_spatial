@@ -258,7 +258,8 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 
 class RTreeIndexConstructionTask final : public ExecutorTask {
 public:
-	RTreeIndexConstructionTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate, const PhysicalCreateRTreeIndex &op)
+	RTreeIndexConstructionTask(shared_ptr<Event> event_p, ClientContext &context, CreateRTreeIndexGlobalState &gstate,
+	                           const PhysicalCreateRTreeIndex &op)
 	    : ExecutorTask(context, std::move(event_p), op), state(gstate) {
 	}
 

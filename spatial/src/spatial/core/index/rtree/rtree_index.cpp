@@ -88,8 +88,10 @@ RTreeIndex::RTreeIndex(const string &name, IndexConstraintType index_constraint_
 	auto &block_manager = table_io_manager.GetIndexBlockManager();
 
 	const auto max_alloc_size = block_manager.GetBlockSize() - sizeof(validity_t);
-	if(config.GetNodeByteSize() > max_alloc_size || config.GetLeafByteSize() > max_alloc_size) {
-		throw InvalidInputException("Cannot instantiate RTree index: The node and/or leaf capacity of RTree index '%s' is too large to fit within the configured block size of this database", name);
+	if (config.GetNodeByteSize() > max_alloc_size || config.GetLeafByteSize() > max_alloc_size) {
+		throw InvalidInputException("Cannot instantiate RTree index: The node and/or leaf capacity of RTree index '%s' "
+		                            "is too large to fit within the configured block size of this database",
+		                            name);
 	}
 
 	tree = make_uniq<RTree>(block_manager, config);
@@ -152,15 +154,15 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 	const auto &geom_data = FlatVector::GetData<geometry_t>(geom_vec);
 	const auto &rowid_data = FlatVector::GetData<row_t>(rowid_vec);
 
-	if(geom_data == nullptr || rowid_data == nullptr) {
-		return ErrorData{};
+	if (geom_data == nullptr || rowid_data == nullptr) {
+		return ErrorData {};
 	}
 
 	RTreeEntry entry_buffer[STANDARD_VECTOR_SIZE];
 	bool valid_buffer[STANDARD_VECTOR_SIZE];
 
 	for (idx_t i = 0; i < input.size(); i++) {
-		if(FlatVector::IsNull(geom_vec, i) || FlatVector::IsNull(rowid_vec, i)) {
+		if (FlatVector::IsNull(geom_vec, i) || FlatVector::IsNull(rowid_vec, i)) {
 			valid_buffer[i] = false;
 			continue;
 		}
@@ -189,7 +191,7 @@ ErrorData RTreeIndex::Insert(IndexLock &lock, DataChunk &input, Vector &rowid_ve
 	// Or insert by smallest first? or largest first?
 	// Or even create a separate subtree entirely, and then insert that into the root?
 	for (idx_t i = 0; i < input.size(); i++) {
-		if(valid_buffer[i]) {
+		if (valid_buffer[i]) {
 			tree->Insert(entry_buffer[i]);
 		}
 	}
@@ -301,7 +303,6 @@ string RTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
 }
 
 void RTreeIndex::VerifyAllocations(IndexLock &state) {
-
 }
 
 //------------------------------------------------------------------------------

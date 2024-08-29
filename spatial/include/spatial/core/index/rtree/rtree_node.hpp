@@ -70,7 +70,7 @@ struct RTreeEntry {
 	RTreeEntry() = default;
 	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {
 	}
-	//bool IsSet() const {
+	// bool IsSet() const {
 	//	return pointer.Get() != 0;
 	//}
 	void Clear() {
@@ -149,9 +149,8 @@ public:
 	}
 
 	void SortEntriesByXMin() {
-		std::sort(begin(), end(), [&](const RTreeEntry &a, const RTreeEntry &b) {
-			return a.bounds.min.x < b.bounds.min.x;
-		});
+		std::sort(begin(), end(),
+		          [&](const RTreeEntry &a, const RTreeEntry &b) { return a.bounds.min.x < b.bounds.min.x; });
 	}
 
 	void SortEntriesByRowId() {

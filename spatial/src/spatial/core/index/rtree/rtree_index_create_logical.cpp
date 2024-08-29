@@ -59,18 +59,20 @@ static unique_ptr<PhysicalOperator> CreateNullFilter(const LogicalCreateRTreeInd
 	// Filter IS_NOT_EMPTY on the GEOMETRY column
 	auto &catalog = Catalog::GetSystemCatalog(context);
 	auto &is_empty_entry = catalog.GetEntry(context, CatalogType::SCALAR_FUNCTION_ENTRY, DEFAULT_SCHEMA, "ST_IsEmpty")
-	                          .Cast<ScalarFunctionCatalogEntry>();
+	                           .Cast<ScalarFunctionCatalogEntry>();
 
 	auto is_empty_func = is_empty_entry.functions.GetFunctionByArguments(context, {GeoTypes::GEOMETRY()});
 	vector<unique_ptr<Expression>> is_empty_args;
 	is_empty_args.push_back(std::move(bound_ref));
-	auto is_empty_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::BOOLEAN, is_empty_func, std::move(is_empty_args), nullptr);
+	auto is_empty_expr = make_uniq_base<Expression, BoundFunctionExpression>(LogicalType::BOOLEAN, is_empty_func,
+	                                                                         std::move(is_empty_args), nullptr);
 
 	auto is_not_empty_expr = make_uniq<BoundOperatorExpression>(ExpressionType::OPERATOR_NOT, LogicalType::BOOLEAN);
 	is_not_empty_expr->children.push_back(std::move(is_empty_expr));
 
 	// Combine into an AND
-	auto and_expr = make_uniq_base<Expression, BoundConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(is_not_null_expr), std::move(is_not_empty_expr));
+	auto and_expr = make_uniq_base<Expression, BoundConjunctionExpression>(
+	    ExpressionType::CONJUNCTION_AND, std::move(is_not_null_expr), std::move(is_not_empty_expr));
 
 	filter_select_list.push_back(std::move(and_expr));
 

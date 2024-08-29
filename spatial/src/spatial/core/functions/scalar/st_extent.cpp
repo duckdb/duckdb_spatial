@@ -26,7 +26,6 @@ static uint32_t ReadInt(const bool le, Cursor &cursor) {
 	return le ? cursor.Read<uint32_t>() : cursor.ReadBigEndian<uint32_t>();
 }
 
-
 static void ReadWKB(Cursor &cursor, Box2D<double> &bbox);
 
 static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const bool has_m, Cursor &cursor,
@@ -116,7 +115,7 @@ static void WKBExtFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	using WKB_TYPE = PrimitiveType<string_t>;
 
 	GenericExecutor::ExecuteUnary<WKB_TYPE, BOX_TYPE>(args.data[0], result, count, [&](const WKB_TYPE &wkb) {
-		Box2D<double>  bbox;
+		Box2D<double> bbox;
 		Cursor cursor(wkb.val);
 		ReadWKB(cursor, bbox);
 		return BOX_TYPE {bbox.min.x, bbox.min.y, bbox.max.x, bbox.max.y};

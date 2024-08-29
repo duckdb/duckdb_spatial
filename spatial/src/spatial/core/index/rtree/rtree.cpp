@@ -488,9 +488,8 @@ DeleteResult RTree::LeafDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 
 	// Do a binary search with std::lower_bound to find the matching rowid
 	// This is faster than a linear search
-	auto it =
-		std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
-						 [](const RTreeEntry &item, const row_t &row) { return item.pointer.GetRowId() < row; });
+	auto it = std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
+	                           [](const RTreeEntry &item, const row_t &row) { return item.pointer.GetRowId() < row; });
 	if (it == node.end()) {
 		// Not found in this leaf
 		return {false, false, false};
@@ -533,7 +532,6 @@ DeleteResult RTree::LeafDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 	}
 	return DeleteResult {true, shrunk, false};
 }
-
 
 void RTree::ReInsertNode(RTreeEntry &root, RTreeEntry &target) {
 	if (target.pointer.IsRowId()) {

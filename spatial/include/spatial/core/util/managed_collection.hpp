@@ -24,12 +24,14 @@ template <class T>
 class ManagedCollection {
 public:
 	explicit ManagedCollection(BufferManager &manager)
-		: manager(manager), block_size(manager.GetBlockSize()), block_capacity(block_size / sizeof(T)) {
+	    : manager(manager), block_size(manager.GetBlockSize()), block_capacity(block_size / sizeof(T)) {
 	}
 
 	// Initialize append state, optionally with a lower initial capacity. This is useful for small collections.
 	void InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity);
-	void InitializeAppend(ManagedCollectionAppendState &state) { InitializeAppend(state, block_capacity); }
+	void InitializeAppend(ManagedCollectionAppendState &state) {
+		InitializeAppend(state, block_capacity);
+	}
 
 	// Push a single value to the collection, potentially allocating a new block
 	void Append(ManagedCollectionAppendState &state, const T &value);

@@ -56,7 +56,7 @@ public:
 		return root;
 	}
 
-	const RTreeConfig& GetConfig() const {
+	const RTreeConfig &GetConfig() const {
 		return config;
 	}
 
@@ -64,7 +64,7 @@ public:
 		// Set the pointer
 		root.pointer.Set(root_ptr);
 		// Compute the bounds
-		if(root.pointer.Get() != 0) {
+		if (root.pointer.Get() != 0) {
 			root.bounds = Ref(root.pointer).GetBounds();
 		}
 	}
