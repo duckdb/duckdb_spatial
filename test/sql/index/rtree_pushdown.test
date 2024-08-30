@@ -1,0 +1,38 @@
+require spatial
+
+statement ok
+CREATE TABLE t1 (geom GEOMETRY, id INT);
+
+statement ok
+INSERT INTO t1 VALUES ('POINT(0 0)'::GEOMETRY, 1), ('POINT(40 40)'::GEOMETRY, 2), ('POINT(2 2)'::GEOMETRY, 3);
+
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE (geom);
+
+# Check that we get an index scan if we add an AND clause
+query II
+EXPLAIN SELECT * FROM t1 WHERE st_within(geom, 'POINT (1 2)'::GEOMETRY) AND id = 2;
+----
+physical_plan	<REGEX>:.*RTREE_INDEX_SCAN.*
+
+
+# Check that we get the index scan as long as there is a constant foldable value
+query II
+EXPLAIN SELECT * FROM t1 WHERE st_within(geom, ST_FlipCoordinates('POINT (1 2)'::GEOMETRY));
+----
+physical_plan	<REGEX>:.*RTREE_INDEX_SCAN.*
+
+
+# Check that we DONT get an index scan from OR clause
+query II
+EXPLAIN SELECT * FROM t1 WHERE st_within(geom, ST_FlipCoordinates('POINT (1 2)'::GEOMETRY)) OR id = 2;
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*
+
+
+# Check that we DONT get an index scan if there are multiple matches
+# TODO: In the future, we may union these together and do an index scan with a single predicate
+query II
+EXPLAIN SELECT * FROM t1 WHERE st_within(geom, 'POINT (1 2)'::GEOMETRY) AND st_within(geom, 'POINT (4 4)'::GEOMETRY)
+----
+physical_plan	<REGEX>:.*SEQ_SCAN.*

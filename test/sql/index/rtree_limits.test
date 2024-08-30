@@ -20,6 +20,6 @@ CREATE INDEX my_idx on t1 USING RTREE (geom) WITH (min_node_capacity = -5)
 RTree: min_node_capacity must be at least 0
 
 statement error
-CREATE INDEX my_idx on t1 USING RTREE (geom) WITH (min_node_capacity = 33)
+CREATE INDEX my_idx on t1 USING RTREE (geom) WITH (max_node_capacity = 64, min_node_capacity = 33)
 ----
 RTree: min_node_capacity must be at most 'max_node_capacity / 2'

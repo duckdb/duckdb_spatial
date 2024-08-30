@@ -103,9 +103,6 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 		return SinkResultType::NEED_MORE_INPUT;
 	}
 
-	// Count the number of entries
-	gstate.rtree_size += chunk.size();
-
 	// TODO: Dont flatten chunk
 	chunk.Flatten();
 
@@ -129,6 +126,9 @@ SinkResultType PhysicalCreateRTreeIndex::Sink(ExecutionContext &context, DataChu
 
 	// Append the chunk to the current layer
 	gstate.curr_layer.Append(gstate.append_state, entries, entries + chunk.size());
+
+	// Count the number of entries
+	gstate.rtree_size += chunk.size();
 
 	return SinkResultType::NEED_MORE_INPUT;
 }
@@ -208,6 +208,8 @@ static TaskExecutionResult BuildRTreeBottomUp(CreateRTreeIndexGlobalState &state
 					auto node_bounds = node.GetBounds();
 					state.next_layer_ptr->Append(state.append_state, RTreeEntry {current_ptr, node_bounds});
 					needs_insertion = false;
+
+					node.Verify(state.max_node_capacity);
 				}
 			}
 

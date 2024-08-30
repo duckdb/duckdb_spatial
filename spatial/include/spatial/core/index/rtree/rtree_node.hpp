@@ -70,9 +70,6 @@ struct RTreeEntry {
 	RTreeEntry() = default;
 	RTreeEntry(const RTreePointer &pointer_p, const RTreeBounds &bounds_p) : pointer(pointer_p), bounds(bounds_p) {
 	}
-	// bool IsSet() const {
-	//	return pointer.Get() != 0;
-	//}
 	void Clear() {
 		pointer.Set(0);
 	}
@@ -97,7 +94,6 @@ public:
 		RTreeBounds result;
 		for (idx_t i = 0; i < count; i++) {
 			auto &entry = begin()[i];
-			// D_ASSERT(entry.IsSet());
 			result.Union(entry.bounds);
 		}
 		return result;
@@ -161,6 +157,8 @@ public:
 
 public: // Collection interface
 	RTreeEntry *begin() {
+		// This is slightly unsafe, but the entries are always laid out after the RTreeNode in memory
+		// inside the same buffer. This is a performance optimization to avoid an additional pointer indirection.
 		return reinterpret_cast<RTreeEntry *>(this + 1);
 	}
 	RTreeEntry *end() {
@@ -186,8 +184,8 @@ public: // Collection interface
 private:
 	uint32_t count;
 
-	// We got 12 bytes for the future
-	uint8_t _unused[12];
+	// We got 20 bytes for the future
+	uint8_t _unused[20] = {};
 };
 
 } // namespace core

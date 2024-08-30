@@ -12,8 +12,8 @@ struct InsertResult;
 struct DeleteResult;
 
 struct RTreeConfig {
-	idx_t max_node_capacity;
-	idx_t min_node_capacity;
+	idx_t max_node_capacity = 128;
+	idx_t min_node_capacity = 50;
 
 	// TODO: Allow setting leaf capacity separately
 	// idx_t max_leaf_capacity;

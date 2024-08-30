@@ -14,7 +14,7 @@ public:
 	idx_t item_count;
 
 	explicit ManagedCollectionBlock(idx_t item_capacity)
-	    : handle(nullptr), item_capacity(item_capacity), item_count(0) {};
+	    : handle(nullptr), item_capacity(item_capacity), item_count(0) {}
 	ManagedCollectionBlock(shared_ptr<BlockHandle> handle, idx_t item_capacity)
 	    : handle(std::move(handle)), item_capacity(item_capacity), item_count(0) {
 	}
@@ -28,7 +28,8 @@ public:
 	}
 
 	// Initialize append state, optionally with a lower initial capacity. This is useful for small collections.
-	void InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity);
+	// If the initial capacity is larger than the block size, it will be clamped to the block size.
+	void InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_smaller_capacity);
 	void InitializeAppend(ManagedCollectionAppendState &state) {
 		InitializeAppend(state, block_capacity);
 	}
@@ -73,27 +74,27 @@ struct ManagedCollectionAppendState {
 };
 
 template <class T>
-void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_capacity) {
-	// D_ASSERT(initial_capacity <= BLOCK_CAPACITY);
+void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state, idx_t initial_smaller_capacity) {
 
 	// TODO: Allow allocating multiple blocks at once?
 
-	// state.block.item_count = 0;
-	// state.block.item_capacity = initial_capacity;
+	// We dont want any variable blocks! If we request more capacity than the block capacity,
+	// we just allocate the first block. The rest will be allocated on demand later.
 
-	if (initial_capacity < block_capacity) {
+	if (initial_smaller_capacity < block_capacity) {
 		// Allocate a new small block
-		blocks.emplace_back(manager.RegisterSmallMemory(initial_capacity * sizeof(T)), initial_capacity);
+		blocks.emplace_back(manager.RegisterSmallMemory(initial_smaller_capacity * sizeof(T)), initial_smaller_capacity);
 		state.block = &blocks.back();
 		state.block->item_count = 0;
-		state.block->item_capacity = initial_capacity;
+		state.block->item_capacity = initial_smaller_capacity;
 		state.handle = manager.Pin(state.block->handle);
 	} else {
+		// Just use the block capacity
 		// Allocate a new standard block
-		blocks.emplace_back(initial_capacity);
+		blocks.emplace_back(block_capacity);
 		state.block = &blocks.back();
 		state.block->item_count = 0;
-		state.block->item_capacity = initial_capacity;
+		state.block->item_capacity = block_capacity;
 		state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true, &state.block->handle);
 	}
 }
@@ -105,9 +106,9 @@ void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T *
 			// Allocate a new standard block
 			blocks.emplace_back(block_capacity);
 			state.block = &blocks.back();
-			state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true, &state.block->handle);
 			state.block->item_count = 0;
 			state.block->item_capacity = block_capacity;
+			state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true, &state.block->handle);
 		}
 
 		// Compute how much we can copy before the block is full or we run out of elements

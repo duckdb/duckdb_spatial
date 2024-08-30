@@ -30,9 +30,6 @@ public:
 static RTreeConfig ParseOptions(const case_insensitive_map_t<Value> &options) {
 	RTreeConfig config = {};
 
-	config.max_node_capacity = 64;
-	config.min_node_capacity = 24;
-
 	const auto max_cap_param_search = options.find("max_node_capacity");
 	if (max_cap_param_search != options.end()) {
 		const auto val = max_cap_param_search->second.GetValue<int32_t>();
