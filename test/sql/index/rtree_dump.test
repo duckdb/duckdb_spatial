@@ -1,0 +1,20 @@
+require spatial
+
+statement ok
+CREATE TABLE t1 AS SELECT point::GEOMETRY as geom
+FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
+
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE (geom) WITH (max_node_capacity = 128, min_node_capacity = 64);
+
+query I
+SELECT count(*) from rtree_index_dump('my_idx');
+----
+100789
+
+query II
+SELECT count(*), level from rtree_index_dump('my_idx') GROUP BY level ORDER BY level;
+----
+7	0
+782	1
+100000	2

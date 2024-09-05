@@ -80,7 +80,7 @@ template <class VERTEX>
 struct SerializeOp {
 	static constexpr uint32_t MAX_DEPTH = 256;
 
-	static void SerializeVertices(const Geometry &verts, Cursor &cursor, BoundingBox &bbox, bool update_bounds) {
+	static void SerializeVertices(const Geometry &verts, Cursor &cursor, Box<VERTEX> &bbox, bool update_bounds) {
 		// Write the vertex data
 		auto byte_size = SinglePartGeometry::ByteSize(verts);
 		memcpy(cursor.GetPtr(), verts.GetData(), byte_size);
@@ -95,7 +95,7 @@ struct SerializeOp {
 		}
 	}
 
-	static void Case(Geometry::Tags::Point, const Geometry &point, Cursor &cursor, BoundingBox &bbox, uint32_t depth) {
+	static void Case(Geometry::Tags::Point, const Geometry &point, Cursor &cursor, Box<VERTEX> &bbox, uint32_t depth) {
 		D_ASSERT(point.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(point.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -110,7 +110,7 @@ struct SerializeOp {
 		SerializeVertices(point, cursor, bbox, depth != 0);
 	}
 
-	static void Case(Geometry::Tags::LineString, const Geometry &linestring, Cursor &cursor, BoundingBox &bbox,
+	static void Case(Geometry::Tags::LineString, const Geometry &linestring, Cursor &cursor, Box<VERTEX> &bbox,
 	                 uint32_t) {
 		D_ASSERT(linestring.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(linestring.GetProperties().HasM() == VERTEX::HAS_M);
@@ -125,7 +125,7 @@ struct SerializeOp {
 		SerializeVertices(linestring, cursor, bbox, true);
 	}
 
-	static void Case(Geometry::Tags::Polygon, const Geometry &polygon, Cursor &cursor, BoundingBox &bbox, uint32_t) {
+	static void Case(Geometry::Tags::Polygon, const Geometry &polygon, Cursor &cursor, Box<VERTEX> &bbox, uint32_t) {
 		D_ASSERT(polygon.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(polygon.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -153,7 +153,7 @@ struct SerializeOp {
 		}
 	}
 
-	static void Case(Geometry::Tags::MultiPoint, const Geometry &multipoint, Cursor &cursor, BoundingBox &bbox,
+	static void Case(Geometry::Tags::MultiPoint, const Geometry &multipoint, Cursor &cursor, Box<VERTEX> &bbox,
 	                 uint32_t depth) {
 		D_ASSERT(multipoint.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(multipoint.GetProperties().HasM() == VERTEX::HAS_M);
@@ -171,7 +171,7 @@ struct SerializeOp {
 	}
 
 	static void Case(Geometry::Tags::MultiLineString, const Geometry &multilinestring, Cursor &cursor,
-	                 BoundingBox &bbox, uint32_t depth) {
+	                 Box<VERTEX> &bbox, uint32_t depth) {
 		D_ASSERT(multilinestring.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(multilinestring.GetProperties().HasM() == VERTEX::HAS_M);
 
@@ -187,7 +187,7 @@ struct SerializeOp {
 		}
 	}
 
-	static void Case(Geometry::Tags::MultiPolygon, const Geometry &multipolygon, Cursor &cursor, BoundingBox &bbox,
+	static void Case(Geometry::Tags::MultiPolygon, const Geometry &multipolygon, Cursor &cursor, Box<VERTEX> &bbox,
 	                 uint32_t depth) {
 		D_ASSERT(multipolygon.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(multipolygon.GetProperties().HasM() == VERTEX::HAS_M);
@@ -204,7 +204,7 @@ struct SerializeOp {
 		}
 	}
 
-	static void Case(Geometry::Tags::GeometryCollection, const Geometry &collection, Cursor &cursor, BoundingBox &bbox,
+	static void Case(Geometry::Tags::GeometryCollection, const Geometry &collection, Cursor &cursor, Box<VERTEX> &bbox,
 	                 uint32_t depth) {
 		D_ASSERT(collection.GetProperties().HasZ() == VERTEX::HAS_Z);
 		D_ASSERT(collection.GetProperties().HasM() == VERTEX::HAS_M);
@@ -227,6 +227,38 @@ struct SerializeOp {
 		}
 	}
 };
+
+template <class V>
+void SerializeTemplated(const Geometry &geom, Cursor &cursor, bool has_bbox, uint32_t bbox_size) {
+
+	// All geometries except points have a bounding box
+	Box<V> bbox;
+	// skip the bounding box for now
+	// we will come back and write it later
+	auto bbox_ptr = cursor.GetPtr();
+	cursor.Skip(bbox_size);
+
+	// Serialize the geometry
+	Geometry::Match<SerializeOp<V>>(geom, cursor, bbox, 0);
+
+	// Now write the bounding box
+	if (has_bbox) {
+		cursor.SetPtr(bbox_ptr);
+		// We serialize the bounding box as floats to save space, but ensure that the bounding box is
+		// still large enough to contain the original double values by rounding up and down
+		// TODO: If we ever break storage, swap the order of these so that its minx/maxx/miny/maxy
+		cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.min.x));
+		cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.min.y));
+		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.max.x));
+		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.max.y));
+
+		// Write the extra M and Z values, if needed
+		for (idx_t i = 2; i < V::SIZE; i++) {
+			cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.min[i]));
+			cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.max[i]));
+		}
+	}
+}
 
 geometry_t Geometry::Serialize(const Geometry &geom, Vector &result) {
 	auto type = geom.GetType();
@@ -263,42 +295,16 @@ geometry_t Geometry::Serialize(const Geometry &geom, Vector &result) {
 	// Pad with 4 bytes (we might want to use this to store SRID in the future)
 	cursor.Write<uint32_t>(0);
 
-	// All geometries except points have a bounding box
-	BoundingBox bbox;
-	auto bbox_ptr = cursor.GetPtr();
-
-	// skip the bounding box for now
-	// we will come back and write it later
-	cursor.Skip(bbox_size);
-
 	if (has_z && has_m) {
-		Geometry::Match<SerializeOp<VertexXYZM>>(geom, cursor, bbox, 0);
+		SerializeTemplated<VertexXYZM>(geom, cursor, has_bbox, bbox_size);
 	} else if (has_z) {
-		Geometry::Match<SerializeOp<VertexXYZ>>(geom, cursor, bbox, 0);
+		SerializeTemplated<VertexXYZ>(geom, cursor, has_bbox, bbox_size);
 	} else if (has_m) {
-		Geometry::Match<SerializeOp<VertexXYM>>(geom, cursor, bbox, 0);
+		SerializeTemplated<VertexXYM>(geom, cursor, has_bbox, bbox_size);
 	} else {
-		Geometry::Match<SerializeOp<VertexXY>>(geom, cursor, bbox, 0);
+		SerializeTemplated<VertexXY>(geom, cursor, has_bbox, bbox_size);
 	}
 
-	// Now write the bounding box
-	if (has_bbox) {
-		cursor.SetPtr(bbox_ptr);
-		// We serialize the bounding box as floats to save space, but ensure that the bounding box is
-		// still large enough to contain the original double values by rounding up and down
-		cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.minx));
-		cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.miny));
-		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxx));
-		cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxy));
-		if (has_z) {
-			cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.minz));
-			cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxz));
-		}
-		if (has_m) {
-			cursor.Write<float>(MathUtil::DoubleToFloatDown(bbox.minm));
-			cursor.Write<float>(MathUtil::DoubleToFloatUp(bbox.maxm));
-		}
-	}
 	blob.Finalize();
 	return geometry_t(blob);
 }

@@ -68,6 +68,11 @@ else
 		BUILD_FLAGS += -DBUILD_SHELL=0
 	endif
 endif
+
+ifeq (${BUILD_BENCHMARK}, 1)
+	BUILD_FLAGS += -DBUILD_BENCHMARKS=1
+endif
+
 CLIENT_FLAGS:=
 
 #### Main build
@@ -94,6 +99,11 @@ release:
 	mkdir -p build/release && \
 	cmake $(GENERATOR) $(BUILD_FLAGS)  $(CLIENT_FLAGS)  -DCMAKE_BUILD_TYPE=Release -S ./duckdb/ -B build/release && \
 	cmake --build build/release --config Release
+
+reldebug:
+	mkdir -p build/reldebug && \
+	cmake $(GENERATOR) $(BUILD_FLAGS)  $(CLIENT_FLAGS)  -DCMAKE_BUILD_TYPE=RelWithDebInfo -S ./duckdb/ -B build/reldebug && \
+	cmake --build build/reldebug --config RelWithDebInfo
 
 ##### Client build
 JS_BUILD_FLAGS=-DBUILD_NODE=1 -DDUCKDB_EXTENSION_${EXTENSION_NAME}_SHOULD_LINK=0

@@ -221,6 +221,22 @@ static bool Box2DToGeometryCast(Vector &source, Vector &result, idx_t count, Cas
 	return true;
 }
 
+static bool Box2DFToGeometryCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	auto &lstate = GeometryFunctionLocalState::ResetAndGet(parameters);
+	auto &arena = lstate.arena;
+	using BOX_TYPE = StructTypeQuaternary<float, float, float, float>;
+	using GEOMETRY_TYPE = PrimitiveType<geometry_t>;
+	GenericExecutor::ExecuteUnary<BOX_TYPE, GEOMETRY_TYPE>(source, result, count, [&](BOX_TYPE &box) {
+		auto minx = box.a_val;
+		auto miny = box.b_val;
+		auto maxx = box.c_val;
+		auto maxy = box.d_val;
+		auto polygon = Polygon::CreateFromBox(arena, minx, miny, maxx, maxy);
+		return Geometry::Serialize(polygon, result);
+	});
+	return true;
+}
+
 //------------------------------------------------------------------------------
 //  Register functions
 //------------------------------------------------------------------------------
@@ -249,6 +265,10 @@ void CoreCastFunctions::RegisterGeometryCasts(DatabaseInstance &db) {
 	ExtensionUtil::RegisterCastFunction(
 	    db, GeoTypes::BOX_2D(), GeoTypes::GEOMETRY(),
 	    BoundCastInfo(Box2DToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
+
+	ExtensionUtil::RegisterCastFunction(
+	    db, GeoTypes::BOX_2DF(), GeoTypes::GEOMETRY(),
+	    BoundCastInfo(Box2DFToGeometryCast, nullptr, GeometryFunctionLocalState::InitCast), 1);
 }
 
 } // namespace core

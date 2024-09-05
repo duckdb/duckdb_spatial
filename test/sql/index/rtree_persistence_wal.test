@@ -1,0 +1,37 @@
+require spatial
+
+# Create a persistent database
+load rtree_persistence_wal_test.db
+
+statement ok
+PRAGMA disable_checkpoint_on_shutdown;
+
+statement ok
+CREATE TABLE t1 AS SELECT point::GEOMETRY as geom
+FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
+
+query I
+SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+----
+43
+
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE (geom);
+
+query II
+EXPLAIN SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+----
+physical_plan	<REGEX>:.*RTREE_INDEX_SCAN.*
+
+restart
+
+# We should still have the index
+query II
+EXPLAIN SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+----
+physical_plan	<REGEX>:.*RTREE_INDEX_SCAN.*
+
+query I
+SELECT count(*) FROM t1 WHERE ST_Within(geom, ST_MakeEnvelope(450, 450, 650, 650));
+----
+43

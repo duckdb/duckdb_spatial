@@ -1,0 +1,15 @@
+require spatial
+
+statement ok
+CREATE TABLE t1(i INT, g GEOMETRY);
+
+statement ok
+INSERT INTO t1 VALUES (1, ST_Point(0.5, 0.5));
+
+statement ok
+CREATE INDEX my_idx ON t1 USING RTREE(g);
+
+query I
+SELECT COUNT(*) FROM t1 WHERE st_intersects(g, st_makeenvelope(0, 0, 1, 1));
+----
+1

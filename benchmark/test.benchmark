@@ -1,0 +1,17 @@
+# name: benchmarks/test.benchmark
+# description: Compare RTree index scan
+# group: [test]
+
+name test
+group test
+
+require spatial
+
+load
+CREATE TABLE t1 as SELECT 1
+
+run
+SELECT count(*) FROM t1;
+
+result I
+1

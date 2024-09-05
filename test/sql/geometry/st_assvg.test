@@ -1,0 +1,69 @@
+require spatial
+
+statement ok
+CREATE TABLE types (i INT, geom GEOMETRY);
+
+statement ok
+INSERT INTO types VALUES
+    (1, ST_GeomFromText('POINT EMPTY')),
+    (2, ST_GeomFromText('POINT(0 0)')),
+    (3, ST_GeomFromText('LINESTRING EMPTY')),
+    (4, ST_GeomFromText('LINESTRING(0 0, 1 1)')),
+    (5, ST_GeomFromText('POLYGON EMPTY')),
+    (6, ST_GeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))')),
+    (7, ST_GeomFromText('MULTIPOINT EMPTY')),
+    (8, ST_GeomFromText('MULTIPOINT(0 0, 1 1)')),
+    (9, ST_GeomFromText('MULTILINESTRING EMPTY')),
+    (10, ST_GeomFromText('MULTILINESTRING((0 0, 1 1), (2 2, 3 3))')),
+    (11, ST_GeomFromText('MULTIPOLYGON EMPTY')),
+    (12, ST_GeomFromText('MULTIPOLYGON(((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))')),
+    (13, ST_GeomFromText('GEOMETRYCOLLECTION EMPTY')),
+    (14, ST_GeomFromText('GEOMETRYCOLLECTION(POINT(0 0), LINESTRING(0 0, 1 1))'));
+
+
+query II
+SELECT i, ST_AsSVG(geom, false, 15) FROM types ORDER BY i;
+----
+1	(empty)
+2	cx="0" cy="0"
+3	(empty)
+4	M 0 0 L 1 -1
+5	(empty)
+6	M 0 0 L 1 0 1 -1 0 -1 Z
+7	(empty)
+8	cx="0" cy="0",cx="1" cy="-1"
+9	(empty)
+10	M 0 0 L 1 -1 M 2 -2 L 3 -3
+11	(empty)
+12	M 0 0 L 1 0 1 -1 0 -1 Z M 2 -2 L 3 -2 3 -3 2 -3 Z
+13	(empty)
+14	cx="0" cy="0";M 0 0 L 1 -1
+
+query II
+SELECT i, ST_AsSVG(geom, true, 15) FROM types ORDER BY i;
+----
+1	(empty)
+2	x="0" y="0"
+3	(empty)
+4	M 0 0 l 1 -1
+5	(empty)
+6	M 0 0 l 1 0 0 -1 -1 0 z
+7	(empty)
+8	x="0" y="0",x="1" y="-1"
+9	(empty)
+10	M 0 0 l 1 -1 M 2 -2 l 1 -1
+11	(empty)
+12	M 0 0 l 1 0 0 -1 -1 0 z M 2 -2 l 1 0 0 -1 -1 0 z
+13	(empty)
+14	x="0" y="0";M 0 0 l 1 -1
+
+query I
+SELECT ST_AsSVG('POLYGON((0 0, 0 1, 2 2, 5 5, 0 0))'::GEOMETRY, false, 15);
+----
+M 0 0 L 0 -1 2 -2 5 -5 Z
+
+query I
+SELECT ST_AsSVG('POLYGON((0 0, 0 1, 2 2, 5 5, 0 0))'::GEOMETRY, true, 15);
+----
+M 0 0 l 0 -1 2 -1 3 -3 z
+

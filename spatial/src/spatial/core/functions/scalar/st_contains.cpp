@@ -10,6 +10,9 @@ namespace core {
 //------------------------------------------------------------------------------
 // POLYGON_2D - POINT_2D
 //------------------------------------------------------------------------------
+
+enum class Side { LEFT, RIGHT, ON };
+
 static void PointInPolygonOperation(Vector &in_point, Vector &in_polygon, Vector &result, idx_t count) {
 
 	in_polygon.Flatten(count);

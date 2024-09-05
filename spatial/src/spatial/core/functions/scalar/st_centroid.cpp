@@ -165,6 +165,7 @@ static void PolygonCentroidFunction(DataChunk &args, ExpressionState &state, Vec
 //------------------------------------------------------------------------------
 // BOX_2D
 //------------------------------------------------------------------------------
+template <class T>
 static void BoxCentroidFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	// using BOX_TYPE = StructTypeQuaternary<double, double, double, double>;
 	// using POINT_TYPE = StructTypeBinary<double, double>;
@@ -174,10 +175,10 @@ static void BoxCentroidFunction(DataChunk &args, ExpressionState &state, Vector 
 	UnifiedVectorFormat format;
 	input.ToUnifiedFormat(count, format);
 	auto &box_children = StructVector::GetEntries(input);
-	auto minx_data = FlatVector::GetData<double>(*box_children[0]);
-	auto miny_data = FlatVector::GetData<double>(*box_children[1]);
-	auto maxx_data = FlatVector::GetData<double>(*box_children[2]);
-	auto maxy_data = FlatVector::GetData<double>(*box_children[3]);
+	auto minx_data = FlatVector::GetData<T>(*box_children[0]);
+	auto miny_data = FlatVector::GetData<T>(*box_children[1]);
+	auto maxx_data = FlatVector::GetData<T>(*box_children[2]);
+	auto maxy_data = FlatVector::GetData<T>(*box_children[3]);
 
 	auto &centroid_children = StructVector::GetEntries(result);
 	auto centroid_x_data = FlatVector::GetData<double>(*centroid_children[0]);
@@ -205,7 +206,8 @@ void CoreScalarFunctions::RegisterStCentroid(DatabaseInstance &db) {
 	set.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, GeoTypes::POINT_2D(), PointCentroidFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::LINESTRING_2D()}, GeoTypes::POINT_2D(), LineStringCentroidFunction));
 	set.AddFunction(ScalarFunction({GeoTypes::POLYGON_2D()}, GeoTypes::POINT_2D(), PolygonCentroidFunction));
-	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, GeoTypes::POINT_2D(), BoxCentroidFunction<double>));
+	set.AddFunction(ScalarFunction({GeoTypes::BOX_2DF()}, GeoTypes::POINT_2D(), BoxCentroidFunction<float>));
 
 	ExtensionUtil::RegisterFunction(db, set);
 }

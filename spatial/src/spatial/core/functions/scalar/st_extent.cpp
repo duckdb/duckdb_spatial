@@ -6,6 +6,8 @@
 #include "spatial/core/functions/scalar.hpp"
 #include "spatial/core/geometry/geometry.hpp"
 #include "spatial/core/types.hpp"
+#include "spatial/core/util/math.hpp"
+#include "spatial/core/util/cursor.hpp"
 
 namespace spatial {
 
@@ -23,10 +25,11 @@ static double ReadDouble(const bool le, Cursor &cursor) {
 static uint32_t ReadInt(const bool le, Cursor &cursor) {
 	return le ? cursor.Read<uint32_t>() : cursor.ReadBigEndian<uint32_t>();
 }
-static void ReadWKB(Cursor &cursor, BoundingBox &bbox);
+
+static void ReadWKB(Cursor &cursor, Box2D<double> &bbox);
 
 static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const bool has_m, Cursor &cursor,
-                    BoundingBox &bbox) {
+                    Box2D<double> &bbox) {
 	switch (type) {
 	case 1: { // POINT
 		// Points are special in that they can be all-nan (empty)
@@ -39,7 +42,7 @@ static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const 
 			}
 		}
 		if (!all_nan) {
-			bbox.Stretch(coords[0], coords[1]);
+			bbox.Stretch(PointXY<double>(coords[0], coords[1]));
 		}
 	} break;
 	case 2: { // LINESTRING
@@ -53,7 +56,7 @@ static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const 
 			if (has_m) {
 				ReadDouble(le, cursor);
 			}
-			bbox.Stretch(x, y);
+			bbox.Stretch(PointXY<double>(x, y));
 		}
 	} break;
 	case 3: { // POLYGON
@@ -69,7 +72,7 @@ static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const 
 				if (has_m) {
 					ReadDouble(le, cursor);
 				}
-				bbox.Stretch(x, y);
+				bbox.Stretch(PointXY<double>(x, y));
 			}
 		}
 	} break;
@@ -87,7 +90,7 @@ static void ReadWKB(const bool le, const uint32_t type, const bool has_z, const 
 	}
 }
 
-static void ReadWKB(Cursor &cursor, BoundingBox &bbox) {
+static void ReadWKB(Cursor &cursor, Box2D<double> &bbox) {
 	const auto le = ReadByte(cursor);
 	const auto type = ReadInt(le, cursor);
 
@@ -112,10 +115,10 @@ static void WKBExtFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	using WKB_TYPE = PrimitiveType<string_t>;
 
 	GenericExecutor::ExecuteUnary<WKB_TYPE, BOX_TYPE>(args.data[0], result, count, [&](const WKB_TYPE &wkb) {
-		BoundingBox bbox;
+		Box2D<double> bbox;
 		Cursor cursor(wkb.val);
 		ReadWKB(cursor, bbox);
-		return BOX_TYPE {bbox.minx, bbox.miny, bbox.maxx, bbox.maxy};
+		return BOX_TYPE {bbox.min.x, bbox.min.y, bbox.max.x, bbox.max.y};
 	});
 }
 
@@ -136,19 +139,59 @@ static void ExtentFunction(DataChunk &args, ExpressionState &state, Vector &resu
 	input.ToUnifiedFormat(count, input_vdata);
 	auto input_data = UnifiedVectorFormat::GetData<geometry_t>(input_vdata);
 
-	BoundingBox bbox;
-
 	for (idx_t i = 0; i < count; i++) {
 		auto row_idx = input_vdata.sel->get_index(i);
 		if (input_vdata.validity.RowIsValid(row_idx)) {
 			auto &blob = input_data[row_idx];
 
 			// Try to get the cached bounding box from the blob
+			Box2D<double> bbox;
 			if (blob.TryGetCachedBounds(bbox)) {
-				min_x_data[i] = bbox.minx;
-				min_y_data[i] = bbox.miny;
-				max_x_data[i] = bbox.maxx;
-				max_y_data[i] = bbox.maxy;
+				min_x_data[i] = bbox.min.x;
+				min_y_data[i] = bbox.min.y;
+				max_x_data[i] = bbox.max.x;
+				max_y_data[i] = bbox.max.y;
+			} else {
+				// No bounding box, return null
+				FlatVector::SetNull(result, i, true);
+			}
+		} else {
+			// Null input, return null
+			FlatVector::SetNull(result, i, true);
+		}
+	}
+
+	if (input.GetVectorType() == VectorType::CONSTANT_VECTOR) {
+		result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	}
+}
+
+static void ExtentCachedFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+
+	auto count = args.size();
+	auto &input = args.data[0];
+	auto &struct_vec = StructVector::GetEntries(result);
+	auto min_x_data = FlatVector::GetData<float>(*struct_vec[0]);
+	auto min_y_data = FlatVector::GetData<float>(*struct_vec[1]);
+	auto max_x_data = FlatVector::GetData<float>(*struct_vec[2]);
+	auto max_y_data = FlatVector::GetData<float>(*struct_vec[3]);
+
+	UnifiedVectorFormat input_vdata;
+	input.ToUnifiedFormat(count, input_vdata);
+	const auto input_data = UnifiedVectorFormat::GetData<geometry_t>(input_vdata);
+
+	for (idx_t i = 0; i < count; i++) {
+		const auto row_idx = input_vdata.sel->get_index(i);
+		if (input_vdata.validity.RowIsValid(row_idx)) {
+			auto &blob = input_data[row_idx];
+
+			// Try to get the cached bounding box from the blob
+			Box2D<double> bbox;
+			if (blob.TryGetCachedBounds(bbox)) {
+				min_x_data[i] = MathUtil::DoubleToFloatDown(bbox.min.x);
+				min_y_data[i] = MathUtil::DoubleToFloatDown(bbox.min.y);
+				max_x_data[i] = MathUtil::DoubleToFloatUp(bbox.max.x);
+				max_y_data[i] = MathUtil::DoubleToFloatUp(bbox.max.y);
 			} else {
 				// No bounding box, return null
 				FlatVector::SetNull(result, i, true);
@@ -188,6 +231,11 @@ void CoreScalarFunctions::RegisterStExtent(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_Extent", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
+	ScalarFunctionSet approx_set("ST_Extent_Approx");
+	approx_set.AddFunction(
+	    ScalarFunction({GeoTypes::GEOMETRY()}, GeoTypes::BOX_2DF(), ExtentCachedFunction, nullptr, nullptr, nullptr));
+	ExtensionUtil::RegisterFunction(db, approx_set);
 }
 
 } // namespace core

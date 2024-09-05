@@ -92,7 +92,7 @@ public:
 		return Load<uint16_t>(const_data_ptr_cast(data.GetPrefix() + 2));
 	}
 
-	bool TryGetCachedBounds(BoundingBox &bbox) const {
+	bool TryGetCachedBounds(Box2D<double> &bbox) const {
 		Cursor cursor(data);
 
 		// Read the header
@@ -105,10 +105,10 @@ public:
 			cursor.Skip(4); // skip padding
 
 			// Now set the bounding box
-			bbox.minx = cursor.Read<float>();
-			bbox.miny = cursor.Read<float>();
-			bbox.maxx = cursor.Read<float>();
-			bbox.maxy = cursor.Read<float>();
+			bbox.min.x = cursor.Read<float>();
+			bbox.min.y = cursor.Read<float>();
+			bbox.max.x = cursor.Read<float>();
+			bbox.max.y = cursor.Read<float>();
 			return true;
 		}
 
@@ -128,10 +128,10 @@ public:
 
 			auto x = cursor.Read<double>();
 			auto y = cursor.Read<double>();
-			bbox.minx = x;
-			bbox.miny = y;
-			bbox.maxx = x;
-			bbox.maxy = y;
+			bbox.min.x = x;
+			bbox.min.y = y;
+			bbox.max.x = x;
+			bbox.max.y = y;
 			return true;
 		}
 		return false;

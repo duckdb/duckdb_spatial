@@ -271,6 +271,7 @@ void CoreScalarFunctions::RegisterStXMax(DatabaseInstance &db) {
 
 	ScalarFunctionSet st_xmax("ST_XMax");
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<2>));
+	st_xmax.AddFunction(ScalarFunction({GeoTypes::BOX_2DF()}, LogicalType::FLOAT, Box2DFunction<2>));
 	st_xmax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
 	st_xmax.AddFunction(
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<0, MaxOp>));
@@ -287,6 +288,7 @@ void CoreScalarFunctions::RegisterStXMin(DatabaseInstance &db) {
 
 	ScalarFunctionSet st_xmin("ST_XMin");
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<0>));
+	st_xmin.AddFunction(ScalarFunction({GeoTypes::BOX_2DF()}, LogicalType::FLOAT, Box2DFunction<0>));
 	st_xmin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<0>));
 	st_xmin.AddFunction(
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<0, MinOp>));
@@ -315,6 +317,7 @@ void CoreScalarFunctions::RegisterStYMax(DatabaseInstance &db) {
 
 	ScalarFunctionSet st_ymax("ST_YMax");
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<3>));
+	st_ymax.AddFunction(ScalarFunction({GeoTypes::BOX_2DF()}, LogicalType::FLOAT, Box2DFunction<3>));
 	st_ymax.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
 	st_ymax.AddFunction(
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<1, MaxOp>));
@@ -331,6 +334,7 @@ void CoreScalarFunctions::RegisterStYMin(DatabaseInstance &db) {
 
 	ScalarFunctionSet st_ymin("ST_YMin");
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::BOX_2D()}, LogicalType::DOUBLE, Box2DFunction<1>));
+	st_ymin.AddFunction(ScalarFunction({GeoTypes::BOX_2DF()}, LogicalType::FLOAT, Box2DFunction<1>));
 	st_ymin.AddFunction(ScalarFunction({GeoTypes::POINT_2D()}, LogicalType::DOUBLE, Point2DFunction<1>));
 	st_ymin.AddFunction(
 	    ScalarFunction({GeoTypes::LINESTRING_2D()}, LogicalType::DOUBLE, LineString2DFunction<1, MinOp>));
