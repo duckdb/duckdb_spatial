@@ -220,8 +220,13 @@ protected:
 public:
 	RESULT Process(const geometry_t &geom, ARGS... args) {
 
-		has_z = geom.GetProperties().HasZ();
-		has_m = geom.GetProperties().HasM();
+		const auto props = geom.GetProperties();
+
+		// Check the version
+		props.CheckVersion();
+
+		has_z = props.HasZ();
+		has_m = props.HasM();
 		nesting_level = 0;
 		current_type = geom.GetType();
 		parent_type = GeometryType::POINT;
