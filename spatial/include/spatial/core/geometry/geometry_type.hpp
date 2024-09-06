@@ -84,7 +84,10 @@ public:
 
 	GeometryType GetType() const {
 		// return the type
-		return Load<GeometryType>(const_data_ptr_cast(data.GetPrefix()));
+		const auto type = Load<GeometryType>(const_data_ptr_cast(data.GetPrefix()));
+		const auto props = Load<GeometryProperties>(const_data_ptr_cast(data.GetPrefix() + 1));
+		props.CheckVersion();
+		return type;
 	}
 
 	GeometryProperties GetProperties() const {
