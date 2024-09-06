@@ -79,7 +79,7 @@ inline uint32_t HilbertEncode(uint32_t n, uint32_t x, uint32_t y) {
 
 static uint32_t FloatToUint32(float f)
 {
-	if (isnan(f)) {
+	if (std::isnan(f)) {
 		return 0xFFFFFFFF;
 	}
 	uint32_t res;
