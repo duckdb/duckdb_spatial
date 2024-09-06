@@ -285,20 +285,17 @@ static void AddIndexToCatalog(ClientContext &context, CreateRTreeIndexGlobalStat
 
 	// Create the index entry in the catalog
 	auto &schema = table.schema;
-	const auto index_entry = schema.CreateIndex(context, info, table).get();
-	if (!index_entry) {
-		D_ASSERT(info.on_conflict == OnCreateConflict::IGNORE_ON_CONFLICT);
-		// index already exists, but error ignored because of IF NOT EXISTS
-		return;
+
+	if (schema.GetEntry(schema.GetCatalogTransaction(context), CatalogType::INDEX_ENTRY, info.index_name)) {
+		if (info.on_conflict != OnCreateConflict::IGNORE_ON_CONFLICT) {
+			throw CatalogException("Index with name \"%s\" already exists", info.index_name);
+		}
 	}
 
-	// Get the entry as a DuckIndexEntry
+	const auto index_entry = schema.CreateIndex(schema.GetCatalogTransaction(context), info, table).get();
+	D_ASSERT(index_entry);
 	auto &duck_index = index_entry->Cast<DuckIndexEntry>();
 	duck_index.initial_index_size = gstate.rtree->Cast<BoundIndex>().GetInMemorySize();
-	duck_index.info = make_uniq<IndexDataTableInfo>(storage.GetDataTableInfo(), duck_index.name);
-	for (auto &parsed_expr : info.parsed_expressions) {
-		duck_index.parsed_expressions.push_back(parsed_expr->Copy());
-	}
 
 	// Finally add it to storage
 	storage.AddIndex(std::move(gstate.rtree));
