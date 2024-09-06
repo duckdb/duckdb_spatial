@@ -1,0 +1,49 @@
+require spatial
+
+statement ok
+CREATE TABLE t1 (id int, geom GEOMETRY);
+
+statement ok
+CREATE OR REPLACE TABLE points AS SELECT row_number() over () as id, geom::GEOMETRY as geom
+FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 1000, 1337) as pts(geom);
+
+statement ok
+CREATE INDEX my_idx ON points USING RTREE(geom);
+
+
+# Test different projections
+query II rowsort
+SELECT * FROM points WHERE ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500));
+----
+351	POINT (359.812940005213 406.6655575297773)
+472	POINT (169.11179292947054 129.24372218549252)
+775	POINT (173.61568519845605 455.52933821454644)
+
+query II rowsort
+SELECT geom, id FROM points WHERE ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500));
+----
+POINT (169.11179292947054 129.24372218549252)	472
+POINT (173.61568519845605 455.52933821454644)	775
+POINT (359.812940005213 406.6655575297773)	351
+
+query I rowsort
+SELECT id FROM points WHERE ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500));
+----
+351
+472
+775
+
+query III rowsort
+SELECT id, geom, ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500)) as contained FROM points WHERE ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500));
+----
+351	POINT (359.812940005213 406.6655575297773)	true
+472	POINT (169.11179292947054 129.24372218549252)	true
+775	POINT (173.61568519845605 455.52933821454644)	true
+
+query I rowsort
+SELECT ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500)) as contained FROM points WHERE ST_Intersects(geom, ST_MakeEnvelope(0, 0, 500, 500));
+----
+true
+true
+true
+
