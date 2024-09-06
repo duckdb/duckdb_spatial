@@ -231,7 +231,7 @@ ExternalProject_Add(
     DEPENDS ${GDAL_DEPENDENCIES}
     URL ${CMAKE_CURRENT_SOURCE_DIR}/vendor/gdal385.zip
     CONFIGURE_HANDLED_BY_BUILD TRUE
-    PATCH_COMMAND patch -p1 < "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler${PATCH_NAME_ENDING}.patch"
+    PATCH_COMMAND patch -p1 -i "${CMAKE_CURRENT_LIST_DIR}/patches/remove_filehandler${PATCH_NAME_ENDING}.patch" && patch -p1 -i "${CMAKE_CURRENT_LIST_DIR}/patches/msyspatch${PATCH_NAME_ENDING}.patch"
     CMAKE_ARGS
     # CMake options
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
