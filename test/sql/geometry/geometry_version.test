@@ -1,0 +1,27 @@
+# Query a database with geometry types created in duckdb v1.0.0
+require spatial
+
+statement ok
+attach 'test/data/duckdb_v1_0_0.db' as db;
+
+statement ok
+use db
+
+query IIII rowsort
+SELECT st_geometrytype(geom), st_astext(geom), st_isvalid(geom), st_area(geom) FROM types;
+----
+GEOMETRYCOLLECTION	GEOMETRYCOLLECTION (POINT (0 0), LINESTRING (0 0, 1 1))	true	0.0
+GEOMETRYCOLLECTION	GEOMETRYCOLLECTION EMPTY	true	0.0
+LINESTRING	LINESTRING (0 0, 1 1)	true	0.0
+LINESTRING	LINESTRING EMPTY	true	0.0
+MULTILINESTRING	MULTILINESTRING ((0 0, 1 1), (2 2, 3 3))	true	0.0
+MULTILINESTRING	MULTILINESTRING EMPTY	true	0.0
+MULTIPOINT	MULTIPOINT (0 0, 1 1)	true	0.0
+MULTIPOINT	MULTIPOINT EMPTY	true	0.0
+MULTIPOLYGON	MULTIPOLYGON (((0 0, 1 0, 1 1, 0 1, 0 0)), ((2 2, 3 2, 3 3, 2 3, 2 2)))	true	2.0
+MULTIPOLYGON	MULTIPOLYGON EMPTY	true	0.0
+POINT	POINT (0 0)	true	0.0
+POINT	POINT EMPTY	true	0.0
+POLYGON	POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))	true	1.0
+POLYGON	POLYGON EMPTY	true	0.0
+
