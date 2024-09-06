@@ -83,13 +83,15 @@ public:
 	}
 
 	GeometryType GetType() const {
+		// return the type
 		return Load<GeometryType>(const_data_ptr_cast(data.GetPrefix()));
 	}
+
 	GeometryProperties GetProperties() const {
-		return Load<GeometryProperties>(const_data_ptr_cast(data.GetPrefix() + 1));
-	}
-	uint16_t GetHash() const {
-		return Load<uint16_t>(const_data_ptr_cast(data.GetPrefix() + 2));
+		const auto props = Load<GeometryProperties>(const_data_ptr_cast(data.GetPrefix() + 1));
+		// Check the version
+		props.CheckVersion();
+		return props;
 	}
 
 	bool TryGetCachedBounds(Box2D<double> &bbox) const {
@@ -100,6 +102,9 @@ public:
 		auto properties = cursor.Read<GeometryProperties>();
 		auto hash = cursor.Read<uint16_t>();
 		(void)hash;
+
+		// Check the version
+		properties.CheckVersion();
 
 		if (properties.HasBBox()) {
 			cursor.Skip(4); // skip padding
