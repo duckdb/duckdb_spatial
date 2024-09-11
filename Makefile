@@ -79,17 +79,6 @@ CLIENT_FLAGS:=
 # For regular CLI build, we link the spatial extension directly into the DuckDB executable
 CLIENT_FLAGS=-DDUCKDB_EXTENSION_${EXTENSION_NAME}_SHOULD_LINK=1
 
-
-# These flags will make DuckDB build the extension
-EXTENSION_FLAGS=\
--DENABLE_SANITIZER=OFF \
--DDUCKDB_EXTENSION_NAMES="spatial" \
--DDUCKDB_EXTENSION_SPATIAL_PATH="$(PROJ_DIR)" \
--DDUCKDB_EXTENSION_SPATIAL_SHOULD_LINK=1 \
--DDUCKDB_EXTENSION_SPATIAL_LOAD_TESTS=1 \
--DDUCKDB_EXTENSION_SPATIAL_TEST_PATH="$(PROJ_DIR)test" \
--DDUCKDB_EXTENSION_SPATIAL_INCLUDE_PATH="$(PROJ_DIR)spatial/include" \
-
 debug:
 	mkdir -p  build/debug && \
 	cmake $(GENERATOR) $(BUILD_FLAGS) $(CLIENT_FLAGS) -DCMAKE_BUILD_TYPE=Debug -S ./duckdb/ -B build/debug && \
