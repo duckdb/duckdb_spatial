@@ -22,16 +22,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  duckdb-stable-build:
+  duckdb-latest-build:
     name: Build extension binaries
-    uses: ./.github/workflows/_extension_distribution.yml
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
     with:
       duckdb_version: main
       extension_name: spatial
 
-  duckdb-stable-deploy:
+  duckdb-latest-deploy:
     name: Deploy extension binaries
-    needs: duckdb-stable-build
+    needs: duckdb-latest-build
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@main
     secrets: inherit
     with:
