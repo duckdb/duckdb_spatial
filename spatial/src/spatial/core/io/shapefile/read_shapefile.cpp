@@ -434,7 +434,7 @@ static void ConvertStringAttributeLoop(Vector &result, int record_start, idx_t c
 			auto string_bytes = DBFReadStringAttribute(dbf_handle, record_idx, field_idx);
 			string_t result_str;
 			if (attribute_encoding == AttributeEncoding::LATIN1) {
-				conversion_buffer.reserve(strlen(string_bytes) * 2 + 1); // worst case (all non-ascii chars)
+				conversion_buffer.resize(strlen(string_bytes) * 2 + 1); // worst case (all non-ascii chars)
 				auto out_len =
 				    EncodingUtil::LatinToUTF8Buffer(const_data_ptr_cast(string_bytes), conversion_buffer.data());
 				result_str = StringVector::AddString(result, const_char_ptr_cast(conversion_buffer.data()), out_len);
