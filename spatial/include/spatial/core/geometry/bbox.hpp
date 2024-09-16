@@ -21,6 +21,10 @@ struct Box {
 	Box(const V &min_p, const V &max_p) : min(min_p), max(max_p) {
 	}
 
+	bool IsUnbounded() const {
+		return *this == Box();
+	}
+
 	// Only does a 2D intersection check
 	bool Intersects(const Box &other) const {
 		return !(min.x > other.max.x || max.x < other.min.x || min.y > other.max.y || max.y < other.min.y);

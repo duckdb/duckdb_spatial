@@ -86,6 +86,9 @@ public:
 	RTreePointer MakePage(RTreeNodeType type) const;
 	static RTreePointer MakeRowId(row_t row_id);
 
+	string ToString() const;
+	void Print() const;
+
 private:
 	void Free(RTreePointer &pointer);
 
