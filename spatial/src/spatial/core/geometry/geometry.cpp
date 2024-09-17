@@ -79,14 +79,14 @@ void SinglePartGeometry::SetVertexType(Geometry &geom, ArenaAllocator &alloc, bo
 		MakeMutable(geom, alloc);
 	}
 
-	auto used_to_have_z = geom.properties.HasZ();
-	auto used_to_have_m = geom.properties.HasM();
-	auto old_vertex_size = geom.properties.VertexSize();
+	const auto used_to_have_z = geom.properties.HasZ();
+	const auto used_to_have_m = geom.properties.HasM();
+	const auto old_vertex_size = geom.properties.VertexSize();
 
 	geom.properties.SetZ(has_z);
 	geom.properties.SetM(has_m);
 
-	auto new_vertex_size = geom.properties.VertexSize();
+	const auto new_vertex_size = geom.properties.VertexSize();
 	// Case 1: The new vertex size is larger than the old vertex size
 	if (new_vertex_size > old_vertex_size) {
 		geom.data_ptr = alloc.ReallocateAligned(geom.data_ptr, geom.data_count * old_vertex_size,
@@ -97,24 +97,24 @@ void SinglePartGeometry::SetVertexType(Geometry &geom, ArenaAllocator &alloc, bo
 			// 1. We go from XYM to XYZM
 			// This is special, because we need to slide the M value to the end of each vertex
 			for (int64_t i = geom.data_count - 1; i >= 0; i--) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
-				auto old_m_offset = old_offset + sizeof(double) * 2;
-				auto new_z_offset = new_offset + sizeof(double) * 2;
-				auto new_m_offset = new_offset + sizeof(double) * 3;
+				const auto old_offset = i * old_vertex_size;
+				const auto new_offset = i * new_vertex_size;
+				const auto old_m_offset = old_offset + sizeof(double) * 2;
+				const auto new_z_offset = new_offset + sizeof(double) * 2;
+				const auto new_m_offset = new_offset + sizeof(double) * 3;
 				// Move the M value
 				memcpy(geom.data_ptr + new_m_offset, geom.data_ptr + old_m_offset, sizeof(double));
 				// Set the new Z value
 				memcpy(geom.data_ptr + new_z_offset, &default_z, sizeof(double));
 				// Move the X and Y values
-				memcpy(geom.data_ptr + new_offset, geom.data_ptr + old_offset, sizeof(double) * 2);
+				memmove(geom.data_ptr + new_offset, geom.data_ptr + old_offset, sizeof(double) * 2);
 			}
 		} else if (!used_to_have_z && has_z && !used_to_have_m && has_m) {
 			// 2. We go from XY to XYZM
 			// This is special, because we need to add both the default Z and M values to the end of each vertex
 			for (int64_t i = geom.data_count - 1; i >= 0; i--) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
+				const auto old_offset = i * old_vertex_size;
+				const auto new_offset = i * new_vertex_size;
 				memcpy(geom.data_ptr + new_offset, geom.data_ptr + old_offset, sizeof(double) * 2);
 				memcpy(geom.data_ptr + new_offset + sizeof(double) * 2, &default_z, sizeof(double));
 				memcpy(geom.data_ptr + new_offset + sizeof(double) * 3, &default_m, sizeof(double));
@@ -125,10 +125,10 @@ void SinglePartGeometry::SetVertexType(Geometry &geom, ArenaAllocator &alloc, bo
 			// 4. We go from XY to XYM
 			// 5. We go from XYZ to XYZM
 			// These are all really the same, we just add the default to the end
-			auto default_value = has_m ? default_m : default_z;
+			const auto default_value = has_m ? default_m : default_z;
 			for (int64_t i = geom.data_count - 1; i >= 0; i--) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
+				const auto old_offset = i * old_vertex_size;
+				const auto new_offset = i * new_vertex_size;
 				memmove(geom.data_ptr + new_offset, geom.data_ptr + old_offset, old_vertex_size);
 				memcpy(geom.data_ptr + new_offset + old_vertex_size, &default_value, sizeof(double));
 			}
@@ -138,9 +138,9 @@ void SinglePartGeometry::SetVertexType(Geometry &geom, ArenaAllocator &alloc, bo
 	else if (new_vertex_size == old_vertex_size) {
 		// This only happens when we go from XYZ -> XYM or XYM -> XYZ
 		// In this case we just need to set the default on the third dimension
-		auto default_value = has_m ? default_m : default_z;
+		const auto default_value = has_m ? default_m : default_z;
 		for (uint32_t i = 0; i < geom.data_count; i++) {
-			auto offset = i * new_vertex_size + sizeof(double) * 2;
+			const auto offset = i * new_vertex_size + sizeof(double) * 2;
 			memcpy(geom.data_ptr + offset, &default_value, sizeof(double));
 		}
 	}
@@ -153,17 +153,17 @@ void SinglePartGeometry::SetVertexType(Geometry &geom, ArenaAllocator &alloc, bo
 		// Special case: If we go from XYZM to XYM, we need to slide the M value to the end of each vertex
 		if (used_to_have_z && used_to_have_m && !has_z && has_m) {
 			for (uint32_t i = 0; i < geom.data_count; i++) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
+				const auto old_offset = i * old_vertex_size;
+				const auto new_offset = i * new_vertex_size;
 				memcpy(new_data + new_offset, geom.data_ptr + old_offset, sizeof(double) * 2);
-				auto m_offset = old_offset + sizeof(double) * 3;
+				const auto m_offset = old_offset + sizeof(double) * 3;
 				memcpy(new_data + new_offset + sizeof(double) * 2, geom.data_ptr + m_offset, sizeof(double));
 			}
 		} else {
 			// Otherwise, we just copy the data over
 			for (uint32_t i = 0; i < geom.data_count; i++) {
-				auto old_offset = i * old_vertex_size;
-				auto new_offset = i * new_vertex_size;
+				const auto old_offset = i * old_vertex_size;
+				const auto new_offset = i * new_vertex_size;
 				memcpy(new_data + new_offset, geom.data_ptr + old_offset, new_vertex_size);
 			}
 		}

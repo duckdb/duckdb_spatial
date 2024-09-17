@@ -1,4 +1,5 @@
 #include "spatial/core/index/rtree/rtree.hpp"
+#include "duckdb/common/printer.hpp"
 
 namespace spatial {
 
@@ -415,6 +416,9 @@ void RTree::RootInsert(RTreeEntry &root_entry, const RTreeEntry &new_entry) {
 // Delete
 //------------------------------------------------------------------------------
 DeleteResult RTree::NodeDelete(RTreeEntry &entry, const RTreeEntry &target, vector<RTreeEntry> &orphans) {
+	if(!entry.bounds.Intersects(target.bounds)) {
+		return {false, false, false};
+	}
 	const auto is_leaf = entry.pointer.IsLeafPage();
 	return is_leaf ? LeafDelete(entry, target, orphans) : BranchDelete(entry, target, orphans);
 }
@@ -461,8 +465,8 @@ DeleteResult RTree::BranchDelete(RTreeEntry &entry, const RTreeEntry &target, ve
 			entry.bounds = node.GetBounds();
 			shrunk = entry.bounds != old_bounds;
 
-			// Assert that the bounds shrunk
-			D_ASSERT(entry.bounds.Area() <= old_bounds.Area());
+			// If the min capacity is zero, the bounds can grow when a node becomes empty
+			D_ASSERT(entry.bounds.IsUnbounded() || entry.bounds.Area() <= old_bounds.Area());
 		}
 		return {true, shrunk, false};
 	}
@@ -475,7 +479,8 @@ DeleteResult RTree::BranchDelete(RTreeEntry &entry, const RTreeEntry &target, ve
 		entry.bounds = node.GetBounds();
 		shrunk = entry.bounds != old_bounds;
 
-		D_ASSERT(entry.bounds.Area() <= old_bounds.Area());
+		// If the min capacity is zero, the bounds can grow when a node becomes empty
+		D_ASSERT(entry.bounds.IsUnbounded() || (entry.bounds.Area() <= old_bounds.Area()));
 	}
 
 	return {true, shrunk, false};
@@ -488,15 +493,21 @@ DeleteResult RTree::LeafDelete(RTreeEntry &entry, const RTreeEntry &target, vect
 
 	// Do a binary search with std::lower_bound to find the matching rowid
 	// This is faster than a linear search
-	auto it = std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
+	const auto it = std::lower_bound(node.begin(), node.end(), target.pointer.GetRowId(),
 	                           [](const RTreeEntry &item, const row_t &row) { return item.pointer.GetRowId() < row; });
 	if (it == node.end()) {
 		// Not found in this leaf
 		return {false, false, false};
 	}
 
-	auto &child = *it;
-	auto child_idx = it - node.begin();
+	const auto &child = *it;
+
+	// Ok, did the binary search actually find the rowid?
+	if(child.pointer.GetRowId() != target.pointer.GetRowId()) {
+		return {false, false, false};
+	}
+
+	const auto child_idx = it - node.begin();
 
 	D_ASSERT(child.pointer.IsRowId());
 
@@ -580,6 +591,73 @@ void RTree::RootDelete(RTreeEntry &root, const RTreeEntry &target) {
 		}
 	}
 }
+
+// Print as ascii tree
+string RTree::ToString() const {
+	string result;
+
+	struct PrintState {
+		RTreePointer pointer;
+		idx_t entry_idx;
+		explicit PrintState(const RTreePointer &pointer_p) : pointer(pointer_p), entry_idx(0) {
+		}
+	};
+
+	vector<PrintState> stack;
+	idx_t level = 0;
+
+	stack.emplace_back(root.pointer);
+
+	while(!stack.empty()) {
+		auto &frame = stack.back();
+		const auto &node = Ref(frame.pointer);
+		const auto count = node.GetCount();
+
+		if(frame.pointer.IsLeafPage()) {
+			while(frame.entry_idx < count) {
+				auto &entry = node[frame.entry_idx];
+				// TODO: Print entry
+				for(idx_t i = 0; i < level; i++) {
+					result += "  ";
+				}
+
+				result += "Leaf: " + std::to_string(entry.pointer.GetRowId()) + "\n";
+
+				frame.entry_idx++;
+			}
+			stack.pop_back();
+			level--;
+		}
+		else {
+			D_ASSERT(frame.pointer.IsBranchPage());
+			if(frame.entry_idx < count) {
+				auto &entry = node[frame.entry_idx];
+
+				// TODO: Print entry
+				for(idx_t i = 0; i < level; i++) {
+					result += "  ";
+				}
+
+				result += "Branch: " + std::to_string(frame.entry_idx) + "\n";
+
+				frame.entry_idx++;
+				level++;
+				stack.emplace_back(entry.pointer);
+			} else {
+				stack.pop_back();
+				level--;
+			}
+		}
+	}
+
+
+	return result;
+}
+
+void RTree::Print() const {
+	Printer::Print(ToString());
+}
+
 
 } // namespace core
 
