@@ -212,7 +212,11 @@ static void RTreeIndexDumpExecute(ClientContext &context, TableFunctionInput &da
 		ymin_data[output_idx] = entry.bounds.min.y;
 		xmax_data[output_idx] = entry.bounds.max.x;
 		ymax_data[output_idx] = entry.bounds.max.y;
-		rowid_data[output_idx] = entry.pointer.GetRowId();
+		if(entry.pointer.IsRowId()) {
+			rowid_data[output_idx] = entry.pointer.GetRowId();
+		} else {
+			FlatVector::SetNull(output.data[2], output_idx, true);
+		}
 		output_idx++;
 		if (output_idx == STANDARD_VECTOR_SIZE) {
 			// We've filled the result vector, yield!
