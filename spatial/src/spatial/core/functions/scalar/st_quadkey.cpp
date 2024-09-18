@@ -90,7 +90,6 @@ static void GeometryQuadKeyFunction(DataChunk &args, ExpressionState &state, Vec
 // Documentation
 //------------------------------------------------------------------------------
 static constexpr const char *DOC_DESCRIPTION = R"(
-Computes a quadkey from a given lon/lat point.
 
 Compute the [quadkey](https://learn.microsoft.com/en-us/bingmaps/articles/bing-maps-tile-system) for a given lon/lat point at a given level.
 Note that the the parameter order is __longitude__, __latitude__.
@@ -99,7 +98,7 @@ Note that the the parameter order is __longitude__, __latitude__.
 
 The input coordinates will be clamped to the lon/lat bounds of the earth (longitude between -180 and 180, latitude between -85.05112878 and 85.05112878).
 
-Throws for any geometry that is not a `POINT`
+The geometry overload throws an error if the input geometry is not a `POINT`
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(

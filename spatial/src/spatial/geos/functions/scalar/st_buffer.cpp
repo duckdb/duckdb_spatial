@@ -101,7 +101,7 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 
     `cap_style` must be one of "CAP_ROUND", "CAP_FLAT", "CAP_SQUARE". This parameter is case-insensitive.
 
-    `mite_limit` only applies when `join_style` is "JOIN_MITRE". It is the ratio of the distance from the corner to the miter point to the corner radius. The default value is 1.0.
+    `mitre_limit` only applies when `join_style` is "JOIN_MITRE". It is the ratio of the distance from the corner to the mitre point to the corner radius. The default value is 1.0.
 
     This is a planar operation and will not take into account the curvature of the earth.
 )";

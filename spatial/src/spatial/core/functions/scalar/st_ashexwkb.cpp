@@ -53,6 +53,8 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 
 static constexpr const char *DOC_EXAMPLE = R"(
 SELECT ST_AsHexWKB('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+----
+01030000000100000005000000000000000000000000000...
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};

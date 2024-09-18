@@ -31,7 +31,9 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
-SELECT ST_AsWKB('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+SELECT ST_AsWKB('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::GEOMETRY)::BLOB;
+----
+\x01\x03\x00\x00\x00\x01\x00\x00\x00\x05...
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};

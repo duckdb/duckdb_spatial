@@ -179,17 +179,17 @@ static void GeometryAreaFunction(DataChunk &args, ExpressionState &state, Vector
 //------------------------------------------------------------------------------
 
 static constexpr const char *DOC_DESCRIPTION = R"(
-    Returns the area of a geometry.
-
     Compute the area of a geometry.
 
     Returns `0.0` for any geometry that is not a `POLYGON`, `MULTIPOLYGON` or `GEOMETRYCOLLECTION` containing polygon geometries.
+	The area is in the same units as the spatial reference system of the geometry.
 
-    The `POINT_2D` and `LINESTRING_2D` variants of this function always return `0.0` but are included for completeness.
+    The `POINT_2D` and `LINESTRING_2D` overloads of this function always return `0.0` but are included for completeness.
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
     select ST_Area('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+	-- 1.0
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "property"}};

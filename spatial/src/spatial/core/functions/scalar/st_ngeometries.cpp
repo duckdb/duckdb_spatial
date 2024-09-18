@@ -41,8 +41,8 @@ static void GeometryNGeometriesFunction(DataChunk &args, ExpressionState &state,
 // Documentation
 //------------------------------------------------------------------------------
 static constexpr const char *DOC_DESCRIPTION = R"(
-    Returns the number of component geometries in a collection geometry
-    If the input geometry is not a collection, returns 1 if the geometry is not empty, otherwise 0
+    Returns the number of component geometries in a collection geometry.
+    If the input geometry is not a collection, this function returns 0 or 1 depending on if the geometry is empty or not.
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
