@@ -159,9 +159,9 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
-    select ST_AsSVG('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry, false, 15);
-	----
-	M 0 0 L 0 -1 1 -1 1 0 Z
+SELECT ST_AsSVG('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::GEOMETRY, false, 15);
+----
+M 0 0 L 0 -1 1 -1 1 0 Z
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};

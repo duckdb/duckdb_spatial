@@ -561,12 +561,24 @@ static constexpr const char *AS_DOC_DESCRIPTION = R"(
     Returns the geometry as a GeoJSON fragment
 
     This does not return a complete GeoJSON document, only the geometry fragment. To construct a complete GeoJSON document or feature, look into using the DuckDB JSON extension in conjunction with this function.
+	This function supports geometries with Z values, but not M values.
 )";
 
 static constexpr const char *AS_DOC_EXAMPLE = R"(
 select ST_AsGeoJSON('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
 ----
 {"type":"Polygon","coordinates":[[[0.0,0.0],[0.0,1.0],[1.0,1.0],[1.0,0.0],[0.0,0.0]]]}
+
+-- Convert a geometry into a full GeoJSON feature (requires the JSON extension to be loaded)
+SELECT CAST({
+	type: 'Feature', 
+	geometry: ST_AsGeoJSON(ST_Point(1,2)), 
+	properties: { 
+		name: 'my_point' 
+	} 
+} AS JSON);
+----
+{"type":"Feature","geometry":{"type":"Point","coordinates":[1.0,2.0]},"properties":{"name":"my_point"}}
 )";
 
 // FromGeoJSON
@@ -575,7 +587,9 @@ static constexpr const char *FROM_DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char *FROM_DOC_EXAMPLE = R"(
-
+SELECT ST_GeomFromGeoJSON('{"type":"Point","coordinates":[1.0,2.0]}');
+----
+POINT (1 2)
 )";
 
 //------------------------------------------------------------------------------

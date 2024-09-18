@@ -74,7 +74,9 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
-SELECT ST_AsText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'::geometry);
+SELECT ST_AsText(ST_MakeEnvelope(0,0,1,1));
+----
+POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "conversion"}};

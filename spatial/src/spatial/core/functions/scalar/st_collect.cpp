@@ -82,7 +82,6 @@ static void CollectFunction(DataChunk &args, ExpressionState &state, Vector &res
 //------------------------------------------------------------------------------
 
 static constexpr const char *DOC_DESCRIPTION = R"(
-Collects geometries into a collection geometry
 
 Collects a list of geometries into a collection geometry.
 - If all geometries are `POINT`'s, a `MULTIPOINT` is returned.

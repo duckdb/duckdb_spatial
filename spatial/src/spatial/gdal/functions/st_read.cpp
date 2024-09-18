@@ -621,7 +621,7 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 
     The `ST_Read` table function is based on the [GDAL](https://gdal.org/index.html) translator library and enables reading spatial data from a variety of geospatial vector file formats as if they were DuckDB tables.
 
-    > See [ST_Drivers](##st_drivers) for a list of supported file formats and drivers.
+    > See [ST_Drivers](#st_drivers) for a list of supported file formats and drivers.
 
     Except for the `path` parameter, all parameters are optional.
 

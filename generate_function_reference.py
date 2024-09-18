@@ -41,7 +41,7 @@ def write_table_of_contents(f, functions):
     for function in functions:
         # Summary is the first line of the description
         summary = function['description'].split('\n')[0]
-        f.write(f"| [{function['name']}](#{to_kebab_case(function['name'])}) | {summary} |\n")
+        f.write(f"| [`{function['name']}`](#{to_kebab_case(function['name'])}) | {summary} |\n")
 
 
 def to_kebab_case(name):
@@ -76,11 +76,11 @@ def main():
             f.write(f"## {func_set[0]}\n\n")
             set_name = func_set[0]
             for function in func_set[1]:
-                f.write(f"### {function['name']}\n\n")
-                summary = function['description'].split('\n')[0]
-                f.write(f"_{summary}_\n\n")
-
-                f.write("#### Signature\n\n")
+                f.write(f"### {function['name']}\n\n\n")
+                #summary = function['description'].split('\n')[0]
+                #f.write(f"_{summary}_\n\n")
+                
+                f.write("#### Signature\n\n") if len(function['signatures']) == 1 else f.write("#### Signatures\n\n")
                 f.write("```sql\n")
                 for signature in function['signatures']:
                     param_list = ", ".join([f"{param['name']} {param['type']}" for param in signature['params']])
@@ -101,14 +101,15 @@ def main():
                     f.write("\n```\n\n")
                 else:
                     print(f"No example for {function['name']}")
-                f.write("\n\n")
+                #f.write("\n\n")
+                f.write("----\n\n")
 
         # Write table functions
         f.write("## Table Functions\n\n")
         for function in table_functions:
             f.write(f"### {function['name']}\n\n")
-            summary = function['description'].split('\n')[0]
-            f.write(f"_{summary}_\n\n")
+            #summary = function['description'].split('\n')[0]
+            #f.write(f"_{summary}_\n\n")
 
             f.write("#### Signature\n\n")
             f.write("```sql\n")
@@ -131,7 +132,7 @@ def main():
                 f.write("\n```\n\n")
             else:
                 print(f"No example for {function['name']}")
-            f.write("\n\n")
+            f.write("----\n\n")
 
 if __name__ == "__main__":
     main()

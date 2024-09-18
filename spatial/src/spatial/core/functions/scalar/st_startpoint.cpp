@@ -87,7 +87,10 @@ static constexpr const char *DOC_DESCRIPTION = R"(
 Returns the first point of a line geometry
 )";
 
-static constexpr const char *DOC_EXAMPLE = R"()";
+static constexpr const char *DOC_EXAMPLE = R"(
+select ST_StartPoint('LINESTRING(0 0, 1 1)'::geometry);
+-- POINT(0 0)
+)";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 //------------------------------------------------------------------------------

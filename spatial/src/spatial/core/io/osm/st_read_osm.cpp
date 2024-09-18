@@ -864,7 +864,7 @@ static unique_ptr<TableRef> ReadOsmPBFReplacementScan(ClientContext &context, Re
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
 static constexpr const char *DOC_DESCRIPTION = R"(
-    The ST_ReadOsm() table function enables reading compressed OpenStreetMap data directly from a `.osm.pbf file.`
+    The `ST_ReadOsm()` table function enables reading compressed OpenStreetMap data directly from a `.osm.pbf file.`
 
     This function uses multithreading and zero-copy protobuf parsing which makes it a lot faster than using the `ST_Read()` OSM driver, however it only outputs the raw OSM data (Nodes, Ways, Relations), without constructing any geometries. For simple node entities (like PoI's) you can trivially construct POINT geometries, but it is also possible to construct LINESTRING and POLYGON geometries by manually joining refs and nodes together in SQL, although with available memory usually being a limiting factor.
     The `ST_ReadOSM()` function also provides a "replacement scan" to enable reading from a file directly as if it were a table. This is just syntax sugar for calling `ST_ReadOSM()` though. Example:

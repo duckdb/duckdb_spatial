@@ -87,11 +87,11 @@ static void GeometryEndPointFunction(DataChunk &args, ExpressionState &state, Ve
 // Documentation
 //------------------------------------------------------------------------------
 static constexpr const char *DOC_DESCRIPTION = R"(
-Returns the end point of a line.
+Returns the last point of a line.
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
-select st_endpoint('LINESTRING(0 0, 1 1)'::geometry);
+select ST_EndPoint('LINESTRING(0 0, 1 1)'::geometry);
 -- POINT(1 1)
 )";
 

@@ -117,7 +117,7 @@ static void DumpFunction(DataChunk &args, ExpressionState &state, Vector &result
 // Documentation
 //------------------------------------------------------------------------------
 static constexpr const char *DOC_DESCRIPTION = R"(
-Dumps a geometry into a set of sub-geometries and their "path" in the original geometry.
+Dumps a geometry into a list of sub-geometries and their "path" in the original geometry.
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
