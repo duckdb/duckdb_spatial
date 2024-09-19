@@ -8,11 +8,11 @@ namespace core {
 struct CoreAggregateFunctions {
 public:
 	static void Register(DatabaseInstance &db) {
-		RegisterStEnvelopeAgg(db);
+		RegisterStExtentAgg(db);
 	}
 
 private:
-	static void RegisterStEnvelopeAgg(DatabaseInstance &db);
+	static void RegisterStExtentAgg(DatabaseInstance &db);
 };
 
 } // namespace core

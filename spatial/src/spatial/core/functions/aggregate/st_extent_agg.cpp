@@ -11,7 +11,7 @@ namespace spatial {
 
 namespace core {
 
-struct EnvelopeAggState {
+struct ExtentAggState {
 	bool is_set;
 	double xmin;
 	double xmax;
@@ -22,7 +22,7 @@ struct EnvelopeAggState {
 //------------------------------------------------------------------------
 // ENVELOPE AGG
 //------------------------------------------------------------------------
-struct EnvelopeAggFunction {
+struct ExtentAggFunction {
 	template <class STATE>
 	static void Initialize(STATE &state) {
 		state.is_set = false;
@@ -90,24 +90,37 @@ struct EnvelopeAggFunction {
 //------------------------------------------------------------------------------
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
 static constexpr const char *DOC_DESCRIPTION = R"(
-    Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries
+    Computes the minimal-bounding-box polygon containing the set of input geometries
 )";
 static constexpr const char *DOC_EXAMPLE = R"(
+	SELECT ST_Extent_Agg(geom) FROM UNNEST([ST_Point(1,1), ST_Point(5,5)]) AS _(geom);
+	-- POLYGON ((1 1, 1 5, 5 5, 5 1, 1 1))
+)";
 
+static constexpr const char* DOC_ALIAS_DESCRIPTION = R"(
+	Alias for [ST_Extent_Agg](#st_extent_agg).
+
+	Computes the minimal-bounding-box polygon containing the set of input geometries.
 )";
 
 //------------------------------------------------------------------------
 // Register
 //------------------------------------------------------------------------
-void CoreAggregateFunctions::RegisterStEnvelopeAgg(DatabaseInstance &db) {
+void CoreAggregateFunctions::RegisterStExtentAgg(DatabaseInstance &db) {
 
-	AggregateFunctionSet st_envelope_agg("ST_Envelope_Agg");
-	st_envelope_agg.AddFunction(
-	    AggregateFunction::UnaryAggregate<EnvelopeAggState, geometry_t, geometry_t, EnvelopeAggFunction>(
-	        GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY()));
+	auto function = AggregateFunction::UnaryAggregate<ExtentAggState, geometry_t, geometry_t, ExtentAggFunction>(
+			GeoTypes::GEOMETRY(), GeoTypes::GEOMETRY());
 
-	ExtensionUtil::RegisterFunction(db, st_envelope_agg);
-	DocUtil::AddDocumentation(db, "ST_Envelope_Agg", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	// Register the function
+	function.name = "ST_Extent_Agg";
+	ExtensionUtil::RegisterFunction(db, function);
+	DocUtil::AddDocumentation(db, "ST_Extent_Agg", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
+	// Also add an alias with the name ST_Envelope_Agg
+	function.name = "ST_Envelope_Agg";
+	ExtensionUtil::RegisterFunction(db, function);
+	DocUtil::AddDocumentation(db, "ST_Envelope_Agg", DOC_ALIAS_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+
 }
 
 } // namespace core
