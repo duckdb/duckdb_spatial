@@ -113,7 +113,8 @@
 
 | Function | Summary |
 | --- | --- |
-| [`ST_Envelope_Agg`](#st_envelope_agg) | Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries |
+| [`ST_Envelope_Agg`](#st_envelope_agg) | Alias for [ST_Extent_Agg](#st_extent_agg). |
+| [`ST_Extent_Agg`](#st_extent_agg) | Computes the minimal-bounding-box polygon containing the set of input geometries |
 | [`ST_Intersection_Agg`](#st_intersection_agg) | Computes the intersection of a set of geometries |
 | [`ST_Union_Agg`](#st_union_agg) | Computes the union of a set of input geometries |
 
@@ -124,7 +125,7 @@
 | [`ST_Drivers`](#st_drivers) | Returns the list of supported GDAL drivers and file formats |
 | [`ST_Read`](#st_read) | Read and import a variety of geospatial file formats using the GDAL library. |
 | [`ST_ReadOSM`](#st_readosm) | The `ST_ReadOsm()` table function enables reading compressed OpenStreetMap data directly from a `.osm.pbf file.` |
-| [`ST_Read_Meta`](#st_read_meta) | Read and the metadata from a variety of geospatial file formats using the GDAL library. |
+| [`ST_Read_Meta`](#st_read_meta) | Read the metadata from a variety of geospatial file formats using the GDAL library. |
 
 ----
 
@@ -342,9 +343,9 @@ Returns the "boundary" of a geometry
 #### Signatures
 
 ```sql
-GEOMETRY ST_Buffer (col0 GEOMETRY, col1 DOUBLE)
-GEOMETRY ST_Buffer (col0 GEOMETRY, col1 DOUBLE, col2 INTEGER)
-GEOMETRY ST_Buffer (col0 GEOMETRY, col1 DOUBLE, col2 INTEGER, col3 VARCHAR, col4 VARCHAR, col5 DOUBLE)
+GEOMETRY ST_Buffer (geom GEOMETRY, distance DOUBLE)
+GEOMETRY ST_Buffer (geom GEOMETRY, distance DOUBLE, num_triangles INTEGER)
+GEOMETRY ST_Buffer (geom GEOMETRY, distance DOUBLE, num_triangles INTEGER, join_style VARCHAR, cap_style VARCHAR, mitre_limit DOUBLE)
 ```
 
 #### Description
@@ -716,7 +717,7 @@ DOUBLE ST_Distance_Spheroid (col0 POINT_2D, col1 POINT_2D)
 
 Returns the distance between two geometries in meters using a ellipsoidal model of the earths surface
 
-The input geometry is assumed to be in the [EPSG:4326](https://en.wikipedia.org/wiki/World_Geodetic_System) coordinate system (WGS84), with [latitude, longitude] axis order and the distance is returned in meters. This function uses the [GeographicLib](https://geographiclib.sourceforge.io/) library to solve the [inverse geodesic problem](https://en.wikipedia.org/wiki/Geodesics_on_an_ellipsoid#Solution_of_the_direct_and_inverse_problems), calculating the distance between two points using an ellipsoidal model of the earth. This is a highly accurate method for calculating the distance between two arbitrary points taking the curvature of the earths surface into account, but is also the slowest.
+The input geometry is assumed to be in the [EPSG:4326](https://en.wikipedia.org/wiki/World_Geodetic_System) coordinate system (WGS84), with [latitude, longitude] axis order and the distance limit is expected to be in meters. This function uses the [GeographicLib](https://geographiclib.sourceforge.io/) library to solve the [inverse geodesic problem](https://en.wikipedia.org/wiki/Geodesics_on_an_ellipsoid#Solution_of_the_direct_and_inverse_problems), calculating the distance between two points using an ellipsoidal model of the earth. This is a highly accurate method for calculating the distance between two arbitrary points taking the curvature of the earths surface into account, but is also the slowest.
 
 #### Example
 
@@ -1885,12 +1886,12 @@ Returns true if geom1 "touches" geom2
 #### Signatures
 
 ```sql
-BOX_2D ST_Transform (col0 BOX_2D, col1 VARCHAR, col2 VARCHAR)
-BOX_2D ST_Transform (col0 BOX_2D, col1 VARCHAR, col2 VARCHAR, col3 BOOLEAN)
-POINT_2D ST_Transform (col0 POINT_2D, col1 VARCHAR, col2 VARCHAR)
-POINT_2D ST_Transform (col0 POINT_2D, col1 VARCHAR, col2 VARCHAR, col3 BOOLEAN)
-GEOMETRY ST_Transform (col0 GEOMETRY, col1 VARCHAR, col2 VARCHAR)
-GEOMETRY ST_Transform (col0 GEOMETRY, col1 VARCHAR, col2 VARCHAR, col3 BOOLEAN)
+BOX_2D ST_Transform (geom BOX_2D, source_crs VARCHAR, target_crs VARCHAR)
+BOX_2D ST_Transform (geom BOX_2D, source_crs VARCHAR, target_crs VARCHAR, always_xy BOOLEAN)
+POINT_2D ST_Transform (geom POINT_2D, source_crs VARCHAR, target_crs VARCHAR)
+POINT_2D ST_Transform (geom POINT_2D, source_crs VARCHAR, target_crs VARCHAR, always_xy BOOLEAN)
+GEOMETRY ST_Transform (geom GEOMETRY, source_crs VARCHAR, target_crs VARCHAR)
+GEOMETRY ST_Transform (geom GEOMETRY, source_crs VARCHAR, target_crs VARCHAR, always_xy BOOLEAN)
 ```
 
 #### Description
@@ -2201,7 +2202,38 @@ GEOMETRY ST_Envelope_Agg (col0 GEOMETRY)
 
 #### Description
 
-Computes a minimal-bounding-box polygon 'enveloping' the set of input geometries
+Alias for [ST_Extent_Agg](#st_extent_agg).
+
+Computes the minimal-bounding-box polygon containing the set of input geometries.
+
+#### Example
+
+```sql
+SELECT ST_Extent_Agg(geom) FROM UNNEST([ST_Point(1,1), ST_Point(5,5)]) AS _(geom);
+-- POLYGON ((1 1, 1 5, 5 5, 5 1, 1 1))
+```
+
+----
+
+### ST_Extent_Agg
+
+
+#### Signature
+
+```sql
+GEOMETRY ST_Extent_Agg (col0 GEOMETRY)
+```
+
+#### Description
+
+Computes the minimal-bounding-box polygon containing the set of input geometries
+
+#### Example
+
+```sql
+SELECT ST_Extent_Agg(geom) FROM UNNEST([ST_Point(1,1), ST_Point(5,5)]) AS _(geom);
+-- POLYGON ((1 1, 1 5, 5 5, 5 1, 1 1))
+```
 
 ----
 
@@ -2371,7 +2403,7 @@ ST_Read_Meta (col0 VARCHAR[])
 
 #### Description
 
-Read and the metadata from a variety of geospatial file formats using the GDAL library.
+Read the metadata from a variety of geospatial file formats using the GDAL library.
 
 The `ST_Read_Meta` table function accompanies the `ST_Read` table function, but instead of reading the contents of a file, this function scans the metadata instead.
 Since the data model of the underlying GDAL library is quite flexible, most of the interesting metadata is within the returned `layers` column, which is a somewhat complex nested structure of DuckDB `STRUCT` and `LIST` types.

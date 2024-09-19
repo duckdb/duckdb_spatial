@@ -131,6 +131,8 @@ void GEOSScalarFunctions::RegisterStBuffer(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_Buffer", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddFunctionParameterNames(db, "ST_Buffer", {"geom", "distance", "num_triangles", "join_style", "cap_style",
+	                                                     "mitre_limit"});
 }
 
 } // namespace geos
