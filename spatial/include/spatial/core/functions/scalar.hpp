@@ -41,6 +41,7 @@ public:
 		RegisterStMakeEnvelope(db);
 		RegisterStMakeLine(db);
 		RegisterStMakePolygon(db);
+		RegisterStMulti(db);
 		RegisterStNGeometries(db);
 		RegisterStNInteriorRings(db);
 		RegisterStNPoints(db);
@@ -164,6 +165,9 @@ private:
 
 	// ST_MakePolygon
 	static void RegisterStMakePolygon(DatabaseInstance &db);
+
+	// ST_Multi
+	static void RegisterStMulti(DatabaseInstance &db);
 
 	// ST_NGeometries
 	static void RegisterStNGeometries(DatabaseInstance &db);
