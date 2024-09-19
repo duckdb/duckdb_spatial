@@ -69,6 +69,7 @@
 | [`ST_MakeLine`](#st_makeline) | Creates a LINESTRING geometry from a pair or list of input points |
 | [`ST_MakePolygon`](#st_makepolygon) | Creates a polygon from a shell geometry and an optional set of holes |
 | [`ST_MakeValid`](#st_makevalid) | Attempts to make an invalid geometry valid without removing any vertices |
+| [`ST_Multi`](#st_multi) | Turns a single geometry into a multi geometry. |
 | [`ST_NGeometries`](#st_ngeometries) | Returns the number of component geometries in a collection geometry. |
 | [`ST_NInteriorRings`](#st_ninteriorrings) | Returns the number if interior rings of a polygon |
 | [`ST_NPoints`](#st_npoints) | Returns the number of vertices within a geometry |
@@ -1428,6 +1429,36 @@ GEOMETRY ST_MakeValid (col0 GEOMETRY)
 #### Description
 
 Attempts to make an invalid geometry valid without removing any vertices
+
+----
+
+### ST_Multi
+
+
+#### Signature
+
+```sql
+GEOMETRY ST_Multi (col0 GEOMETRY)
+```
+
+#### Description
+
+Turns a single geometry into a multi geometry.
+
+If the geometry is already a multi geometry, it is returned as is.
+
+#### Example
+
+```sql
+SELECT ST_Multi(ST_GeomFromText('POINT(1 2)'));
+-- MULTIPOINT (1 2)
+
+SELECT ST_Multi(ST_GeomFromText('LINESTRING(1 1, 2 2)'));
+-- MULTILINESTRING ((1 1, 2 2))
+
+SELECT ST_Multi(ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))'));
+-- MULTIPOLYGON (((0 0, 0 1, 1 1, 1 0, 0 0)))
+```
 
 ----
 
