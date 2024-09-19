@@ -211,7 +211,7 @@ static void Scan(ClientContext &context, TableFunctionInput &input, DataChunk &o
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}};
 
 static constexpr const char *DOC_DESCRIPTION = R"(
-    Read and the metadata from a variety of geospatial file formats using the GDAL library.
+    Read the metadata from a variety of geospatial file formats using the GDAL library.
 
     The `ST_Read_Meta` table function accompanies the `ST_Read` table function, but instead of reading the contents of a file, this function scans the metadata instead.
     Since the data model of the underlying GDAL library is quite flexible, most of the interesting metadata is within the returned `layers` column, which is a somewhat complex nested structure of DuckDB `STRUCT` and `LIST` types.

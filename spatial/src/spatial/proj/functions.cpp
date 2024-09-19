@@ -511,6 +511,7 @@ void ProjFunctions::Register(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_Transform", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddFunctionParameterNames(db, "ST_Transform", {"geom", "source_crs", "target_crs", "always_xy"});
 
 	GenerateSpatialRefSysTable::Register(db);
 }
