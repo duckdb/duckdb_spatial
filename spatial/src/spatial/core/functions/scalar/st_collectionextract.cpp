@@ -158,12 +158,27 @@ static void CollectionExtractAutoFunction(DataChunk &args, ExpressionState &stat
 //------------------------------------------------------------------------------
 
 static constexpr const char *DOC_DESCRIPTION = R"(
-    Extracts a sub-geometry from a collection geometry
+Extracts geometries from a GeometryCollection into a typed multi geometry.
+
+If the input geometry is a GeometryCollection, the function will return a multi geometry, determined by the `type` parameter.
+- if `type` = 1, returns a MultiPoint containg all the Points in the collection
+- if `type` = 2, returns a MultiLineString containg all the LineStrings in the collection
+- if `type` = 3, returns a MultiPolygon containg all the Polygons in the collection
+
+If no `type` parameters is provided, the function will return a multi geometry matching the highest "surface dimension"
+of the contained geometries. E.g. if the collection contains only Points, a MultiPoint will be returned. But if the
+collection contains both Points and LineStrings, a MultiLineString will be returned. Similarly, if the collection
+contains Polygons, a MultiPolygon will be returned. Contained geometries of a lower surface dimension will be ignored.
+
+If the input geometry contains nested GeometryCollections, their geometries will be extracted recursively and included
+into the final multi geometry as well.
+
+If the input geometry is not a GeometryCollection, the function will return the input geometry as is.
 )";
 
 static constexpr const char *DOC_EXAMPLE = R"(
 select st_collectionextract('MULTIPOINT(1 2,3 4)'::geometry, 1);
--- POINT(1 2)
+-- MULTIPOINT (1 2, 3 4)
 )";
 
 static constexpr DocTag DOC_TAGS[] = {{"ext", "spatial"}, {"category", "construction"}};
@@ -182,6 +197,7 @@ void CoreScalarFunctions::RegisterStCollectionExtract(DatabaseInstance &db) {
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_CollectionExtract", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
+	DocUtil::AddFunctionParameterNames(db, "ST_CollectionExtract", {"geom", "type"});
 }
 
 } // namespace core
