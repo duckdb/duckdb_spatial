@@ -16,7 +16,7 @@
 | [`ST_Buffer`](#st_buffer) | Returns a buffer around the input geometry at the target distance |
 | [`ST_Centroid`](#st_centroid) | Calculates the centroid of a geometry |
 | [`ST_Collect`](#st_collect) | Collects a list of geometries into a collection geometry. |
-| [`ST_CollectionExtract`](#st_collectionextract) | Extracts a sub-geometry from a collection geometry |
+| [`ST_CollectionExtract`](#st_collectionextract) | Extracts geometries from a GeometryCollection into a typed multi geometry. |
 | [`ST_Contains`](#st_contains) | Returns true if geom1 contains geom2. |
 | [`ST_ContainsProperly`](#st_containsproperly) | Returns true if geom1 "properly contains" geom2 |
 | [`ST_ConvexHull`](#st_convexhull) | Returns the convex hull enclosing the geometry |
@@ -458,19 +458,34 @@ MULTIPOINT (1 2, 3 4)
 #### Signatures
 
 ```sql
-GEOMETRY ST_CollectionExtract (col0 GEOMETRY)
-GEOMETRY ST_CollectionExtract (col0 GEOMETRY, col1 INTEGER)
+GEOMETRY ST_CollectionExtract (geom GEOMETRY)
+GEOMETRY ST_CollectionExtract (geom GEOMETRY, type INTEGER)
 ```
 
 #### Description
 
-Extracts a sub-geometry from a collection geometry
+Extracts geometries from a GeometryCollection into a typed multi geometry.
+
+If the input geometry is a GeometryCollection, the function will return a multi geometry, determined by the `type` parameter.
+- if `type` = 1, returns a MultiPoint containg all the Points in the collection
+- if `type` = 2, returns a MultiLineString containg all the LineStrings in the collection
+- if `type` = 3, returns a MultiPolygon containg all the Polygons in the collection
+
+If no `type` parameters is provided, the function will return a multi geometry matching the highest "surface dimension"
+of the contained geometries. E.g. if the collection contains only Points, a MultiPoint will be returned. But if the
+collection contains both Points and LineStrings, a MultiLineString will be returned. Similarly, if the collection
+contains Polygons, a MultiPolygon will be returned. Contained geometries of a lower surface dimension will be ignored.
+
+If the input geometry contains nested GeometryCollections, their geometries will be extracted recursively and included
+into the final multi geometry as well.
+
+If the input geometry is not a GeometryCollection, the function will return the input geometry as is.
 
 #### Example
 
 ```sql
 select st_collectionextract('MULTIPOINT(1 2,3 4)'::geometry, 1);
--- POINT(1 2)
+-- MULTIPOINT (1 2, 3 4)
 ```
 
 ----
