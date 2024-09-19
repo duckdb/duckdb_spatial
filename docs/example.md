@@ -9,11 +9,11 @@ LOAD spatial;
 LOAD parquet;
 
 CREATE TABLE rides AS SELECT *
-FROM './spatial/test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet';
+FROM './test/data/nyc_taxi/yellow_tripdata_2010-01-limit1mil.parquet';
 
 -- Load the NYC taxi zone data from a shapefile using the gdal-based st_read function
-CREATE TABLE zones AS SELECT zone, LocationId, borough, ST_GeomFromWKB(wkb_geometry) AS geom
-FROM st_read('./spatial/test/data/nyc_taxi/taxi_zones/taxi_zones.shx');
+CREATE TABLE zones AS SELECT zone, LocationId, borough, geom
+FROM st_read('./test/data/nyc_taxi/taxi_zones/taxi_zones.shp');
 ```
 <details>
 <summary>
