@@ -184,7 +184,9 @@ public: // Collection interface
 private:
 	uint32_t count;
 
+public:
 	// We got 20 bytes for the future
+	// make this public so compiler stops warning about unused fields
 	uint8_t _unused[20] = {};
 };
 
