@@ -27,6 +27,7 @@ jobs:
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@main
     with:
       duckdb_version: main
+      ci_tools_version: main
       extension_name: spatial
 
   duckdb-latest-deploy:
