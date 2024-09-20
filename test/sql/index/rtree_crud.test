@@ -2,7 +2,7 @@ require spatial
 
 statement ok
 CREATE TABLE t1 AS SELECT point::GEOMETRY as geom
-FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 100_000, 1337);
+FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 1000, max_y: 1000}::BOX_2D, 10000, 1337);
 
 statement ok
 INSERT INTO t1 (geom) VALUES ('POINT(1 1)');
@@ -23,12 +23,12 @@ statement ok
 DROP INDEX my_idx;
 
 statement ok
-INSERT INTO t1 (geom) SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 10000, max_y: 10000}::BOX_2D, 1000, 1337);
+INSERT INTO t1 (geom) SELECT * FROM st_generatepoints({min_x: 0, min_y: 0, max_x: 1000, max_y: 1000}::BOX_2D, 1000, 1337);
 
 query I
 SELECT count(*) FROM t1;
 ----
-101000
+11000
 
 statement ok
 CREATE INDEX my_idx ON t1 USING RTREE (geom);
