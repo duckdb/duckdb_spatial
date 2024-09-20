@@ -39,7 +39,18 @@ public:
 	}
 };
 
-class LogicalCreateRTreeIndexOperatorExtension : public OperatorExtension {
+class LogicalCreateRTreeIndexOperatorExtension final : public OperatorExtension {
+public:
+	LogicalCreateRTreeIndexOperatorExtension() {
+		Bind = [](ClientContext &, Binder &, OperatorExtensionInfo *, SQLStatement &) -> BoundStatement {
+			// For some reason all operator extensions require this callback to be implemented
+			// even though it is useless for us as we construct this operator through the optimizer instead.
+			BoundStatement result;
+			result.plan = nullptr;
+			return result;
+		};
+	}
+
 	std::string GetName() override {
 		return "duckdb_spatial";
 	}
