@@ -42,10 +42,6 @@ void LogicalCreateRTreeIndex::ResolveColumnBindings(ColumnBindingResolver &res, 
 	                                             [&](unique_ptr<Expression> *child) { res.VisitExpression(child); });
 }
 
-string LogicalCreateRTreeIndex::GetExtensionName() const {
-	return "rtree_create_index";
-}
-
 static unique_ptr<PhysicalOperator> CreateNullFilter(const LogicalCreateRTreeIndex &op,
                                                      const vector<LogicalType> &types, ClientContext &context) {
 	vector<unique_ptr<Expression>> filter_select_list;

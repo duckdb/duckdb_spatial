@@ -75,6 +75,8 @@ public:
 void RTreeModule::RegisterIndexPlanCreate(DatabaseInstance &db) {
 	// Register the optimizer extension
 	db.config.optimizer_extensions.push_back(RTreeIndexInsertionRewriter());
+
+	db.config.operator_extensions.push_back(make_uniq<LogicalCreateRTreeIndexOperatorExtension>());
 }
 
 } // namespace core
