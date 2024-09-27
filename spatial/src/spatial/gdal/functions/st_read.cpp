@@ -176,15 +176,16 @@ unique_ptr<FunctionData> GdalTableFunction::Bind(ClientContext &context, TableFu
 		}
 	}
 
+	// Now we can open the dataset
+	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
+
 	auto siblings_params = input.named_parameters.find("sibling_files");
 	if (siblings_params != input.named_parameters.end()) {
 		for (auto &param : ListValue::GetChildren(siblings_params->second)) {
-			result->dataset_sibling_files.AddString(StringValue::Get(param).c_str());
+			result->dataset_sibling_files.AddString(ctx_state.GetPrefix(StringValue::Get(param)).c_str());
 		}
 	}
 
-	// Now we can open the dataset
-	auto &ctx_state = GDALClientContextState::GetOrCreate(context);
 
 	result->raw_file_name = input.inputs[0].GetValue<string>();
 	result->prefixed_file_name = ctx_state.GetPrefix(result->raw_file_name);
