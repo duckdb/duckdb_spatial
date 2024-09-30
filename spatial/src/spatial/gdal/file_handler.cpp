@@ -21,6 +21,7 @@ namespace gdal {
 class DuckDBFileHandle : public VSIVirtualHandle {
 private:
 	unique_ptr<FileHandle> file_handle;
+	bool is_eof;
 
 public:
 	explicit DuckDBFileHandle(unique_ptr<FileHandle> file_handle_p) : file_handle(std::move(file_handle_p)) {
@@ -30,6 +31,8 @@ public:
 		return static_cast<vsi_l_offset>(file_handle->SeekPosition());
 	}
 	int Seek(vsi_l_offset nOffset, int nWhence) override {
+		is_eof = false;
+
 		if (nWhence == SEEK_SET && nOffset == 0) {
 			// Use the reset function instead to allow compressed file handles to rewind
 			// even if they don't support seeking
@@ -66,11 +69,22 @@ public:
 			}
 		} catch (...) {
 		}
+
+		if(remaining_bytes != 0) {
+			if(file_handle->SeekPosition() == file_handle->GetFileSize()) {
+				// Is at EOF!
+				is_eof = true;
+			}
+			// else, error!
+			// unfortunately, this version of GDAL cant distinguish between errors and reading less bytes
+			// its avaiable in 3.9.2, but we're stuck on 3.8.5 for now.
+		}
+
 		return nCount - (remaining_bytes / nSize);
 	}
 
 	int Eof() override {
-		return file_handle->SeekPosition() == file_handle->GetFileSize() ? TRUE : FALSE;
+		return is_eof ? TRUE : FALSE;
 	}
 
 	size_t Write(const void *pBuffer, size_t nSize, size_t nCount) override {
@@ -121,6 +135,8 @@ public:
 	const char *StripPrefix(const char *pszFilename) {
 		return pszFilename + client_prefix.size();
 	}
+
+	string AddPrefix(const string &value) { return client_prefix + value; }
 
 	VSIVirtualHandle *Open(const char *prefixed_file_name, const char *access, bool bSetError,
 	                       CSLConstList /* papszOptions */) override {
@@ -310,7 +326,8 @@ public:
 			if (files_count >= max_files) {
 				return;
 			}
-			files.AddString(file_name.c_str());
+			const auto tmp = AddPrefix(file_name);
+			files.AddString(tmp.c_str());
 			files_count++;
 		});
 		return files.StealList();
@@ -321,9 +338,14 @@ public:
 
 		auto &fs = FileSystem::GetFileSystem(context);
 		CPLStringList files;
-		auto file_vector = fs.Glob(file_name);
+
+		auto file_name_without_ext = fs.JoinPath(StringUtil::GetFilePath(file_name), StringUtil::GetFileStem(file_name));
+		auto file_glob = file_name_without_ext + ".*";
+
+		auto file_vector = fs.Glob(file_glob);
 		for (auto &file : file_vector) {
-			files.AddString(file.c_str());
+			auto tmp = AddPrefix(file);
+			files.AddString(tmp.c_str());
 		}
 		return files.StealList();
 	}

@@ -59,7 +59,7 @@ void GeographicLibFunctions::RegisterDistanceWithin(DatabaseInstance &db) {
 	ScalarFunctionSet set("ST_DWithin_Spheroid");
 	set.AddFunction(
 	    ScalarFunction({spatial::core::GeoTypes::POINT_2D(), spatial::core::GeoTypes::POINT_2D(), LogicalType::DOUBLE},
-	                   LogicalType::DOUBLE, GeodesicPoint2DFunction));
+	                   LogicalType::BOOLEAN, GeodesicPoint2DFunction));
 
 	ExtensionUtil::RegisterFunction(db, set);
 	DocUtil::AddDocumentation(db, "ST_DWithin_Spheroid", DOC_DESCRIPTION, DOC_EXAMPLE, DOC_TAGS);
