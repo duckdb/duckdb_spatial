@@ -95,7 +95,7 @@ void ManagedCollection<T>::InitializeAppend(ManagedCollectionAppendState &state,
 		state.block = &blocks.back();
 		state.block->item_count = 0;
 		state.block->item_capacity = block_capacity;
-		state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true);
+		state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, false);
 		state.block->handle = state.handle.GetBlockHandle();
 	}
 }
@@ -109,7 +109,7 @@ void ManagedCollection<T>::Append(ManagedCollectionAppendState &state, const T *
 			state.block = &blocks.back();
 			state.block->item_count = 0;
 			state.block->item_capacity = block_capacity;
-			state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, true);
+			state.handle = manager.Allocate(MemoryTag::EXTENSION, block_size, false);
 			state.block->handle = state.handle.GetBlockHandle();
 		}
 
