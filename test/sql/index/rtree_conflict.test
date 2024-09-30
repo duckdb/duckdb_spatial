@@ -1,0 +1,18 @@
+require spatial
+
+statement ok
+create table nodes (name varchar, pt geometry);
+
+statement ok
+create index if not exists nodes_pt_idx on nodes using rtree(pt);
+
+statement ok
+create index if not exists nodes_pt_idx on nodes using rtree(pt);
+
+statement error
+create index nodes_pt_idx on nodes using rtree(pt);
+----
+Catalog Error: Index with name "nodes_pt_idx" already exists
+
+statement ok
+create index if not exists nodes_pt_idx on nodes using rtree(pt);
