@@ -290,6 +290,9 @@ static void AddIndexToCatalog(ClientContext &context, CreateRTreeIndexGlobalStat
 		if (info.on_conflict != OnCreateConflict::IGNORE_ON_CONFLICT) {
 			throw CatalogException("Index with name \"%s\" already exists", info.index_name);
 		}
+		// IF NOT EXISTS on existing index. We are done.
+		// TODO: Early out before this.
+		return;
 	}
 
 	const auto index_entry = schema.CreateIndex(schema.GetCatalogTransaction(context), info, table).get();
