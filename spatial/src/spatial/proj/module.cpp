@@ -1,3 +1,14 @@
+#include "duckdb.hpp"
+#include "spatial/proj/duckdbvfs.h"
+
+duckdb::DatabaseInstance *getdb2 = nullptr;
+thread_local duckdb::DatabaseInstance *getdb;
+thread_local void* proj_ctx = nullptr; 
+
+duckdb::DatabaseInstance* GetDB() {
+	return getdb;
+}
+
 #include "spatial/common.hpp"
 
 #include "spatial/proj/module.hpp"
@@ -21,15 +32,25 @@ extern "C" unsigned int proj_db_len;
 extern "C" int sqlite3_memvfs_init(sqlite3 *, char **, const sqlite3_api_routines *);
 
 PJ_CONTEXT *ProjModule::GetThreadProjContext() {
+std::cout << "GetThreadProjContext \n";
+if (getdb && getdb != getdb2 &&  proj_ctx) {
+		proj_context_destroy((pj_ctx *)proj_ctx);
+	}
 
 	auto ctx = proj_context_create();
+
+proj_ctx = ctx;
+
+	getdb = getdb2;
+
+
 
 	// We set the default context proj.db path to the one in the binary here
 	// Otherwise GDAL will try to load the proj.db from the system
 	// Any PJ_CONTEXT we create after this will inherit these settings
-	auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void *)proj_db, proj_db_len, proj_db_len);
-
-	proj_context_set_sqlite3_vfs_name(ctx, "memvfs");
+	//auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void *)proj_db, proj_db_len, proj_db_len);
+	string path = "http://10.1.0.81:8080/proj.db";
+	proj_context_set_sqlite3_vfs_name(ctx, "duckdbvfs");
 	auto ok = proj_context_set_database_path(ctx, path.c_str(), nullptr, nullptr);
 	if (!ok) {
 		throw InternalException("Could not set proj.db path");
@@ -48,25 +69,29 @@ PJ_CONTEXT *ProjModule::GetThreadProjContext() {
 
 // IMPORTANT: Make sure this module is loaded before any other modules that use proj (like GDAL)
 void ProjModule::Register(DatabaseInstance &db) {
+std::cout << "Register \n";
 	// we use the sqlite "memvfs" to store the proj.db database in the extension binary itself
 	// this way we don't have to worry about the user having the proj.db database installed
 	// on their system. We therefore have to tell proj to use memvfs as the sqlite3 vfs and
 	// point it to the segment of the binary that contains the proj.db database
+if (getdb2 && getdb2 != &db)
+	sqlite3_shutdown();
+
 
 	sqlite3_initialize();
-	sqlite3_memvfs_init(nullptr, nullptr, nullptr);
-	auto vfs = sqlite3_vfs_find("memvfs");
-	if (!vfs) {
-		throw InternalException("Could not find sqlite memvfs extension");
-	}
-	sqlite3_vfs_register(vfs, 0);
+	//sqlite3_memvfs_init(nullptr, nullptr, nullptr);
+	getdb = &db;
+	getdb2 = &db;
+  	sqlite3_vfs_register(sqlite3_duckdbvfs(), 1);
+	//sqlite3_vfs_register(vfs, 0);
 
 	// We set the default context proj.db path to the one in the binary here
 	// Otherwise GDAL will try to load the proj.db from the system
 	// Any PJ_CONTEXT we create after this will inherit these settings (on this thread?)
-	auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void *)proj_db, proj_db_len, proj_db_len);
 
-	proj_context_set_sqlite3_vfs_name(nullptr, "memvfs");
+	//auto path = StringUtil::Format("file:/proj.db?ptr=%llu&sz=%lu&max=%lu", (void *)proj_db, proj_db_len, proj_db_len);
+string path = "http://10.1.0.81:8080/proj.db";
+	proj_context_set_sqlite3_vfs_name(nullptr, "duckdbvfs");
 
 	auto ok = proj_context_set_database_path(nullptr, path.c_str(), nullptr, nullptr);
 	if (!ok) {
