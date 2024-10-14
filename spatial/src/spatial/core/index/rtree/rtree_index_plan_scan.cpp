@@ -121,6 +121,15 @@ public:
 			return false;
 		}
 
+		// We cant optimize if the table already has filters pushed down :(
+		if(get.dynamic_filters && get.dynamic_filters->HasFilters()) {
+			return false;
+		}
+
+		if(!get.table_filters.filters.empty()) {
+			return false;
+		}
+
 		// We can replace the scan function with a rtree index scan (if the table has a rtree index)
 		// Get the table
 		auto &table = *get.GetTable();
