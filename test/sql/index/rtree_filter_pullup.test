@@ -1,0 +1,17 @@
+require parquet
+
+query I rowsort
+SELECT id FROM '__WORKING_DIRECTORY__/test/data/segments.parquet'
+WHERE subtype='road' AND ST_Intersects(geometry, ST_Buffer(ST_GeomFromText('POINT (-8476562 4795814)'), 100));
+----
+0862aac667ffffff043df7e4c6756d14
+0862aac667ffffff047de7f2111f86ad
+0862aac667ffffff047ffedcbc2db0f8
+
+
+query III rowsort
+SELECT id, subtype, class FROM '__WORKING_DIRECTORY__/test/data/segments.parquet'
+WHERE subtype='road' AND class='residential' AND ST_Intersects(geometry, ST_Buffer(ST_GeomFromText('POINT (-8476562 4795814)'), 100));
+----
+0862aac667ffffff047de7f2111f86ad	road	residential
+0862aac667ffffff047ffedcbc2db0f8	road	residential
