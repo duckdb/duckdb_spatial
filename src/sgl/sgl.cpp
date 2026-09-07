@@ -818,6 +818,10 @@ bool linestring::interpolate(const geometry &geom, double frac, vertex_xyzm &out
 	}
 
 	const auto actual_length = ops::get_length(geom);
+	if (actual_length == 0) {
+		memcpy(&out, vertex_array, vertex_width);
+		return true;
+	}
 	const auto target_length = actual_length * frac;
 
 	// Compute the length of each segment, stop when we reach the target length
@@ -834,6 +838,10 @@ bool linestring::interpolate(const geometry &geom, double frac, vertex_xyzm &out
 		const auto dy = next.y - prev.y;
 
 		const auto segment_length = std::sqrt(dx * dx + dy * dy);
+		if (segment_length == 0) {
+			prev = next;
+			continue;
+		}
 
 		if (length + segment_length >= target_length) {
 			const auto remaining = target_length - length;
@@ -848,7 +856,8 @@ bool linestring::interpolate(const geometry &geom, double frac, vertex_xyzm &out
 		prev = next;
 	}
 
-	return false;
+	memcpy(&out, vertex_array + (vertex_count - 1) * vertex_width, vertex_width);
+	return true;
 }
 
 void linestring::interpolate_points(allocator &alloc, const geometry &geom, double frac, geometry &result) {
@@ -891,10 +900,16 @@ void linestring::interpolate_points(allocator &alloc, const geometry &geom, doub
 		return;
 	}
 
+	const auto actual_length = ops::get_length(geom); // TODO: use linstring::length
+	if (actual_length == 0) {
+		result.set_type(geometry_type::POINT);
+		result.set_vertex_array(vertex_array, 1);
+		return;
+	}
+
 	// Make a multi-point
 	result.set_type(geometry_type::MULTI_POINT);
 
-	const auto actual_length = ops::get_length(geom); // TODO: use linstring::length
 	double total_length = 0.0;
 	double next_target = frac * actual_length;
 
@@ -910,6 +925,10 @@ void linestring::interpolate_points(allocator &alloc, const geometry &geom, doub
 		const auto dy = next.y - prev.y;
 
 		const auto segment_length = std::sqrt(dx * dx + dy * dy);
+		if (segment_length == 0) {
+			prev = next;
+			continue;
+		}
 
 		// There can be multiple points on the same segment, so we need to loop here
 		while (total_length + segment_length >= next_target) {
@@ -1481,6 +1500,10 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 	size_t end_idx = 0;
 
 	const double total_length = ops::get_length(geom); // TODO: use linstring::length
+	if (total_length == 0) {
+		result.set_vertex_array(vertex_array, vertex_count);
+		return;
+	}
 	const double beg_length = total_length * beg_frac;
 	const double end_length = total_length * end_frac;
 	double length = 0.0;
@@ -1498,6 +1521,16 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 		const auto dx = next.x - prev.x;
 		const auto dy = next.y - prev.y;
 		const auto segment_length = std::sqrt(dx * dx + dy * dy);
+
+		if (segment_length == 0) {
+			if (length >= beg_length) {
+				beg = prev;
+				beg_idx = vertex_idx - 1;
+				break;
+			}
+			prev = next;
+			continue;
+		}
 
 		if (length + segment_length >= beg_length) {
 			const auto remaining = beg_length - length;
@@ -1521,6 +1554,16 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 		const auto dy = next.y - prev.y;
 		const auto segment_length = std::sqrt(dx * dx + dy * dy);
 
+		if (segment_length == 0) {
+			if (length >= end_length) {
+				end = prev;
+				end_idx = vertex_idx - 1;
+				break;
+			}
+			prev = next;
+			continue;
+		}
+
 		if (length + segment_length >= end_length) {
 			const auto remaining = end_length - length;
 			const auto sfrac = remaining / segment_length;
@@ -1534,6 +1577,11 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 		}
 		length += segment_length;
 		prev = next;
+	}
+
+	if (vertex_idx == vertex_count) {
+		end = next;
+		end_idx = vertex_count - 2;
 	}
 
 	// Now create a new line containing beg, all the points in between, and end

@@ -1,6 +1,7 @@
 #include "sgl.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 
 namespace sgl {
@@ -816,6 +817,83 @@ void test_misc_coverage() {
 	assert(geom.get_vertex_array() != nullptr);
 }
 
+void test_linear_referencing() {
+	sgl::arena_allocator alloc;
+	sgl::wkt_reader reader(alloc);
+
+	// 1. linestring::interpolate on zero-length line
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(5 5, 5 5)"));
+		sgl::vertex_xyzm pt = {};
+		assert(sgl::linestring::interpolate(geom, 0.5, pt));
+		assert(pt.x == 5.0 && pt.y == 5.0);
+		assert(!std::isnan(pt.x) && !std::isnan(pt.y));
+	}
+
+	// 2. linestring::interpolate_points on zero-length line (must not hang / infinite loop)
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(5 5, 5 5)"));
+		sgl::geometry result;
+		sgl::linestring::interpolate_points(alloc, geom, 0.2, result);
+		assert(result.get_type() == sgl::geometry_type::POINT);
+		assert(result.get_vertex_count() == 1);
+		auto pt = result.get_vertex_xy(0);
+		assert(pt.x == 5.0 && pt.y == 5.0);
+		assert(!std::isnan(pt.x) && !std::isnan(pt.y));
+	}
+
+	// 3. linestring::substring on leading duplicate vertices
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(1 1, 1 1, 2 2)"));
+		sgl::geometry result;
+		sgl::linestring::substring(alloc, geom, 0.0, 0.5, result);
+		assert(result.get_type() == sgl::geometry_type::LINESTRING);
+		assert(result.get_vertex_count() == 3);
+		for (size_t i = 0; i < result.get_vertex_count(); i++) {
+			auto pt = result.get_vertex_xy(i);
+			assert(!std::isnan(pt.x) && !std::isnan(pt.y));
+		}
+		auto pt0 = result.get_vertex_xy(0);
+		auto pt1 = result.get_vertex_xy(1);
+		auto pt2 = result.get_vertex_xy(2);
+		assert(pt0.x == 1.0 && pt0.y == 1.0);
+		assert(pt1.x == 1.0 && pt1.y == 1.0);
+		assert(pt2.x == 1.5 && pt2.y == 1.5);
+	}
+
+	// 4. linestring::substring on collapsed zero-length line (beg_frac != end_frac)
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(5 5, 5 5)"));
+		sgl::geometry result;
+		sgl::linestring::substring(alloc, geom, 0.2, 0.8, result);
+		assert(result.get_type() == sgl::geometry_type::LINESTRING);
+		assert(result.get_vertex_count() == 2);
+		auto pt0 = result.get_vertex_xy(0);
+		auto pt1 = result.get_vertex_xy(1);
+		assert(pt0.x == 5.0 && pt0.y == 5.0);
+		assert(pt1.x == 5.0 && pt1.y == 5.0);
+		assert(!std::isnan(pt0.x) && !std::isnan(pt0.y));
+		assert(!std::isnan(pt1.x) && !std::isnan(pt1.y));
+	}
+
+	// 5. linestring::substring on collapsed zero-length line (beg_frac == end_frac)
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(5 5, 5 5)"));
+		sgl::geometry result;
+		sgl::linestring::substring(alloc, geom, 0.5, 0.5, result);
+		assert(result.get_type() == sgl::geometry_type::POINT);
+		assert(result.get_vertex_count() == 1);
+		auto pt0 = result.get_vertex_xy(0);
+		assert(pt0.x == 5.0 && pt0.y == 5.0);
+		assert(!std::isnan(pt0.x) && !std::isnan(pt0.y));
+	}
+}
+
 int main() {
 
 	test_allocator();
@@ -832,6 +910,7 @@ int main() {
 	test_prepared_geometry();
 
 	test_misc_coverage();
+	test_linear_referencing();
 
 	printf("All tests passed!\n");
 	return 0;
