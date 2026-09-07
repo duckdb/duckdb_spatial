@@ -787,6 +787,9 @@ bool multi_linestring::is_closed(const geometry &geom) {
 }
 
 bool linestring::interpolate(const geometry &geom, double frac, vertex_xyzm &out) {
+	if (std::isnan(frac)) {
+		return false;
+	}
 	if (geom.get_type() != geometry_type::LINESTRING) {
 		return false;
 	}
@@ -869,7 +872,7 @@ void linestring::interpolate_points(allocator &alloc, const geometry &geom, doub
 		result.set_type(geometry_type::POINT);
 		return;
 	}
-	if (geom.is_empty()) {
+	if (geom.is_empty() || std::isnan(frac)) {
 		result.set_type(geometry_type::POINT);
 		return;
 	}
@@ -901,7 +904,7 @@ void linestring::interpolate_points(allocator &alloc, const geometry &geom, doub
 	}
 
 	const auto actual_length = ops::get_length(geom); // TODO: use linstring::length
-	if (actual_length == 0) {
+	if (actual_length == 0 || (frac * actual_length) <= 0.0) {
 		result.set_type(geometry_type::POINT);
 		result.set_vertex_array(vertex_array, 1);
 		return;
@@ -1458,6 +1461,10 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 		if (beg_frac == end_frac) {
 			result.set_type(geometry_type::POINT);
 		}
+		return;
+	}
+
+	if (std::isnan(beg_frac) || std::isnan(end_frac)) {
 		return;
 	}
 
