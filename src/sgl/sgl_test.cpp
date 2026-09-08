@@ -892,6 +892,38 @@ void test_linear_referencing() {
 		assert(pt0.x == 5.0 && pt0.y == 5.0);
 		assert(!std::isnan(pt0.x) && !std::isnan(pt0.y));
 	}
+
+	// 6. linestring::substring on single-vertex linestring (beg_frac != end_frac)
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(0 0)"));
+		sgl::geometry result;
+		sgl::linestring::substring(alloc, geom, 0.25, 0.75, result);
+		assert(result.get_type() == sgl::geometry_type::LINESTRING);
+		assert(result.get_vertex_count() == 2);
+		auto pt0 = result.get_vertex_xy(0);
+		auto pt1 = result.get_vertex_xy(1);
+		assert(pt0.x == 0.0 && pt0.y == 0.0);
+		assert(pt1.x == 0.0 && pt1.y == 0.0);
+		assert(!std::isnan(pt0.x) && !std::isnan(pt0.y));
+		assert(!std::isnan(pt1.x) && !std::isnan(pt1.y));
+	}
+
+	// 7. linestring::substring on single-vertex linestring (0.0, 1.0)
+	{
+		sgl::geometry geom;
+		assert(reader.try_parse(geom, "LINESTRING(0 0)"));
+		sgl::geometry result;
+		sgl::linestring::substring(alloc, geom, 0.0, 1.0, result);
+		assert(result.get_type() == sgl::geometry_type::LINESTRING);
+		assert(result.get_vertex_count() == 2);
+		auto pt0 = result.get_vertex_xy(0);
+		auto pt1 = result.get_vertex_xy(1);
+		assert(pt0.x == 0.0 && pt0.y == 0.0);
+		assert(pt1.x == 0.0 && pt1.y == 0.0);
+		assert(!std::isnan(pt0.x) && !std::isnan(pt0.y));
+		assert(!std::isnan(pt1.x) && !std::isnan(pt1.y));
+	}
 }
 
 void test_linear_referencing_adversarial() {

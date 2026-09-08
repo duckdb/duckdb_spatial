@@ -1481,7 +1481,14 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 
 	// Reference the whole line
 	if (beg_frac == 0 && end_frac == 1) {
-		result.set_vertex_array(vertex_array, vertex_count);
+		if (vertex_count == 1) {
+			const auto mem = static_cast<char *>(alloc.alloc(vertex_width * 2));
+			memcpy(mem, vertex_array, vertex_width);
+			memcpy(mem + vertex_width, vertex_array, vertex_width);
+			result.set_vertex_array(mem, 2);
+		} else {
+			result.set_vertex_array(vertex_array, vertex_count);
+		}
 		return;
 	}
 
@@ -1508,7 +1515,14 @@ void linestring::substring(allocator &alloc, const geometry &geom, double beg_fr
 
 	const double total_length = ops::get_length(geom); // TODO: use linstring::length
 	if (total_length == 0) {
-		result.set_vertex_array(vertex_array, vertex_count);
+		if (vertex_count == 1) {
+			const auto mem = static_cast<char *>(alloc.alloc(vertex_width * 2));
+			memcpy(mem, vertex_array, vertex_width);
+			memcpy(mem + vertex_width, vertex_array, vertex_width);
+			result.set_vertex_array(mem, 2);
+		} else {
+			result.set_vertex_array(vertex_array, vertex_count);
+		}
 		return;
 	}
 	const double beg_length = total_length * beg_frac;
