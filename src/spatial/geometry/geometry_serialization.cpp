@@ -168,6 +168,9 @@ void Prepare<sgl::prepared_geometry>(sgl::prepared_geometry &type, ArenaAllocato
 
 template <class GEOM_TYPE = sgl::geometry>
 static void DeserializeInternal(GEOM_TYPE &result, ArenaAllocator &arena, const char *buffer, size_t buffer_size) {
+	if (buffer_size == 0) {
+		throw InvalidInputException("Unexpected end of binary data at position 0");
+	}
 	BinaryReader reader(buffer, buffer_size);
 
 	uint32_t stack[32];
