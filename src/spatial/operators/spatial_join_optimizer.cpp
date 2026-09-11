@@ -109,6 +109,12 @@ static bool IsSpatialJoinPredicate(const unique_ptr<Expression> &expr, const uno
 		return false;
 	}
 
+	// The function's operands must be GEOMETRY
+	if (func.GetChildren()[0]->GetReturnType().id() != LogicalTypeId::GEOMETRY ||
+	    func.GetChildren()[1]->GetReturnType().id() != LogicalTypeId::GEOMETRY) {
+		return false;
+	}
+
 	const auto left_side = JoinSide::GetJoinSide(*func.GetChildren()[0], left_bindings, right_bindings);
 	const auto right_side = JoinSide::GetJoinSide(*func.GetChildren()[1], left_bindings, right_bindings);
 
