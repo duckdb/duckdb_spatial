@@ -1,0 +1,15 @@
+diff --git a/src/planner/binder/expression/bind_window_expression.cpp b/src/planner/binder/expression/bind_window_expression.cpp
+index 839ee419..f029ce23 100644
+--- a/src/planner/binder/expression/bind_window_expression.cpp
++++ b/src/planner/binder/expression/bind_window_expression.cpp
+@@ -297,6 +297,10 @@ BindResult BaseSelectBinder::BindWindow(WindowExpression &window, idx_t depth) {
+ 		// found a matching function! bind it as an aggregate
+ 		auto bound_function = func.functions.GetFunctionByOffset(best_function.GetIndex());
+ 
++		if (!bound_function.CanAggregate() && bound_function.CanWindow() && window.distinct) {
++			throw BinderException(error_context, "Function '%s' does not support DISTINCT", bound_function.name);
++		}
++
+ 		if (!bound_function.CanAggregate() && bound_function.CanWindow() && !window.arg_orders.empty()) {
+ 			// ORDER BY in non-aggregate window functions not supported
+ 			// (The WindowCustomAggregator does not support it for now)

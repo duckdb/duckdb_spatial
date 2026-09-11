@@ -19,6 +19,14 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 unittest_relassert:
 	build/relassert/test/run $(T)
 
+.PHONY: test_dbscan
+test_dbscan:
+	cmake -S test/unit -B build/dbscan-unit -DCMAKE_BUILD_TYPE=Release
+	cmake --build build/dbscan-unit
+	ctest --test-dir build/dbscan-unit --output-on-failure
+
+test_release_internal test_debug_internal test_reldebug_internal: test_dbscan
+
 
 #### Override the included format target because we have different source tree layout
 format:

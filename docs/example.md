@@ -170,3 +170,48 @@ TO 'output.geojson'
 WITH (FORMAT GDAL, DRIVER 'GeoJSON',LAYER_CREATION_OPTIONS ('WRITE_BBOX=YES', 'RFC7946=YES'))
 ```
 
+## Spatial Density Clustering with DBSCAN (`ST_ClusterDBSCAN`)
+
+We can discover high-density taxi pickup hotspots and identify isolated outlier trips using the `ST_ClusterDBSCAN` window aggregate function.
+
+Because DBSCAN evaluates Cartesian Euclidean distance, we first project the pickup coordinates into a planar metric coordinate system such as State Plane New York Long Island ftUS (`ESRI:102718`) or UTM Zone 18N (`EPSG:32618`), where distance values represent physical lengths (e.g. feet or meters) rather than angular degrees:
+
+```sql
+-- Cluster taxi pickup points within 200 feet of each other with at least 5 pickups
+CREATE TABLE pickup_clusters AS
+WITH projected_pickups AS (
+    SELECT
+        rowid,
+        pickup_point,
+        -- Transform pickup coordinates to projected planar feet
+        st_transform(pickup_point, 'EPSG:4326', 'ESRI:102718') AS projected_geom
+    FROM cleaned_rides
+    WHERE pickup_point IS NOT NULL
+)
+SELECT
+    rowid,
+    pickup_point,
+    -- Execute DBSCAN: eps = 200 feet, minpoints = 5
+    ST_ClusterDBSCAN(
+        {'x': st_x(projected_geom), 'y': st_y(projected_geom)}::POINT_2D,
+        200.0,
+        5
+    ) OVER (ORDER BY rowid) AS cluster_id
+FROM projected_pickups;
+```
+We can then aggregate the discovered clusters to identify the most active pickup hubs, filter out noise (`NULL`), and compute cluster centroids:
+
+```sql
+SELECT
+    cluster_id,
+    count(*) AS total_pickups,
+    round(avg(st_x(pickup_point)), 6) AS centroid_lat,
+    round(avg(st_y(pickup_point)), 6) AS centroid_lon
+FROM pickup_clusters
+WHERE cluster_id IS NOT NULL
+GROUP BY cluster_id
+ORDER BY total_pickups DESC
+LIMIT 10;
+```
+
+Cluster counts and IDs depend on the input dataset. The ordering by `rowid` provides a stable traversal for this materialized table.

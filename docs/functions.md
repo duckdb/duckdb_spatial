@@ -181,6 +181,12 @@
 | [`ST_ReadSHP`](#st_readshp) | Read a Shapefile without relying on the GDAL library |
 | [`ST_Read_Meta`](#st_read_meta) | Read the metadata from a variety of geospatial file formats using the GDAL library. |
 
+**[Window Functions](#window-functions)**
+
+| Function | Summary |
+| --- | --- |
+| [`ST_ClusterDBSCAN`](#st_clusterdbscan) | Window function that returns a cluster id for each input point using the DBSCAN algorithm. |
+
 ----
 
 ## Scalar Functions
@@ -3658,3 +3664,88 @@ FROM st_read_meta('../../tmp/data/amsterdam_roads.fgb');
 
 ----
 
+## Window Functions
+
+### ST_ClusterDBSCAN
+
+#### Signatures
+
+```sql
+INTEGER ST_ClusterDBSCAN (point POINT_2D, eps DOUBLE, minpoints BIGINT)
+```
+
+#### Description
+
+A window function that returns a cluster number (0-indexed integer) for each input point using the 2D [Density-Based Spatial Clustering of Applications with Noise (DBSCAN)](https://en.wikipedia.org/wiki/DBSCAN) algorithm.
+
+Unlike centroid-based clustering (such as $k$-means), DBSCAN does not require the number of clusters to be specified in advance. Instead, it discovers arbitrarily shaped spatial clusters based on density parameters:
+
+- `eps`: The maximum distance threshold ($\le \varepsilon$) for neighborhood expansion. Distances are evaluated as Cartesian Euclidean distances in the coordinate units of the input geometry.
+- `minpoints`: The minimum number of points required within the `eps`-neighborhood (including the point itself) to form a dense "core" cluster.
+
+A point is assigned to a cluster if it is either:
+
+- A **core point**: has at least `minpoints` within `eps` distance (including itself); or
+- A **border point**: is within `eps` distance of a core point.
+
+Points that do not meet the criteria to join any cluster are considered **noise** and are assigned a cluster number of `NULL`.
+
+Use `OVER (PARTITION BY ...)` to cluster independently by city, date, or another key. Cluster IDs restart at 0 within each partition. For reproducible IDs and ambiguous border-point assignments, use a window `ORDER BY` with a unique tie-breaking key, such as `OVER (PARTITION BY city ORDER BY id)`.
+
+`eps` must be finite and non-negative; `minpoints` must be non-negative. Both parameters must be non-NULL and constant within each SQL partition, although they may differ between partitions. Invalid parameters raise an error. With `eps = 0`, coincident points are neighbors. With `minpoints = 0` or `1`, every participating point belongs to a cluster.
+
+NULL points and points with a NULL coordinate are excluded and return NULL. Non-finite coordinates raise an error. `FILTER` excludes points from both density calculations and cluster assignment; excluded rows return NULL.
+
+Clustering always uses the whole SQL partition. `ROWS`, `RANGE`, `GROUPS`, and `EXCLUDE` clauses do not change the clustering input. `DISTINCT` is unsupported and raises an error. The function must be called with `OVER`.
+
+This overload supports `POINT_2D`, not general geometries. It shares the DBSCAN density and border-point rules with PostGIS, but does not claim full PostGIS API compatibility. Coordinates are interpreted in their supplied units; project longitude/latitude to an appropriate planar CRS before choosing a radius in meters or feet. Dense neighborhoods can require quadratic work.
+
+#### Example
+
+```sql
+-- Create a table of sample points with two clusters and one isolated noise point
+CREATE TABLE points AS SELECT {'x': x::DOUBLE, 'y': y::DOUBLE}::POINT_2D AS pt, id FROM (
+    VALUES
+        (0.0, 0.0, 1),
+        (0.1, 0.0, 2),
+        (0.0, 0.1, 3),
+        (0.1, 0.1, 4),
+        (5.0, 5.0, 5),
+        (5.1, 5.0, 6),
+        (5.0, 5.1, 7),
+        (5.1, 5.1, 8),
+        (2.5, 2.5, 9)
+) t(x, y, id);
+
+-- Cluster points with eps = 0.5 and minpoints = 3
+SELECT id, pt, ST_ClusterDBSCAN(pt, 0.5, 3) OVER (ORDER BY id) AS cluster_id
+FROM points
+ORDER BY id;
+----
+-- Output:
+-- 1 | {'x': 0.0, 'y': 0.0} | 0
+-- 2 | {'x': 0.1, 'y': 0.0} | 0
+-- 3 | {'x': 0.0, 'y': 0.1} | 0
+-- 4 | {'x': 0.1, 'y': 0.1} | 0
+-- 5 | {'x': 5.0, 'y': 5.0} | 1
+-- 6 | {'x': 5.1, 'y': 5.0} | 1
+-- 7 | {'x': 5.0, 'y': 5.1} | 1
+-- 8 | {'x': 5.1, 'y': 5.1} | 1
+-- 9 | {'x': 2.5, 'y': 2.5} | NULL
+
+-- Summarize clusters with point counts and centroids
+SELECT
+    cluster_id,
+    count(*) AS point_count,
+    avg(pt.x) AS centroid_x,
+    avg(pt.y) AS centroid_y
+FROM (
+    SELECT pt, ST_ClusterDBSCAN(pt, 0.5, 3) OVER (ORDER BY id) AS cluster_id
+    FROM points
+)
+WHERE cluster_id IS NOT NULL
+GROUP BY cluster_id
+ORDER BY cluster_id;
+```
+
+----

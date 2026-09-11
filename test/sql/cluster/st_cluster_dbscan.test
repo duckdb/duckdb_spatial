@@ -1,0 +1,305 @@
+# name: test/sql/cluster/st_cluster_dbscan.test
+# description: Test ST_ClusterDBSCAN window aggregate function
+# group: [cluster]
+
+require spatial
+
+# FILTER determines which points participate; excluded rows have no cluster.
+query II
+SELECT i, ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.1, 2)
+FILTER (WHERE i < 2) OVER (ORDER BY i)
+FROM range(3) t(i) ORDER BY i;
+----
+0	0
+1	0
+2	NULL
+
+query I
+SELECT count(cid) FROM (
+    SELECT ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.1, 2)
+    FILTER (WHERE false) OVER () AS cid FROM range(3)
+);
+----
+0
+
+# Filtering can remove enough neighbors to turn all remaining points into noise.
+query I
+SELECT count(cid) FROM (
+    SELECT ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.1, 3)
+    FILTER (WHERE i < 2) OVER () AS cid FROM range(3) t(i)
+);
+----
+0
+
+statement error
+SELECT ST_ClusterDBSCAN(DISTINCT {'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.1, 2) OVER ();
+----
+does not support DISTINCT
+
+# Clustering is a whole-partition window function, including with explicit
+# frames or exclusions, matching the contract of rank-like window functions.
+query II
+SELECT i, ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.1, 3)
+OVER (ORDER BY i ROWS BETWEEN CURRENT ROW AND CURRENT ROW EXCLUDE CURRENT ROW)
+FROM range(3) t(i) ORDER BY i;
+----
+0	0
+1	0
+2	0
+
+# More SQL partitions than hash bins: groups sharing a bin must not cluster
+# together, and each partition must use its own parameters and restart IDs.
+query I
+SELECT count(*) FROM (
+    SELECT g, j, ST_ClusterDBSCAN(
+        {'x': CASE WHEN j = 2 THEN 5.0 ELSE j * 0.1 END::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D,
+        CASE WHEN g % 2 = 0 THEN 0.2 ELSE 10.0 END, 2
+    ) OVER (PARTITION BY g ORDER BY j) AS cid
+    FROM range(4096) groups(g), range(3) points(j)
+) WHERE cid IS DISTINCT FROM CASE WHEN j < 2 OR g % 2 = 1 THEN 0 ELSE NULL END;
+----
+0
+
+# A NULL partition key is one independent SQL partition too.
+query III
+SELECT g, j, ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.2, 2)
+OVER (PARTITION BY g ORDER BY j)
+FROM (VALUES (NULL, 1), (NULL, 2), (1, 3)) t(g, j)
+ORDER BY j;
+----
+NULL	1	0
+NULL	2	0
+1	3	NULL
+
+# Parallel window callbacks must use input row positions, not callback order.
+statement ok
+SET threads = 8;
+
+statement ok
+PRAGMA verify_parallelism;
+
+query I
+SELECT count(*) FROM (
+    SELECT i, ST_ClusterDBSCAN(
+        {'x': (i // 100)::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.1, 2
+    ) OVER (ORDER BY i) AS cid
+    FROM range(100000) t(i)
+) WHERE cid IS DISTINCT FROM i // 100;
+----
+0
+
+statement ok
+PRAGMA disable_verify_parallelism;
+
+statement ok
+RESET threads;
+
+# Regression: a partition fitting in one R-tree node must still find neighbors.
+query II
+WITH test_points AS (
+    SELECT {'x': x::DOUBLE, 'y': y::DOUBLE}::POINT_2D AS pt, id
+    FROM (VALUES (0.0, 0.0, 1), (0.1, 0.0, 2), (0.0, 0.1, 3),
+                 (5.0, 5.0, 4), (5.1, 5.0, 5), (2.5, 2.5, 6)) t(x, y, id)
+)
+SELECT id, ST_ClusterDBSCAN(pt, 0.2, 2) OVER () AS cluster_id
+FROM test_points ORDER BY id;
+----
+1	0
+2	0
+3	0
+4	1
+5	1
+6	NULL
+
+# Test basic clustering of 2 clusters and 1 noise point
+statement ok
+CREATE TABLE points AS SELECT {'x': x::DOUBLE, 'y': y::DOUBLE}::POINT_2D AS pt, id FROM (
+    VALUES
+        (0.0, 0.0, 1),
+        (0.1, 0.0, 2),
+        (0.0, 0.1, 3),
+        (0.1, 0.1, 4),
+        (5.0, 5.0, 5),
+        (5.1, 5.0, 6),
+        (5.0, 5.1, 7),
+        (5.1, 5.1, 8),
+        (2.5, 2.5, 9)
+) t(x, y, id);
+
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 0.2, 3) OVER () AS cid FROM points ORDER BY id;
+----
+1	0
+2	0
+3	0
+4	0
+5	1
+6	1
+7	1
+8	1
+9	NULL
+
+# Test NULL handling
+statement ok
+INSERT INTO points VALUES (NULL, 10);
+
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 0.2, 3) OVER () AS cid FROM points WHERE id = 10;
+----
+10	NULL
+
+# Test PostGIS Documentation Example (eps=50, minpoints=2)
+statement ok
+CREATE TABLE postgis_doc AS SELECT {'x': x::DOUBLE, 'y': y::DOUBLE}::POINT_2D AS pt, id FROM (
+    VALUES
+        (5.0, 5.0, 1),
+        (35.0, 5.0, 2),
+        (105.0, 5.0, 3),
+        (135.0, 5.0, 4),
+        (255.0, 5.0, 5)
+) t(x, y, id);
+
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 50.0, 2) OVER () AS cid FROM postgis_doc ORDER BY id;
+----
+1	0
+2	0
+3	1
+4	1
+5	NULL
+
+# Test PostGIS Regression t101 (eps=0.8, minpoints=1)
+statement ok
+CREATE TABLE postgis_t101 AS SELECT {'x': x::DOUBLE, 'y': y::DOUBLE}::POINT_2D AS pt, id FROM (
+    VALUES
+        (0.0, 0.0, 1),
+        (0.0, 1.0, 2),
+        (-0.5, 0.5, 3),
+        (1.0, 0.0, 4),
+        (1.0, 1.0, 5),
+        (1.0, 0.5, 6)
+) t(x, y, id);
+
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 0.8, 1) OVER () AS cid FROM postgis_t101 ORDER BY id;
+----
+1	0
+2	0
+3	0
+4	1
+5	1
+6	1
+
+# Test PostGIS Regression t102 (eps=0.8, minpoints=4 -> all noise)
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 0.8, 4) OVER () AS cid FROM postgis_t101 ORDER BY id;
+----
+1	NULL
+2	NULL
+3	NULL
+4	NULL
+5	NULL
+6	NULL
+
+# Test PostGIS Regression t103 (eps=0.6, minpoints=3 -> left noise, right cluster 0)
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 0.6, 3) OVER () AS cid FROM postgis_t101 ORDER BY id;
+----
+1	NULL
+2	NULL
+3	NULL
+4	0
+5	0
+6	0
+
+# Test PostGIS Regression #3612b (single point with minpoints=5 -> noise)
+statement ok
+CREATE TABLE single_pt AS SELECT {'x': 1.0::DOUBLE, 'y': 1.0::DOUBLE}::POINT_2D AS pt, 1 AS id;
+
+query II
+SELECT id, ST_ClusterDBSCAN(pt, 20.1, 5) OVER () AS cid FROM single_pt;
+----
+1	NULL
+
+# Zero radius clusters coincident points; zero minpoints permits singletons.
+query II
+SELECT i, ST_ClusterDBSCAN({'x': (i // 2)::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.0, 2)
+OVER (ORDER BY i) FROM range(3) t(i) ORDER BY i;
+----
+0	0
+1	0
+2	NULL
+
+query II
+SELECT i, ST_ClusterDBSCAN({'x': i::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 0.0, 0)
+OVER (ORDER BY i) FROM range(3) t(i) ORDER BY i;
+----
+0	0
+1	1
+2	2
+
+statement error
+SELECT ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, -1, 2) OVER ();
+----
+finite and non-negative
+
+statement error
+SELECT ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 1, -1) OVER ();
+----
+minpoints' must be non-negative
+
+statement error
+SELECT ST_ClusterDBSCAN(NULL::POINT_2D, NULL, 2) OVER ();
+----
+parameters must not be NULL
+
+statement error
+SELECT ST_ClusterDBSCAN(NULL::POINT_2D, 1, NULL) OVER ();
+----
+parameters must not be NULL
+
+statement error
+SELECT ST_ClusterDBSCAN(NULL::POINT_2D, 'NaN'::DOUBLE, 2) OVER ();
+----
+finite and non-negative
+
+statement error
+SELECT ST_ClusterDBSCAN(NULL::POINT_2D, 'Infinity'::DOUBLE, 2) OVER ();
+----
+finite and non-negative
+
+statement error
+SELECT ST_ClusterDBSCAN({'x': 'NaN'::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D, 1, 2) OVER ();
+----
+coordinates must be finite
+
+statement error
+SELECT ST_ClusterDBSCAN({'x': 0.0::DOUBLE, 'y': 'Infinity'::DOUBLE}::POINT_2D, 1, 2) OVER ();
+----
+coordinates must be finite
+
+statement error
+SELECT ST_ClusterDBSCAN(NULL::POINT_2D, i::DOUBLE, 2) OVER () FROM range(2) t(i);
+----
+parameters must be constant within each partition
+
+statement error
+SELECT ST_ClusterDBSCAN(NULL::POINT_2D, 1, i) OVER () FROM range(2) t(i);
+----
+parameters must be constant within each partition
+
+# Parent NULLs and NULL coordinates neither contribute to density nor get IDs.
+query II
+SELECT i, ST_ClusterDBSCAN(pt, 0.1, 2) OVER (ORDER BY i)
+FROM (VALUES (0, NULL::POINT_2D),
+             (1, {'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D),
+             (2, {'x': NULL::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D),
+             (3, {'x': 0.0::DOUBLE, 'y': NULL::DOUBLE}::POINT_2D),
+             (4, {'x': 0.0::DOUBLE, 'y': 0.0::DOUBLE}::POINT_2D)) t(i, pt)
+ORDER BY i;
+----
+0	NULL
+1	0
+2	NULL
+3	NULL
+4	0

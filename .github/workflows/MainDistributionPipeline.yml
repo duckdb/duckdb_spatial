@@ -24,6 +24,23 @@ concurrency:
 
 
 jobs:
+  dbscan-unit-tests:
+    name: DBSCAN engine regressions
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure engine tests
+        run: cmake -S test/unit -B build/dbscan-unit -DCMAKE_BUILD_TYPE=Release
+      - name: Build engine tests
+        run: cmake --build build/dbscan-unit --parallel 2
+      - name: Run engine tests
+        run: ctest --test-dir build/dbscan-unit --output-on-failure
+
   duckdb-latest-build:
     name: Build extension binaries
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5-variegata
@@ -36,7 +53,7 @@ jobs:
 
   duckdb-latest-deploy:
     name: Deploy extension binaries
-    needs: duckdb-latest-build
+    needs: [duckdb-latest-build, dbscan-unit-tests]
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5-variegata
     secrets: inherit
     with:

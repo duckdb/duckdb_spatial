@@ -1,0 +1,2 @@
+# Unified diff context intentionally includes leading and trailing whitespace.
+patches/duckdb/*.patch -whitespace

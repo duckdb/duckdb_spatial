@@ -1,0 +1,64 @@
+diff --git a/src/function/window/window_custom_aggregator.cpp b/src/function/window/window_custom_aggregator.cpp
+index 69408634..4e83b3e9 100644
+--- a/src/function/window/window_custom_aggregator.cpp
++++ b/src/function/window/window_custom_aggregator.cpp
+@@ -53,10 +53,12 @@ public:
+ 	using CollectionPtr = optional_ptr<WindowCollection>;
+ 
+ 	WindowCustomAggregatorGlobalState(ClientContext &client, const WindowCustomAggregator &aggregator,
+-	                                  idx_t group_count)
+-	    : WindowAggregatorGlobalState(client, aggregator, group_count) {
++	                                  idx_t group_count, const ValidityMask &partition_mask)
++	    : WindowAggregatorGlobalState(client, aggregator, group_count), partition_mask(partition_mask) {
+ 	}
+ 
++	//! SQL partition boundaries in the hash group's input collection.
++	const ValidityMask &partition_mask;
+ 	//! Traditional packed filter mask for API
+ 	ValidityMask filter_packed;
+ 	//! Data pointer that contains a single local state, used for global custom window execution state
+@@ -88,8 +90,8 @@ WindowCustomAggregatorLocalState::~WindowCustomAggregatorLocalState() {
+ }
+ 
+ unique_ptr<GlobalSinkState> WindowCustomAggregator::GetGlobalState(ClientContext &context, idx_t group_count,
+-                                                                   const ValidityMask &) const {
+-	return make_uniq<WindowCustomAggregatorGlobalState>(context, *this, group_count);
++	                                                                   const ValidityMask &partition_mask) const {
++	return make_uniq<WindowCustomAggregatorGlobalState>(context, *this, group_count, partition_mask);
+ }
+ 
+ void WindowCustomAggregator::Finalize(ExecutionContext &context, CollectionPtr collection, const FrameStats &stats,
+@@ -119,6 +121,7 @@ void WindowCustomAggregator::Finalize(ExecutionContext &context, CollectionPtr c
+ 		auto &gcstate = gcsink.glstate->Cast<WindowCustomAggregatorLocalState>();
+ 		WindowPartitionInput partition(context, inputs, count, child_idx, all_valids, filter_packed, stats,
+ 		                               sink.interrupt_state);
++		partition.partition_mask = &gcsink.partition_mask;
+ 
+ 		AggregateInputData aggr_input_data(aggr.GetFunctionData(), gcstate.allocator);
+ 		aggr.function.GetWindowInitCallback()(aggr_input_data, partition, gcstate.state.data());
+@@ -150,7 +153,9 @@ void WindowCustomAggregator::Evaluate(ExecutionContext &context, const DataChunk
+ 	auto &stats = gcsink.stats;
+ 	WindowPartitionInput partition(context, inputs, collection->size(), child_idx, all_valids, filter_packed, stats,
+ 	                               sink.interrupt_state);
++	partition.partition_mask = &gcsink.partition_mask;
+ 	EvaluateSubFrames(bounds, exclude_mode, count, row_idx, frames, [&](idx_t i) {
++		partition.row_index = row_idx + i;
+ 		// Extract the range
+ 		AggregateInputData aggr_input_data(aggr.GetFunctionData(), lcstate.allocator);
+ 		aggr.function.GetWindowCallback()(aggr_input_data, partition, gstate_p, lcstate.state.data(), frames, result,
+diff --git a/src/include/duckdb/function/aggregate_function.hpp b/src/include/duckdb/function/aggregate_function.hpp
+index 1ac83bc0..c1525c80 100644
+--- a/src/include/duckdb/function/aggregate_function.hpp
++++ b/src/include/duckdb/function/aggregate_function.hpp
+@@ -50,6 +50,11 @@ struct WindowPartitionInput {
+ 	const ValidityMask &filter_mask;
+ 	const FrameStats stats;
+ 	InterruptState &interrupt_state;
++	//! SQL partition starts within inputs (a hash group can contain several partitions).
++	//! Available during both initialization and evaluation of custom windows.
++	optional_ptr<const ValidityMask> partition_mask;
++	//! Absolute row in inputs for the current evaluation; invalid during initialization.
++	idx_t row_index = DConstants::INVALID_INDEX;
+ };
+ 
+ //! The type used for sizing hashed aggregate function states
