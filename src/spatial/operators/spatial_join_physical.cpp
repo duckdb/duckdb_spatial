@@ -1163,10 +1163,14 @@ OperatorResultType PhysicalSpatialJoin::ExecuteInternal(ExecutionContext &contex
 			}
 
 			// Also collect the build side row pointers (if we have a match column)
+			// Note: we must offset by matches_idx here, just like build_side_source_sel above. A single probe's
+			// candidate batch can be split across multiple output chunks, and in that case we resume in the middle of
+			// the batch. Reading from the start of the batch would mark the wrong build rows as matched, dropping them
+			// from the right-outer output while emitting the actual matches twice.
 			if (IsRightOuterJoin(join_type)) {
 				const auto ptrs = FlatVector::GetData<data_ptr_t>(row_pointers);
 				for (idx_t i = 0; i < scan_count; i++) {
-					lstate.build_side_pointers[output_index + i] = ptrs[i];
+					lstate.build_side_pointers[output_index + i] = ptrs[lstate.scan.matches_idx + i];
 				}
 			}
 
