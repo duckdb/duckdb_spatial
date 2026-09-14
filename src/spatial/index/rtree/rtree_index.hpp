@@ -53,7 +53,7 @@ public:
 	ErrorData Append(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) override;
 
 	//! Deletes all data from the index. The lock obtained from InitializeLock must be held
-	void CommitDrop(IndexLock &index_lock) override;
+	void ResetStorage(IndexLock &index_lock) override;
 	//! Delete a chunk of entries from the index. The lock obtained from InitializeLock must be held
 	void Delete(IndexLock &lock, DataChunk &entries, Vector &row_identifiers) override;
 	//! Insert a chunk of entries into the index
