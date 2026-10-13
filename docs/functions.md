@@ -418,7 +418,7 @@ The `x_origin` and `y_origin` parameters specify the origin of the grid. In othe
 The `x_size` and `y_size` parameters specify the width and height of each grid cell.
 
 In case the origin is not specified, the grid is assumed to start at the bottom-left corner
-of the bounding box of each sub geometry of the input geometry.
+of the bounding box of the input geometry.
 
 If `all_touch` is `true`, the result includes every cell that intersects the input geometry,
 otherwise, the result includes only cells whose center point is strictly contained in the input geometry.
