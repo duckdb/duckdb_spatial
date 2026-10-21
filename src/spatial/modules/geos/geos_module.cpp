@@ -328,8 +328,13 @@ struct ST_AsGrid {
 			// Check the geometry type and fetch input parameters for the grid.
 
 			GEOSGeomTypes geom_type = geom.type();
-			if (geom_type != GEOSGeomTypes::GEOS_POLYGON && geom_type != GEOSGeomTypes::GEOS_MULTIPOLYGON) {
-				throw InvalidInputException("ST_AsGrid only supports POLYGON and MULTIPOLYGON geometries.");
+			const auto all_touch = args.data[3].GetValue(i).GetValue<bool>();
+
+			if (geom_type == GEOSGeomTypes::GEOS_POINT) {
+				throw InvalidInputException("ST_AsGrid does not support POINT geometries.");
+			} else if (geom_type == GEOSGeomTypes::GEOS_LINESTRING && !all_touch) {
+				throw InvalidInputException(
+				    "ST_AsGrid does not support LINESTRING geometries when `all_touch` is false.");
 			}
 
 			double x_min, y_min, x_max, y_max;
@@ -339,16 +344,15 @@ struct ST_AsGrid {
 			const auto y_origin = y_min;
 			const auto x_size = args.data[1].GetValue(i).GetValue<double>();
 			const auto y_size = args.data[2].GetValue(i).GetValue<double>();
-			const auto all_touch = args.data[3].GetValue(i).GetValue<bool>();
 			const auto num_geometries = geom.get_num_geometries();
 
 			if (x_size <= 0 || y_size <= 0) {
 				throw InvalidInputException("ST_AsGrid: cell sizes must be positive.");
 			}
 
-			duckdb::vector<Value> cells;
-
 			// Fill the grid of cells for each sub-geometry of the input geometry.
+
+			duckdb::vector<Value> cells;
 
 			for (idx_t geom_idx = 0; geom_idx < num_geometries; geom_idx++) {
 				const auto sub_geom = geom.get_geometry_n(geom_idx);
@@ -374,24 +378,28 @@ struct ST_AsGrid {
 			// Check the geometry type and fetch input parameters for the grid.
 
 			GEOSGeomTypes geom_type = geom.type();
-			if (geom_type != GEOSGeomTypes::GEOS_POLYGON && geom_type != GEOSGeomTypes::GEOS_MULTIPOLYGON) {
-				throw InvalidInputException("ST_AsGrid only supports POLYGON and MULTIPOLYGON geometries.");
+			const auto all_touch = args.data[5].GetValue(i).GetValue<bool>();
+
+			if (geom_type == GEOSGeomTypes::GEOS_POINT) {
+				throw InvalidInputException("ST_AsGrid does not support POINT geometries.");
+			} else if (geom_type == GEOSGeomTypes::GEOS_LINESTRING && !all_touch) {
+				throw InvalidInputException(
+				    "ST_AsGrid does not support LINESTRING geometries when `all_touch` is false.");
 			}
 
 			const auto x_origin = args.data[1].GetValue(i).GetValue<double>();
 			const auto y_origin = args.data[2].GetValue(i).GetValue<double>();
 			const auto x_size = args.data[3].GetValue(i).GetValue<double>();
 			const auto y_size = args.data[4].GetValue(i).GetValue<double>();
-			const auto all_touch = args.data[5].GetValue(i).GetValue<bool>();
 			const auto num_geometries = geom.get_num_geometries();
 
 			if (x_size <= 0 || y_size <= 0) {
 				throw InvalidInputException("ST_AsGrid: cell sizes must be positive.");
 			}
 
-			duckdb::vector<Value> cells;
-
 			// Fill the grid of cells for each sub-geometry of the input geometry.
+
+			duckdb::vector<Value> cells;
 
 			for (idx_t geom_idx = 0; geom_idx < num_geometries; geom_idx++) {
 				const auto sub_geom = geom.get_geometry_n(geom_idx);
