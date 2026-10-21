@@ -12,6 +12,12 @@ struct SpatialSettings {
 
 	static bool AlwaysXY(ClientContext &context, bool &is_set);
 
+	// Returns the value of the 'geometry_always_xy' setting. If the setting has not been explicitly set,
+	// logs 'message' as a warning and throws an InvalidConfigurationException with the same message.
+	// 'message' should describe the axis-order sensitivity of the calling function and is suffixed with
+	// instructions on how to set the setting.
+	static bool AlwaysXYOrThrow(ClientContext &context, const string &message);
+
 	static double RTreeIndexScanRatio(ClientContext &context);
 	static idx_t RTreeIndexScanMinRows(ClientContext &context);
 

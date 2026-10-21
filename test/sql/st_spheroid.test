@@ -1,9 +1,12 @@
 require spatial
 
+statement ok
+SET geometry_always_xy = true;
+
 query I
 SELECT ST_DWithin_Spheroid(
-    st_point(40.6446, -73.7797),
-    st_point(52.3130, 4.7725),
+    st_point(-73.7797, 40.6446),
+    st_point(4.7725, 52.3130),
     6000000.0
 );
 ----
@@ -12,8 +15,8 @@ true
 # Points within 5000km should return false
 query I
 SELECT ST_DWithin_Spheroid(
-    st_point(40.6446, -73.7797),
-    st_point(52.3130, 4.7725),
+    st_point(-73.7797, 40.6446),
+    st_point(4.7725, 52.3130),
     5000000.0
 );
 ----
@@ -22,8 +25,8 @@ false
 # Same point should be within any positive distance
 query I
 SELECT ST_DWithin_Spheroid(
-    st_point(40.6446, -73.7797),
-    st_point(40.6446, -73.7797),
+    st_point(-73.7797, 40.6446),
+    st_point(-73.7797, 40.6446),
     0.0
 );
 ----
@@ -42,8 +45,8 @@ true
 # Very close points within 1 meter
 query I
 SELECT ST_DWithin_Spheroid(
-    st_point(52.373123, 4.892360),
-    st_point(52.373124, 4.892361),
+    st_point(4.892360, 52.373123),
+    st_point(4.892361, 52.373124),
     1.0
 );
 ----
@@ -52,53 +55,28 @@ true
 # Verify consistency with ST_Distance_Spheroid
 query I
 SELECT ST_DWithin_Spheroid(
-    st_point(40.6446, -73.7797),
-    st_point(52.3130, 4.7725),
+    st_point(-73.7797, 40.6446),
+    st_point(4.7725, 52.3130),
     ST_Distance_Spheroid(
-        st_point(40.6446, -73.7797),
-        st_point(52.3130, 4.7725)
+        st_point(-73.7797, 40.6446),
+        st_point(4.7725, 52.3130)
     )
 );
 ----
 true
 
-# Test with always_xy setting
-statement ok
-SET geometry_always_xy = true;
-
-query I
-SELECT ST_DWithin_Spheroid(
-    st_point(-73.7797, 40.6446),
-    st_point(4.7725, 52.3130),
-    6000000.0
-);
-----
-true
-
-query I
-SELECT ST_DWithin_Spheroid(
-    st_point(-73.7797, 40.6446),
-    st_point(4.7725, 52.3130),
-    5000000.0
-);
-----
-false
-
-statement ok
-SET geometry_always_xy = false;
-
 # Test with NULL inputs
 query I
-SELECT ST_DWithin_Spheroid(NULL::POINT_2D, st_point(52.3130, 4.7725), 6000000.0);
+SELECT ST_DWithin_Spheroid(NULL::POINT_2D, st_point(4.7725, 52.3130), 6000000.0);
 ----
 NULL
 
 query I
-SELECT ST_DWithin_Spheroid(st_point(40.6446, -73.7797), NULL::POINT_2D, 6000000.0);
+SELECT ST_DWithin_Spheroid(st_point(-73.7797, 40.6446), NULL::POINT_2D, 6000000.0);
 ----
 NULL
 
 query I
-SELECT ST_DWithin_Spheroid(st_point(40.6446, -73.7797), st_point(52.3130, 4.7725), NULL);
+SELECT ST_DWithin_Spheroid(st_point(-73.7797, 40.6446), st_point(4.7725, 52.3130), NULL);
 ----
 NULL

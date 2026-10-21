@@ -1,16 +1,20 @@
 require spatial
-# belem box (lat, lon)
-# -1.475781,-48.516655,-1.403706,-48.433228
-# 'POLYGON((-1.475781 -48.516655, -1.475781 -48.433228, -1.403706 -48.433228, -1.403706 -48.516655, -1.475781 -48.516655))'
+
+statement ok
+SET geometry_always_xy = true;
+
+# belem box (lon, lat)
+# -48.516655,-1.475781,-48.433228,-1.403706
+# 'POLYGON((-48.516655 -1.475781, -48.433228 -1.475781, -48.433228 -1.403706, -48.516655 -1.403706, -48.516655 -1.475781))'
 
 statement ok
 CREATE TABLE polys (cw GEOMETRY, ccw GEOMETRY);
 
-# Store two polygons, one clockwise, one counter-clockwise, both in EPSG:4326 with lat/lon coordinate axis order
+# Store two polygons, one clockwise, one counter-clockwise, both in EPSG:4326 with lon/lat coordinate axis order
 statement ok
 INSERT INTO polys SELECT * FROM (
 	SELECT
-		'POLYGON((-1.475781 -48.516655, -1.475781 -48.433228, -1.403706 -48.433228, -1.403706 -48.516655, -1.475781 -48.516655))'::GEOMETRY as cw,
+		'POLYGON((-48.516655 -1.475781, -48.433228 -1.475781, -48.433228 -1.403706, -48.516655 -1.403706, -48.516655 -1.475781))'::GEOMETRY as cw,
 		ST_Reverse(cw) as ccw
 );
 

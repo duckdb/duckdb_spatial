@@ -3,6 +3,9 @@
 
 require spatial
 
+statement ok
+SET geometry_always_xy = true;
+
 # Test that we can round-trip by writing from GDAL and reading back in
 
 statement ok

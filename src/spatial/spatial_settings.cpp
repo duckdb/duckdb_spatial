@@ -3,6 +3,7 @@
 #include "duckdb/main/database.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/main/client_context.hpp"
+#include "duckdb/logging/logger.hpp"
 
 namespace duckdb {
 
@@ -25,6 +26,29 @@ bool SpatialSettings::AlwaysXY(ClientContext &context, bool &is_set) {
 
 	is_set = false;
 	return false;
+}
+
+bool SpatialSettings::AlwaysXYOrThrow(ClientContext &context, const string &message) {
+	auto is_set = false;
+	const auto always_xy = AlwaysXY(context, is_set);
+	if (is_set) {
+		return always_xy;
+	}
+
+	const auto full_message =
+	    message +
+	    "\n"
+	    "In DuckDB v2.0, the 'geometry_always_xy' setting must be set explicitly to use this functionality.\n"
+	    "In DuckDB v2.1, 'geometry_always_xy = true' will become the default.\n"
+	    "To make this error go away:\n"
+	    " * 'SET geometry_always_xy = true' to always assume [EASTING, NORTHING] (= LONGITUDE, LATITUDE) axis order "
+	    "(recommended)\n"
+	    " * 'SET geometry_always_xy = false' to keep the pre-v2.0 behavior";
+
+	auto &logger = Logger::Get(context);
+	logger.WriteLog("Spatial", LogLevel::LOG_WARNING, full_message);
+
+	throw InvalidConfigurationException(full_message);
 }
 
 double SpatialSettings::RTreeIndexScanRatio(ClientContext &context) {

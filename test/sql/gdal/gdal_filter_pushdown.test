@@ -4,6 +4,9 @@
 require spatial
 
 statement ok
+SET geometry_always_xy = true;
+
+statement ok
 SET profiling_renderer_settings = MAP {'operator_casing': 'upper'};
 
 statement ok
