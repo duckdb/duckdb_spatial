@@ -1,7 +1,10 @@
 require spatial
 
+statement ok
+SET geometry_always_xy = true;
+
 # Distance between JFK and AMS in meters
 query I
-SELECT ST_Distance_Sphere(ST_Point(40.639722, -73.778889), ST_Point(52.3, 4.765));
+SELECT ST_Distance_Sphere(ST_Point(-73.778889, 40.639722), ST_Point(4.765, 52.3));
 ----
 5847000

@@ -5861,22 +5861,12 @@ struct ST_Distance_Sphere {
 
 		auto bind_data = make_uniq<BindData>();
 
-		bool is_set = false;
-		bind_data->always_xy = SpatialSettings::AlwaysXY(context, is_set);
-
-		if (!is_set) {
-			constexpr auto raw_message =
-			    "The '%s' function is sensitive to the coordinate axis order of the input geometry.\n"
-			    "The current default for this function is to assume [LATITUDE, LONGITUDE] axis order.\n"
-			    "This is expected to change to [LONGITUDE, LATITUDE] in the future.\n "
-			    "Please explicitly set the 'geometry_always_xy' setting to avoid unexpected changes in behavior.\n"
-			    " * 'SET geometry_always_xy = true' to make this function assume all geometries are (LONGITUDE, "
-			    "LATITUDE)\n"
-			    " * 'SET geometry_always_xy = false' to keep the current behavior and make this warning go away.";
-
-			auto &logger = Logger::Get(context);
-			logger.WriteLog("Spatial", LogLevel::LOG_WARNING, StringUtil::Format(raw_message, func.GetName().c_str()));
-		}
+		constexpr auto raw_message =
+		    "The '%s' function is sensitive to the coordinate axis order of the input geometry.\n"
+		    "Unless 'geometry_always_xy' is enabled, all input geometries are assumed to be in [LATITUDE, LONGITUDE] "
+		    "axis order.";
+		bind_data->always_xy =
+		    SpatialSettings::AlwaysXYOrThrow(context, StringUtil::Format(raw_message, func.GetName().c_str()));
 
 		return std::move(bind_data);
 	}

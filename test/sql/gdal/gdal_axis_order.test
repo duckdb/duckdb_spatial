@@ -9,6 +9,16 @@ CREATE TABLE data (id int, geom geometry);
 statement ok
 INSERT INTO data VALUES (1, ST_MakePoint(100, 0));
 
+# Writing with an SRS requires 'geometry_always_xy' to be set explicitly
+statement error
+COPY data TO '{TEST_DIR}/output.kml' WITH (FORMAT GDAL, DRIVER 'KML', SRS 'EPSG:4326');
+----
+Invalid Configuration Error: GDAL COPY TO with an SRS is sensitive to the coordinate axis order
+
+# Explicitly use the authority-defined axis order
+statement ok
+SET geometry_always_xy = false;
+
 # The KML driver does not validate coordinate ranges reliably, so dont expect an error here.
 # - (only once per process, and also just sets an error, not a warning, but still returns success)
 statement ok

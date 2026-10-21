@@ -3,6 +3,9 @@
 
 require spatial
 
+statement ok
+SET geometry_always_xy = true;
+
 query I
 SELECT COUNT(*) FROM st_read('{WORKING_DIRECTORY}/test/data/amsterdam_roads.fgb') WHERE kind = 'motorway'
 ----

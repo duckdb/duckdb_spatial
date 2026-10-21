@@ -661,8 +661,8 @@ public:
 	OGRwkbGeometryType layer_type = wkbUnknown;
 };
 
-auto Bind(ClientContext &ctx, TableFunctionBindInput &input, vector<LogicalType> &col_types, vector<Identifier> &col_names)
-    -> unique_ptr<FunctionData> {
+auto Bind(ClientContext &ctx, TableFunctionBindInput &input, vector<LogicalType> &col_types,
+          vector<Identifier> &col_names) -> unique_ptr<FunctionData> {
 
 	auto result = make_uniq<BindData>();
 
@@ -1530,26 +1530,6 @@ auto Bind(ClientContext &context, CopyFunctionBindInput &input, const vector<Ide
 		throw BinderException("Unknown GDAL COPY option: '%s'", option.first);
 	}
 
-	// Read the global geometry_always_xy setting to control axis order
-	{
-		bool is_set = false;
-		result->always_xy = SpatialSettings::AlwaysXY(context, is_set);
-
-		if (!is_set) {
-			constexpr auto message =
-			    "GDAL COPY TO with an SRS is sensitive to the coordinate axis order.\n"
-			    "DuckDB GEOMETRY uses [EASTING, NORTHING] (= LONGITUDE, LATITUDE) internally.\n"
-			    "Without 'geometry_always_xy', GDAL may interpret coordinates in authority-defined order\n"
-			    "(e.g., [LATITUDE, LONGITUDE] for EPSG:4326), causing incorrect output in KML and similar formats.\n"
-			    "To avoid unexpected results:\n"
-			    " * 'SET geometry_always_xy = true' to always use [EASTING, NORTHING] (recommended)\n"
-			    " * 'SET geometry_always_xy = false' to use authority-defined axis order";
-
-			auto &logger = Logger::Get(context);
-			logger.WriteLog("Spatial", LogLevel::LOG_WARNING, message);
-		}
-	}
-
 	// If no override SRS is set, we will use the SRS of the first geometry column
 	if (result->target_srs.empty()) {
 		for (auto &col : sql_types) {
@@ -1558,6 +1538,17 @@ auto Bind(ClientContext &context, CopyFunctionBindInput &input, const vector<Ide
 				break;
 			}
 		}
+	}
+
+	// Read the global geometry_always_xy setting to control axis order.
+	// The axis order only matters when the output has an SRS, so only require the setting in that case.
+	if (!result->target_srs.empty()) {
+		constexpr auto message =
+		    "GDAL COPY TO with an SRS is sensitive to the coordinate axis order.\n"
+		    "DuckDB GEOMETRY uses [EASTING, NORTHING] (= LONGITUDE, LATITUDE) internally.\n"
+		    "Unless 'geometry_always_xy' is enabled, GDAL interprets coordinates in authority-defined order\n"
+		    "(e.g., [LATITUDE, LONGITUDE] for EPSG:4326), causing incorrect output in KML and similar formats.";
+		result->always_xy = SpatialSettings::AlwaysXYOrThrow(context, message);
 	}
 
 	// Check that options are valid

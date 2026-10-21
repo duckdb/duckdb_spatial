@@ -149,6 +149,16 @@ using ProjCRS = unique_ptr<PJ, ProjCRSDelete>;
 // ST_Transform
 //======================================================================================================================
 
+//------------------------------------------------------------------------------------------------------------------
+// Axis order
+//------------------------------------------------------------------------------------------------------------------
+static constexpr auto TRANSFORM_AXIS_ORDER_MESSAGE =
+    "'ST_Transform' is sensitive to the coordinate axis order of the input geometry.\n"
+    "Unless 'geometry_always_xy' is enabled, the axis order of the input geometry is assumed to be the same as defined "
+    "by the source CRS.\n"
+    "E.g., EPSG:4326 expects [NORTHING, EASTING] (= LATITUDE, LONGITUDE).\n"
+    "Alternatively, pass 'true' or 'false' as the last optional 'always_xy' parameter to override this per-call.";
+
 struct ST_Transform {
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -189,24 +199,7 @@ struct ST_Transform {
 		} else {
 
 			// Otherwise check the setting for whether to ignore axis order in PROJ transformations, and set the normalize flag accordingly
-			auto is_set = false;
-			result->normalize = SpatialSettings::AlwaysXY(ctx, is_set);
-
-			if (!is_set) {
-				constexpr auto message =
-				    "'ST_Transform' assumes the axis order of the input geometry to be the same as defined by the "
-				    "source CRS.\n"
-				    "E.g., EPSG:4326 expects [NORTHING, EASTING] (= LATITUDE, LONGITUDE).\n"
-				    "In the future this will change to always assume [EASTING, NORTHING] regardless of CRS "
-				    "definition.\n"
-				    "To avoid unexpected results when this changes:\n"
-				    " * 'SET geometry_always_xy = true' to always expect [EASTING, NORTHING]\n"
-				    " * 'SET geometry_always_xy = false' to keep current behavior\n"
-				    " * Pass 'true' or 'false' as last optional 'always_xy' parameter to override per-call";
-
-				auto &logger = Logger::Get(ctx);
-				logger.WriteLog("Spatial", LogLevel::LOG_WARNING, message);
-			}
+			result->normalize = SpatialSettings::AlwaysXYOrThrow(ctx, TRANSFORM_AXIS_ORDER_MESSAGE);
 		}
 
 		return std::move(result);
@@ -319,27 +312,9 @@ struct ST_Transform {
 			explicit_normalize = false;
 		}
 
-		// Check if we need to warn for this
+		// Otherwise, fall back to the global setting (which must be set explicitly)
 		if (!explicit_normalize) {
-
-			auto is_set = false;
-			result->normalize = SpatialSettings::AlwaysXY(ctx, is_set);
-
-			if (!is_set) {
-				constexpr auto message =
-				    "'ST_Transform' assumes the axis order of the input geometry to be the same as defined by the "
-				    "source CRS.\n"
-				    "E.g., EPSG:4326 expects [NORTHING, EASTING] (= LATITUDE, LONGITUDE).\n"
-				    "In the future this will change to always assume [EASTING, NORTHING] regardless of CRS "
-				    "definition.\n"
-				    "To avoid unexpected results when this changes:\n"
-				    " * 'SET geometry_always_xy = true' to always expect [EASTING, NORTHING]\n"
-				    " * 'SET geometry_always_xy = false' to keep current behavior\n"
-				    " * Pass 'true' or 'false' as last optional 'always_xy' parameter to override per-call";
-
-				auto &logger = Logger::Get(ctx);
-				logger.WriteLog("Spatial", LogLevel::LOG_WARNING, message);
-			}
+			result->normalize = SpatialSettings::AlwaysXYOrThrow(ctx, TRANSFORM_AXIS_ORDER_MESSAGE);
 		}
 
 		return std::move(result);
@@ -753,22 +728,12 @@ struct GeodesicBindData final : FunctionData {
 
 		auto result = make_uniq<GeodesicBindData>();
 
-		bool is_set = false;
-		result->always_xy = SpatialSettings::AlwaysXY(ctx, is_set);
-
-		if (!is_set) {
-			constexpr auto raw_message =
-			    "The '%s' function is sensitive to the coordinate axis order of the input geometry.\n"
-			    "The current default for this function is to assume [LATITUDE, LONGITUDE] axis order.\n"
-			    "This is expected to change to [LONGITUDE, LATITUDE] in the future.\n "
-			    "Please explicitly set the 'geometry_always_xy' setting to avoid unexpected changes in behavior.\n"
-			    " * 'SET geometry_always_xy = true' to make this function assume all geometries are [LONGITUDE, "
-			    "LATITUDE]\n"
-			    " * 'SET geometry_always_xy = false' to keep the current behavior and make this warning go away.";
-
-			auto &logger = Logger::Get(ctx);
-			logger.WriteLog("Spatial", LogLevel::LOG_WARNING, StringUtil::Format(raw_message, func.GetName().c_str()));
-		}
+		constexpr auto raw_message =
+		    "The '%s' function is sensitive to the coordinate axis order of the input geometry.\n"
+		    "Unless 'geometry_always_xy' is enabled, all input geometries are assumed to be in [LATITUDE, LONGITUDE] "
+		    "axis order.";
+		result->always_xy =
+		    SpatialSettings::AlwaysXYOrThrow(ctx, StringUtil::Format(raw_message, func.GetName().c_str()));
 
 		return std::move(result);
 	}
@@ -1506,7 +1471,7 @@ struct DuckDB_Proj_Version {
 	│ duckdb_proj_version() │
 	│        varchar        │
 	├───────────────────────┤
-	│ 9.1.1                 │geometry_always_xy
+	│ 9.1.1                 │
 	└───────────────────────┘
 	)";
 
