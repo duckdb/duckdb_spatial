@@ -448,7 +448,6 @@ struct ST_AsGrid {
 
 				variant.SetInit(LocalState::Init);
 				variant.SetFunction(ExecuteWithoutOrigin);
-				variant.SetResolveTypes(GeoTypes::PropagateCRS);
 				variant.CanThrowErrors();
 			});
 
@@ -463,7 +462,6 @@ struct ST_AsGrid {
 
 				variant.SetInit(LocalState::Init);
 				variant.SetFunction(ExecuteWithOrigin);
-				variant.SetResolveTypes(GeoTypes::PropagateCRS);
 				variant.CanThrowErrors();
 			});
 
